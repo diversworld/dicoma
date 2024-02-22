@@ -2,12 +2,8 @@
 
 namespace App\Controller;
 
-use App\Entity\Instructor;
 use App\Entity\Member;
-use App\Entity\User;
 use App\Form\MemberType;
-use App\Form\UserType;
-use App\Repository\InstructorRepository;
 use App\Repository\MemberRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
