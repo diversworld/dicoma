@@ -46,20 +46,20 @@ class MemberRepository extends ServiceEntityRepository
             ->getResult()
             ;
     }
-//    /**
-//     * @return Instructor[] Returns an array of Instructor objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('i')
-//            ->andWhere('i.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('i.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return Instructor[] Returns an array of Instructor objects
+     */
+    public function findByCategory($value): array
+    {
+        return $this->createQueryBuilder('i')
+            ->andWhere('i.category = :val')
+            ->setParameter('val', $value)
+            ->orderBy('i.lastname', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 
 //    public function findOneBySomeField($value): ?Instructor
 //    {

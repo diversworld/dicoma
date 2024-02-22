@@ -50,6 +50,9 @@ class Member
     #[ORM\Column(length: 20)]
     private ?string $category = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $published = null;
+
     public function __tostring()
     {
         return $this->firstname . " " . $this->lastname;
@@ -200,6 +203,18 @@ class Member
     public function setCategory(string $category): static
     {
         $this->category = $category;
+
+        return $this;
+    }
+
+    public function isPublished(): ?bool
+    {
+        return $this->published;
+    }
+
+    public function setPublished(?bool $published): static
+    {
+        $this->published = $published;
 
         return $this;
     }

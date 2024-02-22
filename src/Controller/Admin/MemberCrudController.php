@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Member;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
@@ -81,6 +82,8 @@ class MemberCrudController extends AbstractCrudController
                 ->setColumns(3),
             FormField::addRow(breakpointName: 'md')
                 ->setColumns(8),
+            BooleanField::new('published', 'Veröffentlicht')
+                ->setColumns(2),
         ];
     }
 }

@@ -44,7 +44,7 @@
                                 {{ instructor.postal }} {{ instructor.city }}
                             </p>
                             <p class="card-text">
-                                {% if instructor.status =='true' %}
+                                {% if instructor.published =='true' %}
                                     Status: Aktiv
                                 {% else %}
                                     Status: Inaktiv
@@ -89,7 +89,7 @@
                                     {% endif %}
                                 </p>
                                     <p class="card-text">
-                                        {% if instructor.status =='true' %}
+                                        {% if instructor.published =='true' %}
                                             Status: Aktiv
                                         {% else %}
                                             Status: Inaktiv
@@ -129,7 +129,7 @@
                             <td>{{ instructor.lastname }}</td>
                             <td>{{ instructor.email }}</td>
                             <td>
-                                {% if instructor.status =='true' %}
+                                {% if instructor.published =='true' %}
                                 Aktiv
                                 {% else %}
                                 Inaktiv

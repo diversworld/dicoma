@@ -19,7 +19,7 @@ class InstructorController extends AbstractController
     public function index(MemberRepository $instructorRepository): Response
     {
         return $this->render('instructor/index.html.twig', [
-            'instructors' => $instructorRepository->findByStatus('true', 50),
+            'instructors' => $instructorRepository->findByCategory('instructor'),
         ]);
     }
 
