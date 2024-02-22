@@ -1,0 +1,75 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Terminkalender{% endblock %}
+
+{% block body %}
+    <section class="about section">
+        <div class="container">
+            <h1>Kurskalender</h1>
+            <div class="row">
+                {# Calendar Navigation #}
+                <div class="col-md-4">
+                    <a href="{{ path('app_schedule_calendar', {'month': (currentDate|date('m') - 1 < 1 ? 12 : currentDate|date('m') - 1)}) }}">Zurück</a>
+                </div>
+                <div class="col-md-4" style="text-align: center;">
+                    <a href="{{ path('app_schedule_calendar', {'month': currentDate|date('m')}) }}">{{ currentDate|date('M') }} {{  currentDate|date('Y') }}</a>
+                </div>
+                <div class="col-md-4" style="text-align: right;">
+                    <a href="{{ path('app_schedule_calendar', {'month': (currentDate|date('m') + 1 > 12 ? 1 : currentDate|date('m') + 1)}) }}">Weiter</a>
+                </div>
+                {# Calendar #}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover" style="table-layout: fixed;">
+                        <tr style="border-left: 1px; border-right: 1px; border-color: #cecece; border-style: solid">
+                            <th style="text-align: center;">Mo</th>
+                            <th style="text-align: center;">Di</th>
+                            <th style="text-align: center;">Mi</th>
+                            <th style="text-align: center;">Do</th>
+                            <th style="text-align: center;">Fr</th>
+                            <th style="text-align: center;">Sa</th>
+                            <th style="text-align: center;">So</th>
+                        </tr>
+                        {% for week in calendar %}
+                            <tr class="row-cols-7 text-center">
+                                {% for date in week %}
+                                    <td class="col-md-2 " style="height: 120px;">
+                                        {% if date != ' ' %}
+                                            <div class="block" >
+                                                {{ date|date('d') }}
+                                                {% for schedule in schedules %}
+                                                    {% if date == schedule.startDate|date('Y-m-d') %}
+                                                        <div class="block bg-shadow">
+                                                            <div class="badge text-wrap">
+                                                                <a href="{{ path('app_schedule_show', {'id': schedule.id}) }}">
+                                                                    {{ schedule.title }}<br>{{ schedule.startTime|date('H:i') }}
+                                                                </a>
+                                                            </div>
+                                                            <ul class="list-inline">
+                                                                {% if is_granted('ROLE_ADMIN') %}
+                                                                    <li class="list-inline-item">
+                                                                        <a href="{{ path('app_schedule_edit', {'id': schedule.id}) }}"><i class="ion-edit"></i></a>
+                                                                    </li>
+                                                                {% endif %}
+                                                                {% if is_granted('ROLE_USER') %}
+                                                                    <li class="list-inline-item">
+                                                                        <a href="{{ path('app_booking_book', {id: schedule.id, user: app.user.username}) }}"><i class="ion-card"></i> </a>
+                                                                    </li>
+                                                                {% endif %}
+                                                            </ul>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            {# cell is empty #}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

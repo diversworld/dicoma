@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <!-- Basic Page Needs
+    ================================================== -->
+    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>{% block title %}Dive Course manager!{% endblock %}</title>
+
+    <!-- Mobile Specific Metas
+    ================================================== -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Diversworld DiveCourseManager">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="author" content="Eckhard becker">
+    <meta name="theme-name" content="airspace">
+    <meta name="generator" content="Themefisher Airspace Template v1.0">
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.png') }}" />
+
+    <!-- bootstrap.min css -->
+    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
+    <!-- Ionic Icon Css -->
+    <link rel="stylesheet" href="{{ asset('plugins/Ionicons/css/ionicons.min.css') }}">
+    <!-- animate.css -->
+    <link rel="stylesheet" href="{{ asset('plugins/animate-css/animate.css') }}">
+    <!-- Magnify Popup -->
+    <link rel="stylesheet" href="{{ asset('plugins/magnific-popup/magnific-popup.css') }}">
+    <!-- Slick CSS -->
+    <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
+    <!-- Place the first <script> tag in your HTML's <head> -->
+    <script src="https://cdn.tiny.cloud/1/xbvosrai0lmjngk31smvwau7lniu70rrp3ka4m2qsu112w39/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+</head>
+    <body>
+        {% include 'includes/_header.html.twig' %}
+        {% include 'includes/_slider.html.twig' %}
+
+        {% block body %}{% endblock %}
+
+        {% include 'includes/_footer.html.twig' %}
+
+        <!--Scroll to top-->
+        <div id="scroll-to-top" class="scroll-to-top">
+            <span class="icon ion-ios-arrow-up"></span>
+        </div>
+        {% block javascripts %}
+        <!--
+        Essential Scripts
+        =====================================-->
+            <!-- Main jQuery -->
+            <script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
+            <!-- Ionicons -->
+            <script type="module" src="{{ asset('plugins/Ionicons/js/ionicons.esm.js') }}"></script>
+            <!-- Bootstrap 3.1 -->
+            <script src="{{ asset('plugins/bootstrap/bootstrap.min.js') }}"></script>
+            <!-- slick Carousel -->
+            <script src="{{ asset('plugins/slick/slick.min.js') }}"></script>
+            <script src="{{ asset('plugins/magnific-popup/jquery.magnific-popup.min.js') }}"></script>
+            <!-- filter -->
+            <script src="{{ asset('plugins/shuffle/shuffle.min.js') }}"></script>
+            <script src="{{ asset('plugins/SyoTimer/jquery.syotimer.min.js') }}"></script>
+            <!-- Google Map -->
+            <!--<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCcABaamniA6OL5YvYSpB3pFMNrXwXnLwU&libraries=places"></script>-->
+            <script src="{{ asset('plugins/google-map/map.js') }}"></script>
+            <script src="{{ asset('js/script.js') }}"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.querySelectorAll('.choose-file-btn').forEach(function(button) {
+                        button.addEventListener('click', function() {
+                            const file = this.dataset.filename;
+                            document.getElementById('selectedFile').value = file;
+                        });
+                    });
+                });
+
+                document.getElementById('uploadButton').addEventListener('click', function() {
+                    document.getElementById('uploadInput').click();
+                });
+
+                document.addEventListener('click', function(e) {
+                    if(e.target && e.target.classList.contains('delete-file-btn')) {
+                        let filename = e.target.dataset.filename;
+
+                        fetch('/courses/image/delete', {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            // additional code to run when fetch is successful
+                        }).catch(error => {
+                            console.error('Fetch Error: ', error.message); alert('Delete Failed');
+                        });
+                    }
+                });
+
+                document.getElementById('uploadInput').addEventListener('change', function(e) {
+                    var file = e.target.files[0];
+                    var formData = new FormData();
+                    formData.append('file', file);
+
+                    fetch('/courses/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => {
+                            return response.json();
+                        })
+                        .then(data => {
+                            data.allFiles = Object.values(data.allFiles);
+                            if(data.file) {
+                                let container = document.querySelector('.modal-body');
+                                while(container.firstChild) {
+                                    container.firstChild.remove();
+                                }
+
+                                data.allFiles.forEach(file => {
+                                    let div = document.createElement('div');
+                                    div.classList.add("img-wrapper col-md-6");
+
+                                    let img = document.createElement('img');
+                                    img.src = `/images/kurse/${file}`;
+                                    img.alt = file;
+                                    img.width = "100";
+                                    img.classList.add("img-responsive");
+
+                                    let btn = document.createElement('button');
+                                    btn.classList.add("btn choose-file-btn");
+                                    btn.textContent = 'Choose';
+                                    btn.dataset.filename = file;
+
+                                    let deleteBtn = document.createElement('button');
+                                    deleteBtn.classList.add("btn delete-file-btn");
+                                    deleteBtn.textContent = 'Löschen';
+                                    deleteBtn.dataset.filename = file;
+
+                                    div.appendChild(img);
+                                    div.appendChild(btn);
+                                    div.appendChild(deleteBtn);
+                                    container.appendChild(div);
+                                });
+                            } else {
+                                alert('Upload failed 1');
+                            }
+                        })
+                        .catch(error => { console.error('Fetch Error: ', error.message); alert('Upload failed 2'); });
+                });
+
+                $(document).ready(function() {
+                    $('body').on('click', 'button.choose-file-btn', function() {
+                        var filename = $(this).data('filename');
+                        $('#selectedFile').val(filename);
+                        $('#fileModal').modal('hide');
+                    });
+                });
+            </script>
+        {% endblock %}
+    </body>
+</html>

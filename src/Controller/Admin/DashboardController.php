@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Booking;
 use App\Entity\Brevets;
 use App\Entity\Courses;
+use App\Entity\Member;
 use App\Entity\Schedule;
 use App\Entity\User;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
@@ -58,7 +59,8 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Brevets', 'fa fa-id-card', Brevets::class);
 
         yield MenuItem::section('Benutzer');
-        yield MenuItem::linkToCrud('Users', 'fa fa-user', User::class);
+        yield MenuItem::linkToCrud('Benutzer', 'fa fa-user', User::class);
+        yield MenuItem::linkToCrud('Mitglieder', 'fa fa-user', Member::class);
     }
 
     public function configureUserMenu(UserInterface $user): UserMenu

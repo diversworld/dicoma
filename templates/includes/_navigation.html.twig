@@ -1,0 +1,69 @@
+<nav class="navbar navbar-expand-lg p-0">
+    <a class="navbar-brand" href="{{ path('app_home') }}">
+        <img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250px" alt="Logo">
+    </a>
+
+    <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarsExample09" aria-controls="navbarsExample09" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="ion-android-menu"></span>
+    </button>
+
+    <div class="collapse navbar-collapse ml-auto" id="navbarsExample09">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ path('app_home') }}">Home</a>
+            </li>
+            <li class="nav-item dropdown ">
+                <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tauchkurse</a>
+                <ul class="dropdown-menu" aria-labelledby="dropdown03">
+                    <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_courses_index') }}">Tauchkurse</a></li>
+                    <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_schedule_index') }}">Kurstermine</a></li>
+                    <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_schedule_calendar', {'month': "now"|date("m") }) }}">Kurskalender</a></li>
+                    <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_instructor_index') }}">Instruktoren</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item @@service"><a class="nav-link" href="#">Service</a></li>
+            <li class="nav-item @@contact"><a class="nav-link" href="#">Contact</a></li>
+            {%  if is_granted('IS_AUTHENTICATED_ANONYMOUSLY') %}
+                <li><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
+            {% endif %}
+            {% if is_granted('ROLE_ADMIN') %}
+                <li class="nav-item dropdown @@portfolio">
+                    <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">TeamManager<span class="ion-ios-arrow-down"></span></a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown03">
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_instructor_index') }}">Instructor-Übersicht</a></li>
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{path('app_booking_index')}}">Buchungen bearbeiten</a></li>
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{path('app_student_index')}}">Tauchschüler</a></li>
+                    </ul>
+                </li>
+            {% endif %}
+            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                <li class="nav-item dropdown @@portfolio">
+                    <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="ion-person"> {{  app.user.username }}</i> </a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown03">
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_profile') }}">Meine Daten</a></li>
+                        {% if is_granted('ROLE_ADMIN') %}
+                            <li><a class="dropdown-item @@portfolioSingle" href="{{ path('admin', {'id': app.user.id}) }}" target="_blank">Backend</a></li>
+                        {% endif %}
+                        <li class="nav-item @@logout"><a class="nav-link" href="{{ path('app_logout') }}">Logout</a></li>
+                    </ul>
+                </li>
+            {% else %}
+                <li class="nav-item @@login"><a class="nav-link" href="{{ path('app_login') }}">Login</a></li>
+            {% endif %}
+            {% if is_granted('ROLE_INSTRUCTOR') %}
+                <li class="nav-item dropdown @@portfolio">
+                    <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">CourseManager<span class="ion-ios-arrow-down"></span></a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown03">
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_courses_index') }}">Kurs-Übersicht</a></li>
+                        <li><a class="dropdown-item @@portfolioFilter" href="{{ path('app_courses_new') }}">kurs hinzufügen</a></li>
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_schedule_index') }}">Kurstermine</a></li>
+                        <li><a class="dropdown-item @@portfolioFilter" href="{{ path('app_schedule_new') }}">Kurstermin hinzufügen</a></li>
+                        <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_student_index') }}">Schüler</a></li>
+                        <li><a class="dropdown-item @@portfolioFilter" href="{{ path('app_student_new') }}">Schüler hinzufügen</a></li>
+                    </ul>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+</nav>

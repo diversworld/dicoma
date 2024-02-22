@@ -1,0 +1,135 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Instructor{% endblock %}
+
+{% block body %}
+<section class="section">
+    <div class="container">
+        <h1>Instruktor anzeigen</h1>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    <a href="{{ path('app_instructor_index') }}">back to list</a>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="block">
+                    {%  if is_granted('ROLE_ADMIN') %}
+                        <a href="{{ path('app_instructor_edit', {'id': instructor.id}) }}">edit</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-2">
+                {%  if is_granted('ROLE_ADMIN') %}
+                    {{ include('instructor/_delete_form.html.twig') }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Vorname
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.firstname }} {{ instructor.lastname }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Geburtsdatum
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.birthdate ? instructor.birthdate|date('Y-m-d') : '' }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Telefon
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.email }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Geburtsdatum
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.postal}} {{ instructor.city }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Mobil
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.mobile }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Telefon
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.phone }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Benutzername
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {{ instructor.username }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="block">
+                    Status
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="block">
+                    {% if instructor.status == 'true' %}
+                        Aktiv
+                    {% else %}
+                        Inaktiv
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

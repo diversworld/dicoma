@@ -1,0 +1,73 @@
+{{ form_errors(form) }}
+{{ form_start(form, {'method': 'POST'}) }}
+    <div class="row form-group">
+        <div class="col-md-6">
+            <div class="block">
+                {{ form_row(form.title) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-4">
+            {% if course.image %}
+                <img src="{{ asset('images/kurse/'  ~ '/' ~ course.image) }}" width="200px" alt="Brevetbild">
+            {% endif %}
+        </div>
+        <div class="col-md-5">
+            {{ form_label(form.image) }}
+            {{ form_widget(form.image) }}
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-4">
+            <div class="block">
+                {{ form_row(form.category) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-8">
+            <div class="block">
+                {{ form_row(form.description) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-8">
+            <div class="block">
+                {{ form_row(form.requirements) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-8">
+            <div class="block">
+                {{ form_row(form.notes) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">&nbsp;
+    </div>
+    <div class="row form-group">
+        <div class="col-md-6">
+            <div class="block">
+                {{ form_row(form.submit) }}
+            </div>
+        </div>
+    </div>
+{{ form_end(form) }}
+<!-- Place the following <script> and <textarea> tags your HTML's <body> -->
+<script>
+    tinymce.init({
+        selector: 'textarea',
+        plugins: 'ai tinycomments mentions anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount checklist mediaembed casechange export formatpainter pageembed permanentpen footnotes advtemplate advtable advcode editimage tableofcontents mergetags powerpaste tinymcespellchecker autocorrect a11ychecker typography inlinecss',
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | align lineheight | tinycomments | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'Eckhard Becker',
+        mergetags_list: [
+            { value: 'First.Name', title: 'First Name' },
+            { value: 'Email', title: 'Email' },
+        ],
+        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject("See docs to implement AI Assistant")),
+    });
+</script>

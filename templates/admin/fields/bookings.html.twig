@@ -1,0 +1,15 @@
+<table>
+    <tr>
+        <th>Booking Number</th>
+        <th>Booking Date</th>
+        <th>Status</th>
+    </tr>
+
+    {% for booking in value %}
+        <tr>
+            <td>{{ booking.bookingnumber }}</td>
+            <td>{{ booking.bookingdate|date('Y-m-d') }}</td>
+            <td>{{ booking.status }}</td>
+        </tr>
+    {% endfor %}
+</table>

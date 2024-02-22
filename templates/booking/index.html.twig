@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Booking index{% endblock %}
+
+{% block body %}
+<section id="booking">
+    <div class="container">
+        <div class="section-title">
+            <h2>Buchungsübersicht</h2>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Buchungsnummer</th>
+                    <th>Buchungsdatum</th>
+                    <th>Kurs</th>
+                    <th>Status</th>
+                    <th>Schüler</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for booking in bookings %}
+                <tr>
+                    <td>{{ booking.bookingnumber }}</td>                
+                    <td>{{ booking.bookingdate ? booking.bookingdate|date('d.m.Y') : '' }}</td>
+                    <td>{{ booking.schedule.title }}</td>
+                    <td>{{ booking.status }}</td>
+                    <td>{{ booking.students.firstname }} {{ booking.students.lastname }}</td>
+                    <td>
+                        <button type="button" class="btn">
+                            <a href="{{ path('app_booking_show', {'id': booking.id}) }}"><i class="ion-eye"></i> </a>
+                        </button>
+                        {% if is_granted('ROLE_ADMIN') %}
+                            <button type="button" class="btn">
+                                <a href="{{ path('app_booking_edit', {'id': booking.id}) }}"><i class="ion-edit"></i> </a>
+                            </button>
+                        {% endif %}
+                        {% if is_granted('ROLE_ADMIN') %}
+                            {{ include('booking/_delete_form.html.twig') }}
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">no records found</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if is_granted('ROLE_ADMIN') %}
+            <div class="btn btn-outline-primary">
+                <a href="{{ path('app_booking_new') }}">Neuen erstellen</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

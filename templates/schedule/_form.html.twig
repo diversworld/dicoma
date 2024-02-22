@@ -1,0 +1,82 @@
+{{ form_errors(form) }}
+{{ form_start(form) }}
+<div class="row form-group">
+    <div class="col-md-4">
+        {{ form_label(form.title) }}
+        {{ form_widget(form.title) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_label(form.courses) }}
+        {{ form_widget(form.courses) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-4">
+        {% if schedule.image %}
+        <img src="{{ asset('images/kurse/'  ~ '/' ~ schedule.image) }}" width="200px" alt="Brevetbild">
+        {% endif %}
+    </div>
+    <div class="col-md-5">
+        {{ form_label(form.image) }}
+        {{ form_widget(form.image) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-2">
+        {{ form_label(form.price ) }}
+        {{ form_widget(form.price) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-2">
+        {{ form_label(form.startDate) }}
+        {{ form_widget(form.startDate) }}
+    </div>
+    <div class="col-md-2">
+        {{ form_label(form.startTime) }}
+        {{ form_widget(form.startTime) }}
+    </div>
+    <div class="col-md-2">
+        {{ form_label(form.duration) }}
+        {{ form_widget(form.duration) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-4">
+        <div class="block">
+            {{ form_label(form.location) }}
+            {{ form_widget(form.location) }}
+        </div>
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-4">
+        {{ form_label(form.locationStreet) }}
+        {{ form_widget(form.locationStreet) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-2">
+        {{ form_label(form.locationPostal) }}
+        {{ form_widget(form.locationPostal) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_label(form.locationCity) }}
+        {{ form_widget(form.locationCity) }}
+    </div>
+</div>
+<div class="row form-group">
+    <div class="col-md-8">
+        {{ form_label(form.notes) }}
+        {{ form_widget(form.notes) }}
+    </div>
+</div>
+<div class="row form-group">&nbsp;</div>
+<div class="row form-group">
+    <div class="col-md-6">
+        <div class="block">
+            {{ form_widget(form.submit) }}
+        </div>
+    </div>
+</div>
+{{ form_end(form) }}

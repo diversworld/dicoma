@@ -40,64 +40,28 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
-//    /**
-//     * @return User[] Returns an array of User objects
-//     */
-//    public function findByExampleField($value): array
+    /**
+     * @return User[] Returns an array of User objects
+     */
+    public function findByUsername($value): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.username = :val')
+            ->setParameter('val', $value)
+            ->orderBy('u.id', 'ASC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
+//    public function findOneBySomeField($value): ?User
 //    {
 //        return $this->createQueryBuilder('u')
 //            ->andWhere('u.exampleField = :val')
 //            ->setParameter('val', $value)
-//            ->orderBy('u.id', 'ASC')
-//            ->setMaxResults(10)
 //            ->getQuery()
-//            ->getResult()
+//            ->getOneOrNullResult()
 //        ;
 //    }
-
-    /**
-     * @return User[] Returns an array of Student objects
-     */
-    public function findByCategory($value, $max): array
-    {
-        return $this->createQueryBuilder('s')
-            ->andWhere('s.category = :val')
-            ->setParameter('val', $value)
-            ->orderBy('s.id', 'ASC')
-            ->setMaxResults($max)
-            ->getQuery()
-            ->getResult()
-            ;
-    }
-
-    public function getInstructors(): \Doctrine\ORM\QueryBuilder
-    {
-        $queryBuilder = $this->createQueryBuilder('s')
-            ->andWhere('s.category = :val')
-            ->setParameter('val', 'instructor')
-            ->orderBy('s.id', 'ASC');
-
-        return $queryBuilder;
-    }
-
-    public function findStudents($value, $max): array
-    {
-        return $this->createQueryBuilder('s')
-            ->andWhere('s.category = :val')
-            ->setParameter('val', 'student')
-            ->orderBy('s.id', 'ASC')
-            ->setMaxResults('99')
-            ->getQuery()
-            ->getResult()
-            ;
-    }
-    public function findOneByCategory($value): ?User
-    {
-        return $this->createQueryBuilder('u')
-            ->andWhere('u.category = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-           ->getOneOrNullResult()
-       ;
-    }
 }

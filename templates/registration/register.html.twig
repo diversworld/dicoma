@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Register{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        {%  if app.flashes %}
+            {% for flash_error in app.flashes('verify_email_error') %}
+                <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+            {% endfor %}
+        {% endif %}
+        <h1>Register</h1>
+        {% if form_errors(registrationForm) %}
+            <div class="alert alert-danger" role="alert">
+                {{ form_errors(registrationForm) }}
+            </div>
+        {%endif %}
+        {{ form_start(registrationForm) }}
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.username) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.email) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.plainPassword, {
+                            label: 'Password'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.agreeTerms) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-outline-info">Register</button>
+        {{ form_end(registrationForm) }}
+    </div>
+</section>
+{% endblock %}
