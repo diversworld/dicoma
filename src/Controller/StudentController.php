@@ -10,7 +10,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/student')]
@@ -20,7 +19,7 @@ class StudentController extends AbstractController
     public function index(MemberRepository $studentRepository): Response
     {
         return $this->render('student/index.html.twig', [
-            'students' => $studentRepository->findByStatus('true', 25),
+            'students' => $studentRepository->findByCategory('student'),
         ]);
     }
 
@@ -61,7 +60,7 @@ class StudentController extends AbstractController
     public function edit(Request $request, Member $student, EntityManagerInterface $entityManager): Response
     {
 
-        $form = $this->createForm(UserType::class, $student);
+        $form = $this->createForm(MemberType::class, $student);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

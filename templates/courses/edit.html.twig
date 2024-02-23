@@ -6,10 +6,21 @@
 <section class="about section">
     <div class="container">
         <h1>Edit Courses</h1>
-        <p><a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">back to list</a></p>
-        {{ include('courses/_form.html.twig', {'button_label': 'Update'}) }}
+        <div class="row text-bg-dark text-center">
+            <div class="col-md-12">
+                <ul class="list-inline">
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">Zurück</a>
+                    </li>
+                    <li class="list-inline-item">
+                        {{ include('courses/_delete_form.html.twig') }}
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-        {{ include('courses/_delete_form.html.twig') }}
+        {{ include('courses/_form.html.twig') }}
+
     </div>
 </section>
 <!-- File modal moved from files/index.html.twig to here -->

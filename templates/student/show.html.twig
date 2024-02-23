@@ -48,7 +48,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="block">
-                            {{ student.birthdate ? student.birthdate|date('Y-m-d') : '' }}
+                            {{ student.birthday ? student.birthday|date('Y-m-d') : '' }}
                         </div>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="block">
-                            {% if student.status == 'true' %}
+                            {% if student.published == 'true' %}
                                 Aktiv
                             {% else %}
                                 Inaktiv

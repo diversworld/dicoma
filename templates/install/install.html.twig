@@ -1,13 +1,11 @@
-{# templates/install/install.html.twig #}
+{# templates/install.html.twig #}
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Admin User erstellen {% endblock %}
-
-{% block %}
-
-    <div class="container">
-        <h1>Admin User esrtellen</h1>
-        {{ form(form) }}
-    </div>
+{% block install %}
+    <h1>Create a new User</h1>
+    <form method="post" action="{{ path('install') }}">
+        {{ form_widget(registrationForm) }}
+        <button class="btn" type="submit">Create</button>
+    </form>
 {% endblock %}

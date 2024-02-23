@@ -34,21 +34,24 @@ class CoursesType extends AbstractType
                 'attr' => [
                     'id' => 'image',
                     'class' => 'form-control',
-                    //'style' => 'display:none;'
                 ]
             ])
             ->add('description', TextareaType::class,[
+                'required' => false,
                 'label' => 'Kursbeschreibung',
                 'attr' => [
                     'placeholder' => 'Beschreibung der Kursinhalte',
                     'class' =>'form-control tinymce',
+                    'novalidate' => 'novalidate'
                 ]
             ])
             ->add('requirements', TextareaType::class,[
+                'required' => false,
                 'label' => 'Voraussetzungen',
                 'attr' => [
                     'placeholder' => 'Beschreibung der Voraussetzungen',
                     'class' =>'form-control tinymce',
+                    'novalidate' => 'novalidate'
                 ]
             ])
             ->add('category', ChoiceType::class,[
@@ -72,6 +75,7 @@ class CoursesType extends AbstractType
                 'attr' => [
                     'placeholder' => 'Bemerkungen zum Kurs',
                     'class' =>'form-control tinymce',
+                    'novalidate' => 'novalidate'
                 ]
             ])
             ->add('submit', SubmitType::class,[

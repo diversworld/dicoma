@@ -615,7 +615,7 @@ input[type=tel]:focus {
 }
 
 /*--
-	features-work Start 
+	features-work Start
 --*/
 #features-work {
   padding-top: 50px;
@@ -629,7 +629,7 @@ input[type=tel]:focus {
 }
 
 /*--
-	Header Start 
+	Header Start
 --*/
 header {
   background: #fff;
@@ -1043,7 +1043,7 @@ ul.dropdown-menu li {
 
 .portfolio-item {
   position: relative;
-  padding: 0;
+  padding: 2;
 }
 .portfolio-item img {
   width: 100%;

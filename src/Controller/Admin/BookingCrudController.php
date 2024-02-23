@@ -42,21 +42,21 @@ class BookingCrudController extends AbstractCrudController
                 ->setFormTypeOptions([
                     'data' => BookingController::nextBookingNumber( $entityManager),
                 ]),
-                DateField::new('bookingdate','Datum der Buchung')
-                    ->setColumns(2)
-                    ->setFormat('dd.MM.yyyy'),
-                ChoiceField::new('status', 'Status')
-                    ->setChoices([
-                        'gebucht' => 'gebucht',
-                        'bestätigt' => 'bestätigt',
-                        'bezahlt' => 'bezahlt',
-                        'storniert' => 'storniert',
-                    ])
-                    ->setColumns(2),
+            DateField::new('bookingdate','Datum der Buchung')
+                ->setColumns(2)
+                ->setFormat('dd.MM.yyyy'),
+            ChoiceField::new('status', 'Status')
+                ->setChoices([
+                    'gebucht' => 'gebucht',
+                    'bestätigt' => 'bestätigt',
+                    'bezahlt' => 'bezahlt',
+                    'storniert' => 'storniert',
+                ])
+                ->setColumns(2),
             FormField::addFieldset('Kurstermin')
                 ->collapsible(),
-                AssociationField::new('schedule','Kurstermin')
-                    ->setColumns(4),
+            AssociationField::new('schedule','Kurstermin')
+                ->setColumns(4),
             FormField::addFieldset('Schüler')
                 ->collapsible(),
             AssociationField::new('students', 'Schüler')

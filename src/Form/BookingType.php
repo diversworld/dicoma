@@ -25,7 +25,6 @@ class BookingType extends AbstractType
                 'required' => false,
                 'widget' => 'single_text', #'choice',
                 'input_format' => 'dd.MM.yyyy',
-                // this is actually the default format for single_text
                 'format' => 'dd.MM.yyyy',
                 'html5' => false,
                 'disabled' => !$options['admin_mode'],// Annahme: Nur Admins können den Wert ändern
@@ -42,8 +41,8 @@ class BookingType extends AbstractType
                 'placeholder' => 'Status auswählen', // Ein Platzhalter für das Dropdown
                 'required' => true, // Oder false, je nach Anforderung
                 'attr' => ['class' => 'form-control'],
-            
-            ])       
+
+            ])
             ->add('schedule', EntityType::class, [
                 'class' => Schedule::class,
                 'choices' => $options['available_schedules'], // Verfügbare Termine laden
@@ -67,7 +66,7 @@ class BookingType extends AbstractType
             ])
         ;
     }
-    
+
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([

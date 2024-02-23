@@ -102,7 +102,8 @@ class ScheduleType extends AbstractType
                 'required' => false,
                 'attr' => [
                     'placeholder' => 'Bemerkungen',
-                    'class' =>'form-control'
+                    'class' =>'form-control tinymce',
+                    'id' => 'tinymce'
                 ]
             ])
             ->add('courses', EntityType::class, [

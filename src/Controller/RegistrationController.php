@@ -73,6 +73,55 @@ class RegistrationController extends AbstractController
         ]);
     }
 
+    #[Route('/register/install', name: 'app_register_install')]
+    public function install(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerinterface): Response
+    {
+        $user = new User();
+        $form = $this->createForm(RegistrationFormType::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+
+
+            // encode the plain password
+            $user->setPassword(
+                $userPasswordHasher->hashPassword(
+                    $user,
+                    $form->get('plainPassword')->getData()
+                )
+            );
+            $user->setRoles(['ROLE_ADMIN']);
+
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            // generate a signed url and email it to the user
+            $this->emailVerifier->sendEmailConfirmation('app_verify_email', $user,
+                (new TemplatedEmail())
+                    ->from(new Address('info@diversworld.eu', 'Diversworld'))
+                    ->to($user->getEmail())
+                    ->subject('Please Confirm your Email')
+                    ->htmlTemplate('registration/confirmation_email.html.twig')
+            );
+            // do anything else you need here, like send an email
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('info@diversworld.eu', 'Diversworld'))
+                ->to($user->getEmail())
+                ->subject('Neue Nutzer Registrierung')
+                ->htmlTemplate('registration/registration_email.html.twig');
+
+            $mailer = $mailerinterface;
+            $mailer->send($email);
+
+            return $this->redirectToRoute('app_login');
+        }
+
+        return $this->render('registration/register.html.twig', [
+            'registrationForm' => $form->createView(),
+        ]);
+    }
+
     #[Route('/verify/email', name: 'app_verify_email')]
     public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
     {

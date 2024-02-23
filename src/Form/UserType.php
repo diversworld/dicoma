@@ -21,7 +21,7 @@ class UserType extends AbstractType
             ->add('isVerified')
             ->add('member', EntityType::class, [
                 'class' => Member::class,
-'choice_label' => 'id',
+                'choice_label' => 'id',
             ])
         ;
     }
