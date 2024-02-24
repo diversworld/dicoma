@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\MemberRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -52,6 +54,14 @@ class Member
 
     #[ORM\Column(nullable: true)]
     private ?bool $published = null;
+
+    #[ORM\OneToMany(mappedBy: 'instructor', targetEntity: Schedule::class)]
+    private Collection $schedules;
+
+    public function __construct()
+    {
+        $this->schedules = new ArrayCollection();
+    }
 
     public function __tostring()
     {
@@ -215,6 +225,36 @@ class Member
     public function setPublished(?bool $published): static
     {
         $this->published = $published;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Schedule>
+     */
+    public function getSchedules(): Collection
+    {
+        return $this->schedules;
+    }
+
+    public function addSchedule(Schedule $schedule): static
+    {
+        if (!$this->schedules->contains($schedule)) {
+            $this->schedules->add($schedule);
+            $schedule->setInstructor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSchedule(Schedule $schedule): static
+    {
+        if ($this->schedules->removeElement($schedule)) {
+            // set the owning side to null (unless already changed)
+            if ($schedule->getInstructor() === $this) {
+                $schedule->setInstructor(null);
+            }
+        }
 
         return $this;
     }

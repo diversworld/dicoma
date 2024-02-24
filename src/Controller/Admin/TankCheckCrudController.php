@@ -32,8 +32,8 @@ class TankCheckCrudController extends AbstractCrudController
             FormField::addFieldset('Prüferinformationen')
             ->collapsible(),
             FormField::addRow(breakpointName: 'md' ),
-            TextField::new('vendorName', 'Prüfer')
-                ->setColumns(5),
+            AssociationField::new('vendor', 'Prüfunternehmen')
+                ->setColumns(8),
             FormField::addRow(breakpointName: 'md' ),
             TextEditorField::new('notes', 'Bemerkungen')
                 ->setColumns(5),

@@ -10,6 +10,7 @@ use App\Entity\Schedule;
 use App\Entity\Tank;
 use App\Entity\TankCheck;
 use App\Entity\User;
+use App\Entity\Vendor;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -18,6 +19,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class DashboardController extends AbstractDashboardController
 {
@@ -28,8 +30,8 @@ class DashboardController extends AbstractDashboardController
 
         // Option 1. You can make your dashboard redirect to some common page of your backend
         //
-        $adminUrlGenerator = $this->container->get(AdminUrlGenerator::class);
-        return $this->redirect($adminUrlGenerator->setController(CoursesCrudController::class)->generateUrl());
+        //$adminUrlGenerator = $this->container->get(AdminUrlGenerator::class);
+        //return $this->redirect($adminUrlGenerator->setController(CoursesCrudController::class)->generateUrl());
 
         // Option 2. You can make your dashboard redirect to different pages depending on the user
         //
@@ -40,7 +42,7 @@ class DashboardController extends AbstractDashboardController
         // Option 3. You can render some custom template to display a proper dashboard with widgets, etc.
         // (tip: it's easier if your template extends from @EasyAdmin/page/content.html.twig)
         //
-        // return $this->render('some/path/my-dashboard.html.twig');
+        return $this->render('admin/dashboard/my-dashboard.html.twig');
     }
 
     public function configureDashboard(): Dashboard
@@ -48,6 +50,14 @@ class DashboardController extends AbstractDashboardController
         return Dashboard::new()
             ->setTitle('<h4>DiveCourseManager</h4>')
             ->setFaviconPath('images/favicon.ico')
+            ->setLocales(['de', 'en'])
+            // to customize the labels of locales, pass a key => value array
+            // (e.g. to display flags; although it's not a recommended practice,
+            // because many languages/locales are not associated to a single country)
+            ->setLocales([
+                'de' => '🇩🇪 Deutsch',
+                'en' => '🇬🇧 English',
+            ])
             ;
     }
 
@@ -63,6 +73,9 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Equipment');
         yield MenuItem::linkToCrud('Flaschen', 'fa fa-user', Tank::class);
         yield MenuItem::linkToCrud('Prüfungen', 'fa fa-user', TankCheck::class);
+
+        yield MenuItem::section('Partner');
+        yield MenuItem::linkToCrud('Lieferanten', 'fa fa-user', Vendor::class);
 
         yield MenuItem::section('Benutzer');
         yield MenuItem::linkToCrud('Benutzer', 'fa fa-user', User::class);

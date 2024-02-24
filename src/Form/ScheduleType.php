@@ -117,10 +117,10 @@ class ScheduleType extends AbstractType
             ])
             ->add('submit', SubmitType::class,[
                 'label' => 'Speichern',
-            'attr' => [
-                'class' =>'form-button btn btn-transparent btn-solid-border'
-            ]
-        ])
+                'attr' => [
+                    'class' =>'form-button btn btn-transparent btn-solid-border'
+                ]
+            ])
         ;
     }
 

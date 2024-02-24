@@ -23,7 +23,6 @@ class ScheduleRepository extends ServiceEntityRepository
         parent::__construct($registry, Schedule::class);
     }
 
-
     /**
      * @param $value
      * @return array Returns an array of Schedule objects

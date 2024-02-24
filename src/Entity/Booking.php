@@ -2,10 +2,7 @@
 
 namespace App\Entity;
 
-use App\Form\ScheduleType;
 use App\Repository\BookingRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -29,7 +26,7 @@ class Booking
     #[ORM\ManyToOne(targetEntity: Schedule::class, inversedBy: 'bookings', cascade:["persist"])]
     private $schedule = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'bookings', cascade:["persist"])]
+    #[ORM\ManyToOne(targetEntity: Member::class, inversedBy: 'bookings', cascade:["persist"])]
     private $students;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -81,12 +78,12 @@ class Booking
         return $this;
     }
 
-    public function getStudents(): ?User
+    public function getStudents(): ?Member
     {
         return $this->students;
     }
 
-    public function setStudents(?User $students): static
+    public function setStudents(?Member $students): static
     {
         $this->students = $students;
 

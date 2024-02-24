@@ -56,7 +56,7 @@ class Schedule
     private ?string $price = null;
 
     #[ORM\ManyToOne(inversedBy: 'schedules')]
-    private ?User $instructor = null;
+    private ?Member $instructor = null;
 
     public function __construct()
     {
@@ -193,12 +193,12 @@ class Schedule
         return $this;
     }
 
-    public function getInstructor(): ?User
+    public function getInstructor(): ?Member
     {
         return $this->instructor;
     }
 
-    public function setInstructor(?User $instructor): static
+    public function setInstructor(?Member $instructor): static
     {
         $this->instructor = $instructor;
 

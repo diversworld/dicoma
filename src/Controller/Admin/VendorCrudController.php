@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Controller\Admin;
+
+use App\Entity\Vendor;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+
+class VendorCrudController extends AbstractCrudController
+{
+    public static function getEntityFqcn(): string
+    {
+        return Vendor::class;
+    }
+
+
+    public function configureFields(string $pageName): iterable
+    {
+        return [
+            FormField::addFieldset('Lieferantendaten')
+                ->setColumns(8)
+                ->collapsible(),
+            IdField::new('id', 'ID')
+                ->hideOnForm()
+                ->setColumns(3),
+            TextField::new('name', 'Name')
+                ->setColumns(5),
+            FormField::addFieldset('Adressdaten')
+                ->collapsible(),
+            TextField::new('street', 'Straße')
+                ->setColumns(4)
+                ->hideOnIndex(),
+            FormField::addRow(breakpointName: 'md')
+                ->setColumns(8),
+            IntegerField::new('postal', 'PLZ')
+                ->setColumns(1)
+                ->hideOnIndex(),
+            TextField::new('city', 'Wohnort')
+                ->setColumns(5)
+                ->hideOnIndex(),
+            FormField::addFieldset('Kontaktdaten')
+                ->collapsible(),
+            EmailField::new('email', 'E-Mail')
+                ->setColumns(4),
+            FormField::addRow(breakpointName: 'md')
+                ->setColumns(8),
+            TextField::new('website', 'Website')
+                ->setColumns(3),
+            TelephoneField::new('phone', 'Telefon')
+                ->setColumns(3)
+                ->hideOnIndex(),
+            FormField::addFieldset('Notizen')
+                ->collapsible(),
+            TextEditorField::new('notes', 'Notizen')
+                ->setColumns(8)
+                ->hideOnIndex()
+        ];
+    }
+}

@@ -3,8 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
-use App\Entity\User;
-use App\Repository\UserRepository;
+use App\Repository\MemberRepository;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -82,8 +81,10 @@ class ScheduleCrudController extends AbstractCrudController
             ->setCurrency('EUR'),
         AssociationField::new('instructor', 'Instruktor')
             ->setColumns(4)
-            ->setFormTypeOption('query_builder', function(UserRepository $userRepository) {
-                return $userRepository->getInstructors();
+            ->setFormTypeOption('query_builder', function(MemberRepository $memberRepository) {
+                return $memberRepository->createQueryBuilder('m')
+                    ->where('m.category = :category')
+                    ->setParameter('category', 'instructor');
             }),
         FormField::addFieldset('Buchungen')
             ->collapsible(),

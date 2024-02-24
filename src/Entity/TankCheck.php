@@ -32,6 +32,9 @@ class TankCheck
     #[ORM\ManyToMany(targetEntity: Tank::class, inversedBy: 'tankChecks')]
     private Collection $tank;
 
+    #[ORM\ManyToOne(inversedBy: 'tankChecks')]
+    private ?Vendor $vendor = null;
+
     public function __construct()
     {
         $this->tank = new ArrayCollection();
@@ -115,6 +118,18 @@ class TankCheck
     public function removeTank(Tank $tank): static
     {
         $this->tank->removeElement($tank);
+
+        return $this;
+    }
+
+    public function getVendor(): ?Vendor
+    {
+        return $this->vendor;
+    }
+
+    public function setVendor(?Vendor $vendor): static
+    {
+        $this->vendor = $vendor;
 
         return $this;
     }
