@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Tank;
 use App\Entity\TankCheck;
+use App\Entity\TankCheckArticle;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -34,6 +35,7 @@ class TankCheckType extends AbstractType
             ])
             ->add('notes', TextareaType::class, [
                 'label' => 'Bemerkungen',
+                'required' => false,
                 'attr' => [
                     'class' => 'form-control',
                     'id' => 'tinymce'
@@ -42,6 +44,7 @@ class TankCheckType extends AbstractType
             ])
             ->add('costInformation', TextareaType::class, [
                 'label' => 'Kosteninformation',
+                'required' => false,
                 'attr' => [
                     'class' => 'form-control',
                     'id' => 'tinymce'
@@ -50,8 +53,16 @@ class TankCheckType extends AbstractType
             ])
             ->add('tank', EntityType::class, [
                 'class' => Tank::class,
+                'required' => false,
                 'choice_label' => 'serialnumber',
                 'choices' => $options['available_tanks'],
+                'multiple' => true,
+            ])
+            ->add('article', EntityType::class, [
+                'class' => TankCheckArticle::class,
+                'choice_label' => 'title',
+                'label' => 'Artikel',
+                'required' => false,
                 'multiple' => true,
             ])
         ;

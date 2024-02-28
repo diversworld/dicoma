@@ -1,14 +1,14 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Vendor index{% endblock %}
+{% block title %}{% trans %}Vendor{% endtrans %}{% endblock %}
 
 {% block body %}
 <section class="portfolio-work">
     <div class="container">
-        <h1>Lieferanten/Partner</h1>
+        <h1>{% trans %}Vendor{% endtrans %}</h1>
         <div class="col-md-3">
             <div class="block">
-                <a href="{{ path('app_vendor_new') }}" class="btn btn-transparent btn-solid-border">Neuen Lieferant anlegen</a>
+                <a href="{{ path('app_vendor_new') }}" class="btn btn-transparent btn-solid-border">{% trans %}Create new{% endtrans %}</a>
             </div>
         </div>
 
@@ -38,7 +38,7 @@
             </tr>
         {% else %}
             <tr>
-                <td colspan="10">no records found</td>
+                <td colspan="10">{% trans %}no records found{% endtrans %}</td>
             </tr>
         {% endfor %}
         </tbody>

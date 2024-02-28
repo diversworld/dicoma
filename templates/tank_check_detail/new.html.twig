@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Tank{% endblock %}
+{% block title %}New TankCheckDetail{% endblock %}
 
 {% block body %}
 <section class="about section">
@@ -8,11 +8,11 @@
         <div class="row">
             <div class="block">
                 <h1>Neu erstellen</h1>
-                <p><a href="{{ path('app_tank_index') }}">Zurück zur Übersicht</a></p>
+                <p><a href="{{ path('app_tank_check_detail_index') }}">Zurück zur Übersicht</a></p>
             </div>
         </div>
 
-    {{ include('tank/_form.html.twig') }}
+    {{ include('tank_check_detail/_form.html.twig') }}
 
     </div>
 </section>

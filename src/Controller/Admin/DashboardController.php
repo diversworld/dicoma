@@ -9,6 +9,8 @@ use App\Entity\Member;
 use App\Entity\Schedule;
 use App\Entity\Tank;
 use App\Entity\TankCheck;
+use App\Entity\TankCheckArticle;
+use App\Entity\TankCheckDetail;
 use App\Entity\User;
 use App\Entity\Vendor;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
@@ -73,6 +75,8 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Equipment');
         yield MenuItem::linkToCrud('Flaschen', 'fa fa-user', Tank::class);
         yield MenuItem::linkToCrud('Prüfungen', 'fa fa-user', TankCheck::class);
+        yield MenuItem::linkToCrud('Prüfungsdetails', 'fa fa-user', TankCheckDetail::class);
+        yield MenuItem::linkToCrud('TÜV Preise', 'fa fa-user', TankCheckArticle::class);
 
         yield MenuItem::section('Partner');
         yield MenuItem::linkToCrud('Lieferanten', 'fa fa-user', Vendor::class);

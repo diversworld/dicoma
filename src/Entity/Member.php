@@ -58,9 +58,13 @@ class Member
     #[ORM\OneToMany(mappedBy: 'instructor', targetEntity: Schedule::class)]
     private Collection $schedules;
 
+    #[ORM\OneToMany(mappedBy: 'students', targetEntity: Booking::class)]
+    private Collection $bookings;
+
     public function __construct()
     {
         $this->schedules = new ArrayCollection();
+        $this->bookings = new ArrayCollection();
     }
 
     public function __tostring()
@@ -253,6 +257,36 @@ class Member
             // set the owning side to null (unless already changed)
             if ($schedule->getInstructor() === $this) {
                 $schedule->setInstructor(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Booking>
+     */
+    public function getBookings(): Collection
+    {
+        return $this->bookings;
+    }
+
+    public function addBooking(Booking $booking): static
+    {
+        if (!$this->bookings->contains($booking)) {
+            $this->bookings->add($booking);
+            $booking->setStudents($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBooking(Booking $booking): static
+    {
+        if ($this->bookings->removeElement($booking)) {
+            // set the owning side to null (unless already changed)
+            if ($booking->getStudents() === $this) {
+                $booking->setStudents(null);
             }
         }
 

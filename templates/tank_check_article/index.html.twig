@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}TankCheckArticle index{% endblock %}
+
+{% block body %}
+<section class="portfolio-work">
+    <div class="container">
+        <h1>Preise für TÜV Prüfung</h1>
+        <div class="col-md-3">
+            <div class="block">
+                <a href="{{ path('app_tank_check_article_new') }}" class="btn btn-transparent btn-solid-border">Neuen Artikel anlegen</a>
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 380px">Artikel</th>
+                    <th >Notizen</th>
+                    <th style="width: 100px" class="text-right">Preis (netto)</th>
+                    <th style="width: 100px" class="text-right">Preis (rutto)</th>
+                    <th style="width: 100px"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for tank_check_article in tank_check_articles %}
+                <tr>
+                    <td width="180">{{ tank_check_article.title }}</td>
+                    <td>{{ tank_check_article.notes | raw }}</td>
+                    <td class="text-right">{{ tank_check_article.priceNetto | number_format(2, ',', '.') }} €</td>
+                    <td class="text-right">{{ tank_check_article.priceBrutto | number_format(2, ',', '.') }} €</td>
+                    <td>
+                        <a href="{{ path('app_tank_check_article_show', {'id': tank_check_article.id}) }}"><ion class="ion-eye"></ion></a>&nbsp;&nbsp;|&nbsp;
+                        <a href="{{ path('app_tank_check_article_edit', {'id': tank_check_article.id}) }}"><ion class="ion-edit"></ion></a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6">no records found</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

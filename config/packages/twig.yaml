@@ -8,6 +8,8 @@ twig:
         decimals: 2
         decimal_point: ','
         thousands_separator: '.'
+    debug: '%kernel.debug%'
+    strict_variables: '%kernel.debug%'
 
 when@test:
     twig:

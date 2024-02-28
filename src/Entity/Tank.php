@@ -45,9 +45,17 @@ class Tank
     #[ORM\ManyToMany(targetEntity: TankCheck::class, mappedBy: 'tank')]
     private Collection $tankChecks;
 
+    #[ORM\OneToMany(mappedBy: 'tank', targetEntity: TankCheckDetail::class)]
+    private Collection $tankCheckDetails;
+
+    #[ORM\OneToMany(mappedBy: 'tank', targetEntity: TankCheckDetail::class)]
+    private Collection $checkDetail;
+
     public function __construct()
     {
         $this->tankChecks = new ArrayCollection();
+        $this->tankCheckDetails = new ArrayCollection();
+        $this->checkDetail = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -178,6 +186,66 @@ class Tank
     {
         if ($this->tankChecks->removeElement($tankCheck)) {
             $tankCheck->removeTank($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TankCheckDetail>
+     */
+    public function getTankCheckDetails(): Collection
+    {
+        return $this->tankCheckDetails;
+    }
+
+    public function addTankCheckDetail(TankCheckDetail $tankCheckDetail): static
+    {
+        if (!$this->tankCheckDetails->contains($tankCheckDetail)) {
+            $this->tankCheckDetails->add($tankCheckDetail);
+            $tankCheckDetail->setTank($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTankCheckDetail(TankCheckDetail $tankCheckDetail): static
+    {
+        if ($this->tankCheckDetails->removeElement($tankCheckDetail)) {
+            // set the owning side to null (unless already changed)
+            if ($tankCheckDetail->getTank() === $this) {
+                $tankCheckDetail->setTank(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TankCheckDetail>
+     */
+    public function getCheckDetail(): Collection
+    {
+        return $this->checkDetail;
+    }
+
+    public function addCheckDetail(TankCheckDetail $checkDetail): static
+    {
+        if (!$this->checkDetail->contains($checkDetail)) {
+            $this->checkDetail->add($checkDetail);
+            $checkDetail->setTank($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCheckDetail(TankCheckDetail $checkDetail): static
+    {
+        if ($this->checkDetail->removeElement($checkDetail)) {
+            // set the owning side to null (unless already changed)
+            if ($checkDetail->getTank() === $this) {
+                $checkDetail->setTank(null);
+            }
         }
 
         return $this;

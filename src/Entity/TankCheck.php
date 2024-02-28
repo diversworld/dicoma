@@ -35,10 +35,14 @@ class TankCheck
     #[ORM\ManyToOne(inversedBy: 'tankChecks')]
     private ?Vendor $vendor = null;
 
+    #[ORM\OneToMany(mappedBy: 'tankCheck', targetEntity: TankCheckDetail::class)]
+    private Collection $article;
+
     public function __construct()
     {
         $this->tank = new ArrayCollection();
         $this->checkDate = new \DateTime();
+        $this->article = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -130,6 +134,36 @@ class TankCheck
     public function setVendor(?Vendor $vendor): static
     {
         $this->vendor = $vendor;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TankCheckDetail>
+     */
+    public function getArticle(): Collection
+    {
+        return $this->article;
+    }
+
+    public function addArticle(TankCheckDetail $article): static
+    {
+        if (!$this->article->contains($article)) {
+            $this->article->add($article);
+            $article->setTankCheck($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticle(TankCheckDetail $article): static
+    {
+        if ($this->article->removeElement($article)) {
+            // set the owning side to null (unless already changed)
+            if ($article->getTankCheck() === $this) {
+                $article->setTankCheck(null);
+            }
+        }
 
         return $this;
     }

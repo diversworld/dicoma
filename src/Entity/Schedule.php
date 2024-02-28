@@ -53,7 +53,7 @@ class Schedule
     private Collection $bookings;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?string $price = null;
+    private ?float $price = null;
 
     #[ORM\ManyToOne(inversedBy: 'schedules')]
     private ?Member $instructor = null;

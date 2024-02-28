@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}TankCheckDetail index{% endblock %}
+
+{% block body %}
+    <h1>TankCheckDetail index</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for tank_check_detail in tank_check_details %}
+            <tr>
+                <td>{{ tank_check_detail.id }}</td>
+                <td>
+                    <a href="{{ path('app_tank_check_detail_show', {'id': tank_check_detail.id}) }}">show</a>
+                    <a href="{{ path('app_tank_check_detail_edit', {'id': tank_check_detail.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="2">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_tank_check_detail_new') }}">Create new</a>
+{% endblock %}
