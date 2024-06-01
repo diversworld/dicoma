@@ -2,7 +2,9 @@
 
 namespace App\Form;
 
+use App\Entity\TankCheck;
 use App\Entity\TankCheckArticle;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -16,7 +18,7 @@ class TankCheckArticleType extends AbstractType
     {
         $builder
             ->add('title', TextType::class,[
-                'label' => 'Kurstermin',
+                'label' => 'Artikel',
                 'attr' => [
                     'placeholder' => 'Bezeichnung',
                     'class' =>'form-control'
@@ -51,7 +53,17 @@ class TankCheckArticleType extends AbstractType
                     'class' => 'form-control',
                     'id' => 'tinymce'
                 ],
-            ])
+            ])/*
+            ->add('tankChecks', EntityType::class,[
+                'label' => 'TÜV Prüfung',
+                'class' => TankCheck::class,
+                'choice_label' => 'id',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Kurs',
+                    'class' =>'form-control'
+                ]
+            ])*/
         ;
     }
 

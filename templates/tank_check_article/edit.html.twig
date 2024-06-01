@@ -3,10 +3,12 @@
 {% block title %}Edit TankCheckArticle{% endblock %}
 
 {% block body %}
+
 <section class="about section">
     <div class="container">
         <h1>Bearbeiten</h1>
-        <p><a class="btn btn-transparent btn-solid-border" href="{{ path('app_tank_check_article_index') }}">back to list</a></p>
+        {{ dump() }}
+        <p><a class="btn btn-transparent btn-solid-border" href="{{ path('app_tank_check_article_index', {'tank_check_id': tank_check.id}) }}">back to list</a></p>
 
     {{ include('tank_check_article/_form.html.twig', {'button_label': 'Update'}) }}
 

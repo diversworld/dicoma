@@ -54,7 +54,7 @@
                                     <a href="{{ path('app_schedule_edit', {'id': schedule.id}) }}"><i class="ion-edit"></i> |  </a>
                                 {% endif %}
                                 {% if is_granted('ROLE_USER') %}
-                                    <a href="{{ path('app_booking_book', {id: schedule.id, user: app.user.username}) }}"><i class="ion-card"></i> </a>
+                                    <a href="{{ path('app_booking_book', {id: schedule.id, user: app.user.id}) }}"><i class="ion-card"></i> </a>
                                 {% endif %}
                             </td>
                         </tr>

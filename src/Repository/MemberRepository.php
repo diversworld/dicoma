@@ -35,6 +35,18 @@ class MemberRepository extends ServiceEntityRepository
             ->getResult()
             ;
     }
+    
+        public function findByUserId($value): array
+    {
+        return $this->createQueryBuilder('m')
+            ->andWhere('m.username = :val')
+            ->setParameter('val', $value)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getResult()
+            ;
+    }
+    
     public function findById($value): array
     {
         return $this->createQueryBuilder('m')

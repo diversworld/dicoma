@@ -9,6 +9,9 @@
         <thead>
             <tr>
                 <th>Id</th>
+                <th>TankCheck</th>
+                <th>Tank</th>
+                <th>Amount</th>
                 <th>actions</th>
             </tr>
         </thead>
@@ -16,6 +19,9 @@
         {% for tank_check_detail in tank_check_details %}
             <tr>
                 <td>{{ tank_check_detail.id }}</td>
+                <td>{{ tank_check_detail.tankCheck }}</td>
+                <td>{{ tank_check_detail.tank }}</td>
+                <td>{{ tank_check_detail.amount }}</td>
                 <td>
                     <a href="{{ path('app_tank_check_detail_show', {'id': tank_check_detail.id}) }}">show</a>
                     <a href="{{ path('app_tank_check_detail_edit', {'id': tank_check_detail.id}) }}">edit</a>

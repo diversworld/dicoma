@@ -4,6 +4,8 @@ namespace App\Repository;
 
 use App\Entity\TankCheckDetail;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -19,6 +21,34 @@ class TankCheckDetailRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, TankCheckDetail::class);
+    }
+
+    /**
+     * @throws NonUniqueResultException
+     * @throws NoResultException
+     */
+    public function getSumOfNettoForCheck(int $tankCheckId): float
+    {
+        return $this->createQueryBuilder('d')
+            ->select('SUM(d.netto_price) as netto_total')
+            ->where('d.tankCheck = :id')
+            ->setParameter('id', $tankCheckId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * @throws NonUniqueResultException
+     * @throws NoResultException
+     */
+    public function getSumOfBruttoForCheck(int $tankCheckId): float
+    {
+        return $this->createQueryBuilder('d')
+            ->select('SUM(d.brutto_price) as brutto_total')
+            ->where('d.tankCheck = :id')
+            ->setParameter('id', $tankCheckId)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
 //    /**

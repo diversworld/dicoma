@@ -3,11 +3,17 @@
 {% block title %}Edit Tank{% endblock %}
 
 {% block body %}
-    <h1>Edit Tank</h1>
+<section class="portfolio-work section">
+    <div class="container">
+        <h1>Edit Tank</h1>
+        <div class="col-md-3">
+            <div class="block">
+                <a href="{{ path('app_tank_index') }}" class="btn btn-transparent btn-solid-border">{% trans %}back to list{% endtrans %}</a>
+            </div>
+        </div>
+        {{ include('tank/_form.html.twig', {'button_label': 'Update'}) }}
 
-    {{ include('tank/_form.html.twig', {'button_label': 'Update'}) }}
-
-    <a href="{{ path('app_tank_index') }}">back to list</a>
-
-    {{ include('tank/_delete_form.html.twig') }}
+        {{ include('tank/_delete_form.html.twig') }}
+    </div>
+</section>
 {% endblock %}

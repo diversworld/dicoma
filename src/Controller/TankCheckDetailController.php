@@ -14,11 +14,18 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/tank/check/detail')]
 class TankCheckDetailController extends AbstractController
 {
-    #[Route('/', name: 'app_tank_check_detail_index', methods: ['GET'])]
-    public function index(TankCheckDetailRepository $tankCheckDetailRepository): Response
+    #[Route('/{id}', name: 'app_tank_check_detail_index', methods: ['GET'])]
+    public function index(TankCheckDetailRepository $tankCheckDetailRepository, int $id =0): Response
     {
+        $tankCheckDetails = $tankCheckDetailRepository->findAll();
+
+        $totalNetto = $tankCheckDetailRepository->getSumOfNettoForCheck($id);
+        $totalBrutto = $tankCheckDetailRepository->getSumOfBruttoForCheck($id);
+
         return $this->render('tank_check_detail/index.html.twig', [
-            'tank_check_details' => $tankCheckDetailRepository->findAll(),
+            'tank_check_details' => $tankCheckDetails,
+            'total_netto' => $totalNetto,
+            'total_brutto' => $totalBrutto,
         ]);
     }
 
@@ -27,9 +34,11 @@ class TankCheckDetailController extends AbstractController
     {
         $tankCheckDetail = new TankCheckDetail();
         $form = $this->createForm(TankCheckDetailType::class, $tankCheckDetail);
+
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        if ($form->isSubmitted() && $form->isValid())
+        {
             $entityManager->persist($tankCheckDetail);
             $entityManager->flush();
 

@@ -4,7 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Booking;
 use App\Entity\Schedule;
-use App\Entity\User;
+use App\Entity\Member;
 use App\Form\BookingType;
 use App\Repository\BookingRepository;
 use App\Repository\ScheduleRepository;
@@ -96,8 +96,10 @@ class BookingController extends AbstractController
         if (!$schedule) {
             throw $this->createNotFoundException('No schedule found for id '.$id);
         }
-        $username = $entityManager->getRepository(User::class)->findOneBy(['username' => $user]);
-        if (!$username) {
+        
+        $student = $entityManager->getRepository(Member::class)->findByUserId([$user]);
+        
+        if (!$student) {
             throw $this->createNotFoundException('No user found for username '.$user);
         }
 
@@ -105,8 +107,10 @@ class BookingController extends AbstractController
         if (!$this->isGranted('ROLE_USER')) {
             throw new AccessDeniedException('You are not authorized to perform this action.');
         }
+        
+        dump($student);
 
-        if($this->checkBookings($schedule, $username)){
+        if($this->checkBookings($schedule, $student)){
             $session->getFlashBag()->clear('error');  // Clear any previously set 'error' flash messages
             $this->addFlash('error', 'Du hast diesen Kurs bereits gebucht');
             return $this->redirect($this->generateUrl('app_schedule_index'));
@@ -218,11 +222,11 @@ class BookingController extends AbstractController
         return $monthYearInt . $bookingNumberPadded;
     }
 
-    function checkBookings(Schedule $schedule, User $user): bool
+    function checkBookings(Schedule $schedule, Member $student): bool
     {
         $bookings = $schedule->getBookings();
         foreach ($bookings as $booking) {
-            if ($booking->getStudents() === $user) {
+            if ($booking->getStudents() === $student->getId()) {
                 return true;
             }
         }

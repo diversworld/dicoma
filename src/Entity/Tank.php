@@ -46,9 +46,6 @@ class Tank
     private Collection $tankChecks;
 
     #[ORM\OneToMany(mappedBy: 'tank', targetEntity: TankCheckDetail::class)]
-    private Collection $tankCheckDetails;
-
-    #[ORM\OneToMany(mappedBy: 'tank', targetEntity: TankCheckDetail::class)]
     private Collection $checkDetail;
 
     public function __construct()

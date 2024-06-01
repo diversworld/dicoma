@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\TankCheckDetailRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TankCheckDetailRepository::class)]
@@ -16,8 +17,14 @@ class TankCheckDetail
     #[ORM\ManyToOne(inversedBy: 'article')]
     private ?TankCheck $tankCheck = null;
 
+    #[ORM\ManyToOne(targetEntity: TankCheckArticle::class)]
+    private ?TankCheckArticle $article = null;
+
     #[ORM\ManyToOne(inversedBy: 'checkDetail')]
     private ?Tank $tank = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
+    private ?float $amount = null;
 
     public function getId(): ?int
     {
@@ -44,6 +51,30 @@ class TankCheckDetail
     public function setTank(?Tank $tank): static
     {
         $this->tank = $tank;
+
+        return $this;
+    }
+
+    public function getAmount(): ?string
+    {
+        return $this->amount;
+    }
+
+    public function setAmount(string $amount): static
+    {
+        $this->amount = $amount;
+
+        return $this;
+    }
+
+    public function getArticle(): ?TankCheckArticle
+    {
+        return $this->article;
+    }
+
+    public function setArticle(?TankCheckArticle $article): static
+    {
+        $this->article = $article;
 
         return $this;
     }

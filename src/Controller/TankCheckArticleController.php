@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\TankCheck;
 use App\Entity\TankCheckArticle;
 use App\Form\TankCheckArticleType;
 use App\Repository\TankCheckArticleRepository;
@@ -22,27 +23,31 @@ class TankCheckArticleController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_tank_check_article_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    #[Route('/new/{tank_check_id}', name: 'app_tank_check_article_new', methods: ['GET', 'POST'])]
+    public function new(Request $request, EntityManagerInterface $entityManager, int $tank_check_id): Response
     {
         $tankCheckArticle = new TankCheckArticle();
         $form = $this->createForm(TankCheckArticleType::class, $tankCheckArticle);
+
+        // Set TankCheck to TankCheckArticle
+        $tankCheck = $entityManager->getRepository(TankCheck::class)->find($tank_check_id);
+        $tankCheckArticle->setTankChecks($tankCheck);
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid())
         {
             $tankCheckArticle->setPriceBrutto($tankCheckArticle->getPriceNetto() * 1.19);
-
             $entityManager->persist($tankCheckArticle);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_tank_check_article_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_tank_check_show', ['id' => $tank_check_id], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('tank_check_article/new.html.twig', [
             'tank_check_article' => $tankCheckArticle,
             'form' => $form,
+            'tank_check_id' => $tank_check_id,
         ]);
     }
 

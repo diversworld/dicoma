@@ -26,6 +26,9 @@ class TankCheckArticle
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+    #[ORM\ManyToOne(targetEntity: TankCheck::class, inversedBy: 'tankChecks')]
+    private ?TankCheck $tankChecks = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -79,4 +82,17 @@ class TankCheckArticle
 
         return $this;
     }
+
+    public function getTankChecks(): ?TankCheck
+    {
+        return $this->tankChecks;
+    }
+
+    public function setTankChecks(?TankCheck $tankChecks): static
+    {
+        $this->tankChecks = $tankChecks;
+
+        return $this;
+    }
+
 }

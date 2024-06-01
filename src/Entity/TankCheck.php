@@ -35,14 +35,15 @@ class TankCheck
     #[ORM\ManyToOne(inversedBy: 'tankChecks')]
     private ?Vendor $vendor = null;
 
-    #[ORM\OneToMany(mappedBy: 'tankCheck', targetEntity: TankCheckDetail::class)]
-    private Collection $article;
+    #[ORM\OneToMany(mappedBy: 'articles', targetEntity: TankCheckArticle::class)]
+    private Collection $articles;
 
     public function __construct()
     {
         $this->tank = new ArrayCollection();
         $this->checkDate = new \DateTime();
         $this->article = new ArrayCollection();
+        $this->articles = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -139,32 +140,33 @@ class TankCheck
     }
 
     /**
-     * @return Collection<int, TankCheckDetail>
+     * @return Collection<int, TankCheckArticle>
      */
-    public function getArticle(): Collection
+    public function getArticles(): Collection
     {
-        return $this->article;
+        return $this->articles;
     }
 
-    public function addArticle(TankCheckDetail $article): static
+    public function addArticle(TankCheckArticle $article): static
     {
-        if (!$this->article->contains($article)) {
-            $this->article->add($article);
-            $article->setTankCheck($this);
+        if (!$this->articles->contains($article)) {
+            $this->articles->add($article);
+            $article->setArticles($this);
         }
 
         return $this;
     }
 
-    public function removeArticle(TankCheckDetail $article): static
+    public function removeArticle(TankCheckArticle $article): static
     {
-        if ($this->article->removeElement($article)) {
+        if ($this->articles->removeElement($article)) {
             // set the owning side to null (unless already changed)
-            if ($article->getTankCheck() === $this) {
-                $article->setTankCheck(null);
+            if ($article->getArticles() === $this) {
+                $article->setArticles(null);
             }
         }
 
         return $this;
     }
+
 }

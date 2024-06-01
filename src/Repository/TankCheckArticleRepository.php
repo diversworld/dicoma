@@ -21,20 +21,20 @@ class TankCheckArticleRepository extends ServiceEntityRepository
         parent::__construct($registry, TankCheckArticle::class);
     }
 
-//    /**
-//     * @return TankCheckArticle[] Returns an array of TankCheckArticle objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('t')
-//            ->andWhere('t.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('t.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return TankCheckArticle[] Returns an array of TankCheckArticle objects
+     */
+    public function findByCheck($value): array
+    {
+        return $this->createQueryBuilder('t')
+            ->andWhere('t.tankChecks = :val')
+            ->setParameter('val', $value)
+            ->orderBy('t.id', 'ASC')
+            ->setMaxResults(25)
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 
 //    public function findOneBySomeField($value): ?TankCheckArticle
 //    {

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\TankCheck;
 use App\Form\TankCheckType;
+use App\Repository\TankCheckArticleRepository;
 use App\Repository\TankCheckRepository;
 use App\Repository\TankRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,10 +46,13 @@ class TankCheckController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_show', methods: ['GET'])]
-    public function show(TankCheck $tankCheck): Response
+    public function show(TankCheck $tankCheck, TankCheckArticleRepository $checkArticleRepository): Response
     {
+        $checkArticles = $checkArticleRepository->findByCheck($tankCheck->getId());
+
         return $this->render('tank_check/show.html.twig', [
             'tank_check' => $tankCheck,
+            'tank_check_articles' => $checkArticles,
         ]);
     }
 

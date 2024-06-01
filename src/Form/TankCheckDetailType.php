@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Tank;
 use App\Entity\TankCheck;
+use App\Entity\TankCheckArticle;
 use App\Entity\TankCheckDetail;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -17,12 +18,16 @@ class TankCheckDetailType extends AbstractType
         $builder
             ->add('tankCheck', EntityType::class, [
                 'class' => TankCheck::class,
-'choice_label' => 'id',
+                'choice_label' => 'id',
             ])
             ->add('tank', EntityType::class, [
                 'class' => Tank::class,
-'choice_label' => 'id',
+                'choice_label' => 'id',
             ])
+            ->add('article', EntityType::class, [
+                'class' => TankCheckArticle::class,
+                'choice_label' => 'title'
+            ]);
         ;
     }
 
