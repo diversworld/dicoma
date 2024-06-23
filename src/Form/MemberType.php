@@ -12,6 +12,8 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -92,6 +94,21 @@ class MemberType extends AbstractType
                 'class' => User::class,
                 'choice_label' => 'username',
                 'placeholder' => '',
+            ])
+            ->add('plainPassword', RepeatedType::class, [
+                'type' => PasswordType::class,
+                'mapped' => false,
+                'first_options'  => ['label' => 'Password'],
+                'second_options' => ['label' => 'Confirm Password'],
+            ])
+            ->add('status', ChoiceType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'choices'  => [
+                    'Active' => 'active',
+                    'Inactive' => 'inactive',
+                    // ... any other statuses
+                ],
             ])
             ->add('submit', SubmitType::class, [
                 'label' => 'Speichern',

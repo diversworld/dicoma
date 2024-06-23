@@ -15,7 +15,7 @@
 </div>
 <div class="row">
     <div class="col-md-2">
-        {{ form_row(form.birthdate) }}
+        {{ form_row(form.birthday) }}
     </div>
 </div>
 <div class="row">
@@ -53,16 +53,25 @@
     <div class="col-md-3">
         {{ form_row(form.plainPassword) }}
     </div>
-    <div class="col-md-3">
-        {{ form_row(form.confirmPassword) }}
+</div>
+<div class="row">
+    <div class="col-md-8">
+        {{ form_row(form.notes) }}
     </div>
 </div>
 <div class="row">
     <div class="col-md-2">
+        {{ form_row(form.category) }}
+    </div>
+    <div class="col-md-2">
         {{ form_row(form.status) }}
     </div>
 </div>
-<div class="row">&nbsp;</div>
+<div class="row">
+    <div class="col-md-2">
+        {{ form_row(form.published) }}
+    </div>
+</div>
 <div class="row">
     <div class="col-md-6">
         {{ form_row(form.submit) }}

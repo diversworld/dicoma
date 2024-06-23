@@ -61,11 +61,28 @@ class Member
     #[ORM\OneToMany(mappedBy: 'students', targetEntity: Booking::class)]
     private Collection $bookings;
 
+    #[ORM\Column(type: "string", length: 255, nullable: true)]
+    private ?string $status = null;
+
     public function __construct()
     {
         $this->schedules = new ArrayCollection();
         $this->bookings = new ArrayCollection();
     }
+    /**
+     * @SecurityAssert\UserPassword(
+     *     message = "Wrong value for your current password"
+     * )
+     */
+    private $oldPassword;
+
+    /**
+     * @Assert\Length(
+     *     min = 6,
+     *     minMessage = "Password should by at least 6 chars long"
+     * )
+     */
+    private $plainPassword;
 
     public function __tostring()
     {
@@ -75,6 +92,28 @@ class Member
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getOldPassword(): string
+    {
+        return $this->oldPassword;
+    }
+
+    public function setOldPassword(string $oldPassword): self
+    {
+        $this->oldPassword = $oldPassword;
+        return $this;
+    }
+
+    public function getPlainPassword(): string
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword(string $password): self
+    {
+        $this->plainPassword = $password;
+        return $this;
     }
 
     public function getFirstname(): ?string
@@ -290,6 +329,17 @@ class Member
             }
         }
 
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(?string $status): self
+    {
+        $this->status = $status;
         return $this;
     }
 }
