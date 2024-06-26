@@ -5,6 +5,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\RegistrationFormType;
+use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use \Symfony\Component\HttpFoundation\Response;
@@ -28,7 +29,7 @@ class InstallController extends AbstractController
     #[Route('/install', name: 'app_install', methods: ['GET'])]
     public function install(Request $request): Response
     {
-        $schemaTool = new \Doctrine\ORM\Tools\SchemaTool($this->em);
+        $schemaTool = new SchemaTool($this->em);
         $schemaTool->updateSchema($this->em->getMetadataFactory()->getAllMetadata());
 
         return $this->redirectToRoute('app_register_install');
@@ -53,6 +54,6 @@ class InstallController extends AbstractController
         }
 
         // Database details were saved, now redirect to home page (or any other page where you validate DB connection and create tables).
-        return $this->redirectToRoute('home');
+        return $this->redirectToRoute('app_home');
     }
 }
