@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('zh_CN', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => '文件的扩展名无效 ({{ extension }})。允许的扩展名为 {{ extensions }}。',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => '检测到的字符编码无效 ({{ detected }})。允许的编码为 {{ encodings }}。',
     'This value is not a valid MAC address.' => '该值不是有效的MAC地址。',
+    'This URL is missing a top-level domain.' => '此URL缺少顶级域名。',
     'This form should not contain extra fields.' => '该表单中不可有额外字段.',
     'The uploaded file was too large. Please try to upload a smaller file.' => '上传文件太大， 请重新尝试上传一个较小的文件.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'CSRF 验证符无效， 请重新提交.',
@@ -168,11 +169,12 @@ $catalogue = new MessageCatalogue('zh_CN', array (
     'Too many failed login attempts, please try again later.' => '登入失败的次数过多，请稍后再试。',
     'Invalid or expired login link.' => '失效或过期的登入链接。',
     'Too many failed login attempts, please try again in %minutes% minute.' => '登入失败的次数过多，请在%minutes%分钟后再试。',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => '登录尝试失败次数过多，请在 %minutes% 分钟后再试。|登录尝试失败次数过多，请在 %minutes% 分钟后再试。',
   ),
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => '控制台',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => '编辑 %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => '新增 %entity_label_singular%',
@@ -382,6 +384,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -441,6 +446,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -456,7 +462,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('mn', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'Файлын өргөтгөл буруу байна ({{ extension }}). Зөвшөөрөгдсөн өргөтгөлүүд нь {{ extensions }} юм.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Илрүүлсэн тэмдэгтийн кодчилол буруу байна ({{ detected }}). Зөвшөөрөгдсөн кодчилолууд нь {{ encodings }} юм.',
     'This value is not a valid MAC address.' => 'Энэ утга хүчинтэй MAC хаяг биш юм.',
+    'This URL is missing a top-level domain.' => 'Энэ URL дээд түвшингийн домейн дутуу байна.',
     'This form should not contain extra fields.' => 'Форм нэмэлт талбар багтаах боломжгүй.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'Upload хийсэн файл хэтэрхий том байна. Бага хэмжээтэй файл оруулна уу.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'CSRF token буруу байна. Формоо дахин илгээнэ үү.',
@@ -168,6 +169,7 @@ $catalogue = new MessageCatalogue('mn', array (
     'Too many failed login attempts, please try again later.' => 'Хэтэрхий олон амжилтгүй оролдлого, түр хүлээгээд дахин оролдоно уу.',
     'Invalid or expired login link.' => 'Буруу эсвэл хугацаа нь дууссан нэвтрэх зам.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Нэвтрэх оролдлого ихээр амжилтгүй болсон, %minutes% минутын дараа дахин оролдоно уу.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Хэт олон бүтэлгүй нэвтрэх оролдлого, %minutes% минутын дараа дахин оролдоно уу.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -308,6 +310,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -367,6 +372,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -382,7 +388,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

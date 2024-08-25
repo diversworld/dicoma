@@ -73,12 +73,16 @@ class RegistrationController extends AbstractController
         ]);
     }
 
-    #[Route('/register/install', name: 'app_register_install')]
-    public function install(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerinterface): Response
+    #[Route('/register/install/{adminUser}', name: 'app_register_install')]
+    public function install($adminUser = null, Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerinterface): Response
     {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
+
+        if ($adminUser) {
+            $user->setRoles(['ROLE_ADMIN']);
+        }
 
         if ($form->isSubmitted() && $form->isValid()) {
 

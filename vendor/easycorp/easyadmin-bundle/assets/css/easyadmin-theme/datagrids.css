@@ -23,6 +23,7 @@ table.datagrid {
   }
   table.datagrid:not(.datagrid-empty) tr:not(.empty-row) td {
     box-shadow: inset 0 1px 0 var(--table-cell-border-color);
+    min-height: 36px;
     padding-left: 35%;
     position: relative;
   }
@@ -67,6 +68,10 @@ table.datagrid {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  table.datagrid:not(.datagrid-empty) td.actions::before {
+    /* needed to make actions clickable when they are shown inlined */
+    display: none;
   }
 }
 .datagrid thead th {
@@ -201,11 +206,10 @@ table.datagrid {
 }
 
 .datagrid mark {
-  border-radius: var(--border-radius);
+  border-radius: 0;
   background: var(--highlight-bg);
-  box-shadow: 0 1px 0 rgba(250, 204, 21, 0.4);
-  color: inherit;
-  padding: 0 1px;
+  color: var(--highlight-color);
+  padding: 0;
 }
 
 .datagrid .header-for-field-boolean {

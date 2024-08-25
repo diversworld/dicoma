@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('hu', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'A fájl kiterjesztése érvénytelen ({{ extension }}). Engedélyezett kiterjesztések: {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Az érzékelt karakterkódolás érvénytelen ({{ detected }}). Engedélyezett karakterkódolások: {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Ez az érték nem érvényes MAC-cím.',
+    'This URL is missing a top-level domain.' => 'Az URL-ből hiányzik a legfelső szintű tartomány (top-level domain).',
     'This form should not contain extra fields.' => 'Ez a mezőcsoport nem tartalmazhat extra mezőket.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'A feltöltött fájl túl nagy. Kérem, próbáljon egy kisebb fájlt feltölteni.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'Érvénytelen CSRF token. Kérem, próbálja újra elküldeni az űrlapot.',
@@ -168,6 +169,7 @@ $catalogue = new MessageCatalogue('hu', array (
     'Too many failed login attempts, please try again later.' => 'Túl sok sikertelen bejelentkezési kísérlet, kérjük próbálja újra később.',
     'Invalid or expired login link.' => 'Érvénytelen vagy lejárt bejelentkezési link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Túl sok sikertelen bejelentkezési kísérlet, kérjük próbálja újra %minutes% perc múlva.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Túl sok sikertelen bejelentkezési kísérlet, kérjük, próbálja újra %minutes% perc múlva.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -180,7 +182,7 @@ $catalogue = new MessageCatalogue('hu', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Vezérlőpult',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => '%entity_label_singular% szerkesztése',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Új %entity_label_singular% létrehozása',
@@ -396,6 +398,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -455,6 +460,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -470,7 +476,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

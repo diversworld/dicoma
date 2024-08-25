@@ -7,6 +7,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TankCheckArticleRepository::class)]
+#[ORM\HasLifecycleCallbacks()]
 class TankCheckArticle
 {
     #[ORM\Id]
@@ -54,7 +55,6 @@ class TankCheckArticle
     public function setPriceNetto(string $priceNetto): static
     {
         $this->priceNetto = $priceNetto;
-        $this->priceBrutto = $this->priceNetto * 1.19;
 
         return $this;
     }
@@ -64,7 +64,7 @@ class TankCheckArticle
         return $this->priceBrutto;
     }
 
-    public function setPriceBrutto(?string $priceBrutto): static
+   public function setPriceBrutto(?string $priceBrutto): static
     {
         $this->priceBrutto = $priceBrutto;
 
@@ -95,4 +95,10 @@ class TankCheckArticle
         return $this;
     }
 
+    #[ORM\PrePersist]
+    #[ORM\PreUpdate]
+    public function calculatePriceBrutto()
+    {
+        $this->priceBrutto = $this->priceNetto * 1.19;
+    }
 }

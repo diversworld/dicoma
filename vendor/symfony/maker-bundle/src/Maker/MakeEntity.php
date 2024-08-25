@@ -25,6 +25,7 @@ use Symfony\Bundle\MakerBundle\FileManager;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputAwareMakerInterface;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
+use Symfony\Bundle\MakerBundle\Maker\Common\UidTrait;
 use Symfony\Bundle\MakerBundle\Str;
 use Symfony\Bundle\MakerBundle\Util\ClassDetails;
 use Symfony\Bundle\MakerBundle\Util\ClassSource\Model\ClassProperty;
@@ -47,6 +48,8 @@ use Symfony\UX\Turbo\Attribute\Broadcast;
  */
 final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 {
+    use UidTrait;
+
     private Generator $generator;
     private EntityClassGenerator $entityClassGenerator;
 
@@ -97,12 +100,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             ->setHelp(file_get_contents(__DIR__.'/../Resources/help/MakeEntity.txt'))
         ;
 
+        $this->addWithUuidOption($command);
+
         $inputConfig->setArgumentAsNonInteractive('name');
     }
 
     public function interact(InputInterface $input, ConsoleStyle $io, Command $command): void
     {
-        if ($input->getArgument('name')) {
+        if (($entityClassName = $input->getArgument('name')) && empty($this->verifyEntityName($entityClassName))) {
             return;
         }
 
@@ -118,9 +123,19 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             return;
         }
 
+        $this->checkIsUsingUid($input);
+
         $argument = $command->getDefinition()->getArgument('name');
         $question = $this->createEntityClassQuestion($argument->getDescription());
-        $entityClassName = $io->askQuestion($question);
+        $entityClassName ??= $io->askQuestion($question);
+
+        while ($dangerous = $this->verifyEntityName($entityClassName)) {
+            if ($io->confirm(sprintf('"%s" contains one or more non-ASCII characters, which are potentially problematic with some database. It is recommended to use only ASCII characters for entity names. Continue anyway?', $entityClassName), false)) {
+                break;
+            }
+
+            $entityClassName = $io->askQuestion($question);
+        }
 
         $input->setArgument('name', $entityClassName);
 
@@ -147,7 +162,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
             // Mercure is needed
             if ($isBroadcast && !class_exists(MercureExtension::class)) {
-                throw new RuntimeCommandException('Please run "composer require symfony/mercure". It is needed to broadcast entities.');
+                throw new RuntimeCommandException('Please run "composer require symfony/mercure-bundle". It is needed to broadcast entities.');
             }
 
             $input->setOption('broadcast', $isBroadcast);
@@ -175,11 +190,10 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         if (!$classExists) {
             $broadcast = $input->getOption('broadcast');
             $entityPath = $this->entityClassGenerator->generateEntityClass(
-                $entityClassDetails,
-                $input->getOption('api-resource'),
-                false,
-                true,
-                $broadcast
+                entityClassDetails: $entityClassDetails,
+                apiResource: $input->getOption('api-resource'),
+                broadcast: $broadcast,
+                useUuidIdentifier: $this->getIdType(),
             );
 
             if ($broadcast) {
@@ -291,7 +305,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             }
 
             foreach ($fileManagerOperations as $path => $manipulatorOrMessage) {
-                if (\is_string($manipulatorOrMessage)) {
+                if (\is_string($manipulatorOrMessage)) {     /* @phpstan-ignore-line - https://github.com/symfony/maker-bundle/issues/1509 */
                     $io->comment($manipulatorOrMessage);
                 } else {
                     $this->fileManager->dumpFile($path, $manipulatorOrMessage->getSourceCode());
@@ -318,13 +332,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         if (null !== $input && $input->getOption('broadcast')) {
             $dependencies->addClassDependency(
                 Broadcast::class,
-                'ux-turbo'
+                'symfony/ux-turbo'
             );
         }
 
         ORMDependencyBuilder::buildDependencies($dependencies);
     }
 
+    /** @param string[] $fields */
     private function askForNextField(ConsoleStyle $io, array $fields, string $entityClass, bool $isFirstField): EntityRelation|ClassProperty|null
     {
         $io->writeln('');
@@ -377,7 +392,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         $allValidTypes = array_merge(
             array_keys($types),
             EntityRelation::getValidRelationTypes(),
-            ['relation']
+            ['relation', 'enum']
         );
         while (null === $type) {
             $question = new Question('Field type (enter <comment>?</comment> to see all types)', $defaultType);
@@ -407,13 +422,19 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
         if ('string' === $type) {
             // default to 255, avoid the question
-            $classProperty->length = $io->ask('Field length', 255, Validator::validateLength(...));
+            $classProperty->length = $io->ask('Field length', '255', Validator::validateLength(...));
         } elseif ('decimal' === $type) {
             // 10 is the default value given in \Doctrine\DBAL\Schema\Column::$_precision
-            $classProperty->precision = $io->ask('Precision (total number of digits stored: 100.00 would be 5)', 10, Validator::validatePrecision(...));
+            $classProperty->precision = $io->ask('Precision (total number of digits stored: 100.00 would be 5)', '10', Validator::validatePrecision(...));
 
             // 0 is the default value given in \Doctrine\DBAL\Schema\Column::$_scale
-            $classProperty->scale = $io->ask('Scale (number of decimals to store: 100.00 would be 2)', 0, Validator::validateScale(...));
+            $classProperty->scale = $io->ask('Scale (number of decimals to store: 100.00 would be 2)', '0', Validator::validateScale(...));
+        } elseif ('enum' === $type) {
+            // ask for valid backed enum class
+            $classProperty->enumType = $io->ask('Enum class', null, Validator::classIsBackedEnum(...));
+
+            // set type according to user decision
+            $classProperty->type = $io->confirm('Can this field store multiple enum values', false) ? 'simple_array' : 'string';
         }
 
         if ($io->confirm('Can this field be null in the database (nullable)', false)) {
@@ -448,6 +469,9 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 'date' => ['date_immutable'],
                 'time' => ['time_immutable'],
                 'dateinterval' => [],
+            ],
+            'other' => [
+                'enum' => [],
             ],
         ];
 
@@ -519,6 +543,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         $io->writeln('<info>Other Types</info>');
         // empty the values
         $allTypes = array_map(static fn () => [], $allTypes);
+        $allTypes = [...$typesTable['other'], ...$allTypes];
         $printSection($allTypes);
     }
 
@@ -757,12 +782,18 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         return $relation;
     }
 
-    private function askRelationType(ConsoleStyle $io, string $entityClass, string $targetEntityClass)
+    private function askRelationType(ConsoleStyle $io, string $entityClass, string $targetEntityClass): string
     {
         $io->writeln('What type of relationship is this?');
 
         $originalEntityShort = Str::getShortClassName($entityClass);
         $targetEntityShort = Str::getShortClassName($targetEntityClass);
+        if ($originalEntityShort === $targetEntityShort) {
+            [$originalDiscriminator, $targetDiscriminator] = Str::getHumanDiscriminatorBetweenTwoClasses($entityClass, $targetEntityClass);
+            $originalEntityShort = trim($originalDiscriminator.'\\'.$originalEntityShort, '\\');
+            $targetEntityShort = trim($targetDiscriminator.'\\'.$targetEntityShort, '\\');
+        }
+
         $rows = [];
         $rows[] = [
             EntityRelation::MANY_TO_ONE,
@@ -805,6 +836,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         return $io->askQuestion($question);
     }
 
+    /** @return string[] */
+    private function verifyEntityName(string $entityName): array
+    {
+        preg_match('/([^\x00-\x7F]+)/u', $entityName, $matches);
+
+        return $matches;
+    }
+
     private function createClassManipulator(string $path, ConsoleStyle $io, bool $overwrite): ClassSourceManipulator
     {
         $manipulator = new ClassSourceManipulator(
@@ -835,6 +874,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         $regenerator->regenerateEntities($classOrNamespace);
     }
 
+    /** @return string[] */
     private function getPropertyNames(string $class): array
     {
         if (!class_exists($class)) {
@@ -851,6 +891,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         return $this->doctrineHelper->getEntityNamespace();
     }
 
+    /** @return string[] */
     private function getTypesMap(): array
     {
         return Type::getTypesMap();

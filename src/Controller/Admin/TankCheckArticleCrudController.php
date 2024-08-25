@@ -30,13 +30,14 @@ class TankCheckArticleCrudController extends AbstractCrudController
             MoneyField::new('priceBrutto', 'Preis')
                 ->setColumns(2)
                 ->setCurrency('EUR'),
+//                ->setFormTypeOptions(['mapped' => false]), // Add this line,
             TextEditorField::new('notes')
                 ->setColumns(6)
                 ->hideOnIndex(),
         ];
     }
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             BeforeEntityPersistedEvent::class => ['calculatePriceBrutto'],

@@ -120,8 +120,14 @@ final class ClassSourceManipulator
         $attributes[] = $this->buildAttributeNode(Column::class, $mapping->getAttributes(), 'ORM');
 
         $defaultValue = null;
+        $commentLines = [];
         if ('array' === $typeHint && !$nullable) {
             $defaultValue = new Node\Expr\Array_([], ['kind' => Node\Expr\Array_::KIND_SHORT]);
+            if (null !== $mapping->enumType) {
+                $commentLines = [sprintf('@return %s[]', Str::getShortClassName($mapping->enumType))];
+            }
+        } elseif (null !== $mapping->enumType) {
+            $typeHint = $this->addUseStatementIfNecessary($mapping->enumType);
         } elseif ($typeHint && '\\' === $typeHint[0] && false !== strpos($typeHint, '\\', 1)) {
             $typeHint = $this->addUseStatementIfNecessary(substr($typeHint, 1));
         }
@@ -146,7 +152,8 @@ final class ClassSourceManipulator
             // getter methods always have nullable return values
             // because even though these are required in the db, they may not be set yet
             // unless there is a default value
-            null === $defaultValue
+            null === $defaultValue,
+            $commentLines
         );
 
         // don't generate setters for id fields
@@ -270,8 +277,22 @@ final class ClassSourceManipulator
 
     public function addGetter(string $propertyName, $returnType, bool $isReturnTypeNullable, array $commentLines = []): void
     {
-        $methodName = ('bool' === $returnType ? 'is' : 'get').Str::asCamelCase($propertyName);
+        $methodName = $this->getGetterName($propertyName, $returnType);
         $this->addCustomGetter($propertyName, $methodName, $returnType, $isReturnTypeNullable, $commentLines);
+    }
+
+    private function getGetterName(string $propertyName, $returnType): string
+    {
+        if ('bool' !== $returnType) {
+            return 'get'.Str::asCamelCase($propertyName);
+        }
+
+        // exclude is & has from getter definition if already in property name
+        if (0 !== strncasecmp($propertyName, 'is', 2) && 0 !== strncasecmp($propertyName, 'has', 3)) {
+            return 'is'.Str::asCamelCase($propertyName);
+        }
+
+        return Str::asLowerCamelCase($propertyName);
     }
 
     public function addSetter(string $propertyName, ?string $type, bool $isNullable, array $commentLines = []): void
@@ -395,7 +416,9 @@ final class ClassSourceManipulator
 
         $classNode = $this->getClassNode();
 
-        $classNode->attrGroups[] = new Node\AttributeGroup([$this->buildAttributeNode($attributeClass, $options)]);
+        $attributePrefix = str_starts_with($attributeClass, 'ORM\\') ? 'ORM' : null;
+
+        $classNode->attrGroups[] = new Node\AttributeGroup([$this->buildAttributeNode($attributeClass, $options, $attributePrefix)]);
 
         $this->updateSourceCodeFromNewStmts();
     }
@@ -434,7 +457,7 @@ final class ClassSourceManipulator
 
     private function createSetterNodeBuilder(string $propertyName, $type, bool $isNullable, array $commentLines = []): Builder\Method
     {
-        $methodName = 'set'.Str::asCamelCase($propertyName);
+        $methodName = $this->getSetterName($propertyName, $type);
         $setterNodeBuilder = (new Builder\Method($methodName))->makePublic();
 
         if ($commentLines) {
@@ -448,6 +471,15 @@ final class ClassSourceManipulator
         $setterNodeBuilder->addParam($paramBuilder->getNode());
 
         return $setterNodeBuilder;
+    }
+
+    private function getSetterName(string $propertyName, $type): string
+    {
+        if ('bool' === $type && 0 === strncasecmp($propertyName, 'is', 2)) {
+            return 'set'.Str::asCamelCase(substr($propertyName, 2));
+        }
+
+        return 'set'.Str::asCamelCase($propertyName);
     }
 
     private function addSingularRelation(BaseRelation $relation): void
@@ -569,6 +601,8 @@ final class ClassSourceManipulator
         $this->addProperty(
             name: $relation->getPropertyName(),
             attributes: $attributes,
+            // add @var that advertises this as a collection of specific objects
+            comments: [sprintf('@var %s<int, %s>', $collectionTypeHint, $typeHint)],
             propertyType: $collectionTypeHint,
         );
 
@@ -783,6 +817,10 @@ final class ClassSourceManipulator
                         return $alias;
                     }
 
+                    if (str_starts_with($class, $alias)) {
+                        return $class;
+                    }
+
                     if ($alias === $shortClassName) {
                         // we have a conflicting alias!
                         // to be safe, use the fully-qualified class name
@@ -856,6 +894,16 @@ final class ClassSourceManipulator
             if ('type' === $option && str_starts_with($value, 'Types::')) {
                 return new Node\Arg(
                     new Node\Expr\ConstFetch(new Node\Name($value)),
+                    false,
+                    false,
+                    [],
+                    new Node\Identifier($option)
+                );
+            }
+
+            if ('enumType' === $option) {
+                return new Node\Arg(
+                    new Node\Expr\ConstFetch(new Node\Name(Str::getShortClassName($value).'::class')),
                     false,
                     false,
                     [],

@@ -50,7 +50,7 @@ final class ActionFactory
                 continue;
             }
 
-            if (false === $actionDto->shouldBeDisplayedFor($entityDto)) {
+            if (false === $actionDto->isDisplayed($entityDto)) {
                 continue;
             }
 
@@ -70,7 +70,7 @@ final class ActionFactory
                 $actionDto->setCssClass($actionDto->getCssClass().' '.$addedCssClass);
             }
 
-            $entityActions[] = $this->processAction($currentPage, $actionDto, $entityDto);
+            $entityActions[$actionDto->getName()] = $this->processAction($currentPage, $actionDto, $entityDto);
         }
 
         $entityDto->setActions(ActionCollection::new($entityActions));
@@ -93,6 +93,10 @@ final class ActionFactory
                 continue;
             }
 
+            if (false === $actionDto->isDisplayed()) {
+                continue;
+            }
+
             if (Crud::PAGE_INDEX !== $currentPage && $actionDto->isBatchAction()) {
                 throw new \RuntimeException(sprintf('Batch actions can be added only to the "index" page, but the "%s" batch action is defined in the "%s" page.', $actionDto->getName(), $currentPage));
             }
@@ -108,7 +112,7 @@ final class ActionFactory
                 $actionDto->setCssClass($actionDto->getCssClass().' '.$addedCssClass);
             }
 
-            $globalActions[] = $this->processAction($currentPage, $actionDto);
+            $globalActions[$actionDto->getName()] = $this->processAction($currentPage, $actionDto);
         }
 
         return ActionCollection::new($globalActions);

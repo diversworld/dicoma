@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('sl', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'Končnica datoteke ni veljavna ({{ extension }}). Dovoljene so naslednje končnice: {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Zaznano kodiranje znakov ni veljavno ({{ detected }}). Dovoljene so naslednje vrste kodiranja {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Ta vrednost ni veljaven MAC naslov.',
+    'This URL is missing a top-level domain.' => 'Temu URL manjka domena najvišje ravni.',
     'This form should not contain extra fields.' => 'Ta obrazec ne sme vsebovati dodatnih polj.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'Naložena datoteka je prevelika. Prosimo, poizkusite naložiti manjšo.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'CSRF vrednost je napačna. Prosimo, ponovno pošljite obrazec.',
@@ -168,11 +169,12 @@ $catalogue = new MessageCatalogue('sl', array (
     'Too many failed login attempts, please try again later.' => 'Preveč neuspelih poskusov prijave, poskusite znova pozneje.',
     'Invalid or expired login link.' => 'Neveljavna ali potekla povezava prijave.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Preveč neuspelih poskusov prijave, poskusite znova čez %minutes% minuto.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Preveč neuspešnih poskusov prijave, poskusite znova čez %minutes% minuto.|Preveč neuspešnih poskusov prijave, poskusite znova čez %minutes% minut.',
   ),
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Nadzorna plošča',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => '%entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Dodaj %entity_label_singular%',
@@ -380,6 +382,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -439,6 +444,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -454,7 +460,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

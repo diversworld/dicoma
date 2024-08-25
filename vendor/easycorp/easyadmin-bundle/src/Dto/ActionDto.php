@@ -241,7 +241,19 @@ final class ActionDto
 
     public function shouldBeDisplayedFor(EntityDto $entityDto): bool
     {
-        return null === $this->displayCallable || (bool) \call_user_func($this->displayCallable, $entityDto->getInstance());
+        trigger_deprecation(
+            'easycorp/easyadmin-bundle',
+            '4.9.4',
+            'The "%s" method is deprecated and it will be removed in 5.0.0 because it\'s been replaced by the method "isDisplayed()" of the same class.',
+            __METHOD__,
+        );
+
+        return $this->isDisplayed($entityDto);
+    }
+
+    public function isDisplayed(?EntityDto $entityDto = null): bool
+    {
+        return null === $this->displayCallable || (bool) \call_user_func($this->displayCallable, $entityDto?->getInstance());
     }
 
     public function setDisplayCallable(callable $displayCallable): void

@@ -149,6 +149,12 @@ to users::
             ->add(Crud::PAGE_INDEX, $viewInvoice);
     }
 
+.. note::
+
+    The ``displayIf()`` method also works for :ref:`global actions <global-actions>`.
+    However, your closure won't receive the object that represents the current
+    entity because global actions are not associated to any specific entity.
+
 Disabling Actions
 -----------------
 
@@ -363,6 +369,8 @@ The following example shows all kinds of actions in practice::
         }
     }
 
+.. _global-actions:
+
 Global Actions
 --------------
 
@@ -455,7 +463,7 @@ If you do that, EasyAdmin will inject a DTO with all the batch action data::
 
     As an alternative, instead of injecting the ``BatchActionDto`` variable, you can
     also inject Symfony's ``Request`` object to get all the raw submitted batch data
-    (e.g. ``$request->request->get('batchActionEntityIds')``).
+    (e.g. ``$request->request->all('batchActionEntityIds')``).
 
 .. _actions-integrating-symfony:
 

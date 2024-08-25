@@ -24,6 +24,7 @@ use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Doctrine\DoctrineHelper;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
+use Symfony\Bundle\MakerBundle\Maker\Common\CanGenerateTestsTrait;
 use Symfony\Bundle\MakerBundle\Renderer\FormTypeRenderer;
 use Symfony\Bundle\MakerBundle\Str;
 use Symfony\Bundle\MakerBundle\Util\UseStatementGenerator;
@@ -45,6 +46,8 @@ use Symfony\Component\Validator\Validation;
  */
 final class MakeCrud extends AbstractMaker
 {
+    use CanGenerateTestsTrait;
+
     private Inflector $inflector;
     private string $controllerClassName;
     private bool $generateTests = false;
@@ -72,6 +75,7 @@ final class MakeCrud extends AbstractMaker
         ;
 
         $inputConfig->setArgumentAsNonInteractive('entity-class');
+        $this->configureCommandWithTestsOption($command);
     }
 
     public function interact(InputInterface $input, ConsoleStyle $io, Command $command): void
@@ -96,7 +100,7 @@ final class MakeCrud extends AbstractMaker
             $defaultControllerClass
         );
 
-        $this->generateTests = $io->confirm('Do you want to generate tests for the controller? [Experimental]', false);
+        $this->interactSetGenerateTests($input, $io);
     }
 
     public function generate(InputInterface $input, ConsoleStyle $io, Generator $generator): void
@@ -170,18 +174,18 @@ final class MakeCrud extends AbstractMaker
             $controllerClassDetails->getFullName(),
             'crud/controller/Controller.tpl.php',
             array_merge([
-                    'use_statements' => $useStatements,
-                    'entity_class_name' => $entityClassDetails->getShortName(),
-                    'form_class_name' => $formClassDetails->getShortName(),
-                    'route_path' => Str::asRoutePath($controllerClassDetails->getRelativeNameWithoutSuffix()),
-                    'route_name' => $routeName,
-                    'templates_path' => $templatesPath,
-                    'entity_var_plural' => $entityVarPlural,
-                    'entity_twig_var_plural' => $entityTwigVarPlural,
-                    'entity_var_singular' => $entityVarSingular,
-                    'entity_twig_var_singular' => $entityTwigVarSingular,
-                    'entity_identifier' => $entityDoctrineDetails->getIdentifier(),
-                ],
+                'use_statements' => $useStatements,
+                'entity_class_name' => $entityClassDetails->getShortName(),
+                'form_class_name' => $formClassDetails->getShortName(),
+                'route_path' => Str::asRoutePath($controllerClassDetails->getRelativeNameWithoutSuffix()),
+                'route_name' => $routeName,
+                'templates_path' => $templatesPath,
+                'entity_var_plural' => $entityVarPlural,
+                'entity_twig_var_plural' => $entityTwigVarPlural,
+                'entity_var_singular' => $entityVarSingular,
+                'entity_twig_var_singular' => $entityTwigVarSingular,
+                'entity_identifier' => $entityDoctrineDetails->getIdentifier(),
+            ],
                 $repositoryVars
             )
         );
@@ -237,7 +241,7 @@ final class MakeCrud extends AbstractMaker
             );
         }
 
-        if ($this->generateTests) {
+        if ($this->shouldGenerateTests()) {
             $testClassDetails = $generator->createClassNameDetails(
                 $entityClassDetails->getRelativeNameWithoutSuffix(),
                 'Test\\Controller\\',

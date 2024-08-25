@@ -814,7 +814,7 @@ Misc. Options
         // a custom HTML attribute added when rendering the field
         // e.g. setAttribute('data-foo', 'bar') renders a 'data-foo="bar"' attribute in HTML
         // it's a shortcut for the equivalent setFormTypeOption('attr.data-foo', 'bar)
-        ->setHtmlAttribute('attribute_name' => 'attribute_value')
+        ->setHtmlAttribute('attribute_name', 'attribute_value')
 
         // a key-value array of attributes to add to the HTML element
         ->setHtmlAttributes(['data-foo' => 'bar', 'autofocus' => 'autofocus'])
@@ -969,7 +969,7 @@ field DTO. For example, in a Twig template:
 Field Configurators
 -------------------
 
-Some default options of some fields depend on the value of the of the entity
+Some default options of some fields depend on the value of the entity
 property, which is only available during runtime. That's why you can optionally
 define a **field configurator**, which is a class that updates the config of the
 field before rendering them.

@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('id', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'Ekstensi file tidak valid ({{ extension }}). Ekstensi yang diperbolehkan adalah {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Pengkodean karakter yang terdeteksi tidak valid ({{ detected }}). Pengkodean yang diperbolehkan adalah {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Nilai ini bukan alamat MAC yang valid.',
+    'This URL is missing a top-level domain.' => 'URL ini tidak memiliki domain tingkat atas.',
     'This form should not contain extra fields.' => 'Gabungan kolom tidak boleh mengandung kolom tambahan.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'Berkas yang di unggah terlalu besar. Silahkan coba unggah berkas yang lebih kecil.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'CSRF-Token tidak sah. Silahkan coba kirim ulang formulir.',
@@ -150,13 +151,13 @@ $catalogue = new MessageCatalogue('id', array (
   ),
   'security' => 
   array (
-    'An authentication exception occurred.' => 'Terjadi sebuah pengecualian otentikasi.',
+    'An authentication exception occurred.' => 'Terjadi kesalahan otentikasi.',
     'Authentication credentials could not be found.' => 'Kredensial otentikasi tidak bisa ditemukan.',
     'Authentication request could not be processed due to a system problem.' => 'Permintaan otentikasi tidak bisa diproses karena masalah sistem.',
-    'Invalid credentials.' => 'Kredensial salah.',
+    'Invalid credentials.' => 'Kredensial tidak valid.',
     'Cookie has already been used by someone else.' => 'Cookie sudah digunakan oleh orang lain.',
     'Not privileged to request the resource.' => 'Tidak berhak untuk meminta sumber daya.',
-    'Invalid CSRF token.' => 'Token CSRF salah.',
+    'Invalid CSRF token.' => 'Token CSRF tidak valid.',
     'No authentication provider found to support the authentication token.' => 'Tidak ditemukan penyedia otentikasi untuk mendukung token otentikasi.',
     'No session available, it either timed out or cookies are not enabled.' => 'Tidak ada sesi yang tersedia, mungkin waktu sudah habis atau cookie tidak diaktifkan',
     'No token could be found.' => 'Tidak ada token yang bisa ditemukan.',
@@ -165,9 +166,10 @@ $catalogue = new MessageCatalogue('id', array (
     'Credentials have expired.' => 'Kredensial telah berakhir.',
     'Account is disabled.' => 'Akun dinonaktifkan.',
     'Account is locked.' => 'Akun terkunci.',
-    'Too many failed login attempts, please try again later.' => 'Terlalu banyak percobaan login yang salah, silahkan coba lagi nanti.',
-    'Invalid or expired login link.' => 'Link login salah atau sudah kedaluwarsa.',
-    'Too many failed login attempts, please try again in %minutes% minute.' => 'Terlalu banyak percobaan login yang salah, silahkan coba lagi dalam %minutes% menit.',
+    'Too many failed login attempts, please try again later.' => 'Terlalu banyak percobaan login yang gagal, silahkan coba lagi nanti.',
+    'Invalid or expired login link.' => 'Link login tidak valid atau sudah kedaluwarsa.',
+    'Too many failed login attempts, please try again in %minutes% minute.' => 'Terlalu banyak percobaan login yang gagal, silahkan coba lagi dalam %minutes% menit.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Terlalu banyak upaya login yang gagal, silakan coba lagi dalam beberapa %minutes% menit.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -183,7 +185,7 @@ $catalogue = new MessageCatalogue('id', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dasbor',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Sunting %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Buat %entity_label_singular%',
@@ -391,6 +393,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -450,6 +455,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -465,7 +471,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

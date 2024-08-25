@@ -133,6 +133,7 @@ return static function (ContainerConfigurator $container) {
             ->arg(1, service(AdminContextProvider::class))
             ->arg(2, new Reference('security.csrf.token_manager', ContainerInterface::NULL_ON_INVALID_REFERENCE))
             ->arg(3, new Reference('asset_mapper.importmap.renderer', ContainerInterface::NULL_ON_INVALID_REFERENCE))
+            ->arg(4, service('translator'))
             ->tag('twig.extension')
 
         ->set(EaCrudFormTypeExtension::class)
@@ -206,7 +207,6 @@ return static function (ContainerConfigurator $container) {
             ->arg(4, service(MenuItemMatcherInterface::class))
 
         ->set(MenuItemMatcher::class)
-            ->arg(0, service(AdminContextProvider::class))
 
         ->alias(MenuItemMatcherInterface::class, MenuItemMatcher::class)
 
@@ -355,6 +355,7 @@ return static function (ContainerConfigurator $container) {
             ->arg(0, service(IntlFormatter::class))
 
         ->set(PercentConfigurator::class)
+            ->arg(0, service(IntlFormatter::class))
 
         ->set(ChoiceConfigurator::class)
 

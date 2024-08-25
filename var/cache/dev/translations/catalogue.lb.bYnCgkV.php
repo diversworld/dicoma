@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('lb', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'D\'Extensioun vum Fichier ass net valabel ({{ extension }}). Valabel Extensioune sinn {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Den Encodage vun de Schrëftzeechen ass net valabel ({{ detected }}). Valabel Encodage sinn {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Dëse Wäert ass keng gülteg MAC-Adress.',
+    'This URL is missing a top-level domain.' => 'Dësen URL feelt eng Top-Level-Domain.',
     'This form should not contain extra fields.' => 'Dës Feldergrupp sollt keng zousätzlech Felder enthalen.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'De geschécktene Fichier ass ze grouss. Versicht wann ech gelift ee méi klenge Fichier eropzelueden.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'Den CSRF-Token ass ongëlteg. Versicht wann ech gelift de Formulaire nach eng Kéier ze schécken.',
@@ -168,11 +169,12 @@ $catalogue = new MessageCatalogue('lb', array (
     'Too many failed login attempts, please try again later.' => 'Ze vill mësslonge Login-Versich, w.e.g. méi spéit nach emol probéieren.',
     'Invalid or expired login link.' => 'Ongëltegen oder ofgelafene Login-Link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Zu vill fehlgeschloen Loginversich, w. e. g. probéiert nach am %minutes% Minutt.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Ze vill Feeler beim Umellen, versicht weg erëm an %minutes% Minutten.',
   ),
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Tableau de bord',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => '%entity_label_singular% beaarbechten',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => '%entity_label_singular% erstellen',
@@ -375,6 +377,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -434,6 +439,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -449,7 +455,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

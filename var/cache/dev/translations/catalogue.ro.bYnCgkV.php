@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('ro', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'Extensia fișierului este invalidă ({{ extension }}). Extensiile permise sunt {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Codificarea caracterelor detectate nu este valabilă ({{ detected }}). Codificările permise sunt {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Această valoare nu este o adresă MAC validă.',
+    'This URL is missing a top-level domain.' => 'Acestui URL îi lipsește un domeniu de nivel superior.',
     'This form should not contain extra fields.' => 'Acest formular nu ar trebui să conțină câmpuri suplimentare.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'Fișierul încărcat a fost prea mare. Vă rugăm sa încărcați un fișier mai mic.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'Token-ul CSRF este invalid. Vă rugăm să retrimiteți formularul.',
@@ -168,6 +169,7 @@ $catalogue = new MessageCatalogue('ro', array (
     'Too many failed login attempts, please try again later.' => 'Prea multe încercări de autentificare eșuate, vă rugăm să încercați mai târziu.',
     'Invalid or expired login link.' => 'Link de autentificare invalid sau expirat.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Prea multe încercări nereușite, încearcă din nou în %minutes% minut.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Prea multe încercări eșuate de autentificare, vă rugăm să încercați din nou peste %minutes% minut.|Prea multe încercări eșuate de autentificare, vă rugăm să încercați din nou peste %minutes% minute.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -183,7 +185,7 @@ $catalogue = new MessageCatalogue('ro', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Tablou de bord',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Editează %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Creează %entity_label_singular%',
@@ -274,6 +276,7 @@ $catalogue = new MessageCatalogue('ro', array (
     'exception.forbidden_action' => 'Acțiunea solicitată nu poate fi efectuată asupra acestui item.',
     'exception.insufficient_entity_permission' => 'Nu sunteți autorizat să accesați acest item.',
     'autocomplete.no-results-found' => 'Nu au fost găsite rezultate',
+    'autocomplete.no-more-results' => 'Nu mai sunt rezultate',
     'autocomplete.loading-more-results' => 'Se încarcă mai multe rezultate…',
   ),
   'ResetPasswordBundle' => 
@@ -404,6 +407,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -463,6 +469,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -478,7 +485,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

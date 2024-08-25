@@ -12,9 +12,6 @@
 - Dive Course Booking for Dive Centers
 - Dive Course Booking for Dive Schools
 - Dive Course Booking for Dive Resorts
-- Dive Course Booking for Dive Boats
-- Dive Course Booking for Dive Trips
-- Dive Course Booking for Dive Holidays
 
 #### Installation
 - Clone the repository

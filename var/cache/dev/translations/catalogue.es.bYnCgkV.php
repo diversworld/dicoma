@@ -105,7 +105,7 @@ $catalogue = new MessageCatalogue('es', array (
     'This value is not a valid CSS color.' => 'Este valor no es un color CSS válido.',
     'This value is not a valid CIDR notation.' => 'Este valor no es una notación CIDR válida.',
     'The value of the netmask should be between {{ min }} and {{ max }}.' => 'El valor de la máscara de red debería estar entre {{ min }} y {{ max }}.',
-    'The filename is too long. It should have {{ filename_max_length }} character or less.|The filename is too long. It should have {{ filename_max_length }} characters or less.' => 'El nombre del archivo es demasido largo. Debe tener {{ filename_max_length }} carácter o menos.|El nombre del archivo es demasido largo. Debe tener {{ filename_max_length }} caracteres o menos.',
+    'The filename is too long. It should have {{ filename_max_length }} character or less.|The filename is too long. It should have {{ filename_max_length }} characters or less.' => 'El nombre del archivo es demasiado largo. Debe tener {{ filename_max_length }} carácter o menos.|El nombre del archivo es demasiado largo. Debe tener {{ filename_max_length }} caracteres o menos.',
     'The password strength is too low. Please use a stronger password.' => 'La seguridad de la contraseña es demasiado baja. Por favor, utilice una contraseña más segura.',
     'This value contains characters that are not allowed by the current restriction-level.' => 'Este valor contiene caracteres que no están permitidos según el nivel de restricción actual.',
     'Using invisible characters is not allowed.' => 'No se permite el uso de caracteres invisibles.',
@@ -114,6 +114,9 @@ $catalogue = new MessageCatalogue('es', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'La extensión del archivo no es válida ({{ extension }}). Las extensiones permitidas son {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'La codificación de los caracteres detectada es inválida ({{ detected }}). Las codificaciones permitidas son {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Este valor no es una dirección MAC válida.',
+    'This URL is missing a top-level domain.' => 'Esta URL no contiene una extensión de dominio (TLD).',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'Este valor es demasiado corto. Debe contener al menos una palabra.|Este valor es demasiado corto. Debe contener al menos {{ min }} palabras.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'Este valor es demasiado largo. Debe contener una palabra.|Este valor es demasiado largo. Debe contener {{ max }} palabras o menos.',
     'This form should not contain extra fields.' => 'Este formulario no debería contener campos adicionales.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'El archivo subido es demasiado grande. Por favor, suba un archivo más pequeño.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'El token CSRF no es válido. Por favor, pruebe a enviar nuevamente el formulario.',
@@ -168,6 +171,7 @@ $catalogue = new MessageCatalogue('es', array (
     'Too many failed login attempts, please try again later.' => 'Demasiados intentos fallidos de inicio de sesión, inténtelo de nuevo más tarde.',
     'Invalid or expired login link.' => 'Enlace de inicio de sesión inválido o expirado.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Demasiados intentos fallidos de inicio de sesión, inténtelo de nuevo en %minutes% minuto.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Demasiados intentos fallidos de inicio de sesión, inténtelo de nuevo en %minutes% minutos.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -183,7 +187,7 @@ $catalogue = new MessageCatalogue('es', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Inicio',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Modificar %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Crear %entity_label_singular%',
@@ -405,6 +409,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -464,6 +471,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -479,7 +487,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',

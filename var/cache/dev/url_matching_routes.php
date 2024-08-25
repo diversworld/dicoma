@@ -36,7 +36,6 @@ return [
         '/member/new' => [[['_route' => 'app_member_new', '_controller' => 'App\\Controller\\MemberController::new'], null, ['GET' => 0, 'POST' => 1], null, false, false, null]],
         '/profile' => [[['_route' => 'app_profile', '_controller' => 'App\\Controller\\ProfileController::index'], null, null, null, false, false, null]],
         '/register' => [[['_route' => 'app_register', '_controller' => 'App\\Controller\\RegistrationController::register'], null, null, null, false, false, null]],
-        '/register/install' => [[['_route' => 'app_register_install', '_controller' => 'App\\Controller\\RegistrationController::install'], null, null, null, false, false, null]],
         '/verify/email' => [[['_route' => 'app_verify_email', '_controller' => 'App\\Controller\\RegistrationController::verifyUserEmail'], null, null, null, false, false, null]],
         '/reset-password' => [[['_route' => 'app_forgot_password_request', '_controller' => 'App\\Controller\\ResetPasswordController::request'], null, null, null, false, false, null]],
         '/reset-password/check-email' => [[['_route' => 'app_check_email', '_controller' => 'App\\Controller\\ResetPasswordController::checkEmail'], null, null, null, false, false, null]],
@@ -107,61 +106,64 @@ return [
                     .'|/edit(*:482)'
                     .'|(*:490)'
                 .')'
-                .'|/reset\\-password/reset(?:/([^/]++))?(*:535)'
+                .'|/re(?'
+                    .'|gister/install/([^/]++)(*:528)'
+                    .'|set\\-password/reset(?:/([^/]++))?(*:569)'
+                .')'
                 .'|/s(?'
                     .'|chedule/(?'
-                        .'|calendar(?:/([^/]++))?(*:581)'
+                        .'|calendar(?:/([^/]++))?(*:616)'
                         .'|([^/]++)(?'
-                            .'|(*:600)'
-                            .'|/edit(*:613)'
-                            .'|(*:621)'
+                            .'|(*:635)'
+                            .'|/edit(*:648)'
+                            .'|(*:656)'
                         .')'
                     .')'
                     .'|tudent/([^/]++)(?'
-                        .'|(*:649)'
-                        .'|/edit(*:662)'
-                        .'|(*:670)'
+                        .'|(*:684)'
+                        .'|/edit(*:697)'
+                        .'|(*:705)'
                     .')'
                 .')'
                 .'|/tank(?'
                     .'|/(?'
                         .'|check/(?'
                             .'|article/(?'
-                                .'|new/([^/]++)(*:724)'
+                                .'|new/([^/]++)(*:759)'
                                 .'|([^/]++)(?'
-                                    .'|(*:743)'
-                                    .'|/edit(*:756)'
-                                    .'|(*:764)'
+                                    .'|(*:778)'
+                                    .'|/edit(*:791)'
+                                    .'|(*:799)'
                                 .')'
                             .')'
                             .'|detail(?'
-                                .'|(?:/([^/]++))?(*:797)'
+                                .'|(?:/([^/]++))?(*:832)'
                                 .'|/(?'
-                                    .'|new(*:812)'
+                                    .'|new(*:847)'
                                     .'|([^/]++)(?'
-                                        .'|(*:831)'
-                                        .'|/edit(*:844)'
-                                        .'|(*:852)'
+                                        .'|(*:866)'
+                                        .'|/edit(*:879)'
+                                        .'|(*:887)'
                                     .')'
                                 .')'
                             .')'
                         .')'
                         .'|([^/]++)(?'
-                            .'|(*:875)'
-                            .'|/edit(*:888)'
-                            .'|(*:896)'
+                            .'|(*:910)'
+                            .'|/edit(*:923)'
+                            .'|(*:931)'
                         .')'
                     .')'
                     .'|check/([^/]++)(?'
-                        .'|(*:923)'
-                        .'|/edit(*:936)'
-                        .'|(*:944)'
+                        .'|(*:958)'
+                        .'|/edit(*:971)'
+                        .'|(*:979)'
                     .')'
                 .')'
                 .'|/vendor/([^/]++)(?'
-                    .'|(*:973)'
-                    .'|/edit(*:986)'
-                    .'|(*:994)'
+                    .'|(*:1008)'
+                    .'|/edit(*:1022)'
+                    .'|(*:1031)'
                 .')'
             .')/?$}sDu',
     ],
@@ -190,32 +192,33 @@ return [
         469 => [[['_route' => 'app_member_show', '_controller' => 'App\\Controller\\MemberController::show'], ['id'], ['GET' => 0], null, false, true, null]],
         482 => [[['_route' => 'app_member_edit', '_controller' => 'App\\Controller\\MemberController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
         490 => [[['_route' => 'app_member_delete', '_controller' => 'App\\Controller\\MemberController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        535 => [[['_route' => 'app_reset_password', 'token' => null, '_controller' => 'App\\Controller\\ResetPasswordController::reset'], ['token'], null, null, false, true, null]],
-        581 => [[['_route' => 'app_schedule_calendar', 'month' => null, '_controller' => 'App\\Controller\\ScheduleController::calendar'], ['month'], ['GET' => 0], null, false, true, null]],
-        600 => [[['_route' => 'app_schedule_show', '_controller' => 'App\\Controller\\ScheduleController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        613 => [[['_route' => 'app_schedule_edit', '_controller' => 'App\\Controller\\ScheduleController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        621 => [[['_route' => 'app_schedule_delete', '_controller' => 'App\\Controller\\ScheduleController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        649 => [[['_route' => 'app_student_show', '_controller' => 'App\\Controller\\StudentController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        662 => [[['_route' => 'app_student_edit', '_controller' => 'App\\Controller\\StudentController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        670 => [[['_route' => 'app_student_delete', '_controller' => 'App\\Controller\\StudentController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        724 => [[['_route' => 'app_tank_check_article_new', '_controller' => 'App\\Controller\\TankCheckArticleController::new'], ['tank_check_id'], ['GET' => 0, 'POST' => 1], null, false, true, null]],
-        743 => [[['_route' => 'app_tank_check_article_show', '_controller' => 'App\\Controller\\TankCheckArticleController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        756 => [[['_route' => 'app_tank_check_article_edit', '_controller' => 'App\\Controller\\TankCheckArticleController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        764 => [[['_route' => 'app_tank_check_article_delete', '_controller' => 'App\\Controller\\TankCheckArticleController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        797 => [[['_route' => 'app_tank_check_detail_index', 'id' => 0, '_controller' => 'App\\Controller\\TankCheckDetailController::index'], ['id'], ['GET' => 0], null, false, true, null]],
-        812 => [[['_route' => 'app_tank_check_detail_new', '_controller' => 'App\\Controller\\TankCheckDetailController::new'], [], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        831 => [[['_route' => 'app_tank_check_detail_show', '_controller' => 'App\\Controller\\TankCheckDetailController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        844 => [[['_route' => 'app_tank_check_detail_edit', '_controller' => 'App\\Controller\\TankCheckDetailController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        852 => [[['_route' => 'app_tank_check_detail_delete', '_controller' => 'App\\Controller\\TankCheckDetailController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        875 => [[['_route' => 'app_tank_show', '_controller' => 'App\\Controller\\TankController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        888 => [[['_route' => 'app_tank_edit', '_controller' => 'App\\Controller\\TankController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        896 => [[['_route' => 'app_tank_delete', '_controller' => 'App\\Controller\\TankController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        923 => [[['_route' => 'app_tank_check_show', '_controller' => 'App\\Controller\\TankCheckController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        936 => [[['_route' => 'app_tank_check_edit', '_controller' => 'App\\Controller\\TankCheckController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        944 => [[['_route' => 'app_tank_check_delete', '_controller' => 'App\\Controller\\TankCheckController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
-        973 => [[['_route' => 'app_vendor_show', '_controller' => 'App\\Controller\\VendorController::show'], ['id'], ['GET' => 0], null, false, true, null]],
-        986 => [[['_route' => 'app_vendor_edit', '_controller' => 'App\\Controller\\VendorController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
-        994 => [
+        528 => [[['_route' => 'app_register_install', '_controller' => 'App\\Controller\\RegistrationController::install'], ['adminUser'], null, null, false, true, null]],
+        569 => [[['_route' => 'app_reset_password', 'token' => null, '_controller' => 'App\\Controller\\ResetPasswordController::reset'], ['token'], null, null, false, true, null]],
+        616 => [[['_route' => 'app_schedule_calendar', 'month' => null, '_controller' => 'App\\Controller\\ScheduleController::calendar'], ['month'], ['GET' => 0], null, false, true, null]],
+        635 => [[['_route' => 'app_schedule_show', '_controller' => 'App\\Controller\\ScheduleController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        648 => [[['_route' => 'app_schedule_edit', '_controller' => 'App\\Controller\\ScheduleController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        656 => [[['_route' => 'app_schedule_delete', '_controller' => 'App\\Controller\\ScheduleController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        684 => [[['_route' => 'app_student_show', '_controller' => 'App\\Controller\\StudentController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        697 => [[['_route' => 'app_student_edit', '_controller' => 'App\\Controller\\StudentController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        705 => [[['_route' => 'app_student_delete', '_controller' => 'App\\Controller\\StudentController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        759 => [[['_route' => 'app_tank_check_article_new', '_controller' => 'App\\Controller\\TankCheckArticleController::new'], ['tank_check_id'], ['GET' => 0, 'POST' => 1], null, false, true, null]],
+        778 => [[['_route' => 'app_tank_check_article_show', '_controller' => 'App\\Controller\\TankCheckArticleController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        791 => [[['_route' => 'app_tank_check_article_edit', '_controller' => 'App\\Controller\\TankCheckArticleController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        799 => [[['_route' => 'app_tank_check_article_delete', '_controller' => 'App\\Controller\\TankCheckArticleController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        832 => [[['_route' => 'app_tank_check_detail_index', 'id' => 0, '_controller' => 'App\\Controller\\TankCheckDetailController::index'], ['id'], ['GET' => 0], null, false, true, null]],
+        847 => [[['_route' => 'app_tank_check_detail_new', '_controller' => 'App\\Controller\\TankCheckDetailController::new'], [], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        866 => [[['_route' => 'app_tank_check_detail_show', '_controller' => 'App\\Controller\\TankCheckDetailController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        879 => [[['_route' => 'app_tank_check_detail_edit', '_controller' => 'App\\Controller\\TankCheckDetailController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        887 => [[['_route' => 'app_tank_check_detail_delete', '_controller' => 'App\\Controller\\TankCheckDetailController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        910 => [[['_route' => 'app_tank_show', '_controller' => 'App\\Controller\\TankController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        923 => [[['_route' => 'app_tank_edit', '_controller' => 'App\\Controller\\TankController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        931 => [[['_route' => 'app_tank_delete', '_controller' => 'App\\Controller\\TankController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        958 => [[['_route' => 'app_tank_check_show', '_controller' => 'App\\Controller\\TankCheckController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        971 => [[['_route' => 'app_tank_check_edit', '_controller' => 'App\\Controller\\TankCheckController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        979 => [[['_route' => 'app_tank_check_delete', '_controller' => 'App\\Controller\\TankCheckController::delete'], ['id'], ['POST' => 0], null, false, true, null]],
+        1008 => [[['_route' => 'app_vendor_show', '_controller' => 'App\\Controller\\VendorController::show'], ['id'], ['GET' => 0], null, false, true, null]],
+        1022 => [[['_route' => 'app_vendor_edit', '_controller' => 'App\\Controller\\VendorController::edit'], ['id'], ['GET' => 0, 'POST' => 1], null, false, false, null]],
+        1031 => [
             [['_route' => 'app_vendor_delete', '_controller' => 'App\\Controller\\VendorController::delete'], ['id'], ['POST' => 0], null, false, true, null],
             [null, null, null, null, false, false, 0],
         ],

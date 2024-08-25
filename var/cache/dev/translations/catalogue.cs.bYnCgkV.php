@@ -114,6 +114,7 @@ $catalogue = new MessageCatalogue('cs', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'Přípona souboru je neplatná ({{ extension }}). Povolené přípony jsou {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'Zjištěné kódování znaků je neplatné ({{ detected }}). Povolená kódování jsou {{ encodings }}.',
     'This value is not a valid MAC address.' => 'Tato hodnota není platnou MAC adresou.',
+    'This URL is missing a top-level domain.' => 'Této URL chybí doména nejvyššího řádu.',
     'This form should not contain extra fields.' => 'Tato skupina polí nesmí obsahovat další pole.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'Nahraný soubor je příliš velký. Nahrajte prosím menší soubor.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'CSRF token je neplatný. Zkuste prosím znovu odeslat formulář.',
@@ -168,6 +169,7 @@ $catalogue = new MessageCatalogue('cs', array (
     'Too many failed login attempts, please try again later.' => 'Příliš mnoho nepovedených pokusů přihlášení. Zkuste to prosím později.',
     'Invalid or expired login link.' => 'Neplatný nebo expirovaný odkaz na přihlášení.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Příliš mnoho neúspěšných pokusů o přihlášení, zkuste to prosím znovu za %minutes% minutu.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Příliš mnoho neúspěšných pokusů o přihlášení, zkuste to prosím znovu za %minutes% minutu.|Příliš mnoho neúspěšných pokusů o přihlášení, zkuste to prosím znovu za %minutes% minuty.|Příliš mnoho neúspěšných pokusů o přihlášení, zkuste to prosím znovu za %minutes% minut.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -180,7 +182,7 @@ $catalogue = new MessageCatalogue('cs', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Úvod',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Editovat %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Vytvořit %entity_label_singular%',
@@ -280,6 +282,12 @@ $catalogue = new MessageCatalogue('cs', array (
     '%count% day|%count% days' => '%count% den|%count% dny|%count% dní',
     '%count% hour|%count% hours' => '%count% hodina|%count% hodiny|%count% hodin',
     '%count% minute|%count% minutes' => '%count% minuta|%count% minuty|%count% minut',
+    'There was a problem validating your password reset request' => 'Při ověřování vaší žádosti o resetování hesla se vyskytl problém',
+    'There was a problem handling your password reset request' => 'Při zpracování vaší žádosti o resetování hesla se vyskytl problém',
+    'The link in your email is expired. Please try to reset your password again.' => 'Odkaz v e-mailu je neplatný. Zkuste prosím znovu resetovat vaše heslo.',
+    'Please update the request_password_repository configuration in config/packages/reset_password.yaml to point to your "request password repository" service.' => 'Aktualizujte prosím konfiguraci request_password_repository v souboru config/packages/reset_password.yaml, aby odkazovala na vaši službu "repozitář pro žádosti o změnu hesla".',
+    'The reset password link is invalid. Please try to reset your password again.' => 'Odkaz pro resetování hesla je neplatný. Pokuste se, prosím, o resetování hesla znovu.',
+    'You have already requested a reset password email. Please check your email or try again soon.' => 'Již jste požádali o e-mail pro resetování hesla. Zkontrolujte prosím svůj e-mail nebo to zkuste zase později.',
   ),
 ));
 
@@ -395,6 +403,9 @@ $catalogueEn = new MessageCatalogue('en', array (
     'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.' => 'The extension of the file is invalid ({{ extension }}). Allowed extensions are {{ extensions }}.',
     'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.' => 'The detected character encoding is invalid ({{ detected }}). Allowed encodings are {{ encodings }}.',
     'This value is not a valid MAC address.' => 'This value is not a valid MAC address.',
+    'This URL is missing a top-level domain.' => 'This URL is missing a top-level domain.',
+    'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.' => 'This value is too short. It should contain at least one word.|This value is too short. It should contain at least {{ min }} words.',
+    'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.' => 'This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.',
     'This form should not contain extra fields.' => 'This form should not contain extra fields.',
     'The uploaded file was too large. Please try to upload a smaller file.' => 'The uploaded file was too large. Please try to upload a smaller file.',
     'The CSRF token is invalid. Please try to resubmit the form.' => 'The CSRF token is invalid. Please try to resubmit the form.',
@@ -454,6 +465,7 @@ $catalogueEn = new MessageCatalogue('en', array (
     'Too many failed login attempts, please try again later.' => 'Too many failed login attempts, please try again later.',
     'Invalid or expired login link.' => 'Invalid or expired login link.',
     'Too many failed login attempts, please try again in %minutes% minute.' => 'Too many failed login attempts, please try again in %minutes% minute.',
+    'Too many failed login attempts, please try again in %minutes% minutes.' => 'Too many failed login attempts, please try again in %minutes% minutes.',
   ),
   'VerifyEmailBundle' => 
   array (
@@ -469,7 +481,7 @@ $catalogueEn = new MessageCatalogue('en', array (
   'EasyAdminBundle' => 
   array (
     'page_title.dashboard' => 'Dashboard',
-    'page_title.detail' => '%entity_as_string%',
+    'page_title.detail' => '%entity_label_singular% <small>(#%entity_short_id%)</small>',
     'page_title.edit' => 'Edit %entity_label_singular%',
     'page_title.index' => '%entity_label_plural%',
     'page_title.new' => 'Create %entity_label_singular%',
