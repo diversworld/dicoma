@@ -9,7 +9,8 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[AllowDynamicProperties] #[ORM\Entity(repositoryClass: TankCheckRepository::class)]
+#[AllowDynamicProperties]
+#[ORM\Entity(repositoryClass: TankCheckRepository::class)]
 class TankCheck
 {
     #[ORM\Id]
@@ -35,14 +36,13 @@ class TankCheck
     #[ORM\ManyToOne(inversedBy: 'tankChecks')]
     private ?Vendor $vendor = null;
 
-    #[ORM\OneToMany(mappedBy: 'articles', targetEntity: TankCheckArticle::class)]
+    #[ORM\OneToMany(mappedBy: 'tankCheck', targetEntity: TankCheckArticle::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $articles;
 
     public function __construct()
     {
         $this->tank = new ArrayCollection();
         $this->checkDate = new \DateTime();
-        $this->article = new ArrayCollection();
         $this->articles = new ArrayCollection();
     }
 
@@ -60,9 +60,10 @@ class TankCheck
     {
         return $this->checkDate;
     }
-    public function setCheckDate(\DateTimeInterface $CheckDate): static
+
+    public function setCheckDate(\DateTimeInterface $checkDate): static
     {
-        $this->CheckDate = $CheckDate;
+        $this->checkDate = $checkDate;
 
         return $this;
     }
@@ -151,7 +152,7 @@ class TankCheck
     {
         if (!$this->articles->contains($article)) {
             $this->articles->add($article);
-            $article->setArticles($this);
+            $article->setTankCheck($this);
         }
 
         return $this;
@@ -161,12 +162,11 @@ class TankCheck
     {
         if ($this->articles->removeElement($article)) {
             // set the owning side to null (unless already changed)
-            if ($article->getArticles() === $this) {
-                $article->setArticles(null);
+            if ($article->getTankCheck() === $this) {
+                $article->setTankCheck(null);
             }
         }
 
         return $this;
     }
-
 }

@@ -27,8 +27,18 @@ class TankCheckArticle
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
-    #[ORM\ManyToOne(targetEntity: TankCheck::class, inversedBy: 'tankChecks')]
-    private ?TankCheck $tankChecks = null;
+    #[ORM\ManyToOne(targetEntity: TankCheck::class, inversedBy: 'articles')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?TankCheck $tankCheck = null;
+
+    #[ORM\Column(type: Types::BOOLEAN)]
+    private bool $isDefault = false;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $standard = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $size = null;
 
     public function getId(): ?int
     {
@@ -47,24 +57,24 @@ class TankCheckArticle
         return $this;
     }
 
-    public function getPriceNetto(): ?string
+    public function getPriceNetto(): ?float
     {
         return $this->priceNetto;
     }
 
-    public function setPriceNetto(string $priceNetto): static
+    public function setPriceNetto(float $priceNetto): static
     {
         $this->priceNetto = $priceNetto;
 
         return $this;
     }
 
-    public function getPriceBrutto(): ?string
+    public function getPriceBrutto(): ?float
     {
         return $this->priceBrutto;
     }
 
-   public function setPriceBrutto(?string $priceBrutto): static
+    public function setPriceBrutto(?float $priceBrutto): static
     {
         $this->priceBrutto = $priceBrutto;
 
@@ -83,14 +93,26 @@ class TankCheckArticle
         return $this;
     }
 
-    public function getTankChecks(): ?TankCheck
+    public function getTankCheck(): ?TankCheck
     {
-        return $this->tankChecks;
+        return $this->tankCheck;
     }
 
-    public function setTankChecks(?TankCheck $tankChecks): static
+    public function setTankCheck(?TankCheck $tankCheck): static
     {
-        $this->tankChecks = $tankChecks;
+        $this->tankCheck = $tankCheck;
+
+        return $this;
+    }
+
+    public function isDefault(): bool
+    {
+        return $this->isDefault;
+    }
+
+    public function setIsDefault(bool $isDefault): static
+    {
+        $this->isDefault = $isDefault;
 
         return $this;
     }
@@ -100,5 +122,46 @@ class TankCheckArticle
     public function calculatePriceBrutto()
     {
         $this->priceBrutto = $this->priceNetto * 1.19;
+    }
+
+    /**
+     * Convert the entity to its string representation.
+     *
+     * @return string
+     */
+    public function __toString(): string
+    {
+        return $this->title ?? 'n/a';
+    }
+
+    public function isStandard(): ?bool
+    {
+        return $this->standard;
+    }
+
+    public function setStandard(?bool $standard): static
+    {
+        $this->standard = $standard;
+
+        return $this;
+    }
+
+    public function getSize(): ?int
+    {
+        return $this->size;
+    }
+
+    public function setSize(?int $size): static
+    {
+        $this->size = $size;
+
+        return $this;
+    }
+
+    public function setDefault(bool $isDefault): static
+    {
+        $this->isDefault = $isDefault;
+
+        return $this;
     }
 }

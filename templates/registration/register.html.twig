@@ -21,7 +21,7 @@
             <div class="col-md-4">
                 <div class="block">
                     <div class="form-group">
-                        {{ form_row(registrationForm.username) }}
+                        {{ form_row(registrationForm.user) }}
                     </div>
                 </div>
             </div>
@@ -46,6 +46,127 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.firstname, {
+                            label: 'First Name'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.lastname, {
+                            label: 'Last Name'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.birthday, {
+                            label: 'Birthday'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.mobile, {
+                            label: 'Mobile Number'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.phone, {
+                            label: 'Phone Number'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.street, {
+                            label: 'Street'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.postal, {
+                            label: 'Postal Code'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.city, {
+                            label: 'City'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.category, {
+                            label: 'Category'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="block">
+                    <div class="form-group">
+                        {{ form_row(registrationForm.status, {
+                            label: 'Status'
+                        }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-4">
                 <div class="block">

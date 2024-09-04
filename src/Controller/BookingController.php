@@ -92,25 +92,29 @@ class BookingController extends AbstractController
     #[Route('/book/{id}/{user}', name: 'app_booking_book')]
     public function book_course($id, $user, EntityManagerInterface $entityManager, SessionInterface $session): RedirectResponse
     {
+        // Finde den Zeitplan basierend auf der übergebenen ID
         $schedule = $entityManager->getRepository(Schedule::class)->find($id);
         if (!$schedule) {
-            throw $this->createNotFoundException('No schedule found for id '.$id);
-        }
-        
-        $student = $entityManager->getRepository(Member::class)->findByUserId([$user]);
-        
-        if (!$student) {
-            throw $this->createNotFoundException('No user found for username '.$user);
+            throw $this->createNotFoundException('No schedule found for id ' . $id);
         }
 
         // Überprüfen, ob der Benutzer als Admin authentifiziert ist
         if (!$this->isGranted('ROLE_USER')) {
             throw new AccessDeniedException('You are not authorized to perform this action.');
         }
-        
-        dump($student);
 
-        if($this->checkBookings($schedule, $student)){
+        // Finde den aktuell eingeloggten Benutzer
+        /** @var User $user */
+        $user = $this->getUser();
+
+        // Finde das Mitglied (Member) basierend auf der User-ID
+        $member = $entityManager->getRepository(Member::class)->findOneBy(['user' => $user]);
+        if (!$member) {
+            throw $this->createNotFoundException('No member found for user ID ' . $user->getId());
+        }
+
+        // Überprüfen, ob bereits eine Buchung für diesen Kurs existiert
+        if ($this->checkBookings($schedule, $member)) {
             $session->getFlashBag()->clear('error');  // Clear any previously set 'error' flash messages
             $this->addFlash('error', 'Du hast diesen Kurs bereits gebucht');
             return $this->redirect($this->generateUrl('app_schedule_index'));
@@ -119,24 +123,25 @@ class BookingController extends AbstractController
         // Aktuelles Datum
         $currentDate = new DateTime();
 
-        //$bookingNr = $this->nextBookingNumber($entityManager);
+        // Erstellung der Buchungsnummer
         $bookingNr = BookingController::nextBookingNumber($entityManager);
 
-        /** @var User $user */
-        $students = $this->getUser();
-
+        // Erstellen der neuen Buchung
         $buchung = new Booking();
         $buchung->setBookingdate($currentDate);
         $buchung->setBookingnumber($bookingNr);
         $buchung->setSchedule($schedule);
         $buchung->setStatus('gebucht');
-        $buchung->setStudents($students);
+        $buchung->setStudents($member);  // Setze den Member anstelle von User
 
+        // Speichern der Buchung
         $entityManager->persist($buchung);
         $entityManager->flush();
 
-        $this->addFlash('Kurs', $schedule->getTitle(). 'wurde zur Buchung hinzugefügt');
+        // Flash-Nachricht hinzufügen
+        $this->addFlash('Kurs', $schedule->getTitle() . ' wurde zur Buchung hinzugefügt');
 
+        // Umleitung zur Buchungsübersicht
         return $this->redirect($this->generateUrl('app_booking_index'));
     }
 

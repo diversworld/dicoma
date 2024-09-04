@@ -10,7 +10,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-#[UniqueEntity(fields: ['username'], message: 'There is already an account with this username')]
+#[UniqueEntity(fields: ['user'], message: 'There is already an account with this user')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -19,7 +19,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
-    private ?string $username = null;
+    private ?string $user = null;
 
     #[ORM\Column]
     private array $roles = [];
@@ -30,7 +30,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
-    #[ORM\OneToOne(mappedBy: 'username', cascade: ['persist', 'remove'])]
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Member $member = null;
 
     #[ORM\Column(length: 150)]
@@ -39,24 +39,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'boolean')]
     private $isVerified = false;
 
+    // This field will not be persisted in the database
+    private ?string $plainPassword = null;
+
     public function __toString()
     {
-        return $this->username;
+        return $this->user;
     }
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getUsername(): ?string
+    public function getuser(): ?string
     {
-        return $this->username;
+        return $this->user;
     }
 
-    public function setUsername(string $username): static
+    public function setuser(string $user): static
     {
-        $this->username = $username;
-
+        $this->user = $user;
         return $this;
     }
 
@@ -67,7 +69,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->username;
+        return (string) $this->user;
     }
 
     /**
@@ -85,7 +87,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
@@ -100,6 +101,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
+
+        return $this;
+    }
+
+    public function getPlainPassword(): ?string
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword(string $plainPassword): static
+    {
+        $this->plainPassword = $plainPassword;
+
+        // Ensure that the plain password is not kept longer than necessary
+        if (!empty($plainPassword)) {
+            $this->plainPassword = $plainPassword;
+        }
 
         return $this;
     }
@@ -122,12 +140,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // unset the owning side of the relation if necessary
         if ($member === null && $this->member !== null) {
-            $this->member->setUsername(null);
+            $this->member->setuser(null);
         }
 
         // set the owning side of the relation if necessary
-        if ($member !== null && $member->getUsername() !== $this) {
-            $member->setUsername($this);
+        if ($member !== null && $member->getuser() !== $this) {
+            $member->setuser($this);
         }
 
         $this->member = $member;
@@ -172,5 +190,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isIsVerified(): ?bool
     {
         return $this->isVerified;
+    }
+
+    public function setVerified(bool $isVerified): static
+    {
+        $this->isVerified = $isVerified;
+
+        return $this;
     }
 }

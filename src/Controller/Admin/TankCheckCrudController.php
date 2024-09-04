@@ -3,8 +3,12 @@
 namespace App\Controller\Admin;
 
 use App\Entity\TankCheck;
+use App\Form\TankCheckArticleType;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Field\ArrayField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
@@ -47,7 +51,30 @@ class TankCheckCrudController extends AbstractCrudController
             FormField::addRow(breakpointName: 'md' ),
             AssociationField::new('tank', 'Flaschen')
                 ->setColumns(8),
+
+            // TankCheckArticle fields as a collection
+            CollectionField::new('articles')
+                ->setEntryType(TankCheckArticleType::class)
+                ->setFormTypeOption('by_reference', false)
+                ->onlyOnForms()
+                ->setLabel('Artikel'),
+            ArrayField::new('articles')->hideOnForm()->setLabel('Artikel')
         ];
     }
 
+    public function createEntity(string $entityFqcn)
+    {
+        $tankCheck = new TankCheck();
+        $tankCheck->setCheckDate(new \DateTime('now'));
+        return $tankCheck;
+    }
+
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud
+            ->setEntityLabelInSingular('Prüfungstermin')
+            ->setEntityLabelInPlural('Prüfungstermine')
+            ->setSearchFields(['vendorName', 'notes', 'costInformation'])
+            ->setDefaultSort(['checkDate' => 'DESC']);
+    }
 }

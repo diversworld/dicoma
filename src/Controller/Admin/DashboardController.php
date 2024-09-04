@@ -37,7 +37,7 @@ class DashboardController extends AbstractDashboardController
 
         // Option 2. You can make your dashboard redirect to different pages depending on the user
         //
-        // if ('jane' === $this->getUser()->getUsername()) {
+        // if ('jane' === $this->getUser()->getUser()) {
         //     return $this->redirect('...');
         // }
 

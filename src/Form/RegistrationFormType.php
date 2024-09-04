@@ -5,6 +5,8 @@ namespace App\Form;
 use App\Entity\User;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -18,22 +20,14 @@ class RegistrationFormType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // User fields
         $builder
-            ->add('username', TextType::class, [
+            ->add('user', TextType::class, [
                 'attr' => ['class' => 'form-control'],
             ])
             ->add('email', EmailType::class, [
                 'label' => 'E-Mail Adresse',
                 'attr' => ['class' => 'form-control'],
-            ])
-            ->add('agreeTerms', CheckboxType::class, [
-                'attr' => ['class' => 'form-control'],
-                'mapped' => false,
-                'constraints' => [
-                    new IsTrue([
-                        'message' => 'You should agree to our terms.',
-                    ]),
-                ],
             ])
             ->add('plainPassword', PasswordType::class, [
                 // instead of being set onto the object directly,
@@ -55,7 +49,87 @@ class RegistrationFormType extends AbstractType
                     ]),
                 ],
             ])
-        ;
+            ->add('agreeTerms', CheckboxType::class, [
+                'attr' => ['class' => 'form-control'],
+                'mapped' => false,
+                'constraints' => [
+                    new IsTrue([
+                        'message' => 'You should agree to our terms.',
+                    ]),
+                ],
+            ]);
+
+        // Member fields
+        $builder
+            ->add('firstname', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'First Name',
+            ])
+            ->add('lastname', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'Last Name',
+            ])
+            ->add('birthday', DateType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'widget' => 'single_text',
+                'mapped' => false,
+                'label' => 'Birthday',
+            ])
+            ->add('mobile', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'Mobile Number',
+            ])
+            ->add('phone', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'Phone Number',
+            ])
+            ->add('street', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'Street',
+            ])
+            ->add('postal', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'Postal Code',
+            ])
+            ->add('city', TextType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'label' => 'City',
+            ])
+            ->add('category', ChoiceType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'choices' => [
+                    'Student' => 'student',
+                    'Mitglied' => 'member',
+                    'Instructor' => 'instructor',
+                ],
+            ])
+            ->add('status', ChoiceType::class, [
+                'attr' => [
+                    'class' => 'form-control'],
+                'mapped' => false,
+                'choices' => [
+                    'Active' => 'active',
+                    'Inactive' => 'inactive',
+                    // any other statuses
+                ],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

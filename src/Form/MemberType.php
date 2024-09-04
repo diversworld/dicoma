@@ -87,12 +87,12 @@ class MemberType extends AbstractType
                 'attr' => [
                     'class' => 'form-control'],
             ])
-            ->add('username', EntityType::class, [
+            ->add('user', EntityType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'required' => false,
                 'class' => User::class,
-                'choice_label' => 'username',
+                'choice_label' => 'user',
                 'placeholder' => '',
             ])
             ->add('plainPassword', RepeatedType::class, [

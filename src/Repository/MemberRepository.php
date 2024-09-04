@@ -24,10 +24,10 @@ class MemberRepository extends ServiceEntityRepository
     /**
      * @return Member[] Returns an array of User objects
      */
-    public function findByUsername($value): array
+    public function findByuser($value): array
     {
         return $this->createQueryBuilder('u')
-            ->andWhere('u.username = :val')
+            ->andWhere('u.user = :val')
             ->setParameter('val', $value)
             ->orderBy('u.id', 'ASC')
             ->setMaxResults(1)
@@ -39,7 +39,7 @@ class MemberRepository extends ServiceEntityRepository
         public function findByUserId($value): array
     {
         return $this->createQueryBuilder('m')
-            ->andWhere('m.username = :val')
+            ->andWhere('m.user = :val')
             ->setParameter('val', $value)
             ->setMaxResults(1)
             ->getQuery()

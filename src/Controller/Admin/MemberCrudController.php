@@ -78,7 +78,7 @@ class MemberCrudController extends AbstractCrudController
                 ->hideOnIndex(),
             FormField::addFieldset('Nutzerdaten')
                 ->collapsible(),
-            AssociationField::new('username', 'Benutzer')
+            AssociationField::new('user', 'Benutzer')
                 ->setColumns(3),
             FormField::addRow(breakpointName: 'md')
                 ->setColumns(8),

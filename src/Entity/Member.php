@@ -47,7 +47,7 @@ class Member
     private ?string $notes = null;
 
     #[ORM\OneToOne(inversedBy: 'member', cascade: ['persist', 'remove'])]
-    private ?User $username = null;
+    private ?User $user = null;
 
     #[ORM\Column(length: 20)]
     private ?string $category = null;
@@ -236,14 +236,14 @@ class Member
         return $this;
     }
 
-    public function getUsername(): ?User
+    public function getUser(): ?User
     {
-        return $this->username;
+        return $this->user;
     }
 
-    public function setUsername(?User $username): static
+    public function setUser(?User $user): static
     {
-        $this->username = $username;
+        $this->user = $user;
 
         return $this;
     }

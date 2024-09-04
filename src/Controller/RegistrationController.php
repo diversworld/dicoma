@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Member;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Security\EmailVerifier;
@@ -12,9 +13,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
@@ -28,7 +28,7 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerinterface): Response
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerInterface): Response
     {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
@@ -44,6 +44,23 @@ class RegistrationController extends AbstractController
             );
 
             $entityManager->persist($user);
+
+            // Member-Entität erstellen und mit User-Entität verknüpfen
+            $member = new Member();
+            $member->setUser($user);
+            $member->setFirstname($form->get('firstname')->getData());
+            $member->setLastname($form->get('lastname')->getData());
+            $member->setBirthday($form->get('birthday')->getData());
+            $member->setMobile($form->get('mobile')->getData());
+            $member->setPhone($form->get('phone')->getData());
+            $member->setStreet($form->get('street')->getData());
+            $member->setPostal($form->get('postal')->getData());
+            $member->setCity($form->get('city')->getData());
+            $member->setCategory($form->get('category')->getData());
+            $member->setStatus('active'); // Beispielhafte Statussetzung
+
+            // Speichern des Members
+            $entityManager->persist($member);
             $entityManager->flush();
 
             // generate a signed url and email it to the user
@@ -54,16 +71,15 @@ class RegistrationController extends AbstractController
                     ->subject('Please Confirm your Email')
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-            // do anything else you need here, like send an email
 
+            // do anything else you need here, like send an email
             $email = (new TemplatedEmail())
                 ->from(new Address('info@diversworld.eu', 'Diversworld'))
                 ->to($user->getEmail())
                 ->subject('Neue Nutzer Registrierung')
                 ->htmlTemplate('registration/registration_email.html.twig');
 
-            $mailer = $mailerinterface;
-            $mailer->send($email);
+            $mailerInterface->send($email);
 
             return $this->redirectToRoute('app_login');
         }
@@ -74,7 +90,7 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register/install/{adminUser}', name: 'app_register_install')]
-    public function install($adminUser = null, Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerinterface): Response
+    public function install(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailerInterface, ?User $adminUser = null): Response
     {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
@@ -85,8 +101,6 @@ class RegistrationController extends AbstractController
         }
 
         if ($form->isSubmitted() && $form->isValid()) {
-
-
             // encode the plain password
             $user->setPassword(
                 $userPasswordHasher->hashPassword(
@@ -97,6 +111,23 @@ class RegistrationController extends AbstractController
             $user->setRoles(['ROLE_ADMIN']);
 
             $entityManager->persist($user);
+
+            // Member-Entität erstellen und mit User-Entität verknüpfen
+            $member = new Member();
+            $member->setUser($user);
+            $member->setFirstname($form->get('firstname')->getData());
+            $member->setLastname($form->get('lastname')->getData());
+            $member->setBirthday($form->get('birthday')->getData());
+            $member->setMobile($form->get('mobile')->getData());
+            $member->setPhone($form->get('phone')->getData());
+            $member->setStreet($form->get('street')->getData());
+            $member->setPostal($form->get('postal')->getData());
+            $member->setCity($form->get('city')->getData());
+            $member->setCategory($form->get('category')->getData());
+            $member->setStatus($form->get('status')->getData());
+
+            // Speichern des Members
+            $entityManager->persist($member);
             $entityManager->flush();
 
             // generate a signed url and email it to the user
@@ -107,16 +138,15 @@ class RegistrationController extends AbstractController
                     ->subject('Please Confirm your Email')
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-            // do anything else you need here, like send an email
 
+            // do anything else you need here, like send an email
             $email = (new TemplatedEmail())
                 ->from(new Address('info@diversworld.eu', 'Diversworld'))
                 ->to($user->getEmail())
                 ->subject('Neue Nutzer Registrierung')
                 ->htmlTemplate('registration/registration_email.html.twig');
 
-            $mailer = $mailerinterface;
-            $mailer->send($email);
+            $mailerInterface->send($email);
 
             return $this->redirectToRoute('app_login');
         }

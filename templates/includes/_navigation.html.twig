@@ -37,7 +37,7 @@
                     </ul>
                 </li>
             {% endif %}
-            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+            {% if is_granted('ROLE_USER') %}
                 <li class="nav-item dropdown @@portfolio">
                     <a class="nav-link dropdown-toggle" href="#" id="dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="ion-person"> {{  app.user.username }}</i> </a>
                     <ul class="dropdown-menu" aria-labelledby="dropdown">
