@@ -16,10 +16,16 @@ use Symfony\Component\Routing\Attribute\Route;
 class TankCheckArticleController extends AbstractController
 {
     #[Route('/', name: 'app_tank_check_article_index', methods: ['GET'])]
-    public function index(TankCheckArticleRepository $tankCheckArticleRepository): Response
+    public function index(TankCheckArticleRepository $tankCheckArticleRepository, EntityManagerInterface $entityManager): Response
     {
+        // Hier wird ein Beispielwert für tank_check_id gesetzt.
+        // Passen Sie dies nach Bedarf an, zum Beispiel durch eine Abfrage nach dem ersten TankCheck in der Datenbank.
+        $tankCheck = $entityManager->getRepository(TankCheck::class)->findOneBy([]);
+        $tank_check_id = $tankCheck ? $tankCheck->getId() : null;
+
         return $this->render('tank_check_article/index.html.twig', [
             'tank_check_articles' => $tankCheckArticleRepository->findAll(),
+            'tank_check_id' => $tank_check_id,
         ]);
     }
 
@@ -31,7 +37,7 @@ class TankCheckArticleController extends AbstractController
 
         // Set TankCheck to TankCheckArticle
         $tankCheck = $entityManager->getRepository(TankCheck::class)->find($tank_check_id);
-        $tankCheckArticle->setTankChecks($tankCheck);
+        $tankCheckArticle->setTankCheck($tankCheck);
 
         $form->handleRequest($request);
 
@@ -63,8 +69,10 @@ class TankCheckArticleController extends AbstractController
     public function edit(Request $request, TankCheckArticle $tankCheckArticle, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(TankCheckArticleType::class, $tankCheckArticle);
-
         $form->handleRequest($request);
+
+        // Laden des TankCheck-Objekts
+        $tankCheck = $tankCheckArticle->getTankCheck();
 
         if ($form->isSubmitted() && $form->isValid())
         {
@@ -78,6 +86,7 @@ class TankCheckArticleController extends AbstractController
         return $this->render('tank_check_article/edit.html.twig', [
             'tank_check_article' => $tankCheckArticle,
             'form' => $form,
+            'tank_check' => $tankCheck, // Übergabe der TankCheck-Variable an das Template
         ]);
     }
 

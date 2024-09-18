@@ -30,10 +30,10 @@ class TankCheck
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $costInformation = null;
 
-    #[ORM\ManyToMany(targetEntity: Tank::class, inversedBy: 'tankChecks')]
+    #[ORM\ManyToMany(targetEntity: Tank::class, inversedBy: 'tankCheck')]
     private Collection $tank;
 
-    #[ORM\ManyToOne(inversedBy: 'tankChecks')]
+    #[ORM\ManyToOne(inversedBy: 'tankCheck')]
     private ?Vendor $vendor = null;
 
     #[ORM\OneToMany(mappedBy: 'tankCheck', targetEntity: TankCheckArticle::class, cascade: ['persist', 'remove'], orphanRemoval: true)]

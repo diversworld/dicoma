@@ -39,6 +39,13 @@
                     <td>
                         <a href="{{ path('app_tank_show', {'id': tank.id}) }}">show</a>
                         <a href="{{ path('app_tank_edit', {'id': tank.id}) }}">edit</a>
+                        {% if nextCheck %}
+                            <a href="{{ path('app_book_inspection', {'tankId': tank.id, 'checkId': nextCheck.id}) }}">
+                                <img src="/public/images/icons/tuev-logo.jpg" alt="Book Inspection" />
+                            </a>
+                        {% else %}
+                            //<img src="/public/images/marker.png" alt="Inspection Not Available" />
+                        {% endif %}
                     </td>
                 </tr>
             {% else %}

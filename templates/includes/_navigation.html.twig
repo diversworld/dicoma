@@ -39,7 +39,7 @@
             {% endif %}
             {% if is_granted('ROLE_USER') %}
                 <li class="nav-item dropdown @@portfolio">
-                    <a class="nav-link dropdown-toggle" href="#" id="dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="ion-person"> {{  app.user.username }}</i> </a>
+                    <a class="nav-link dropdown-toggle" href="#" id="dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="ion-person"> {{  app.user.user }}</i> </a>
                     <ul class="dropdown-menu" aria-labelledby="dropdown">
                         <li><a class="dropdown-item @@portfolioSingle" href="{{ path('app_profile') }}">Meine Daten</a></li>
                         {% if is_granted('ROLE_ADMIN') %}

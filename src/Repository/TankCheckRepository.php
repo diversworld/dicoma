@@ -21,6 +21,18 @@ class TankCheckRepository extends ServiceEntityRepository
         parent::__construct($registry, TankCheck::class);
     }
 
+    public function findNextCheck(): ?TankCheck
+    {
+        $today = new \DateTime();
+
+        return $this->createQueryBuilder('tc')
+            ->where('tc.checkDate > :today')
+            ->setParameter('today', $today)
+            ->orderBy('tc.checkDate', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 //    /**
 //     * @return TankCheck[] Returns an array of TankCheck objects
 //     */

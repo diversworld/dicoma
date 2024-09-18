@@ -27,7 +27,7 @@ class TankCheckArticleRepository extends ServiceEntityRepository
     public function findByCheck($value): array
     {
         return $this->createQueryBuilder('t')
-            ->andWhere('t.tankChecks = :val')
+            ->andWhere('t.tankCheck = :val')
             ->setParameter('val', $value)
             ->orderBy('t.id', 'ASC')
             ->setMaxResults(25)

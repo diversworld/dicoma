@@ -15,6 +15,7 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Credentials\PasswordC
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\SecurityRequestAttributes;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Psr\Log\LoggerInterface;
 
 class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 {
@@ -22,19 +23,26 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 
     public const LOGIN_ROUTE = 'app_login';
 
-    public function __construct(private UrlGeneratorInterface $urlGenerator)
+    private $logger;
+
+    public function __construct(UrlGeneratorInterface $urlGenerator, LoggerInterface $logger)
     {
+        $this->urlGenerator = $urlGenerator;
+        $this->logger = $logger;
     }
 
     public function authenticate(Request $request): Passport
     {
-        $user = $request->request->get('user', '');
+        $user = $request->request->get('_username', '');
+        $password = $request->request->get('_password', '');
+
+        $this->logger->info('Authenticating user.', ['username' => $user]);
 
         $request->getSession()->set(SecurityRequestAttributes::LAST_USERNAME, $user);
 
         return new Passport(
             new UserBadge($user),
-            new PasswordCredentials($request->request->get('password', '')),
+            new PasswordCredentials($password),
             [
                 new CsrfTokenBadge('authenticate', $request->request->get('_csrf_token')),
                 new RememberMeBadge(),
@@ -44,13 +52,13 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
+        $this->logger->info('Authentication successful.', ['username' => $request->request->get('user')]);
+
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             return new RedirectResponse($targetPath);
         }
 
-        // For example:
         return new RedirectResponse($this->urlGenerator->generate('app_courses_index'));
-        //throw new \Exception('TODO: provide a valid redirect inside '.__FILE__);
     }
 
     protected function getLoginUrl(Request $request): string

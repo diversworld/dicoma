@@ -3,36 +3,43 @@
 {% block title %}TankCheckArticle{% endblock %}
 
 {% block body %}
-    <h1>TankCheckArticle</h1>
+<section class="about section">
+    <div class="container">
+        <div class="row">
+            <div class="block">
+                <h1>TankCheckArticle</h1>
 
-    <table class="table">
-        <tbody>
-            <tr>
-                <th>Id</th>
-                <td>{{ tank_check_article.id }}</td>
-            </tr>
-            <tr>
-                <th>Title</th>
-                <td>{{ tank_check_article.title }}</td>
-            </tr>
-            <tr>
-                <th>PriceNetto</th>
-                <td>{{ tank_check_article.priceNetto }}</td>
-            </tr>
-            <tr>
-                <th>PriceBrutto</th>
-                <td>{{ tank_check_article.priceBrutto }}</td>
-            </tr>
-            <tr>
-                <th>Notes</th>
-                <td>{{ tank_check_article.notes }}</td>
-            </tr>
-        </tbody>
-    </table>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Id</th>
+                            <td>{{ tank_check_article.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Title</th>
+                            <td>{{ tank_check_article.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>PriceNetto</th>
+                            <td>{{ tank_check_article.priceNetto }}</td>
+                        </tr>
+                        <tr>
+                            <th>PriceBrutto</th>
+                            <td>{{ tank_check_article.priceBrutto }}</td>
+                        </tr>
+                        <tr>
+                            <th>Notes</th>
+                            <td>{{ tank_check_article.notes }}</td>
+                        </tr>
+                    </tbody>
+                </table>
 
-    <a href="{{ path('app_tank_check_article_index') }}">back to list</a>
+                <a href="{{ path('app_tank_check_article_index') }}" class="btn btn-outline-primary">back to list</a>
+                <a href="{{ path('app_tank_check_article_edit', {'id': tank_check_article.id}) }}" class="btn btn-outline-secondary">edit</a>
+                {{ include('tank_check_article/_delete_form.html.twig') }}
+            </div>
+        </div>
+    </div>
+</section>
 
-    <a href="{{ path('app_tank_check_article_edit', {'id': tank_check_article.id}) }}">edit</a>
-
-    {{ include('tank_check_article/_delete_form.html.twig') }}
 {% endblock %}

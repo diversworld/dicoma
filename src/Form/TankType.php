@@ -93,7 +93,7 @@ class TankType extends AbstractType
                 'required' => false,
                 'placeholder' => '',
                 'class' => TankCheck::class,
-                'choice_label' => 'id',
+                'choice_label' => fn (TankCheck $tankCheck) => $tankCheck->getCheckdate()->format('d.m.Y'),
                 'multiple' => true,
                 'attr' => [
                     'class' =>'form-control'

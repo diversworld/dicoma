@@ -59,7 +59,7 @@ class MemberRepository extends ServiceEntityRepository
             ;
     }
     /**
-     * @return Instructor[] Returns an array of Instructor objects
+     * @return Member[] Returns an array of Instructor objects
      */
     public function findByCategory($value): array
     {

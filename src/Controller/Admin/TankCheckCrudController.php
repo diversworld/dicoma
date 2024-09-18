@@ -54,10 +54,14 @@ class TankCheckCrudController extends AbstractCrudController
 
             // TankCheckArticle fields as a collection
             CollectionField::new('articles')
-                ->setEntryType(TankCheckArticleType::class)
+                //->setEntryType(TankCheckArticleType::class)
+                ->useEntryCrudForm(TankCheckArticleCrudController::class)
+                ->setEntryIsComplex()
                 ->setFormTypeOption('by_reference', false)
                 ->onlyOnForms()
-                ->setLabel('Artikel'),
+                ->setLabel('Artikel')
+                ->renderExpanded()
+            ->setColumns(12), // Hier die Breite auf 12 Spalten setzen
             ArrayField::new('articles')->hideOnForm()->setLabel('Artikel')
         ];
     }

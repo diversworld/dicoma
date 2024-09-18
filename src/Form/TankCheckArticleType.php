@@ -53,8 +53,8 @@ class TankCheckArticleType extends AbstractType
                     'class' => 'form-control',
                     'id' => 'tinymce'
                 ],
-            ])/*
-            ->add('tankChecks', EntityType::class,[
+            ])
+            ->add('tankCheck', EntityType::class,[
                 'label' => 'TÜV Prüfung',
                 'class' => TankCheck::class,
                 'choice_label' => 'id',
@@ -63,7 +63,7 @@ class TankCheckArticleType extends AbstractType
                     'placeholder' => 'Kurs',
                     'class' =>'form-control'
                 ]
-            ])*/
+            ])
         ;
     }
 

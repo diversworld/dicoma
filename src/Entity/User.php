@@ -37,7 +37,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $email = null;
 
     #[ORM\Column(type: 'boolean')]
-    private $isVerified = false;
+    private bool $isVerified = false;
 
     // This field will not be persisted in the database
     private ?string $plainPassword = null;
@@ -46,17 +46,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->user;
     }
+
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getuser(): ?string
+    public function getUser(): ?string
     {
         return $this->user;
     }
 
-    public function setuser(string $user): static
+    public function setUser(string $user): static
     {
         $this->user = $user;
         return $this;
@@ -105,6 +106,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getSalt(): ?string
+    {
+        return null;
+    }
+
     public function getPlainPassword(): ?string
     {
         return $this->plainPassword;
@@ -128,7 +134,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function eraseCredentials(): void
     {
         // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        $this->plainPassword = null;
     }
 
     public function getMember(): ?Member
@@ -140,12 +146,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // unset the owning side of the relation if necessary
         if ($member === null && $this->member !== null) {
-            $this->member->setuser(null);
+            $this->member->setUser(null);
         }
 
         // set the owning side of the relation if necessary
-        if ($member !== null && $member->getuser() !== $this) {
-            $member->setuser($this);
+        if ($member !== null && $member->getUser() !== $this) {
+            $member->setUser($this);
         }
 
         $this->member = $member;
@@ -165,7 +171,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function isVerified(): bool
+    public function getIsVerified(): bool
     {
         return $this->isVerified;
     }
@@ -177,25 +183,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function displayPassword()
+    public function displayPassword(): string
     {
         return '******';
     }
 
-    public function getHiddenPassword()
+    public function getHiddenPassword(): string
     {
         return '******';
-    }
-
-    public function isIsVerified(): ?bool
-    {
-        return $this->isVerified;
-    }
-
-    public function setVerified(bool $isVerified): static
-    {
-        $this->isVerified = $isVerified;
-
-        return $this;
     }
 }

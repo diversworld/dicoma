@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Constraints\Range;
 
 class InstallController extends AbstractController
 {
-    #[Route('/install', name: 'app_install', methods: ['GET'])]
+    #[Route('/install', name: 'app_install', methods: ['GET', 'POST'])]
     public function install(Request $request, Filesystem $filesystem): Response
     {
         $defaultData = [
@@ -46,7 +46,7 @@ class InstallController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Fetch data from form
+            // Fetch data from the form
             $data = $form->getData();
 
             // Parse data into DATABASE_URL format.
@@ -56,13 +56,37 @@ class InstallController extends AbstractController
             );
 
             // Write DATABASE_URL to .env.local
-            $accesstoDotEnv= $this->getParameter('kernel.project_dir').'/.env.local';
+            $envFilePath = $this->getParameter('kernel.project_dir').'/.env.local';
 
-            $data = 'DATABASE_URL="'.$databaseUrl.'"';
-            $filesystem->dumpFile($accesstoDotEnv, $data);
+            try {
+                // Check if the .env.local file exists, and create it if not.
+                if (!$filesystem->exists($envFilePath)) {
+                    $filesystem->touch($envFilePath);
+                }
 
-            // Redirect to a new route where you will create the admin user
-            return $this->redirectToRoute('app_register_install');
+                // Load the current content of the file.
+                $envContent = file_get_contents($envFilePath);
+
+                // Check and update the `DATABASE_URL`.
+                if (strpos($envContent, 'DATABASE_URL') === false) {
+                    // Append DATABASE_URL if it does not exist.
+                    $envContent .= "\nDATABASE_URL=\"$databaseUrl\"";
+                } else {
+                    // Replace the existing DATABASE_URL entry.
+                    $pattern = '/^DATABASE_URL=.*$/m';
+                    $replacement = 'DATABASE_URL="' . $databaseUrl . '"';
+                    $envContent = preg_replace($pattern, $replacement, $envContent);
+                }
+
+                // Overwrite the file with the new content.
+                $filesystem->dumpFile($envFilePath, $envContent);
+
+                // Redirect to a new route where you will create the admin user
+                return $this->redirectToRoute('app_register_install');
+            } catch (IOExceptionInterface $exception) {
+                echo "An error occurred while creating your .env.local file at " . $exception->getPath();
+                // or return error message to the user using flash messages or other technique
+            }
         }
 
         // Render DB parameters form
@@ -70,6 +94,7 @@ class InstallController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
+
     #[Route('/save_db_config', name: 'save_db_config', methods: ['GET', 'POST'])]
     public function saveDbConfig(Request $request): Response
     {
@@ -91,17 +116,38 @@ class InstallController extends AbstractController
                 $dbHost,
                 $dbPort,
                 $dbName,
-                $dbVersion,
+                $dbVersion
             );
 
-            $filesystem->appendToFile(
-                $this->getParameter(
-                    'kernel.project_dir').'/.env.local',
-                $databaseUrl
-            );
+            // Dateienpfad festlegen
+            $envFilePath = $this->getParameter('kernel.project_dir').'/.env.local';
 
+            // Sicherstellen das die Datei existiert
+            if (!$filesystem->exists($envFilePath)) {
+                $filesystem->touch($envFilePath);
+            }
+
+            // Dateiinhalt laden
+            $envContent = file_get_contents($envFilePath);
+
+            // Überprüfen und aktualisieren
+            if (strpos($envContent, 'DATABASE_URL') === false) {
+                $envContent .= "\n$databaseUrl";
+            } else {
+                $envContent = preg_replace(
+                    '/^DATABASE_URL=.*$/m',
+                    $databaseUrl,
+                    $envContent
+                );
+            }
+
+            // Datei/das File überschreiben
+            $filesystem->dumpFile($envFilePath, $envContent);
+
+            // Arbeitsverzeichnis für die Prozesse
             $kernelProjectDir = $this->getParameter('kernel.project_dir');
 
+            // Prozess zum Erstellen der Datenbank ausführen
             $process = new Process(['php', 'bin/console', 'doctrine:database:create'], $kernelProjectDir);
             $process->run();
 
@@ -109,22 +155,24 @@ class InstallController extends AbstractController
                 throw new ProcessFailedException($process);
             }
 
+            // Prozess zum Aktualisieren des Schemas ausführen
             $process = new Process(['php', 'bin/console', 'doctrine:schema:update', '--force'], $kernelProjectDir);
             $process->run();
 
             if (!$process->isSuccessful()) {
                 throw new ProcessFailedException($process);
             }
-            // Nach dem erfolgreichen Schreiben der Daten in die Datei,
-            // den Admin-Nutzer erstellen.
+
+            // Nach erfolgreichem Schreiben der Daten und der Ausführung der Prozesse, den Admin-Benutzer erstellen.
             return $this->redirectToRoute('app_register_install', ['adminUser' => true]);
 
         } catch (IOExceptionInterface $exception) {
-            echo "An error occurred while creating your .env.local file at ".$exception->getPath();
-            // or return error message to the user using flash messages or other technique
+            // Fehlerbehandlung beim Schreiben der Datei
+            echo "An error occurred while creating your .env.local file at " . $exception->getPath();
+            // Fehlernachricht an den Benutzer zurückgeben
         }
 
-        // Database details were saved, now redirect to home page (or any other page where you validate DB connection and create tables).
+        // Weiterleitung zur Startseite oder zu einer anderen Seite nach der erfolgreichen Speicherung der Datenbankdetails
         return $this->redirectToRoute('app_home');
     }
 }

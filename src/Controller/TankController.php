@@ -6,20 +6,46 @@ use App\Entity\Tank;
 use App\Form\TankType;
 use App\Repository\TankCheckRepository;
 use App\Repository\TankRepository;
+use App\Service\TankCheckService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/tank')]
 class TankController extends AbstractController
 {
-    #[Route('/', name: 'app_tank_index', methods: ['GET'])]
-    public function index(TankRepository $tankRepository): Response
+    private $tankCheckService;
+    private $entityManager;
+
+    public function __construct(TankCheckService $tankCheckService, EntityManagerInterface $entityManager)
     {
+        $this->tankCheckService = $tankCheckService;
+        $this->entityManager = $entityManager;
+    }
+
+    private function checkForCurrentInspection(Tank $tank): bool
+    {
+        $today = new \DateTime();
+        foreach ($tank->getTankChecks() as $tankCheck) {
+            if ($tankCheck->getCheckDate() > $today) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    #[Route('/', name: 'app_tank_index', methods: ['GET'])]
+    public function index(TankRepository $tankRepository, TankCheckRepository $tankCheckRepository): Response
+    {
+        $tanks = $tankRepository->findAll();
+        $nextCheck = $tankCheckRepository->findNextCheck();
+
         return $this->render('tank/index.html.twig', [
-            'tanks' => $tankRepository->findAll(),
+            'tanks' => $tanks,
+            'nextCheck' => $nextCheck,
         ]);
     }
 
@@ -79,5 +105,22 @@ class TankController extends AbstractController
         }
 
         return $this->redirectToRoute('app_tank_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/book-inspection/{tankId}/{checkId}', name: 'app_book_inspection', methods: ['GET'])]
+    public function bookInspection(int $tankId, int $checkId, TankRepository $tankRepository, TankCheckRepository $tankCheckRepository): Response
+    {
+        $tank = $tankRepository->find($tankId);
+        $tankCheck = $tankCheckRepository->find($checkId);
+
+        if (!$tank || !$tankCheck) {
+            throw $this->createNotFoundException("Tank or Check not found.");
+        }
+
+        $this->tankCheckService->bookTankInspection($tank, $tankCheck);
+
+        return new Response(
+            "The tank inspection has been booked."
+        );
     }
 }
