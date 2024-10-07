@@ -40,6 +40,8 @@ class TankCheckArticle
     #[ORM\Column(nullable: true)]
     private ?int $size = null;
 
+    // Getter und Setter
+
     public function getId(): ?int
     {
         return $this->id;
