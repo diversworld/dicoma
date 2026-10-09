@@ -1,8 +1,0 @@
-# config/packages/html_sanitizer.yaml
-framework:
-  html_sanitizer:
-    sanitizers:
-      app.post_sanitizer:
-        # enable either of these
-        allow_safe_elements: true
-        allow_static_elements: true
