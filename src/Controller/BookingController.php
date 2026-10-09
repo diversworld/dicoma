@@ -133,7 +133,11 @@ class BookingController extends AbstractController
         $buchung->setBookingnumber($bookingNr);
         $buchung->setSchedule($schedule);
         $buchung->setStatus('gebucht');
+<<<<<<< HEAD
         $buchung->setMember($member);  // Setze den Member anstelle von User
+=======
+        $buchung->setStudents($member);  // Setze den Member anstelle von User
+>>>>>>> origin/main
 
         // Speichern der Buchung
         $entityManager->persist($buchung);
@@ -228,6 +232,7 @@ class BookingController extends AbstractController
         return $monthYearInt . $bookingNumberPadded;
     }
 
+<<<<<<< HEAD
 	private function checkBookings(
 		Schedule $schedule,
 		Member $member
@@ -240,4 +245,16 @@ class BookingController extends AbstractController
 
 		return false;
 	}
+=======
+    function checkBookings(Schedule $schedule, Member $student): bool
+    {
+        $bookings = $schedule->getBookings();
+        foreach ($bookings as $booking) {
+            if ($booking->getStudents() === $student->getId()) {
+                return true;
+            }
+        }
+        return false;
+    }
+>>>>>>> origin/main
 }

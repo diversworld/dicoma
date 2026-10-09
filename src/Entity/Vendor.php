@@ -40,9 +40,12 @@ class Vendor
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+<<<<<<< HEAD
     /**
      * @var Collection<int, TankCheck>
      */
+=======
+>>>>>>> origin/main
     #[ORM\OneToMany(mappedBy: 'vendor', targetEntity: TankCheck::class)]
     private Collection $tankChecks;
 
@@ -51,9 +54,15 @@ class Vendor
         $this->tankChecks = new ArrayCollection();
     }
 
+<<<<<<< HEAD
     public function __toString(): string
     {
         return $this->name ?? '';
+=======
+    public function __toString()
+    {
+        return $this->name;
+>>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -85,6 +94,7 @@ class Vendor
         return $this;
     }
 
+<<<<<<< HEAD
     public function getPostal(): ?int
     {
         return $this->postal;
@@ -109,6 +119,8 @@ class Vendor
         return $this;
     }
 
+=======
+>>>>>>> origin/main
     public function getPhone(): ?string
     {
         return $this->phone;
@@ -178,6 +190,10 @@ class Vendor
     public function removeTankCheck(TankCheck $tankCheck): static
     {
         if ($this->tankChecks->removeElement($tankCheck)) {
+<<<<<<< HEAD
+=======
+            // set the owning side to null (unless already changed)
+>>>>>>> origin/main
             if ($tankCheck->getVendor() === $this) {
                 $tankCheck->setVendor(null);
             }
@@ -185,4 +201,32 @@ class Vendor
 
         return $this;
     }
+<<<<<<< HEAD
 }
+=======
+
+    public function getPostal(): ?int
+    {
+        return $this->postal;
+    }
+
+    public function setPostal(?int $postal): static
+    {
+        $this->postal = $postal;
+
+        return $this;
+    }
+
+    public function getCity(): ?string
+    {
+        return $this->city;
+    }
+
+    public function setCity(?string $city): static
+    {
+        $this->city = $city;
+
+        return $this;
+    }
+}
+>>>>>>> origin/main

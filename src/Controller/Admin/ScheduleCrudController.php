@@ -3,11 +3,15 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
+<<<<<<< HEAD
 use App\Service\ScheduleParticipantSyncService;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+=======
+use App\Repository\MemberRepository;
+>>>>>>> origin/main
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -16,6 +20,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
+<<<<<<< HEAD
 use EasyCorp\Bundle\EasyAdminBundle\Field\NumberField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
@@ -37,11 +42,20 @@ class ScheduleCrudController extends AbstractCrudController
     ) {
     }
 
+=======
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TimeField;
+
+class ScheduleCrudController extends AbstractCrudController
+{
+>>>>>>> origin/main
     public static function getEntityFqcn(): string
     {
         return Schedule::class;
     }
 
+<<<<<<< HEAD
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
@@ -93,10 +107,24 @@ class ScheduleCrudController extends AbstractCrudController
             ->setColumns(6);
 
         yield ImageField::new('image','Bild')
+=======
+    public function configureFields(string $pageName): iterable
+    {
+        return [
+        FormField::addFieldset('Kurstermininformation')
+            ->collapsible(),
+        IdField::new('id')
+            ->setColumns(1)
+            ->hideOnForm(),
+        TextField::new('title', 'Terminbezeichnung')
+            ->setColumns(6),
+        ImageField::new('image', 'Bild')
+>>>>>>> origin/main
             ->setBasePath('/images/kurse/')
             ->setUploadDir('public/images/kurse/')
             ->setUploadedFileNamePattern('[randomness].[extension]')
             ->setRequired(false)
+<<<<<<< HEAD
             ->setColumns(5)
             ->hideOnIndex();
 
@@ -426,3 +454,60 @@ class ScheduleCrudController extends AbstractCrudController
         );
     }
 }
+=======
+            ->setColumns(5),
+        FormField::addFieldset('Termininformationen')
+            ->collapsible(),
+        DateField::new('startDate','Beginnt am')
+            ->setColumns(2)
+            ->setFormat('dd.MM.yyyy'),
+        TimeField::new('startTime', 'um')
+            ->setColumns(2)
+            ->setFormat('HH:mm'),
+        IntegerField::new('duration', 'Kursdauer in Tagen')
+            ->setColumns(2),
+        FormField::addFieldset('Bemerkungen')
+            ->collapsible(),
+        FormField::addRow(breakpointName: 'md' ),
+        TextEditorField::new('notes', 'Notizen')
+            ->setColumns(8)
+            ->hideOnIndex(),
+        FormField::addFieldset('Adressinformationen')
+            ->collapsible(),
+        FormField::addRow(breakpointName: 'md' ),
+        TextField::new('location', 'Veranstaltungsort')
+            ->setColumns(5),
+        FormField::addRow(breakpointName: 'md' ),
+        TextField::new('locationStreet', 'Straße')
+            ->setColumns(5)
+            ->hideOnIndex(),
+        FormField::addRow(breakpointName: 'md' ),
+        IntegerField::new('locationPostal', 'PLZ')
+            ->setColumns(1)
+            ->hideOnIndex(),
+        TextField::new('locationCity', 'Ort')
+            ->setColumns(4)
+            ->hideOnIndex(),
+        FormField::addFieldset('Kursinformation')
+            ->collapsible(),
+        FormField::addRow(breakpointName: 'md' ),
+        AssociationField::new('courses', 'Kurs')
+            ->setColumns(5),
+        MoneyField::new('price', 'Preis')
+            ->setColumns(2)
+            ->setCurrency('EUR'),
+        AssociationField::new('instructor', 'Instruktor')
+            ->setColumns(4)
+            ->setFormTypeOption('query_builder', function(MemberRepository $memberRepository) {
+                return $memberRepository->createQueryBuilder('m')
+                    ->where('m.category = :category')
+                    ->setParameter('category', 'instructor');
+            }),
+        FormField::addFieldset('Buchungen')
+            ->collapsible(),
+        AssociationField::new('bookings', 'Buchungen')
+            ->setColumns(5),
+    ];
+    }
+}
+>>>>>>> origin/main

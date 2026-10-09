@@ -3,6 +3,10 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Booking;
+<<<<<<< HEAD
+=======
+use App\Entity\Brevets;
+>>>>>>> origin/main
 use App\Entity\Courses;
 use App\Entity\Member;
 use App\Entity\Schedule;
@@ -11,6 +15,7 @@ use App\Entity\TankCheck;
 use App\Entity\TankCheckArticle;
 use App\Entity\TankCheckDetail;
 use App\Entity\User;
+<<<<<<< HEAD
 use App\Entity\Club;
 use App\Entity\Sport;
 use App\Entity\MemberSport;
@@ -25,20 +30,28 @@ use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Repository\MemberQualificationRepository;
 use App\Controller\Admin\MemberQualificationCrudController;
+=======
+use App\Entity\Vendor;
+>>>>>>> origin/main
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+<<<<<<< HEAD
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+=======
+use Symfony\Component\HttpFoundation\Response;
+>>>>>>> origin/main
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class DashboardController extends AbstractDashboardController
 {
+<<<<<<< HEAD
 	public function __construct(
 		private readonly MemberQualificationRepository $memberQualificationRepository, 
 		private readonly AdminUrlGenerator $adminUrlGenerator
@@ -92,11 +105,38 @@ class DashboardController extends AbstractDashboardController
 				$allQualificationsUrl,
 		]);
 	}
+=======
+    #[Route('/admin', name: 'admin')]
+    public function index(): Response
+    {
+        //return parent::index();
+
+        // Option 1. You can make your dashboard redirect to some common page of your backend
+        //
+        //$adminUrlGenerator = $this->container->get(AdminUrlGenerator::class);
+        //return $this->redirect($adminUrlGenerator->setController(CoursesCrudController::class)->generateUrl());
+
+        // Option 2. You can make your dashboard redirect to different pages depending on the user
+        //
+        // if ('jane' === $this->getUser()->getUser()) {
+        //     return $this->redirect('...');
+        // }
+
+        // Option 3. You can render some custom template to display a proper dashboard with widgets, etc.
+        // (tip: it's easier if your template extends from @EasyAdmin/page/content.html.twig)
+        //
+        return $this->render('admin/dashboard/my-dashboard.html.twig');
+    }
+>>>>>>> origin/main
 
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
+<<<<<<< HEAD
             ->setTitle('<h4>DiveClubManager</h4>')
+=======
+            ->setTitle('<h4>DiveCourseManager</h4>')
+>>>>>>> origin/main
             ->setFaviconPath('images/favicon.ico')
             ->setLocales(['de', 'en'])
             // to customize the labels of locales, pass a key => value array
@@ -111,6 +151,7 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
+<<<<<<< HEAD
 		yield MenuItem::linkToDashboard('Dashboard','fa fa-home');
 
 		yield MenuItem::section('Verein');
@@ -134,6 +175,14 @@ class DashboardController extends AbstractDashboardController
 		yield MenuItem::section('Ausbildung');
 		yield MenuItem::linkToCrud('Qualifikationskatalog','fa fa-certificate',Qualification::class);
 		yield MenuItem::linkToCrud('Mitgliedsqualifikationen','fa fa-id-card',MemberQualification::class);
+=======
+        yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
+        yield MenuItem::section('Kursverwaltung');
+        yield MenuItem::linkToCrud('Kurse', 'fa fa-school', Courses::class);
+        yield MenuItem::linkToCrud('Kurstermine', 'fa fa-calendar-day', Schedule::class);
+        yield MenuItem::linkToCrud('Buchungen', 'fa fa-calendar-check', Booking::class);
+        yield MenuItem::linkToCrud('Brevets', 'fa fa-id-card', Brevets::class);
+>>>>>>> origin/main
 
         yield MenuItem::section('Equipment');
         yield MenuItem::linkToCrud('Flaschen', 'fa fa-user', Tank::class);
@@ -144,6 +193,13 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Partner');
         yield MenuItem::linkToCrud('Lieferanten', 'fa fa-user', Vendor::class);
 
+<<<<<<< HEAD
+=======
+        yield MenuItem::section('Benutzer');
+        yield MenuItem::linkToCrud('Benutzer', 'fa fa-user', User::class);
+        yield MenuItem::linkToCrud('Mitglieder', 'fa fa-user', Member::class);
+
+>>>>>>> origin/main
     }
 
     public function configureUserMenu(UserInterface $user): UserMenu
@@ -172,5 +228,8 @@ class DashboardController extends AbstractDashboardController
                     ->setEntityId($user->getId()),
             ]);
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 }

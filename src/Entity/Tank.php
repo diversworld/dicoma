@@ -2,13 +2,23 @@
 
 namespace App\Entity;
 
+<<<<<<< HEAD
 use App\Repository\TankRepository;
+=======
+use AllowDynamicProperties;
+use App\Repository\TankRepository;
+use DateTime;
+>>>>>>> origin/main
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+<<<<<<< HEAD
 #[ORM\Entity(repositoryClass: TankRepository::class)]
+=======
+#[AllowDynamicProperties] #[ORM\Entity(repositoryClass: TankRepository::class)]
+>>>>>>> origin/main
 class Tank
 {
     #[ORM\Id]
@@ -40,6 +50,7 @@ class Tank
     #[ORM\Column(nullable: true)]
     private ?bool $oxigenClean = null;
 
+<<<<<<< HEAD
     /**
      * @var Collection<int, TankCheck>
      */
@@ -54,16 +65,32 @@ class Tank
         targetEntity: TankCheckDetail::class
     )]
     private Collection $checkDetails;
+=======
+    #[ORM\ManyToMany(targetEntity: TankCheck::class, mappedBy: 'tank')]
+    private Collection $tankChecks;
+
+    #[ORM\OneToMany(mappedBy: 'tank', targetEntity: TankCheckDetail::class)]
+    private Collection $checkDetail;
+>>>>>>> origin/main
 
     public function __construct()
     {
         $this->tankChecks = new ArrayCollection();
+<<<<<<< HEAD
         $this->checkDetails = new ArrayCollection();
+=======
+        $this->tankCheckDetails = new ArrayCollection();
+        $this->checkDetail = new ArrayCollection();
+>>>>>>> origin/main
     }
 
     public function __toString(): string
     {
+<<<<<<< HEAD
         return $this->inventory ?? '';
+=======
+        return $this->inventory;
+>>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -107,6 +134,7 @@ class Tank
         return $this;
     }
 
+<<<<<<< HEAD
     public function getLastCheckDate(): ?\DateTimeInterface
     {
         return $this->lastCheckDate;
@@ -131,6 +159,8 @@ class Tank
         return $this;
     }
 
+=======
+>>>>>>> origin/main
     public function getNotes(): ?string
     {
         return $this->notes;
@@ -167,6 +197,33 @@ class Tank
         return $this;
     }
 
+<<<<<<< HEAD
+=======
+    public function getLastCheckDate(): ?\DateTimeInterface
+    {
+        return $this->lastCheckDate;
+    }
+
+    public function setLastCheckDate(\DateTimeInterface $lastCheckDate): static
+    {
+        $this->lastCheckDate = $lastCheckDate;
+
+        return $this;
+    }
+
+    public function getNextCheckDate(): ?\DateTimeInterface
+    {
+        return $this->nextCheckDate;
+    }
+
+    public function setNextCheckDate(?\DateTimeInterface $nextCheckDate): static
+    {
+        $this->nextCheckDate = $nextCheckDate;
+
+        return $this;
+    }
+
+>>>>>>> origin/main
     /**
      * @return Collection<int, TankCheck>
      */
@@ -197,15 +254,56 @@ class Tank
     /**
      * @return Collection<int, TankCheckDetail>
      */
+<<<<<<< HEAD
     public function getCheckDetails(): Collection
     {
         return $this->checkDetails;
+=======
+    public function getTankCheckDetails(): Collection
+    {
+        return $this->tankCheckDetails;
+    }
+
+    public function addTankCheckDetail(TankCheckDetail $tankCheckDetail): static
+    {
+        if (!$this->tankCheckDetails->contains($tankCheckDetail)) {
+            $this->tankCheckDetails->add($tankCheckDetail);
+            $tankCheckDetail->setTank($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTankCheckDetail(TankCheckDetail $tankCheckDetail): static
+    {
+        if ($this->tankCheckDetails->removeElement($tankCheckDetail)) {
+            // set the owning side to null (unless already changed)
+            if ($tankCheckDetail->getTank() === $this) {
+                $tankCheckDetail->setTank(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TankCheckDetail>
+     */
+    public function getCheckDetail(): Collection
+    {
+        return $this->checkDetail;
+>>>>>>> origin/main
     }
 
     public function addCheckDetail(TankCheckDetail $checkDetail): static
     {
+<<<<<<< HEAD
         if (!$this->checkDetails->contains($checkDetail)) {
             $this->checkDetails->add($checkDetail);
+=======
+        if (!$this->checkDetail->contains($checkDetail)) {
+            $this->checkDetail->add($checkDetail);
+>>>>>>> origin/main
             $checkDetail->setTank($this);
         }
 
@@ -214,7 +312,12 @@ class Tank
 
     public function removeCheckDetail(TankCheckDetail $checkDetail): static
     {
+<<<<<<< HEAD
         if ($this->checkDetails->removeElement($checkDetail)) {
+=======
+        if ($this->checkDetail->removeElement($checkDetail)) {
+            // set the owning side to null (unless already changed)
+>>>>>>> origin/main
             if ($checkDetail->getTank() === $this) {
                 $checkDetail->setTank(null);
             }
@@ -222,4 +325,8 @@ class Tank
 
         return $this;
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

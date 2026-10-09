@@ -7,12 +7,16 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+<<<<<<< HEAD
 use App\Enum\CourseStatus;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use App\Enum\CourseParticipantStatus;
 
 #[Assert\Callback('validateQualification')]
+=======
+
+>>>>>>> origin/main
 #[ORM\Entity(repositoryClass: CoursesRepository::class)]
 class Courses
 {
@@ -20,7 +24,10 @@ class Courses
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+<<<<<<< HEAD
 	
+=======
+>>>>>>> origin/main
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
@@ -41,6 +48,7 @@ class Courses
 
     #[ORM\Column(length: 30)]
     private ?string $category = null;
+<<<<<<< HEAD
 	
 	#[ORM\ManyToOne]
 	#[ORM\JoinColumn(nullable: true)]
@@ -88,6 +96,14 @@ class Courses
 		$this->trainingUnits = new ArrayCollection();
 	}
 	
+=======
+
+    public function __construct()
+    {
+        $this->schedule = new ArrayCollection();
+    }
+
+>>>>>>> origin/main
     public function __toString(): string
     {
         return $this->title;
@@ -152,6 +168,7 @@ class Courses
         return $this;
     }
 
+<<<<<<< HEAD
 	public function canBeCompleted(): bool
 	{
 		if ($this->participants->isEmpty()) {
@@ -175,6 +192,8 @@ class Courses
 		return true;
 	}
 	
+=======
+>>>>>>> origin/main
     public function removeSchedule(Schedule $schedule): static
     {
         if ($this->schedule->removeElement($schedule)) {
@@ -224,6 +243,7 @@ class Courses
 
         return $this;
     }
+<<<<<<< HEAD
 	
 	public function getQualification(): ?Qualification
 	{
@@ -453,4 +473,6 @@ class Courses
 
 		return $this;
 	}
+=======
+>>>>>>> origin/main
 }

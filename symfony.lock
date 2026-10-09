@@ -8,6 +8,7 @@
             "ref": "64d8583af5ea57b7afa4aba4b159907f3a148b05"
         }
     },
+<<<<<<< HEAD
     "doctrine/deprecations": {
         "version": "1.1",
         "recipe": {
@@ -17,6 +18,8 @@
             "ref": "fdd756167454623e21f1d769c5b814b243782a67"
         }
     },
+=======
+>>>>>>> origin/main
     "doctrine/doctrine-bundle": {
         "version": "2.11",
         "recipe": {
@@ -89,6 +92,7 @@
             ".env"
         ]
     },
+<<<<<<< HEAD
     "symfony/form": {
         "version": "7.4",
         "recipe": {
@@ -101,6 +105,8 @@
             "config/packages/csrf.yaml"
         ]
     },
+=======
+>>>>>>> origin/main
     "symfony/framework-bundle": {
         "version": "7.0",
         "recipe": {
@@ -153,6 +159,7 @@
             "config/packages/monolog.yaml"
         ]
     },
+<<<<<<< HEAD
     "symfony/property-info": {
         "version": "7.4",
         "recipe": {
@@ -165,6 +172,8 @@
             "config/packages/property_info.yaml"
         ]
     },
+=======
+>>>>>>> origin/main
     "symfony/routing": {
         "version": "7.0",
         "recipe": {
@@ -226,6 +235,7 @@
             "ref": "0df5844274d871b37fc3816c57a768ffc60a43a5"
         }
     },
+<<<<<<< HEAD
     "symfony/ux-twig-component": {
         "version": "2.36",
         "recipe": {
@@ -238,6 +248,8 @@
             "config/packages/twig_component.yaml"
         ]
     },
+=======
+>>>>>>> origin/main
     "symfony/validator": {
         "version": "7.0",
         "recipe": {

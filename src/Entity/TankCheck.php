@@ -2,12 +2,20 @@
 
 namespace App\Entity;
 
+<<<<<<< HEAD
+=======
+use AllowDynamicProperties;
+>>>>>>> origin/main
 use App\Repository\TankCheckRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+<<<<<<< HEAD
+=======
+#[AllowDynamicProperties]
+>>>>>>> origin/main
 #[ORM\Entity(repositoryClass: TankCheckRepository::class)]
 class TankCheck
 {
@@ -28,6 +36,7 @@ class TankCheck
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $costInformation = null;
 
+<<<<<<< HEAD
     /**
      * @var Collection<int, Tank>
      */
@@ -46,18 +55,37 @@ class TankCheck
         cascade: ['persist', 'remove'],
         orphanRemoval: true
     )]
+=======
+    #[ORM\ManyToMany(targetEntity: Tank::class, inversedBy: 'tankCheck')]
+    private Collection $tank;
+
+    #[ORM\ManyToOne(inversedBy: 'tankCheck')]
+    private ?Vendor $vendor = null;
+
+    #[ORM\OneToMany(mappedBy: 'tankCheck', targetEntity: TankCheckArticle::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+>>>>>>> origin/main
     private Collection $articles;
 
     public function __construct()
     {
+<<<<<<< HEAD
         $this->tanks = new ArrayCollection();
         $this->articles = new ArrayCollection();
         $this->checkDate = new \DateTime();
+=======
+        $this->tank = new ArrayCollection();
+        $this->checkDate = new \DateTime();
+        $this->articles = new ArrayCollection();
+>>>>>>> origin/main
     }
 
     public function __toString(): string
     {
+<<<<<<< HEAD
         return $this->checkDate?->format('d.m.Y') ?? '';
+=======
+        return $this->getCheckDate()->format('d.m.Y');
+>>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -70,7 +98,11 @@ class TankCheck
         return $this->checkDate;
     }
 
+<<<<<<< HEAD
     public function setCheckDate(?\DateTimeInterface $checkDate): static
+=======
+    public function setCheckDate(\DateTimeInterface $checkDate): static
+>>>>>>> origin/main
     {
         $this->checkDate = $checkDate;
 
@@ -116,15 +148,26 @@ class TankCheck
     /**
      * @return Collection<int, Tank>
      */
+<<<<<<< HEAD
     public function getTanks(): Collection
     {
         return $this->tanks;
+=======
+    public function getTank(): Collection
+    {
+        return $this->tank;
+>>>>>>> origin/main
     }
 
     public function addTank(Tank $tank): static
     {
+<<<<<<< HEAD
         if (!$this->tanks->contains($tank)) {
             $this->tanks->add($tank);
+=======
+        if (!$this->tank->contains($tank)) {
+            $this->tank->add($tank);
+>>>>>>> origin/main
         }
 
         return $this;
@@ -132,7 +175,11 @@ class TankCheck
 
     public function removeTank(Tank $tank): static
     {
+<<<<<<< HEAD
         $this->tanks->removeElement($tank);
+=======
+        $this->tank->removeElement($tank);
+>>>>>>> origin/main
 
         return $this;
     }
@@ -170,6 +217,10 @@ class TankCheck
     public function removeArticle(TankCheckArticle $article): static
     {
         if ($this->articles->removeElement($article)) {
+<<<<<<< HEAD
+=======
+            // set the owning side to null (unless already changed)
+>>>>>>> origin/main
             if ($article->getTankCheck() === $this) {
                 $article->setTankCheck(null);
             }

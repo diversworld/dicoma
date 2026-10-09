@@ -3,11 +3,16 @@
 namespace App\Repository;
 
 use App\Entity\Booking;
+<<<<<<< HEAD
 use App\Entity\Member;
 use App\Entity\Schedule;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Enum\BookingAttendanceStatus;
+=======
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+>>>>>>> origin/main
 
 class BookingRepository extends ServiceEntityRepository
 {
@@ -54,6 +59,7 @@ class BookingRepository extends ServiceEntityRepository
         ;
     }
 
+<<<<<<< HEAD
 	
 	public function existsForScheduleAndMember(
 		Schedule $schedule,
@@ -71,6 +77,8 @@ class BookingRepository extends ServiceEntityRepository
 
 		return (int) $count > 0;
 	}
+=======
+>>>>>>> origin/main
     public function getLastBookingNumberOfCurrentMonth(string $monthYearPart): ?string
     {
         // Get the last booking of the current month/year
@@ -85,6 +93,7 @@ class BookingRepository extends ServiceEntityRepository
 
         return $lastBooking ? $lastBooking->getBookingnumber() : null;
     }
+<<<<<<< HEAD
 	
 	/**
 	 * @return Booking[]
@@ -114,4 +123,6 @@ class BookingRepository extends ServiceEntityRepository
 			->getQuery()
 			->getResult();
 	}
+=======
+>>>>>>> origin/main
 }

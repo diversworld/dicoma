@@ -7,9 +7,13 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+<<<<<<< HEAD
 use App\Enum\BookingAttendanceStatus;
 
 #[ORM\Table(name: 'schedule',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_schedule_course_training_sequence',columns: ['courses_id','training_unit_type_id','training_unit_sequence'])])]
+=======
+
+>>>>>>> origin/main
 #[ORM\Entity(repositoryClass: ScheduleRepository::class)]
 class Schedule
 {
@@ -24,6 +28,7 @@ class Schedule
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
 
+<<<<<<< HEAD
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $startDate = null;
 
@@ -31,6 +36,15 @@ class Schedule
 	private ?int $duration = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE, nullable: true)]
+=======
+    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    private ?\DateTimeInterface $startDate = null;
+
+    #[ORM\Column]
+    private ?int $duration = null;
+
+    #[ORM\Column(type: Types::TIME_MUTABLE)]
+>>>>>>> origin/main
     private ?\DateTimeInterface $startTime = null;
 
     #[ORM\Column(length: 100, nullable: true)]
@@ -39,8 +53,13 @@ class Schedule
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $locationStreet = null;
 
+<<<<<<< HEAD
 	#[ORM\Column(length: 10,nullable: true)]
 	private ?string $locationPostal = null;
+=======
+    #[ORM\Column(nullable: true)]
+    private ?int $locationPostal = null;
+>>>>>>> origin/main
 
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $locationCity = null;
@@ -54,6 +73,7 @@ class Schedule
     #[ORM\OneToMany(mappedBy: 'schedule', targetEntity: Booking::class)]
     private Collection $bookings;
 
+<<<<<<< HEAD
 	#[ORM\Column(type: Types::DECIMAL,precision: 10,scale: 2,nullable: true)]
 	private ?string $price = null;
 
@@ -64,6 +84,11 @@ class Schedule
 	#[ORM\Column(nullable: true)]
 	private ?int $trainingUnitSequence = null;
 	
+=======
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    private ?float $price = null;
+
+>>>>>>> origin/main
     #[ORM\ManyToOne(inversedBy: 'schedules')]
     private ?Member $instructor = null;
 
@@ -74,7 +99,11 @@ class Schedule
 
     public function __toString()
     {
+<<<<<<< HEAD
 		return $this->title ?? '';
+=======
+        return $this->title;
+>>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -99,6 +128,7 @@ class Schedule
         return $this->startDate;
     }
 
+<<<<<<< HEAD
 	public function setStartDate(
 		?\DateTimeInterface $startDate
 	): static {
@@ -106,24 +136,42 @@ class Schedule
 
 		return $this;
 	}
+=======
+    public function setStartDate(\DateTimeInterface $startDate): static
+    {
+        $this->startDate = $startDate;
+
+        return $this;
+    }
+>>>>>>> origin/main
 
     public function getDuration(): ?int
     {
         return $this->duration;
     }
 
+<<<<<<< HEAD
 	public function setDuration(?int $duration): static
 	{
 		$this->duration = $duration;
 
 		return $this;
 	}
+=======
+    public function setDuration(int $duration): static
+    {
+        $this->duration = $duration;
+
+        return $this;
+    }
+>>>>>>> origin/main
 
     public function getStartTime(): ?\DateTimeInterface
     {
         return $this->startTime;
     }
 
+<<<<<<< HEAD
 	public function setStartTime(?\DateTimeInterface $startTime): static {
 		$this->startTime = $startTime;
 
@@ -144,6 +192,16 @@ class Schedule
 	}
 
 	public function getLocation(): ?string
+=======
+    public function setStartTime(\DateTimeInterface $startTime): static
+    {
+        $this->startTime = $startTime;
+
+        return $this;
+    }
+
+    public function getLocation(): ?string
+>>>>>>> origin/main
     {
         return $this->location;
     }
@@ -154,7 +212,11 @@ class Schedule
 
         return $this;
     }
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> origin/main
     public function getLocationStreet(): ?string
     {
         return $this->locationStreet;
@@ -167,6 +229,21 @@ class Schedule
         return $this;
     }
 
+<<<<<<< HEAD
+=======
+    public function getLocationPostal(): ?int
+    {
+        return $this->locationPostal;
+    }
+
+    public function setLocationPostal(?int $locationPostal): static
+    {
+        $this->locationPostal = $locationPostal;
+
+        return $this;
+    }
+
+>>>>>>> origin/main
     public function getLocationCity(): ?string
     {
         return $this->locationCity;
@@ -215,6 +292,7 @@ class Schedule
         return $this;
     }
 
+<<<<<<< HEAD
 	public function getTrainingUnitType(): ?TrainingUnitType
 	{
 		return $this->trainingUnitType;
@@ -228,6 +306,8 @@ class Schedule
 		return $this;
 	}
 	
+=======
+>>>>>>> origin/main
     /**
      * @return Collection<int, Booking>
      */
@@ -257,6 +337,7 @@ class Schedule
 
         return $this;
     }
+<<<<<<< HEAD
 	
 	public function getDurationHours(): ?float
 	{
@@ -286,17 +367,29 @@ class Schedule
 		return sprintf('%d Std. %02d Min.', $hours, $minutes);
 	}
 	
+=======
+
+>>>>>>> origin/main
     public function getPrice(): ?string
     {
         return $this->price;
     }
 
+<<<<<<< HEAD
 	public function setPrice(?string $price): static
 	{
 		$this->price = $price;
 
 		return $this;
 	}
+=======
+    public function setPrice(string $price): static
+    {
+        $this->price = $price;
+
+        return $this;
+    }
+>>>>>>> origin/main
 
     public function getImage(): ?string
     {
@@ -309,6 +402,7 @@ class Schedule
 
         return $this;
     }
+<<<<<<< HEAD
 	
 	public function getTrainingUnitSequence(): ?int
 	{
@@ -468,4 +562,6 @@ class Schedule
 			$this->trainingUnitSequence
 		);
 	}
+=======
+>>>>>>> origin/main
 }
