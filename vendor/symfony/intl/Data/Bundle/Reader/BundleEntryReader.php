@@ -28,19 +28,22 @@ use Symfony\Component\Intl\Locale;
  */
 class BundleEntryReader implements BundleEntryReaderInterface
 {
-    private BundleReaderInterface $reader;
-
     /**
      * A mapping of locale aliases to locales.
      */
     private array $localeAliases = [];
 
     /**
+     * A mapping of locales to their parent locale.
+     */
+    private array $localeParents = [];
+
+    /**
      * Creates an entry reader based on the given resource bundle reader.
      */
-    public function __construct(BundleReaderInterface $reader)
-    {
-        $this->reader = $reader;
+    public function __construct(
+        private BundleReaderInterface $reader,
+    ) {
     }
 
     /**
@@ -56,6 +59,24 @@ class BundleEntryReader implements BundleEntryReaderInterface
     public function setLocaleAliases(array $localeAliases): void
     {
         $this->localeAliases = $localeAliases;
+    }
+
+    /**
+     * Stores a mapping of locales to their parent locale.
+     *
+     * ICU does not always derive the parent locale by removing the last subtag
+     * of a locale: "nb" inherits from "no" and "en_GB" from "en_001". This
+     * mapping is used when merging an entry with its fallback locales, so that
+     * the reader continues at the right locale.
+     *
+     * A parent of "root" is ignored, as the root locale carries no localized
+     * names. Such locales keep using the default fallback chain.
+     *
+     * @param array $localeParents A mapping of locales to their parent locale
+     */
+    public function setLocaleParents(array $localeParents): void
+    {
+        $this->localeParents = array_filter($localeParents, static fn ($parent) => 'root' !== $parent);
     }
 
     public function read(string $path, string $locale): mixed
@@ -133,7 +154,7 @@ class BundleEntryReader implements BundleEntryReaderInterface
             }
 
             // Then determine fallback locale
-            $currentLocale = Locale::getFallback($currentLocale);
+            $currentLocale = $this->localeParents[$currentLocale] ?? Locale::getFallback($currentLocale);
         }
 
         // Multi-valued entry was merged
@@ -148,7 +169,7 @@ class BundleEntryReader implements BundleEntryReaderInterface
 
         // Entry is still NULL, read error occurred. Throw an exception
         // containing the detailed path and locale
-        $errorMessage = sprintf(
+        $errorMessage = \sprintf(
             'Couldn\'t read the indices [%s] for the locale "%s" in "%s".',
             implode('][', $indices),
             $locale,
@@ -160,7 +181,7 @@ class BundleEntryReader implements BundleEntryReaderInterface
             // Remove original locale
             array_shift($testedLocales);
 
-            $errorMessage .= sprintf(
+            $errorMessage .= \sprintf(
                 ' The indices also couldn\'t be found for the fallback locale(s) "%s".',
                 implode('", "', $testedLocales)
             );

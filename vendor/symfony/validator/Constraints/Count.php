@@ -11,10 +11,13 @@
 
 namespace Symfony\Component\Validator\Constraints;
 
+use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Exception\MissingOptionsException;
 
 /**
+ * Validates a collection's element count.
+ *
  * @author Bernhard Schussek <bschussek@gmail.com>
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
@@ -40,6 +43,15 @@ class Count extends Constraint
     public ?int $max = null;
     public ?int $divisibleBy = null;
 
+    /**
+     * @param int<0, max>|null         $exactly     The exact expected number of elements
+     * @param int<0, max>|null         $min         Minimum expected number of elements
+     * @param int<0, max>|null         $max         Maximum expected number of elements
+     * @param positive-int|null        $divisibleBy The number the collection count should be divisible by
+     * @param string[]|null            $groups
+     * @param array<mixed,string>|null $options
+     */
+    #[HasNamedArguments]
     public function __construct(
         int|array|null $exactly = null,
         ?int $min = null,
@@ -51,11 +63,15 @@ class Count extends Constraint
         ?string $divisibleByMessage = null,
         ?array $groups = null,
         mixed $payload = null,
-        array $options = []
+        ?array $options = null,
     ) {
         if (\is_array($exactly)) {
-            $options = array_merge($exactly, $options);
+            trigger_deprecation('symfony/validator', '7.3', 'Passing an array of options to configure the "%s" constraint is deprecated, use named arguments instead.', static::class);
+
+            $options = array_merge($exactly, $options ?? []);
             $exactly = $options['value'] ?? null;
+        } elseif (\is_array($options)) {
+            trigger_deprecation('symfony/validator', '7.3', 'Passing an array of options to configure the "%s" constraint is deprecated, use named arguments instead.', static::class);
         }
 
         $min ??= $options['min'] ?? null;
@@ -78,7 +94,7 @@ class Count extends Constraint
         $this->divisibleByMessage = $divisibleByMessage ?? $this->divisibleByMessage;
 
         if (null === $this->min && null === $this->max && null === $this->divisibleBy) {
-            throw new MissingOptionsException(sprintf('Either option "min", "max" or "divisibleBy" must be given for constraint "%s".', __CLASS__), ['min', 'max', 'divisibleBy']);
+            throw new MissingOptionsException(\sprintf('Either option "min", "max" or "divisibleBy" must be given for constraint "%s".', __CLASS__), ['min', 'max', 'divisibleBy']);
         }
     }
 }

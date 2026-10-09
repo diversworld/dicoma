@@ -24,18 +24,16 @@ use Symfony\Component\Form\FormEvents;
  */
 class DataCollectorListener implements EventSubscriberInterface
 {
-    private FormDataCollectorInterface $dataCollector;
-
-    public function __construct(FormDataCollectorInterface $dataCollector)
-    {
-        $this->dataCollector = $dataCollector;
+    public function __construct(
+        private FormDataCollectorInterface $dataCollector,
+    ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            // High priority in order to be called as soon as possible
-            FormEvents::POST_SET_DATA => ['postSetData', 255],
+            // Low priority in order to be called as late as possible
+            FormEvents::POST_SET_DATA => ['postSetData', -255],
             // Low priority in order to be called as late as possible
             FormEvents::POST_SUBMIT => ['postSubmit', -255],
         ];

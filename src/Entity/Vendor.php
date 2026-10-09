@@ -190,4 +190,3 @@ class Vendor
         return $this;
     }
 }
-

@@ -12,7 +12,6 @@
 namespace Symfony\Bridge\Doctrine\SchemaListener;
 
 use Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
-use Symfony\Component\Lock\Exception\InvalidArgumentException;
 use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\Store\DoctrineDbalStore;
 
@@ -29,21 +28,19 @@ final class LockStoreSchemaListener extends AbstractSchemaListener
     public function postGenerateSchema(GenerateSchemaEventArgs $event): void
     {
         $connection = $event->getEntityManager()->getConnection();
+        $schema = $event->getSchema();
 
-        $storesIterator = new \ArrayIterator($this->stores);
-        while ($storesIterator->valid()) {
-            try {
-                $store = $storesIterator->current();
-                if (!$store instanceof DoctrineDbalStore) {
-                    continue;
-                }
-
-                $store->configureSchema($event->getSchema(), $this->getIsSameDatabaseChecker($connection));
-            } catch (InvalidArgumentException) {
-                // no-op
+        foreach ($this->stores as $store) {
+            if (!$store instanceof DoctrineDbalStore) {
+                continue;
             }
 
-            $storesIterator->next();
+            $isSameDatabaseChecker = $this->getIsSameDatabaseChecker($connection);
+            $schema = $this->filterSchemaChanges($schema, $connection, static fn () => $store->configureSchema($schema, $isSameDatabaseChecker)) ?? $schema;
+        }
+
+        if (method_exists($schema, 'edit') && method_exists($event, 'setSchema')) {
+            $event->setSchema($schema);
         }
     }
 }

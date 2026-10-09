@@ -19,7 +19,6 @@ use Symfony\Bundle\MakerBundle\FileManager;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
 use Symfony\Bundle\MakerBundle\MakerInterface;
-use Symfony\Bundle\MakerBundle\Util\TemplateLinter;
 use Symfony\Bundle\MakerBundle\Validator;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
@@ -41,7 +40,6 @@ final class MakerCommand extends Command
         private MakerInterface $maker,
         private FileManager $fileManager,
         private Generator $generator,
-        private TemplateLinter $linter,
     ) {
         $this->inputConfig = new InputConfiguration();
 
@@ -56,6 +54,11 @@ final class MakerCommand extends Command
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
         $this->io = new ConsoleStyle($input, $output);
+
+        if (!$input->isInteractive()) {
+            $this->io->warning(\sprintf('"%s" is not meant to be run in non-interactive mode.', $this->getName()));
+        }
+
         $this->fileManager->setIO($this->io);
 
         if ($this->checkDependencies) {
@@ -72,7 +75,7 @@ final class MakerCommand extends Command
     {
         if (!$this->fileManager->isNamespaceConfiguredToAutoload($this->generator->getRootNamespace())) {
             $this->io->note([
-                sprintf('It looks like your app may be using a namespace other than "%s".', $this->generator->getRootNamespace()),
+                \sprintf('It looks like your app may be using a namespace other than "%s".', $this->generator->getRootNamespace()),
                 'To configure this and make your life easier, see: https://symfony.com/doc/current/bundles/SymfonyMakerBundle/index.html#configuration',
             ]);
         }
@@ -95,18 +98,12 @@ final class MakerCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if ($output->isVerbose()) {
-            $this->linter->writeLinterMessage($output);
-        }
-
         $this->maker->generate($input, $this->io, $this->generator);
 
         // sanity check for custom makers
         if ($this->generator->hasPendingOperations()) {
             throw new \LogicException('Make sure to call the writeChanges() method on the generator.');
         }
-
-        $this->linter->lintFiles($this->generator->getGeneratedFiles());
 
         return 0;
     }

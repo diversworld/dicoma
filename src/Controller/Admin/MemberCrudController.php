@@ -228,4 +228,3 @@ class MemberCrudController extends AbstractCrudController
             ->setColumns(2);
     }
 }
-

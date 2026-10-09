@@ -29,16 +29,15 @@ use Symfony\Component\HttpKernel\KernelInterface;
  * Generate all config builders.
  *
  * @author Tobias Nyholm <tobias.nyholm@gmail.com>
+ *
+ * @deprecated since Symfony 7.4
  */
 class ConfigBuilderCacheWarmer implements CacheWarmerInterface
 {
-    private KernelInterface $kernel;
-    private ?LoggerInterface $logger;
-
-    public function __construct(KernelInterface $kernel, ?LoggerInterface $logger = null)
-    {
-        $this->kernel = $kernel;
-        $this->logger = $logger;
+    public function __construct(
+        private KernelInterface $kernel,
+        private ?LoggerInterface $logger = null,
+    ) {
     }
 
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
@@ -51,7 +50,7 @@ class ConfigBuilderCacheWarmer implements CacheWarmerInterface
 
         if ($this->kernel instanceof Kernel) {
             /** @var ContainerBuilder $container */
-            $container = \Closure::bind(function (Kernel $kernel) {
+            $container = \Closure::bind(static function (Kernel $kernel) {
                 $containerBuilder = $kernel->getContainerBuilder();
                 $kernel->prepareContainer($containerBuilder);
 

@@ -233,4 +233,3 @@ class Tank
         return $this;
     }
 }
-

@@ -126,7 +126,7 @@ class DoctrineDataCollector extends DataCollector
                     return [Caster::PREFIX_VIRTUAL.'__toString()' => (string) $o->getObject()];
                 }
 
-                return [Caster::PREFIX_VIRTUAL.'⚠' => sprintf('Object of class "%s" could not be converted to string.', $o->getClass())];
+                return [Caster::PREFIX_VIRTUAL.'⚠' => \sprintf('Object of class "%s" could not be converted to string.', $o->getClass())];
             },
         ];
     }
@@ -151,20 +151,23 @@ class DoctrineDataCollector extends DataCollector
         if (!\is_array($query['types'])) {
             $query['types'] = [];
         }
+        $connection = $this->registry->getConnection($connectionName);
+
         foreach ($query['params'] as $j => $param) {
             $e = null;
             if (isset($query['types'][$j])) {
                 // Transform the param according to the type
                 $type = $query['types'][$j];
                 if (\is_string($type)) {
-                    $type = Type::getType($type);
+                    // doctrine/dbal 4.5 deprecates the static registry for a provider on the configuration
+                    $config = $connection->getConfiguration();
+                    $type = method_exists($config, 'getTypeProvider') ? $config->getTypeProvider()->get($type) : Type::getType($type);
                 }
                 if ($type instanceof Type) {
                     $query['types'][$j] = $type->getBindingType();
                     try {
-                        $param = $type->convertToDatabaseValue($param, $this->registry->getConnection($connectionName)->getDatabasePlatform());
-                    } catch (\TypeError $e) {
-                    } catch (ConversionException $e) {
+                        $param = $type->convertToDatabaseValue($param, $connection->getDatabasePlatform());
+                    } catch (\TypeError|ConversionException) {
                     }
                 }
             }
@@ -215,7 +218,7 @@ class DoctrineDataCollector extends DataCollector
         }
 
         if (\is_resource($var)) {
-            return [sprintf('/* Resource(%s) */', get_resource_type($var)), false, false];
+            return [\sprintf('/* Resource(%s) */', get_resource_type($var)), false, false];
         }
 
         return [$var, true, true];

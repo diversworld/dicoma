@@ -726,4 +726,3 @@ class Member
         return $this;
     }
 }
-

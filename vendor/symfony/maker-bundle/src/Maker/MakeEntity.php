@@ -31,6 +31,7 @@ use Symfony\Bundle\MakerBundle\Util\ClassDetails;
 use Symfony\Bundle\MakerBundle\Util\ClassSource\Model\ClassProperty;
 use Symfony\Bundle\MakerBundle\Util\ClassSourceManipulator;
 use Symfony\Bundle\MakerBundle\Util\CliOutputHelper;
+use Symfony\Bundle\MakerBundle\Util\EnumHelper;
 use Symfony\Bundle\MakerBundle\Validator;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\Console\Command\Command;
@@ -65,14 +66,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         }
 
         if (null === $generator) {
-            @trigger_error(sprintf('Passing a "%s" instance as 4th argument is mandatory since version 1.5.', Generator::class), \E_USER_DEPRECATED);
+            @trigger_error(\sprintf('Passing a "%s" instance as 4th argument is mandatory since version 1.5.', Generator::class), \E_USER_DEPRECATED);
             $this->generator = new Generator($fileManager, 'App\\');
         } else {
             $this->generator = $generator;
         }
 
         if (null === $entityClassGenerator) {
-            @trigger_error(sprintf('Passing a "%s" instance as 5th argument is mandatory since version 1.15.1', EntityClassGenerator::class), \E_USER_DEPRECATED);
+            @trigger_error(\sprintf('Passing a "%s" instance as 5th argument is mandatory since version 1.15.1', EntityClassGenerator::class), \E_USER_DEPRECATED);
             $this->entityClassGenerator = new EntityClassGenerator($generator, $this->doctrineHelper);
         } else {
             $this->entityClassGenerator = $entityClassGenerator;
@@ -92,12 +93,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
     public function configureCommand(Command $command, InputConfiguration $inputConfig): void
     {
         $command
-            ->addArgument('name', InputArgument::OPTIONAL, sprintf('Class name of the entity to create or update (e.g. <fg=yellow>%s</>)', Str::asClassName(Str::getRandomTerm())))
+            ->addArgument('name', InputArgument::OPTIONAL, \sprintf('Class name of the entity to create or update (e.g. <fg=yellow>%s</>)', Str::asClassName(Str::getRandomTerm())))
             ->addOption('api-resource', 'a', InputOption::VALUE_NONE, 'Mark this class as an API Platform resource (expose a CRUD API for it)')
             ->addOption('broadcast', 'b', InputOption::VALUE_NONE, 'Add the ability to broadcast entity updates using Symfony UX Turbo?')
             ->addOption('regenerate', null, InputOption::VALUE_NONE, 'Instead of adding new fields, simply generate the methods (e.g. getter/setter) for existing fields')
             ->addOption('overwrite', null, InputOption::VALUE_NONE, 'Overwrite any existing getter/setter methods')
-            ->setHelp(file_get_contents(__DIR__.'/../Resources/help/MakeEntity.txt'))
+            ->addOption('field', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Add a field without being asked for it: <fg=yellow>name[:type[:length]][?]</> (e.g. <fg=yellow>title:string:100</>). Repeat the option for each field')
+            ->addOption('relation', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Add a relation without being asked for it: <fg=yellow>name:type:target[?]</> (e.g. <fg=yellow>author:ManyToOne:User</>). Repeat the option for each relation')
+            ->setHelp($this->getHelpFileContents('MakeEntity.txt'))
         ;
 
         $this->addWithUuidOption($command);
@@ -107,6 +110,8 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
     public function interact(InputInterface $input, ConsoleStyle $io, Command $command): void
     {
+        $this->checkIsUsingUid($input);
+
         if (($entityClassName = $input->getArgument('name')) && empty($this->verifyEntityName($entityClassName))) {
             return;
         }
@@ -123,14 +128,12 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             return;
         }
 
-        $this->checkIsUsingUid($input);
-
         $argument = $command->getDefinition()->getArgument('name');
         $question = $this->createEntityClassQuestion($argument->getDescription());
         $entityClassName ??= $io->askQuestion($question);
 
         while ($dangerous = $this->verifyEntityName($entityClassName)) {
-            if ($io->confirm(sprintf('"%s" contains one or more non-ASCII characters, which are potentially problematic with some database. It is recommended to use only ASCII characters for entity names. Continue anyway?', $entityClassName), false)) {
+            if ($io->confirm(\sprintf('"%s" contains one or more non-ASCII characters, which are potentially problematic with some database. It is recommended to use only ASCII characters for entity names. Continue anyway?', $entityClassName), false)) {
                 break;
             }
 
@@ -172,9 +175,15 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
     public function generate(InputInterface $input, ConsoleStyle $io, Generator $generator): void
     {
         $overwrite = $input->getOption('overwrite');
+        $fieldOptions = $input->getOption('field');
+        $relationOptions = $input->getOption('relation');
 
         // the regenerate option has entirely custom behavior
         if ($input->getOption('regenerate')) {
+            if ($fieldOptions || $relationOptions) {
+                throw new RuntimeCommandException('The "--field" and "--relation" options cannot be combined with "--regenerate", which only generates methods for existing fields.');
+            }
+
             $this->regenerateEntities($input->getArgument('name'), $overwrite, $generator);
             $this->writeSuccessMessage($io);
 
@@ -187,19 +196,28 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         );
 
         $classExists = class_exists($entityClassDetails->getFullName());
+
+        // a class that does not exist yet is about to be generated with an "id" property, so that name is taken
+        $queuedFields = $fieldOptions || $relationOptions ? $this->parseDefinitions(
+            $fieldOptions,
+            $relationOptions,
+            $entityClassDetails->getFullName(),
+            $classExists ? $this->getPropertyNames($entityClassDetails->getFullName()) : ['id'],
+        ) : null;
+
         if (!$classExists) {
             $broadcast = $input->getOption('broadcast');
             $entityPath = $this->entityClassGenerator->generateEntityClass(
                 entityClassDetails: $entityClassDetails,
                 apiResource: $input->getOption('api-resource'),
                 broadcast: $broadcast,
-                useUuidIdentifier: $this->getIdType(),
+                useUuidIdentifier: $this->getIdType($input),
             );
 
             if ($broadcast) {
                 $shortName = $entityClassDetails->getShortName();
                 $generator->generateTemplate(
-                    sprintf('broadcast/%s.stream.html.twig', $shortName),
+                    \sprintf('broadcast/%s.stream.html.twig', $shortName),
                     'doctrine/broadcast_twig_template.tpl.php',
                     [
                         'class_name' => Str::asSnakeCase($shortName),
@@ -229,7 +247,9 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
         $isFirstField = true;
         while (true) {
-            $newField = $this->askForNextField($io, $currentFields, $entityClassDetails->getFullName(), $isFirstField);
+            $newField = null === $queuedFields
+                ? $this->askForNextField($io, $currentFields, $entityClassDetails->getFullName(), $isFirstField)
+                : array_shift($queuedFields);
             $isFirstField = false;
 
             if (null === $newField) {
@@ -246,7 +266,9 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             } elseif ($newField instanceof EntityRelation) {
                 // both overridden below for OneToMany
                 $newFieldName = $newField->getOwningProperty();
-                if ($newField->isSelfReferencing()) {
+                if ($newField->isSelfReferencing() || $newField->getInverseClass() === $entityClassDetails->getFullName()) {
+                    // either the relation is self referencing, or it is a OneToMany, whose
+                    // branch below resolves the owning class itself and discards what is set here
                     $otherManipulatorFilename = $entityPath;
                     $otherManipulator = $manipulator;
                 } else {
@@ -292,7 +314,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
                         break;
                     default:
-                        throw new \Exception('Invalid relation type');
+                        throw new \Exception('Invalid relation type.');
                 }
 
                 // save the inverse side if it's being mapped
@@ -301,21 +323,17 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 }
                 $currentFields[] = $newFieldName;
             } else {
-                throw new \Exception('Invalid value');
+                throw new \Exception('Invalid value.');
             }
 
-            foreach ($fileManagerOperations as $path => $manipulatorOrMessage) {
-                if (\is_string($manipulatorOrMessage)) {     /* @phpstan-ignore-line - https://github.com/symfony/maker-bundle/issues/1509 */
-                    $io->comment($manipulatorOrMessage);
-                } else {
-                    $this->fileManager->dumpFile($path, $manipulatorOrMessage->getSourceCode());
-                }
+            foreach ($fileManagerOperations as $path => $pendingManipulator) {
+                $this->fileManager->dumpFile($path, $pendingManipulator->getSourceCode());
             }
         }
 
         $this->writeSuccessMessage($io);
         $io->text([
-            sprintf('Next: When you\'re ready, create a migration with <info>%s make:migration</info>', CliOutputHelper::getCommandPrefix()),
+            \sprintf('Next: When you\'re ready, create a migration with <info>%s make:migration</info>', CliOutputHelper::getCommandPrefix()),
             '',
         ]);
     }
@@ -339,6 +357,419 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         ORMDependencyBuilder::buildDependencies($dependencies);
     }
 
+    /**
+     * @param string[] $fieldDefinitions
+     * @param string[] $relationDefinitions
+     * @param string[] $currentFields
+     *
+     * @return array<ClassProperty|EntityRelation>
+     */
+    private function parseDefinitions(array $fieldDefinitions, array $relationDefinitions, string $entityClass, array $currentFields): array
+    {
+        $queued = [];
+
+        foreach ($fieldDefinitions as $definition) {
+            $property = $this->parseFieldOption($definition, $currentFields);
+
+            $currentFields[] = $property->propertyName;
+            $queued[] = $property;
+        }
+
+        // the properties the queued relations add to classes on the other side, so that two
+        // relations sharing a target cannot both fall back to the same name on it
+        $claimedTargetFields = [];
+
+        foreach ($relationDefinitions as $definition) {
+            $relation = $this->parseRelationOption($definition, $entityClass, $currentFields, $claimedTargetFields);
+
+            if ($relation->getOwningClass() === $entityClass) {
+                $currentFields[] = $relation->getOwningProperty();
+            }
+
+            if ($relation->getMapInverseRelation() && $relation->getInverseClass() === $entityClass) {
+                $currentFields[] = $relation->getInverseProperty();
+            }
+
+            $queued[] = $relation;
+        }
+
+        return $queued;
+    }
+
+    /**
+     * @param string[]                $currentFields
+     * @param array<string, string[]> $claimedTargetFields
+     */
+    private function parseRelationOption(string $definition, string $entityClass, array $currentFields, array &$claimedTargetFields): EntityRelation
+    {
+        [$head, $nullable, $modifiers] = $this->splitDefinition($definition);
+
+        $parts = explode(':', $head);
+        $fieldName = $this->parsePropertyName(array_shift($parts), $definition, $currentFields);
+        $type = array_shift($parts) ?? '';
+
+        if (!\in_array($type, EntityRelation::getValidRelationTypes(), true)) {
+            throw new RuntimeCommandException(\sprintf('Invalid relation type "%s" in "%s". Expected one of: "%s".', $type, $definition, implode('", "', EntityRelation::getValidRelationTypes())));
+        }
+
+        $targetClass = $this->resolveRelationTarget(array_shift($parts) ?? '', $entityClass, $definition);
+
+        if ($parts) {
+            throw new RuntimeCommandException(\sprintf('The relation "%s" has more options than "%s" accepts.', $definition, $type));
+        }
+
+        $targetField = $modifiers['target-field'] ?? null;
+        unset($modifiers['target-field']);
+
+        if (true === $targetField) {
+            throw new RuntimeCommandException(\sprintf('The "target-field" modifier of "%s" needs a value: a property name, or "none".', $definition));
+        }
+
+        $orphanRemoval = $this->takeFlag($modifiers, 'orphan-removal', $definition);
+
+        if ($modifiers) {
+            throw new RuntimeCommandException(\sprintf('Unknown modifier "%s" in the relation "%s".', array_key_first($modifiers), $definition));
+        }
+
+        $shortName = Str::getShortClassName($entityClass);
+
+        switch ($type) {
+            case EntityRelation::MANY_TO_ONE:
+                $relation = new EntityRelation(EntityRelation::MANY_TO_ONE, $entityClass, $targetClass);
+                $relation->setOwningProperty($fieldName);
+                $relation->setIsNullable($nullable);
+
+                $this->mapRelationInverseSide($relation, $targetField, Str::singularCamelCaseToPluralCamelCase($shortName), true, $definition, $currentFields, $claimedTargetFields);
+
+                // orphan removal only applies if the inverse relation is set
+                $this->setRelationOrphanRemoval($relation, $orphanRemoval, $definition, $relation->getMapInverseRelation() && !$nullable);
+
+                break;
+
+            case EntityRelation::ONE_TO_MANY:
+                // a OneToMany is really a ManyToOne owned by the class on the other side
+                $relation = new EntityRelation(EntityRelation::MANY_TO_ONE, $targetClass, $entityClass);
+                $relation->setInverseProperty($fieldName);
+                $relation->setIsNullable($nullable);
+
+                if ('none' === $targetField) {
+                    throw new RuntimeCommandException(\sprintf('The relation "%s" cannot use "target-field=none": a OneToMany exists only through the property it adds to the other class.', $definition));
+                }
+
+                if (!$relation->isSelfReferencing() && $this->isClassInVendor($targetClass)) {
+                    throw new RuntimeCommandException(\sprintf('The relation "%s" has to add a property to "%s", which lives in vendor/.', $definition, $targetClass));
+                }
+
+                $relation->setOwningProperty($this->claimTargetField(
+                    $targetField ?? Str::asLowerCamelCase($shortName),
+                    $targetClass,
+                    $definition,
+                    $relation->isSelfReferencing() ? $currentFields : [],
+                    $claimedTargetFields,
+                ));
+
+                $this->setRelationOrphanRemoval($relation, $orphanRemoval, $definition, !$nullable);
+
+                break;
+
+            case EntityRelation::MANY_TO_MANY:
+                if ($nullable) {
+                    throw new RuntimeCommandException(\sprintf('The relation "%s" cannot be nullable: a ManyToMany is a collection, which is empty rather than null.', $definition));
+                }
+
+                $relation = new EntityRelation(EntityRelation::MANY_TO_MANY, $entityClass, $targetClass);
+                $relation->setOwningProperty($fieldName);
+
+                $this->mapRelationInverseSide($relation, $targetField, Str::singularCamelCaseToPluralCamelCase($shortName), true, $definition, $currentFields, $claimedTargetFields);
+                $this->setRelationOrphanRemoval($relation, $orphanRemoval, $definition, false);
+
+                break;
+
+            case EntityRelation::ONE_TO_ONE:
+                $relation = new EntityRelation(EntityRelation::ONE_TO_ONE, $entityClass, $targetClass);
+                $relation->setOwningProperty($fieldName);
+                $relation->setIsNullable($nullable);
+
+                // the interactive mode recommends against mapping the inverse side of a
+                // OneToOne, because Doctrine cannot lazy load it
+                $this->mapRelationInverseSide($relation, $targetField, Str::asLowerCamelCase($shortName), false, $definition, $currentFields, $claimedTargetFields);
+                $this->setRelationOrphanRemoval($relation, $orphanRemoval, $definition, false);
+
+                break;
+
+            default:
+                throw new \LogicException(\sprintf('Unhandled relation type "%s".', $type));
+        }
+
+        return $relation;
+    }
+
+    /**
+     * Decides which property the relation adds to the class on the other side, and whether
+     * that side is mapped at all.
+     *
+     * @param string[]                $currentFields
+     * @param array<string, string[]> $claimedTargetFields
+     */
+    private function mapRelationInverseSide(EntityRelation $relation, ?string $targetField, string $default, bool $mapByDefault, string $definition, array $currentFields, array &$claimedTargetFields): void
+    {
+        $inverseClass = $relation->getInverseClass();
+
+        if (!$relation->isSelfReferencing() && $this->isClassInVendor($inverseClass)) {
+            if (null !== $targetField && 'none' !== $targetField) {
+                throw new RuntimeCommandException(\sprintf('The relation "%s" cannot add a property to "%s", which lives in vendor/.', $definition, $inverseClass));
+            }
+
+            $relation->setMapInverseRelation(false);
+
+            return;
+        }
+
+        if ('none' === $targetField || (null === $targetField && !$mapByDefault)) {
+            $relation->setMapInverseRelation(false);
+
+            return;
+        }
+
+        $relation->setInverseProperty($this->claimTargetField(
+            $targetField ?? $default,
+            $inverseClass,
+            $definition,
+            $relation->isSelfReferencing() ? $currentFields : [],
+            $claimedTargetFields,
+        ));
+    }
+
+    private function setRelationOrphanRemoval(EntityRelation $relation, bool $orphanRemoval, string $definition, bool $applies): void
+    {
+        if (!$orphanRemoval) {
+            return;
+        }
+
+        if (!$applies) {
+            throw new RuntimeCommandException(\sprintf('The relation "%s" cannot use "orphan-removal": it only applies to a ManyToOne or OneToMany that maps both sides and is not nullable.', $definition));
+        }
+
+        $relation->setOrphanRemoval(true);
+    }
+
+    /**
+     * @param string[]                $currentFields
+     * @param array<string, string[]> $claimedTargetFields
+     */
+    private function claimTargetField(string $propertyName, string $targetClass, string $definition, array $currentFields, array &$claimedTargetFields): string
+    {
+        try {
+            Validator::validateDoctrineFieldName($propertyName, $this->doctrineHelper->getRegistry());
+        } catch (\InvalidArgumentException $e) {
+            throw new RuntimeCommandException($e->getMessage(), previous: $e);
+        }
+
+        $taken = array_merge($currentFields, $claimedTargetFields[$targetClass] ?? []);
+
+        if (\in_array($propertyName, $taken, true) || (class_exists($targetClass) && property_exists($targetClass, $propertyName))) {
+            throw new RuntimeCommandException(\sprintf('The "%s" class already has a "%s" property; name the one "%s" adds with "target-field=".', $targetClass, $propertyName, $definition));
+        }
+
+        $claimedTargetFields[$targetClass][] = $propertyName;
+
+        return $propertyName;
+    }
+
+    private function resolveRelationTarget(string $target, string $entityClass, string $definition): string
+    {
+        if (!$target) {
+            throw new RuntimeCommandException(\sprintf('The relation "%s" is missing the class it relates to.', $definition));
+        }
+
+        // a new entity is generated after this runs, so it cannot be looked up yet
+        if ($target === $entityClass || $target === Str::getShortClassName($entityClass)) {
+            return $entityClass;
+        }
+
+        // give the Entity namespace priority over the full class name, to avoid issues with
+        // classes like "Directory" that exist in PHP's core
+        if (class_exists($namespaced = $this->getEntityNamespace().'\\'.$target)) {
+            return $namespaced;
+        }
+
+        if (class_exists($target)) {
+            return $target;
+        }
+
+        throw new RuntimeCommandException(\sprintf('Unknown class "%s" in the relation "%s".', $target, $definition));
+    }
+
+    /**
+     * @param string[] $currentFields
+     */
+    private function parseFieldOption(string $definition, array $currentFields): ClassProperty
+    {
+        [$head, $nullable, $modifiers] = $this->splitDefinition($definition);
+
+        $parts = explode(':', $head);
+        $fieldName = $this->parsePropertyName(array_shift($parts), $definition, $currentFields);
+        $type = array_shift($parts) ?: $this->guessFieldType($fieldName);
+
+        if ('relation' === $type || \in_array($type, EntityRelation::getValidRelationTypes(), true)) {
+            throw new RuntimeCommandException(\sprintf('The "--field" option cannot add the relation "%s", use "--relation=%s:%s:<target>" instead.', $fieldName, $fieldName, 'relation' === $type ? 'ManyToOne' : $type));
+        }
+
+        if ('enum' === $type) {
+            // the interactive mode picks the type only after asking, so an enum never goes
+            // through the "string" branch below and never gets a length
+            $classProperty = new ClassProperty(propertyName: $fieldName, type: 'string');
+            $classProperty->enumType = $this->resolveEnumClass(array_shift($parts) ?? '');
+
+            if ($this->takeFlag($modifiers, 'multiple', $definition)) {
+                $classProperty->type = 'simple_array';
+            }
+        } elseif (!\array_key_exists($type, $this->getTypesMap())) {
+            throw new RuntimeCommandException(\sprintf('Invalid type "%s" for field "%s". Run the command without "--field" to see the available types.', $type, $fieldName));
+        } else {
+            $classProperty = new ClassProperty(propertyName: $fieldName, type: $type);
+
+            if ('string' === $type) {
+                $classProperty->length = Validator::validateLength(array_shift($parts) ?: '255');
+            } elseif ('decimal' === $type) {
+                $classProperty->precision = Validator::validatePrecision(array_shift($parts) ?: '10');
+                $classProperty->scale = Validator::validateScale(array_shift($parts) ?: '0');
+            }
+        }
+
+        if ($nullable) {
+            $classProperty->nullable = true;
+        }
+
+        if ($parts) {
+            throw new RuntimeCommandException(\sprintf('The field "%s" has more options than the type "%s" accepts.', $definition, $type));
+        }
+
+        if ($modifiers) {
+            throw new RuntimeCommandException(\sprintf('Unknown modifier "%s" in the field "%s".', array_key_first($modifiers), $definition));
+        }
+
+        return $classProperty;
+    }
+
+    /**
+     * @param string[] $currentFields
+     */
+    private function parsePropertyName(string $propertyName, string $definition, array $currentFields): string
+    {
+        if (!$propertyName) {
+            throw new RuntimeCommandException(\sprintf('The definition "%s" is missing a property name.', $definition));
+        }
+
+        if (\in_array($propertyName, $currentFields, true)) {
+            throw new RuntimeCommandException(\sprintf('The "%s" property already exists.', $propertyName));
+        }
+
+        try {
+            return Validator::validateDoctrineFieldName($propertyName, $this->doctrineHelper->getRegistry());
+        } catch (\InvalidArgumentException $e) {
+            // the interactive mode asks again, there is nobody to ask here
+            throw new RuntimeCommandException($e->getMessage(), previous: $e);
+        }
+    }
+
+    /**
+     * Splits <name>[:<part>...][?][,<modifier>...] into those three parts.
+     *
+     * @return array{string, bool, array<string, string|true>}
+     */
+    private function splitDefinition(string $definition): array
+    {
+        $modifiers = explode(',', $definition);
+        $head = array_shift($modifiers);
+
+        if ($nullable = str_ends_with($head, '?')) {
+            $head = substr($head, 0, -1);
+        }
+
+        $parsedModifiers = [];
+
+        foreach ($modifiers as $modifier) {
+            if (!$modifier) {
+                throw new RuntimeCommandException(\sprintf('The definition "%s" has an empty modifier.', $definition));
+            }
+
+            [$name, $value] = explode('=', $modifier, 2) + [1 => true];
+            $parsedModifiers[$name] = $value;
+        }
+
+        return [$head, $nullable, $parsedModifiers];
+    }
+
+    /**
+     * @param array<string, string|true> $modifiers
+     */
+    private function takeFlag(array &$modifiers, string $name, string $definition): bool
+    {
+        $value = $modifiers[$name] ?? null;
+        unset($modifiers[$name]);
+
+        return match ($value) {
+            null => false,
+            true, 'true' => true,
+            'false' => false,
+            default => throw new RuntimeCommandException(\sprintf('The "%s" modifier of "%s" takes no value, or "true" or "false".', $name, $definition)),
+        };
+    }
+
+    private function resolveEnumClass(string $enumClass): string
+    {
+        if (!$enumClass) {
+            throw new RuntimeCommandException('An enum field needs the enum class, e.g. "--field=status:enum:App\\Enum\\Status".');
+        }
+
+        if (str_contains($enumClass, '\\')) {
+            return Validator::classIsBackedEnum($enumClass);
+        }
+
+        // a short name spares the caller from escaping backslashes in the shell
+        $enums = (new EnumHelper($this->fileManager->getRootDirectory().'/src', 'App'))->getAllEnums();
+        $matches = array_values(array_filter($enums, static fn (string $enum) => Str::getShortClassName($enum) === $enumClass));
+
+        if (!$matches) {
+            throw new RuntimeCommandException(\sprintf('No backed enum "%s" was found in "src/". Pass its full class name if it lives elsewhere.', $enumClass));
+        }
+
+        if (1 < \count($matches)) {
+            throw new RuntimeCommandException(\sprintf('The enum "%s" is ambiguous, pass a full class name: "%s".', $enumClass, implode('", "', $matches)));
+        }
+
+        return $matches[0];
+    }
+
+    private function guessFieldType(string $fieldName): string
+    {
+        // convert to snake case for simplicity
+        $snakeCasedField = Str::asSnakeCase($fieldName);
+
+        if ('_at' === $suffix = substr($snakeCasedField, -3)) {
+            return 'datetime_immutable';
+        }
+
+        if ('_id' === $suffix) {
+            return 'integer';
+        }
+
+        if (str_starts_with($snakeCasedField, 'is_') || str_starts_with($snakeCasedField, 'has_')) {
+            return 'boolean';
+        }
+
+        if ('uuid' === $snakeCasedField) {
+            return 'uuid';
+        }
+
+        if ('guid' === $snakeCasedField) {
+            return 'guid';
+        }
+
+        return 'string';
+    }
+
     /** @param string[] $fields */
     private function askForNextField(ConsoleStyle $io, array $fields, string $entityClass, bool $isFirstField): EntityRelation|ClassProperty|null
     {
@@ -357,7 +788,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             }
 
             if (\in_array($name, $fields)) {
-                throw new \InvalidArgumentException(sprintf('The "%s" property already exists.', $name));
+                throw new \InvalidArgumentException(\sprintf('The "%s" property already exists.', $name));
             }
 
             return Validator::validateDoctrineFieldName($name, $this->doctrineHelper->getRegistry());
@@ -367,24 +798,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             return null;
         }
 
-        $defaultType = 'string';
-        // try to guess the type by the field name prefix/suffix
-        // convert to snake case for simplicity
-        $snakeCasedField = Str::asSnakeCase($fieldName);
-
-        if ('_at' === $suffix = substr($snakeCasedField, -3)) {
-            $defaultType = 'datetime_immutable';
-        } elseif ('_id' === $suffix) {
-            $defaultType = 'integer';
-        } elseif (str_starts_with($snakeCasedField, 'is_')) {
-            $defaultType = 'boolean';
-        } elseif (str_starts_with($snakeCasedField, 'has_')) {
-            $defaultType = 'boolean';
-        } elseif ('uuid' === $snakeCasedField) {
-            $defaultType = Type::hasType('uuid') ? 'uuid' : 'guid';
-        } elseif ('guid' === $snakeCasedField) {
-            $defaultType = 'guid';
-        }
+        $defaultType = $this->guessFieldType($fieldName);
 
         $type = null;
         $types = $this->getTypesMap();
@@ -406,7 +820,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 $type = null;
             } elseif (!\in_array($type, $allValidTypes)) {
                 $this->printAvailableTypes($io);
-                $io->error(sprintf('Invalid type "%s".', $type));
+                $io->error(\sprintf('Invalid type "%s".', $type));
                 $io->writeln('');
 
                 $type = null;
@@ -431,7 +845,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             $classProperty->scale = $io->ask('Scale (number of decimals to store: 100.00 would be 2)', '0', Validator::validateScale(...));
         } elseif ('enum' === $type) {
             // ask for valid backed enum class
-            $classProperty->enumType = $io->ask('Enum class', null, Validator::classIsBackedEnum(...));
+            $classProperty->enumType = $this->askEnumDetails($io);
 
             // set type according to user decision
             $classProperty->type = $io->confirm('Can this field store multiple enum values', false) ? 'simple_array' : 'string';
@@ -454,24 +868,33 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 'text' => [],
                 'boolean' => [],
                 'integer' => ['smallint', 'bigint'],
-                'float' => [],
+                'float' => ['smallfloat'],
+                'decimal' => [],
+                'number' => [],
             ],
             'array_object' => [
                 'array' => ['simple_array'],
-                'json' => [],
+                'json' => ['json_object'],
                 'object' => [],
                 'binary' => [],
                 'blob' => [],
+                'json_b' => ['jsonb_object'],
             ],
             'date_time' => [
                 'datetime' => ['datetime_immutable'],
                 'datetimetz' => ['datetimetz_immutable'],
                 'date' => ['date_immutable'],
-                'time' => ['time_immutable'],
+                'date_point' => [],
                 'dateinterval' => [],
+                'day_point' => [],
+                'time' => ['time_immutable'],
+                'time_point' => [],
             ],
             'other' => [
                 'enum' => [],
+                'uuid' => [],
+                'guid' => [],
+                'ulid' => [],
             ],
         ];
 
@@ -495,11 +918,11 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 // Remove type as not to show it again in "Other Types"
                 unset($allTypes[$mainType]);
 
-                $line = sprintf('  * <comment>%s</comment>', $mainType);
+                $line = \sprintf('  * <comment>%s</comment>', $mainType);
 
                 if (!empty($subTypes)) {
-                    $line .= sprintf(' or %s', implode(' or ', array_map(
-                        static fn ($subType) => sprintf('<comment>%s</comment>', $subType), $subTypes))
+                    $line .= \sprintf(' or %s', implode(' or ', array_map(
+                        static fn ($subType) => \sprintf('<comment>%s</comment>', $subType), $subTypes))
                     );
                 }
 
@@ -516,11 +939,11 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 $wizard = '\\' === \DIRECTORY_SEPARATOR ? 'wizard' : 'wizard 🧙';
             }
 
-            $io->writeln(sprintf('  * <comment>relation</comment> a %s will help you build the relation', $wizard));
+            $io->writeln(\sprintf('  * <comment>relation</comment> a %s will help you build the relation', $wizard));
 
             $relations = [EntityRelation::MANY_TO_ONE, EntityRelation::ONE_TO_MANY, EntityRelation::MANY_TO_MANY, EntityRelation::ONE_TO_ONE];
             foreach ($relations as $relation) {
-                $line = sprintf('  * <comment>%s</comment>', $relation);
+                $line = \sprintf('  * <comment>%s</comment>', $relation);
 
                 $io->writeln($line);
             }
@@ -556,6 +979,35 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         return $question;
     }
 
+    private function askEnumDetails(ConsoleStyle $io): string
+    {
+        $targetEnumClass = null;
+        while (null === $targetEnumClass) {
+            $question = $this->createEnumQuestion('Enum class (e.g. <fg=yellow>App\Enum\Foo</>)');
+
+            $answeredEnumClass = $io->askQuestion($question);
+
+            if (enum_exists($answeredEnumClass)) {
+                $targetEnumClass = $answeredEnumClass;
+            } else {
+                $io->error(\sprintf('Unknown enum "%s"', $answeredEnumClass));
+            }
+        }
+
+        return $targetEnumClass;
+    }
+
+    private function createEnumQuestion(string $questionText): Question
+    {
+        $question = new Question($questionText);
+        $question->setValidator(Validator::classIsBackedEnum(...));
+
+        $enumHelper = new EnumHelper($this->fileManager->getRootDirectory().'/src', 'App');
+        $question->setAutocompleterValues($enumHelper->getAllEnums());
+
+        return $question;
+    }
+
     private function askRelationDetails(ConsoleStyle $io, string $generatedEntityClass, string $type, string $newFieldName): EntityRelation
     {
         // ask the targetEntity
@@ -574,7 +1026,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             } elseif (class_exists($answeredEntityClass)) {
                 $targetEntityClass = $answeredEntityClass;
             } else {
-                $io->error(sprintf('Unknown class "%s"', $answeredEntityClass));
+                $io->error(\sprintf('Unknown class "%s"', $answeredEntityClass));
             }
         }
 
@@ -584,7 +1036,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         }
 
         $askFieldName = fn (string $targetClass, string $defaultValue) => $io->ask(
-            sprintf('New field name inside %s', Str::getShortClassName($targetClass)),
+            \sprintf('New field name inside %s', Str::getShortClassName($targetClass)),
             $defaultValue,
             function ($name) use ($targetClass) {
                 // it's still *possible* to create duplicate properties - by
@@ -592,14 +1044,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 // same make:entity run. property_exists() only knows about
                 // properties that *originally* existed on this class.
                 if (property_exists($targetClass, $name)) {
-                    throw new \InvalidArgumentException(sprintf('The "%s" class already has a "%s" property.', $targetClass, $name));
+                    throw new \InvalidArgumentException(\sprintf('The "%s" class already has a "%s" property.', $targetClass, $name));
                 }
 
                 return Validator::validateDoctrineFieldName($name, $this->doctrineHelper->getRegistry());
             }
         );
 
-        $askIsNullable = static fn (string $propertyName, string $targetClass) => $io->confirm(sprintf(
+        $askIsNullable = static fn (string $propertyName, string $targetClass) => $io->confirm(\sprintf(
             'Is the <comment>%s</comment>.<comment>%s</comment> property allowed to be null (nullable)?',
             Str::getShortClassName($targetClass),
             $propertyName
@@ -608,26 +1060,26 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         $askOrphanRemoval = static function (string $owningClass, string $inverseClass) use ($io) {
             $io->text([
                 'Do you want to activate <comment>orphanRemoval</comment> on your relationship?',
-                sprintf(
+                \sprintf(
                     'A <comment>%s</comment> is "orphaned" when it is removed from its related <comment>%s</comment>.',
                     Str::getShortClassName($owningClass),
                     Str::getShortClassName($inverseClass)
                 ),
-                sprintf(
+                \sprintf(
                     'e.g. <comment>$%s->remove%s($%s)</comment>',
                     Str::asLowerCamelCase(Str::getShortClassName($inverseClass)),
                     Str::asCamelCase(Str::getShortClassName($owningClass)),
                     Str::asLowerCamelCase(Str::getShortClassName($owningClass))
                 ),
                 '',
-                sprintf(
+                \sprintf(
                     'NOTE: If a <comment>%s</comment> may *change* from one <comment>%s</comment> to another, answer "no".',
                     Str::getShortClassName($owningClass),
                     Str::getShortClassName($inverseClass)
                 ),
             ]);
 
-            return $io->confirm(sprintf('Do you want to automatically delete orphaned <comment>%s</comment> objects (orphanRemoval)?', $owningClass), false);
+            return $io->confirm(\sprintf('Do you want to automatically delete orphaned <comment>%s</comment> objects (orphanRemoval)?', $owningClass), false);
         };
 
         $askInverseSide = function (EntityRelation $relation) use ($io) {
@@ -646,7 +1098,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 $getterMethodName = Str::singularCamelCaseToPluralCamelCase($getterMethodName);
             }
             $mapInverse = $io->confirm(
-                sprintf(
+                \sprintf(
                     'Do you want to add a new property to <comment>%s</comment> so that you can access/update <comment>%s</comment> objects from it - e.g. <comment>$%s->%s()</comment>?',
                     Str::getShortClassName($relation->getInverseClass()),
                     Str::getShortClassName($relation->getOwningClass()),
@@ -674,7 +1126,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
                 $askInverseSide($relation);
                 if ($relation->getMapInverseRelation()) {
-                    $io->comment(sprintf(
+                    $io->comment(\sprintf(
                         'A new property will also be added to the <comment>%s</comment> class so that you can access the related <comment>%s</comment> objects from it.',
                         Str::getShortClassName($relation->getInverseClass()),
                         Str::getShortClassName($relation->getOwningClass())
@@ -703,7 +1155,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
                 );
                 $relation->setInverseProperty($newFieldName);
 
-                $io->comment(sprintf(
+                $io->comment(\sprintf(
                     'A new property will also be added to the <comment>%s</comment> class so that you can access and set the related <comment>%s</comment> object from it.',
                     Str::getShortClassName($relation->getOwningClass()),
                     Str::getShortClassName($relation->getInverseClass())
@@ -736,7 +1188,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
                 $askInverseSide($relation);
                 if ($relation->getMapInverseRelation()) {
-                    $io->comment(sprintf(
+                    $io->comment(\sprintf(
                         'A new property will also be added to the <comment>%s</comment> class so that you can access the related <comment>%s</comment> objects from it.',
                         Str::getShortClassName($relation->getInverseClass()),
                         Str::getShortClassName($relation->getOwningClass())
@@ -763,7 +1215,7 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
 
                 $askInverseSide($relation);
                 if ($relation->getMapInverseRelation()) {
-                    $io->comment(sprintf(
+                    $io->comment(\sprintf(
                         'A new property will also be added to the <comment>%s</comment> class so that you can access the related <comment>%s</comment> object from it.',
                         Str::getShortClassName($relation->getInverseClass()),
                         Str::getShortClassName($relation->getOwningClass())
@@ -797,22 +1249,22 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
         $rows = [];
         $rows[] = [
             EntityRelation::MANY_TO_ONE,
-            sprintf("Each <comment>%s</comment> relates to (has) <info>one</info> <comment>%s</comment>.\nEach <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
+            \sprintf("Each <comment>%s</comment> relates to (has) <info>one</info> <comment>%s</comment>.\nEach <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
         ];
         $rows[] = ['', ''];
         $rows[] = [
             EntityRelation::ONE_TO_MANY,
-            sprintf("Each <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.\nEach <comment>%s</comment> relates to (has) <info>one</info> <comment>%s</comment>.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
+            \sprintf("Each <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.\nEach <comment>%s</comment> relates to (has) <info>one</info> <comment>%s</comment>.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
         ];
         $rows[] = ['', ''];
         $rows[] = [
             EntityRelation::MANY_TO_MANY,
-            sprintf("Each <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.\nEach <comment>%s</comment> can also relate to (can also have) <info>many</info> <comment>%s</comment> objects.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
+            \sprintf("Each <comment>%s</comment> can relate to (can have) <info>many</info> <comment>%s</comment> objects.\nEach <comment>%s</comment> can also relate to (can also have) <info>many</info> <comment>%s</comment> objects.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
         ];
         $rows[] = ['', ''];
         $rows[] = [
             EntityRelation::ONE_TO_ONE,
-            sprintf("Each <comment>%s</comment> relates to (has) exactly <info>one</info> <comment>%s</comment>.\nEach <comment>%s</comment> also relates to (has) exactly <info>one</info> <comment>%s</comment>.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
+            \sprintf("Each <comment>%s</comment> relates to (has) exactly <info>one</info> <comment>%s</comment>.\nEach <comment>%s</comment> also relates to (has) exactly <info>one</info> <comment>%s</comment>.", $originalEntityShort, $targetEntityShort, $targetEntityShort, $originalEntityShort),
         ];
 
         $io->table([
@@ -820,14 +1272,14 @@ final class MakeEntity extends AbstractMaker implements InputAwareMakerInterface
             'Description',
         ], $rows);
 
-        $question = new Question(sprintf(
+        $question = new Question(\sprintf(
             'Relation type? [%s]',
             implode(', ', EntityRelation::getValidRelationTypes())
         ));
         $question->setAutocompleterValues(EntityRelation::getValidRelationTypes());
-        $question->setValidator(function ($type) {
+        $question->setValidator(static function ($type) {
             if (!\in_array($type, EntityRelation::getValidRelationTypes())) {
-                throw new \InvalidArgumentException(sprintf('Invalid type: use one of: %s', implode(', ', EntityRelation::getValidRelationTypes())));
+                throw new \InvalidArgumentException(\sprintf('Invalid type, use one of: "%s"', implode('", "', EntityRelation::getValidRelationTypes())));
             }
 
             return $type;

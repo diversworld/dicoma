@@ -24,24 +24,25 @@ use Symfony\Contracts\Service\ServiceSubscriberInterface;
  */
 final class UsageTrackingTokenStorage implements TokenStorageInterface, ServiceSubscriberInterface
 {
-    private TokenStorageInterface $storage;
-    private ContainerInterface $container;
     private bool $enableUsageTracking = false;
 
-    public function __construct(TokenStorageInterface $storage, ContainerInterface $container)
-    {
-        $this->storage = $storage;
-        $this->container = $container;
+    public function __construct(
+        private TokenStorageInterface $storage,
+        private ContainerInterface $container,
+    ) {
     }
 
     public function getToken(): ?TokenInterface
     {
+        // reading the token can enable usage tracking, e.g. when a lazy firewall loads it from the session
+        $token = $this->storage->getToken();
+
         if ($this->shouldTrackUsage()) {
             // increments the internal session usage index
             $this->getSession()->getMetadataBag();
         }
 
-        return $this->storage->getToken();
+        return $token;
     }
 
     public function setToken(?TokenInterface $token = null): void

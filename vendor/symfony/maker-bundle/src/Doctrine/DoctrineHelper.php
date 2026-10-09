@@ -24,7 +24,6 @@ use Doctrine\Persistence\Mapping\ClassMetadata;
 use Doctrine\Persistence\Mapping\Driver\MappingDriver;
 use Doctrine\Persistence\Mapping\Driver\MappingDriverChain;
 use Doctrine\Persistence\Mapping\MappingException as PersistenceMappingException;
-use Doctrine\Persistence\Mapping\StaticReflectionService;
 use Symfony\Bundle\MakerBundle\Util\ClassNameDetails;
 use Symfony\Component\Uid\Ulid;
 use Symfony\Component\Uid\Uuid;
@@ -89,7 +88,7 @@ final class DoctrineHelper
         }
 
         if (null === $em) {
-            throw new \InvalidArgumentException(sprintf('Cannot find the entity manager for class "%s". Ensure entity uses attribute mapping.', $className));
+            throw new \InvalidArgumentException(\sprintf('Cannot find the entity manager for class "%s". Ensure entity uses attribute mapping.', $className));
         }
 
         if (null === $this->mappingDriversByPrefix) {
@@ -156,7 +155,6 @@ final class DoctrineHelper
                 if ($attributeDriver instanceof AttributeDriver) {
                     $classNames = (new \ReflectionClass(AttributeDriver::class))->getProperty('classNames');
 
-                    $classNames->setAccessible(true);
                     $classNames->setValue($attributeDriver, null);
                 }
             }
@@ -264,7 +262,7 @@ final class DoctrineHelper
             Types::BOOLEAN => 'bool',
             Types::INTEGER, Types::SMALLINT => 'int',
             Types::FLOAT => 'float',
-            Types::DATETIME_MUTABLE, Types::DATETIMETZ_MUTABLE, Types::DATE_MUTABLE, Types::TIME_MUTABLE => '\\'.\DateTimeInterface::class,
+            Types::DATETIME_MUTABLE, Types::DATETIMETZ_MUTABLE, Types::DATE_MUTABLE, Types::TIME_MUTABLE => '\\'.\DateTime::class,
             Types::DATETIME_IMMUTABLE, Types::DATETIMETZ_IMMUTABLE, Types::DATE_IMMUTABLE, Types::TIME_IMMUTABLE => '\\'.\DateTimeImmutable::class,
             Types::DATEINTERVAL => '\\'.\DateInterval::class,
             'object' => 'object',
@@ -306,7 +304,7 @@ final class DoctrineHelper
             return null;
         }
 
-        return sprintf('Types::%s', $constants[$columnType]);
+        return \sprintf('Types::%s', $constants[$columnType]);
     }
 
     private function isInstanceOf($object, string $class): bool

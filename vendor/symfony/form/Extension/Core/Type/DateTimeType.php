@@ -11,10 +11,12 @@
 
 namespace Symfony\Component\Form\Extension\Core\Type;
 
+use Symfony\Component\Clock\DatePoint;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Exception\LogicException;
 use Symfony\Component\Form\Extension\Core\DataTransformer\ArrayToPartsTransformer;
 use Symfony\Component\Form\Extension\Core\DataTransformer\DataTransformerChain;
+use Symfony\Component\Form\Extension\Core\DataTransformer\DatePointToDateTimeTransformer;
 use Symfony\Component\Form\Extension\Core\DataTransformer\DateTimeImmutableToDateTimeTransformer;
 use Symfony\Component\Form\Extension\Core\DataTransformer\DateTimeToArrayTransformer;
 use Symfony\Component\Form\Extension\Core\DataTransformer\DateTimeToHtml5LocalDateTimeTransformer;
@@ -47,6 +49,27 @@ class DateTimeType extends AbstractType
         \IntlDateFormatter::LONG,
         \IntlDateFormatter::MEDIUM,
         \IntlDateFormatter::SHORT,
+    ];
+
+    private const UTC_EQUIVALENT_TIMEZONES = [
+        '+00:00',
+        'Etc/GMT',
+        'Etc/GMT+0',
+        'Etc/GMT-0',
+        'Etc/GMT0',
+        'Etc/Greenwich',
+        'Etc/UCT',
+        'Etc/UTC',
+        'Etc/Universal',
+        'Etc/Zulu',
+        'GMT',
+        'GMT0',
+        'Greenwich',
+        'UCT',
+        'UTC',
+        'Universal',
+        'Z',
+        'Zulu',
     ];
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -178,7 +201,12 @@ class DateTimeType extends AbstractType
             ;
         }
 
-        if ('datetime_immutable' === $options['input']) {
+        if ('date_point' === $options['input']) {
+            if (!class_exists(DatePoint::class)) {
+                throw new LogicException(\sprintf('The "symfony/clock" component is required to use "%s" with option "input=date_point". Try running "composer require symfony/clock".', self::class));
+            }
+            $builder->addModelTransformer(new DatePointToDateTimeTransformer());
+        } elseif ('datetime_immutable' === $options['input']) {
             $builder->addModelTransformer(new DateTimeImmutableToDateTimeTransformer());
         } elseif ('string' === $options['input']) {
             $builder->addModelTransformer(new ReversedTransformer(
@@ -194,7 +222,7 @@ class DateTimeType extends AbstractType
             ));
         }
 
-        if (\in_array($options['input'], ['datetime', 'datetime_immutable'], true) && null !== $options['model_timezone']) {
+        if (\in_array($options['input'], ['datetime', 'datetime_immutable', 'date_point'], true) && null !== $options['model_timezone']) {
             $builder->addEventListener(FormEvents::POST_SET_DATA, static function (FormEvent $event) use ($options): void {
                 $date = $event->getData();
 
@@ -202,8 +230,10 @@ class DateTimeType extends AbstractType
                     return;
                 }
 
-                if ($date->getTimezone()->getName() !== $options['model_timezone']) {
-                    throw new LogicException(sprintf('Using a "%s" instance with a timezone ("%s") not matching the configured model timezone "%s" is not supported.', get_debug_type($date), $date->getTimezone()->getName(), $options['model_timezone']));
+                $timezone = $date->getTimezone()->getName();
+
+                if ($timezone !== $options['model_timezone'] && !(\in_array($timezone, self::UTC_EQUIVALENT_TIMEZONES, true) && \in_array($options['model_timezone'], self::UTC_EQUIVALENT_TIMEZONES, true))) {
+                    throw new LogicException(\sprintf('Using a "%s" instance with a timezone ("%s") not matching the configured model timezone "%s" is not supported.', get_debug_type($date), $timezone, $options['model_timezone']));
                 }
             });
         }
@@ -283,6 +313,7 @@ class DateTimeType extends AbstractType
         $resolver->setAllowedValues('input', [
             'datetime',
             'datetime_immutable',
+            'date_point',
             'string',
             'timestamp',
             'array',
@@ -311,7 +342,7 @@ class DateTimeType extends AbstractType
 
         $resolver->setNormalizer('date_format', static function (Options $options, $dateFormat) {
             if (null !== $dateFormat && 'single_text' === $options['widget'] && self::HTML5_FORMAT === $options['format']) {
-                throw new LogicException(sprintf('Cannot use the "date_format" option of the "%s" with an HTML5 date.', self::class));
+                throw new LogicException(\sprintf('Cannot use the "date_format" option of the "%s" with an HTML5 date.', self::class));
             }
 
             return $dateFormat;
@@ -319,10 +350,10 @@ class DateTimeType extends AbstractType
         $resolver->setNormalizer('widget', static function (Options $options, $widget) {
             if ('single_text' === $widget) {
                 if (null !== $options['date_widget']) {
-                    throw new LogicException(sprintf('Cannot use the "date_widget" option of the "%s" when the "widget" option is set to "single_text".', self::class));
+                    throw new LogicException(\sprintf('Cannot use the "date_widget" option of the "%s" when the "widget" option is set to "single_text".', self::class));
                 }
                 if (null !== $options['time_widget']) {
-                    throw new LogicException(sprintf('Cannot use the "time_widget" option of the "%s" when the "widget" option is set to "single_text".', self::class));
+                    throw new LogicException(\sprintf('Cannot use the "time_widget" option of the "%s" when the "widget" option is set to "single_text".', self::class));
                 }
             } elseif (null === $widget && null === $options['date_widget'] && null === $options['time_widget']) {
                 return 'single_text';
@@ -332,7 +363,7 @@ class DateTimeType extends AbstractType
         });
         $resolver->setNormalizer('html5', static function (Options $options, $html5) {
             if ($html5 && self::HTML5_FORMAT !== $options['format']) {
-                throw new LogicException(sprintf('Cannot use the "format" option of "%s" when the "html5" option is enabled.', self::class));
+                throw new LogicException(\sprintf('Cannot use the "format" option of "%s" when the "html5" option is enabled.', self::class));
             }
 
             return $html5;

@@ -15,6 +15,7 @@ use Symfony\Component\Config\Resource\ClassExistenceResource;
 use Symfony\Component\Console\Descriptor\DescriptorInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Alias;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Compiler\AnalyzeServiceReferencesPass;
 use Symfony\Component\DependencyInjection\Compiler\ServiceReferenceGraphEdge;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -49,7 +50,7 @@ abstract class Descriptor implements DescriptorInterface
         }
 
         match (true) {
-            $object instanceof RouteCollection => $this->describeRouteCollection($object, $options),
+            $object instanceof RouteCollection => $this->describeRouteCollection($this->filterRoutesByHttpMethod($object, $options['method'] ?? ''), $options),
             $object instanceof Route => $this->describeRoute($object, $options),
             $object instanceof ParameterBag => $this->describeContainerParameters($object, $options),
             $object instanceof ContainerBuilder && !empty($options['env-vars']) => $this->describeContainerEnvVars($this->getContainerEnvVars($object), $options),
@@ -62,7 +63,7 @@ abstract class Descriptor implements DescriptorInterface
             $object instanceof Alias => $this->describeContainerAlias($object, $options),
             $object instanceof EventDispatcherInterface => $this->describeEventDispatcherListeners($object, $options),
             \is_callable($object) => $this->describeCallable($object, $options),
-            default => throw new \InvalidArgumentException(sprintf('Object of type "%s" is not describable.', get_debug_type($object))),
+            default => throw new \InvalidArgumentException(\sprintf('Object of type "%s" is not describable.', get_debug_type($object))),
         };
 
         if ($object instanceof ContainerBuilder) {
@@ -133,7 +134,7 @@ abstract class Descriptor implements DescriptorInterface
         }
 
         if (\is_object($value)) {
-            return sprintf('object(%s)', $value::class);
+            return \sprintf('object(%s)', $value::class);
         }
 
         if (\is_string($value)) {
@@ -243,7 +244,7 @@ abstract class Descriptor implements DescriptorInterface
                 }
             }
         }
-        uasort($maxPriority, fn ($a, $b) => $b <=> $a);
+        uasort($maxPriority, static fn ($a, $b) => $b <=> $a);
 
         return array_keys($maxPriority);
     }
@@ -258,9 +259,46 @@ abstract class Descriptor implements DescriptorInterface
         return $sortedTags;
     }
 
+    protected function resolvePriorityServiceTags(ContainerBuilder $container, Definition $definition, ?string $tagName = null): array
+    {
+        $tags = null !== $tagName ? $definition->getTag($tagName) : $definition->getTags();
+
+        if (!$r = $container->getReflectionClass($definition->getClass(), false)) {
+            return $tags;
+        }
+
+        $priority = null;
+        if ($r->hasMethod('getDefaultPriority')) {
+            $rm = $r->getMethod('getDefaultPriority');
+            if ($rm->isPublic() && $rm->isStatic() && !$rm->isAbstract() && \is_int($defaultPriority = $rm->invoke(null))) {
+                $priority = $defaultPriority;
+            }
+        } elseif ($definition->isAutoconfigured() && !$definition->hasTag('container.ignore_attributes')) {
+            $priority = ($r->getAttributes(AsTaggedItem::class)[0] ?? null)?->newInstance()->priority;
+        }
+
+        if (!$priority) {
+            return $tags;
+        }
+
+        if (null !== $tagName) {
+            foreach ($tags as &$tag) {
+                $tag['priority'] ??= $priority;
+            }
+        } else {
+            foreach ($tags as &$tagConfigs) {
+                foreach ($tagConfigs as &$tag) {
+                    $tag['priority'] ??= $priority;
+                }
+            }
+        }
+
+        return $tags;
+    }
+
     protected function sortByPriority(array $tag): array
     {
-        usort($tag, fn ($a, $b) => ($b['priority'] ?? 0) <=> ($a['priority'] ?? 0));
+        usort($tag, static fn ($a, $b) => ($b['priority'] ?? 0) <=> ($a['priority'] ?? 0));
 
         return $tag;
     }
@@ -353,11 +391,27 @@ abstract class Descriptor implements DescriptorInterface
     {
         try {
             return array_values(array_unique(array_map(
-                fn (ServiceReferenceGraphEdge $edge) => $edge->getSourceNode()->getId(),
+                static fn (ServiceReferenceGraphEdge $edge) => $edge->getSourceNode()->getId(),
                 $container->getCompiler()->getServiceReferenceGraph()->getNode($serviceId)->getInEdges()
             )));
         } catch (InvalidArgumentException $exception) {
             return [];
         }
+    }
+
+    private function filterRoutesByHttpMethod(RouteCollection $routes, string $method): RouteCollection
+    {
+        if (!$method) {
+            return $routes;
+        }
+        $filteredRoutes = clone $routes;
+
+        foreach ($filteredRoutes as $routeName => $route) {
+            if ($route->getMethods() && !\in_array($method, $route->getMethods(), true)) {
+                $filteredRoutes->remove($routeName);
+            }
+        }
+
+        return $filteredRoutes;
     }
 }

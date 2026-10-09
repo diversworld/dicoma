@@ -19,14 +19,12 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 
 abstract class AbstractPhpFileCacheWarmer implements CacheWarmerInterface
 {
-    private string $phpArrayFile;
-
     /**
      * @param string $phpArrayFile The PHP file where metadata are cached
      */
-    public function __construct(string $phpArrayFile)
-    {
-        $this->phpArrayFile = $phpArrayFile;
+    public function __construct(
+        private string $phpArrayFile,
+    ) {
     }
 
     public function isOptional(): bool
@@ -50,7 +48,7 @@ abstract class AbstractPhpFileCacheWarmer implements CacheWarmerInterface
         // the ArrayAdapter stores the values serialized
         // to avoid mutation of the data after it was written to the cache
         // so here we un-serialize the values first
-        $values = array_map(fn ($val) => null !== $val ? unserialize($val) : null, $arrayAdapter->getValues());
+        $values = array_map(static fn ($val) => null !== $val ? unserialize($val, ['allowed_classes' => true]) : null, $arrayAdapter->getValues());
 
         return $this->warmUpPhpArrayAdapter(new PhpArrayAdapter($this->phpArrayFile, new NullAdapter()), $values);
     }
@@ -60,7 +58,7 @@ abstract class AbstractPhpFileCacheWarmer implements CacheWarmerInterface
      */
     protected function warmUpPhpArrayAdapter(PhpArrayAdapter $phpArrayAdapter, array $values): array
     {
-        return (array) $phpArrayAdapter->warmUp($values);
+        return $phpArrayAdapter->warmUp($values);
     }
 
     /**

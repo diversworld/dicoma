@@ -1006,6 +1006,10 @@ return [
             'XCD',
             'dollar des Caraïbes orientales',
         ],
+        'XCG' => [
+            'Cg.',
+            'florin caribéen',
+        ],
         'XEU' => [
             'XEU',
             'unité de compte européenne (ECU)',
@@ -1077,6 +1081,10 @@ return [
         'ZWD' => [
             'ZWD',
             'dollar zimbabwéen',
+        ],
+        'ZWG' => [
+            'ZWG',
+            'or du Zimbabwe',
         ],
         'ZWL' => [
             'ZWL',

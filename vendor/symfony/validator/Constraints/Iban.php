@@ -11,9 +11,14 @@
 
 namespace Symfony\Component\Validator\Constraints;
 
+use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint;
 
 /**
+ * Validates that a value is a valid bank account number according to the IBAN format.
+ *
+ * @see https://en.wikipedia.org/wiki/International_Bank_Account_Number
+ *
  * @author Manuel Reinhard <manu@sprain.ch>
  * @author Michael Schummel
  * @author Bernhard Schussek <bschussek@gmail.com>
@@ -37,8 +42,16 @@ class Iban extends Constraint
 
     public string $message = 'This is not a valid International Bank Account Number (IBAN).';
 
+    /**
+     * @param string[]|null $groups
+     */
+    #[HasNamedArguments]
     public function __construct(?array $options = null, ?string $message = null, ?array $groups = null, mixed $payload = null)
     {
+        if (\is_array($options)) {
+            trigger_deprecation('symfony/validator', '7.3', 'Passing an array of options to configure the "%s" constraint is deprecated, use named arguments instead.', static::class);
+        }
+
         parent::__construct($options, $groups, $payload);
 
         $this->message = $message ?? $this->message;

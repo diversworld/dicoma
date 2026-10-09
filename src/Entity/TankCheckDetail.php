@@ -96,4 +96,3 @@ class TankCheckDetail
         return $this;
     }
 }
-

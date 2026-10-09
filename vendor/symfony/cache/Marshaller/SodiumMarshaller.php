@@ -22,15 +22,16 @@ use Symfony\Component\Cache\Exception\InvalidArgumentException;
 class SodiumMarshaller implements MarshallerInterface
 {
     private MarshallerInterface $marshaller;
-    private array $decryptionKeys;
 
     /**
      * @param string[] $decryptionKeys The key at index "0" is required and is used to decrypt and encrypt values;
      *                                 more rotating keys can be provided to decrypt values;
      *                                 each key must be generated using sodium_crypto_box_keypair()
      */
-    public function __construct(array $decryptionKeys, ?MarshallerInterface $marshaller = null)
-    {
+    public function __construct(
+        private array $decryptionKeys,
+        ?MarshallerInterface $marshaller = null,
+    ) {
         if (!self::isSupported()) {
             throw new CacheException('The "sodium" PHP extension is not loaded.');
         }
@@ -40,7 +41,6 @@ class SodiumMarshaller implements MarshallerInterface
         }
 
         $this->marshaller = $marshaller ?? new DefaultMarshaller();
-        $this->decryptionKeys = $decryptionKeys;
     }
 
     public static function isSupported(): bool
@@ -62,13 +62,17 @@ class SodiumMarshaller implements MarshallerInterface
 
     public function unmarshall(string $value): mixed
     {
+        if ('' === $value) {
+            // an empty value carries no payload and tells session handlers that no session exists
+            return $this->marshaller->unmarshall($value);
+        }
+
         foreach ($this->decryptionKeys as $k) {
             if (false !== $decryptedValue = @sodium_crypto_box_seal_open($value, $k)) {
-                $value = $decryptedValue;
-                break;
+                return $this->marshaller->unmarshall($decryptedValue);
             }
         }
 
-        return $this->marshaller->unmarshall($value);
+        throw new \DomainException('Failed to decrypt value.');
     }
 }

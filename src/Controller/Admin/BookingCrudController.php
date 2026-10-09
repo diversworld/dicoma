@@ -182,4 +182,3 @@ class BookingCrudController extends AbstractCrudController
             ->setColumns(6);
     }
 }
-

@@ -332,7 +332,7 @@ return [
         ],
         'LSL' => [
             'LSL',
-            'Lesotho Loti',
+            'Loti Lesotho',
         ],
         'LYD' => [
             'LYD',
@@ -440,7 +440,7 @@ return [
         ],
         'PHP' => [
             '₱',
-            'Piso Filipina',
+            'Peso Filipina',
         ],
         'PKR' => [
             'PKR',
@@ -618,6 +618,10 @@ return [
             'EC$',
             'Dolar Karibia Wetan',
         ],
+        'XCG' => [
+            'Cg.',
+            'Guilder Karibia',
+        ],
         'XOF' => [
             'F CFA',
             'CFA Franc Afrika Kulon',
@@ -637,6 +641,10 @@ return [
         'ZMW' => [
             'ZMW',
             'Kwacha Sambia',
+        ],
+        'ZWG' => [
+            'ZWG',
+            'Emas Zimbabwe',
         ],
     ],
 ];

@@ -25,8 +25,6 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
      */
     public const CACHE_KEY_VAR = 'cache_key';
 
-    protected array $defaultThemes;
-
     /**
      * @var array[]
      */
@@ -48,14 +46,19 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
     private array $resourceHierarchyLevels = [];
 
     /**
+     * @var array<string, array<string, bool>>
+     */
+    private array $resourceInheritability = [];
+
+    /**
      * Creates a new renderer engine.
      *
      * @param array $defaultThemes The default themes. The type of these
      *                             themes is open to the implementation.
      */
-    public function __construct(array $defaultThemes = [])
-    {
-        $this->defaultThemes = $defaultThemes;
+    public function __construct(
+        protected array $defaultThemes = [],
+    ) {
     }
 
     public function setTheme(FormView $view, mixed $themes, bool $useDefaultThemes = true): void
@@ -69,7 +72,17 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         // Unset instead of resetting to an empty array, in order to allow
         // implementations (like TwigRendererEngine) to check whether $cacheKey
         // is set at all.
-        unset($this->resources[$cacheKey], $this->resourceHierarchyLevels[$cacheKey]);
+        unset($this->resources[$cacheKey], $this->resourceHierarchyLevels[$cacheKey], $this->resourceInheritability[$cacheKey]);
+    }
+
+    protected function setResourceInheritability(string $cacheKey, string $blockName, bool $inheritable): void
+    {
+        $this->resourceInheritability[$cacheKey][$blockName] = $inheritable;
+    }
+
+    protected function isResourceInheritable(string $cacheKey, string $blockName): bool
+    {
+        return $this->resourceInheritability[$cacheKey][$blockName] ?? false;
     }
 
     public function getResourceForBlockName(FormView $view, string $blockName): mixed
@@ -136,6 +149,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
             // cache. The only missing thing is to set the hierarchy level at which
             // the template was found.
             $this->resourceHierarchyLevels[$cacheKey][$blockName] = $hierarchyLevel;
+            $this->setResourceInheritability($cacheKey, $blockName, true);
 
             return true;
         }
@@ -159,6 +173,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
                 // Cache the shortcuts for further accesses
                 $this->resources[$cacheKey][$blockName] = $this->resources[$cacheKey][$parentBlockName];
                 $this->resourceHierarchyLevels[$cacheKey][$blockName] = $this->resourceHierarchyLevels[$cacheKey][$parentBlockName];
+                $this->setResourceInheritability($cacheKey, $blockName, false);
 
                 return true;
             }
@@ -167,6 +182,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
                 // Cache the shortcuts for further accesses
                 $this->resources[$cacheKey][$blockName] = $this->resources[$cacheKey][$parentBlockName];
                 $this->resourceHierarchyLevels[$cacheKey][$blockName] = $this->resourceHierarchyLevels[$cacheKey][$parentBlockName];
+                $this->setResourceInheritability($cacheKey, $blockName, false);
 
                 return true;
             }
@@ -175,6 +191,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         // Cache the result for further accesses
         $this->resources[$cacheKey][$blockName] = false;
         $this->resourceHierarchyLevels[$cacheKey][$blockName] = false;
+        $this->setResourceInheritability($cacheKey, $blockName, true);
 
         return false;
     }
@@ -185,5 +202,6 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         $this->useDefaultThemes = [];
         $this->resources = [];
         $this->resourceHierarchyLevels = [];
+        $this->resourceInheritability = [];
     }
 }

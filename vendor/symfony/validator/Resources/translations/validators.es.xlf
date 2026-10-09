@@ -160,11 +160,11 @@
             </trans-unit>
             <trans-unit id="43">
                 <source>The image width is too big ({{ width }}px). Allowed maximum width is {{ max_width }}px.</source>
-                <target>El ancho de la imagen es demasiado grande ({{ width }}px). El ancho máximo permitido es de {{ max_width }}px.</target>
+                <target>La anchura de la imagen es demasiado grande ({{ width }}px). La anchura máxima permitida es de {{ max_width }}px.</target>
             </trans-unit>
             <trans-unit id="44">
                 <source>The image width is too small ({{ width }}px). Minimum width expected is {{ min_width }}px.</source>
-                <target>El ancho de la imagen es demasiado pequeño ({{ width }}px). El ancho mínimo requerido es {{ min_width }}px.</target>
+                <target>La anchura de la imagen es demasiado pequeña ({{ width }}px). La anchura mínima requerida es de {{ min_width }}px.</target>
             </trans-unit>
             <trans-unit id="45">
                 <source>The image height is too big ({{ height }}px). Allowed maximum height is {{ max_height }}px.</source>
@@ -449,6 +449,202 @@
             <trans-unit id="115">
                 <source>This value is too long. It should contain one word.|This value is too long. It should contain {{ max }} words or less.</source>
                 <target>Este valor es demasiado largo. Debe contener una palabra.|Este valor es demasiado largo. Debe contener {{ max }} palabras o menos.</target>
+            </trans-unit>
+            <trans-unit id="116">
+                <source>This value does not represent a valid week in the ISO 8601 format.</source>
+                <target>Este valor no representa una semana válida en formato ISO 8601.</target>
+            </trans-unit>
+            <trans-unit id="117">
+                <source>This value is not a valid week.</source>
+                <target>Este valor no es una semana válida.</target>
+            </trans-unit>
+            <trans-unit id="118">
+                <source>This value should not be before week "{{ min }}".</source>
+                <target>Este valor no debe ser anterior a la semana "{{ min }}".</target>
+            </trans-unit>
+            <trans-unit id="119">
+                <source>This value should not be after week "{{ max }}".</source>
+                <target>Este valor no debe ser posterior a la semana "{{ max }}".</target>
+            </trans-unit>
+            <trans-unit id="121">
+                <source>This value is not a valid Twig template.</source>
+                <target>Este valor no es una plantilla Twig válida.</target>
+            </trans-unit>
+            <trans-unit id="122">
+                <source>This file is not a valid video.</source>
+                <target>Este archivo no es un vídeo válido.</target>
+            </trans-unit>
+            <trans-unit id="123">
+                <source>The size of the video could not be detected.</source>
+                <target>No se pudo detectar el tamaño del vídeo.</target>
+            </trans-unit>
+            <trans-unit id="124">
+                <source>The video width is too big ({{ width }}px). Allowed maximum width is {{ max_width }}px.</source>
+                <target>La anchura del vídeo es demasiado grande ({{ width }}px). La anchura máxima permitida es de {{ max_width }}px.</target>
+            </trans-unit>
+            <trans-unit id="125">
+                <source>The video width is too small ({{ width }}px). Minimum width expected is {{ min_width }}px.</source>
+                <target>La anchura del vídeo es demasiado pequeña ({{ width }}px). La anchura mínima requerida es de {{ min_width }}px.</target>
+            </trans-unit>
+            <trans-unit id="126">
+                <source>The video height is too big ({{ height }}px). Allowed maximum height is {{ max_height }}px.</source>
+                <target>La altura del vídeo es demasiado grande ({{ height }}px). La altura máxima permitida es de {{ max_height }}px.</target>
+            </trans-unit>
+            <trans-unit id="127">
+                <source>The video height is too small ({{ height }}px). Minimum height expected is {{ min_height }}px.</source>
+                <target>La altura del vídeo es demasiado pequeña ({{ height }}px). La altura mínima requerida es de {{ min_height }}px.</target>
+            </trans-unit>
+            <trans-unit id="128">
+                <source>The video has too few pixels ({{ pixels }} pixels). Minimum amount expected is {{ min_pixels }} pixels.</source>
+                <target>El vídeo no tiene suficientes píxeles ({{ pixels }}). La cantidad mínima requerida es de {{ min_pixels }}px.</target>
+            </trans-unit>
+            <trans-unit id="129">
+                <source>The video has too many pixels ({{ pixels }} pixels). Maximum amount expected is {{ max_pixels }} pixels.</source>
+                <target>El vídeo tiene demasiados píxeles ({{ pixels }}). La cantidad máxima permitida es de {{ max_pixels }}px.</target>
+            </trans-unit>
+            <trans-unit id="130">
+                <source>The video ratio is too big ({{ ratio }}). Allowed maximum ratio is {{ max_ratio }}.</source>
+                <target>La relación de aspecto del vídeo es demasiado grande ({{ ratio }}). La máxima relación de aspecto permitida es de {{ max_ratio }}.</target>
+            </trans-unit>
+            <trans-unit id="131">
+                <source>The video ratio is too small ({{ ratio }}). Minimum ratio expected is {{ min_ratio }}.</source>
+                <target>La relación de aspecto del vídeo es demasiado pequeña ({{ ratio }}). La mínima relación de aspecto permitida es de {{ min_ratio }}.</target>
+            </trans-unit>
+            <trans-unit id="132">
+                <source>The video is square ({{ width }}x{{ height }}px). Square videos are not allowed.</source>
+                <target>El vídeo es cuadrado ({{ width }}x{{ height }}px). Los vídeos cuadrados no están permitidos.</target>
+            </trans-unit>
+            <trans-unit id="133">
+                <source>The video is landscape oriented ({{ width }}x{{ height }}px). Landscape oriented videos are not allowed.</source>
+                <target>El vídeo está orientado horizontalmente ({{ width }}x{{ height }}px). Los vídeos orientados horizontalmente no están permitidos.</target>
+            </trans-unit>
+            <trans-unit id="134">
+                <source>The video is portrait oriented ({{ width }}x{{ height }}px). Portrait oriented videos are not allowed.</source>
+                <target>El vídeo está orientado verticalmente ({{ width }}x{{ height }}px). Los vídeos orientados verticalmente no están permitidos.</target>
+            </trans-unit>
+            <trans-unit id="135">
+                <source>The video file is corrupted.</source>
+                <target>El archivo de vídeo está dañado.</target>
+            </trans-unit>
+            <trans-unit id="136">
+                <source>The video contains multiple streams. Only one stream is allowed.</source>
+                <target>El vídeo contiene múltiples flujos. Solo se permite un flujo.</target>
+            </trans-unit>
+            <trans-unit id="137">
+                <source>Unsupported video codec "{{ codec }}".</source>
+                <target>El códec de vídeo "{{ codec }}" no es compatible.</target>
+            </trans-unit>
+            <trans-unit id="138">
+                <source>Unsupported video container "{{ container }}".</source>
+                <target>El contenedor de vídeo "{{ container }}" no es compatible.</target>
+            </trans-unit>
+            <trans-unit id="139">
+                <source>The image file is corrupted.</source>
+                <target>El archivo de imagen está dañado.</target>
+            </trans-unit>
+            <trans-unit id="140">
+                <source>The image has too few pixels ({{ pixels }} pixels). Minimum amount expected is {{ min_pixels }} pixels.</source>
+                <target>La imagen no tiene suficientes píxeles ({{ pixels }}). La cantidad mínima requerida es de {{ min_pixels }}px.</target>
+            </trans-unit>
+            <trans-unit id="141">
+                <source>The image has too many pixels ({{ pixels }} pixels). Maximum amount expected is {{ max_pixels }} pixels.</source>
+                <target>La imagen tiene demasiados píxeles ({{ pixels }}). La cantidad máxima permitida es de {{ max_pixels }}px.</target>
+            </trans-unit>
+            <trans-unit id="142">
+                <source>This filename does not match the expected charset.</source>
+                <target>El nombre de este archivo no utiliza el conjunto de caracteres esperado.</target>
+            </trans-unit>
+            <trans-unit id="143">
+                <source>This value is not valid XML.</source>
+                <target>Este valor no es un XML válido.</target>
+            </trans-unit>
+            <trans-unit id="144">
+                <source>This value does not conform to the expected XSD schema.</source>
+                <target>Este valor no se ajusta al esquema XSD esperado.</target>
+            </trans-unit>
+            <trans-unit id="145">
+                <source>This XML payload is too large ({{ size }} bytes): it exceeds the limit of {{ limit }} bytes.</source>
+                <target>Esta carga útil XML es demasiado grande ({{ size }} bytes): supera el límite de {{ limit }} bytes.</target>
+            </trans-unit>
+            <trans-unit id="146">
+                <source>This value is not a valid cron expression.</source>
+                <target>Este valor no es una expresión cron válida.</target>
+            </trans-unit>
+            <trans-unit id="147">
+                <source>The referenced entity does not exist.</source>
+                <target>La entidad referenciada no existe.</target>
+            </trans-unit>
+            <trans-unit id="148" resname="This is not a valid ULID.">
+                <source>This value is not a valid ULID.</source>
+                <target>Este valor no es un ULID válido.</target>
+            </trans-unit>
+            <trans-unit id="149">
+                <source>This file is not a valid audio file.</source>
+                <target>Este archivo no es un archivo de audio válido.</target>
+            </trans-unit>
+            <trans-unit id="150">
+                <source>The audio is too short ({{ duration }} seconds). Minimum duration expected is {{ min_duration }} seconds.</source>
+                <target>El audio es demasiado corto ({{ duration }} segundos). La duración mínima requerida es de {{ min_duration }} segundos.</target>
+            </trans-unit>
+            <trans-unit id="151">
+                <source>The audio is too long ({{ duration }} seconds). Allowed maximum duration is {{ max_duration }} seconds.</source>
+                <target>El audio es demasiado largo ({{ duration }} segundos). La duración máxima permitida es de {{ max_duration }} segundos.</target>
+            </trans-unit>
+            <trans-unit id="152">
+                <source>The duration of the audio could not be detected.</source>
+                <target>No se pudo detectar la duración del audio.</target>
+            </trans-unit>
+            <trans-unit id="153">
+                <source>The audio bitrate is too low ({{ bitrate }} bps). Minimum bitrate expected is {{ min_bitrate }} bps.</source>
+                <target>La tasa de bits del audio es demasiado baja ({{ bitrate }} bps). La tasa de bits mínima requerida es de {{ min_bitrate }} bps.</target>
+            </trans-unit>
+            <trans-unit id="154">
+                <source>The audio bitrate is too high ({{ bitrate }} bps). Allowed maximum bitrate is {{ max_bitrate }} bps.</source>
+                <target>La tasa de bits del audio es demasiado alta ({{ bitrate }} bps). La tasa de bits máxima permitida es de {{ max_bitrate }} bps.</target>
+            </trans-unit>
+            <trans-unit id="155">
+                <source>The bitrate of the audio could not be detected.</source>
+                <target>No se pudo detectar la tasa de bits del audio.</target>
+            </trans-unit>
+            <trans-unit id="156">
+                <source>Unsupported audio sample rate ({{ sample_rate }} Hz).</source>
+                <target>La frecuencia de muestreo del audio ({{ sample_rate }} Hz) no es compatible.</target>
+            </trans-unit>
+            <trans-unit id="157">
+                <source>The sample rate of the audio could not be detected.</source>
+                <target>No se pudo detectar la frecuencia de muestreo del audio.</target>
+            </trans-unit>
+            <trans-unit id="158">
+                <source>The audio has too few channels ({{ channels }}). Minimum amount expected is {{ min_channels }}.</source>
+                <target>El audio no tiene suficientes canales ({{ channels }}). La cantidad mínima requerida es de {{ min_channels }}.</target>
+            </trans-unit>
+            <trans-unit id="159">
+                <source>The audio has too many channels ({{ channels }}). Maximum amount expected is {{ max_channels }}.</source>
+                <target>El audio tiene demasiados canales ({{ channels }}). La cantidad máxima permitida es de {{ max_channels }}.</target>
+            </trans-unit>
+            <trans-unit id="160">
+                <source>The number of audio channels could not be detected.</source>
+                <target>No se pudo detectar el número de canales de audio.</target>
+            </trans-unit>
+            <trans-unit id="161">
+                <source>The audio file is corrupted.</source>
+                <target>El archivo de audio está dañado.</target>
+            </trans-unit>
+            <trans-unit id="162">
+                <source>The audio contains multiple streams. Only one stream is allowed.</source>
+                <target>El audio contiene múltiples flujos. Solo se permite un flujo.</target>
+            </trans-unit>
+            <trans-unit id="163">
+                <source>Unsupported audio codec "{{ codec }}".</source>
+                <target>El códec de audio "{{ codec }}" no es compatible.</target>
+            </trans-unit>
+            <trans-unit id="164">
+                <source>Unsupported audio container "{{ container }}".</source>
+                <target>El contenedor de audio "{{ container }}" no es compatible.</target>
+            </trans-unit>
+            <trans-unit id="165">
+                <source>The file does not contain any audio stream.</source>
+                <target>El archivo no contiene ningún flujo de audio.</target>
             </trans-unit>
         </body>
     </file>

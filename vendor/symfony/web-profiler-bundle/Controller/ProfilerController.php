@@ -34,21 +34,15 @@ use Twig\Environment;
 class ProfilerController
 {
     private TemplateManager $templateManager;
-    private UrlGeneratorInterface $generator;
-    private ?Profiler $profiler;
-    private Environment $twig;
-    private array $templates;
-    private ?ContentSecurityPolicyHandler $cspHandler;
-    private ?string $baseDir;
 
-    public function __construct(UrlGeneratorInterface $generator, ?Profiler $profiler, Environment $twig, array $templates, ?ContentSecurityPolicyHandler $cspHandler = null, ?string $baseDir = null)
-    {
-        $this->generator = $generator;
-        $this->profiler = $profiler;
-        $this->twig = $twig;
-        $this->templates = $templates;
-        $this->cspHandler = $cspHandler;
-        $this->baseDir = $baseDir;
+    public function __construct(
+        private UrlGeneratorInterface $generator,
+        private ?Profiler $profiler,
+        private Environment $twig,
+        private array $templates,
+        private ?ContentSecurityPolicyHandler $cspHandler = null,
+        private ?string $baseDir = null,
+    ) {
     }
 
     /**
@@ -78,7 +72,7 @@ class ProfilerController
         $page = $request->query->get('page', 'home');
         $profileType = $request->query->get('type', 'request');
 
-        if ('latest' === $token && $latest = current($this->profiler->find(null, null, 1, null, null, null, null, fn ($profile) => $profileType === $profile['virtual_type']))) {
+        if ('latest' === $token && $latest = current($this->profiler->find(null, null, 1, null, null, null, null, static fn ($profile) => $profileType === $profile['virtual_type']))) {
             $token = $latest['token'];
         }
 
@@ -105,7 +99,7 @@ class ProfilerController
         }
 
         if (!$profile->hasCollector($panel)) {
-            throw new NotFoundHttpException(sprintf('Panel "%s" is not available for token "%s".', $panel, $token));
+            throw new NotFoundHttpException(\sprintf('Panel "%s" is not available for token "%s".', $panel, $token));
         }
 
         return $this->renderWithCspNonces($request, $this->getTemplateManager()->getName($profile, $panel), [
@@ -169,6 +163,27 @@ class ProfilerController
     }
 
     /**
+     * Renders the Web Debug Toolbar stylesheet.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function toolbarStylesheetAction(): Response
+    {
+        $this->denyAccessIfProfilerDisabled();
+
+        $this->cspHandler?->disableCsp();
+
+        return new Response(
+            $this->twig->render('@WebProfiler/Profiler/toolbar.css.twig'),
+            200,
+            [
+                'Content-Type' => 'text/css',
+                'Cache-Control' => 'max-age=600, private',
+            ],
+        );
+    }
+
+    /**
      * Renders the profiler search bar.
      *
      * @throws NotFoundHttpException
@@ -195,7 +210,6 @@ class ProfilerController
                 'end' => $request->query->get('end', $session?->get('_profiler_search_end')),
                 'limit' => $request->query->get('limit', $session?->get('_profiler_search_limit')),
                 'request' => $request,
-                'render_hidden_by_default' => false,
                 'profile_type' => $request->query->get('type', $session?->get('_profiler_search_type', 'request')),
             ]),
             200,
@@ -229,7 +243,7 @@ class ProfilerController
             'request' => $request,
             'token' => $token,
             'profile' => $profile,
-            'tokens' => $this->profiler->find($ip, $url, $limit, $method, $start, $end, $statusCode, fn ($profile) => $profileType === $profile['virtual_type']),
+            'tokens' => $this->profiler->find($ip, $url, $limit, $method, $start, $end, $statusCode, static fn ($profile) => $profileType === $profile['virtual_type']),
             'ip' => $ip,
             'method' => $method,
             'status_code' => $statusCode,
@@ -275,11 +289,11 @@ class ProfilerController
             $session->set('_profiler_search_type', $profileType);
         }
 
-        if (!empty($token)) {
+        if ($token) {
             return new RedirectResponse($this->generator->generate('_profiler', ['token' => $token]), 302, ['Content-Type' => 'text/html']);
         }
 
-        $tokens = $this->profiler->find($ip, $url, $limit, $method, $start, $end, $statusCode, fn ($profile) => $profileType === $profile['virtual_type']);
+        $tokens = $this->profiler->find($ip, $url, $limit, $method, $start, $end, $statusCode, static fn ($profile) => $profileType === $profile['virtual_type']);
 
         return new RedirectResponse($this->generator->generate('_profiler_search_results', [
             'token' => $tokens ? $tokens[0]['token'] : 'empty',
@@ -343,12 +357,12 @@ class ProfilerController
     {
         $this->denyAccessIfProfilerDisabled();
         if ('JetBrainsMono' !== $fontName) {
-            throw new NotFoundHttpException(sprintf('Font file "%s.woff2" not found.', $fontName));
+            throw new NotFoundHttpException(\sprintf('Font file "%s.woff2" not found.', $fontName));
         }
 
         $fontFile = \dirname(__DIR__).'/Resources/fonts/'.$fontName.'.woff2';
         if (!is_file($fontFile) || !is_readable($fontFile)) {
-            throw new NotFoundHttpException(sprintf('Cannot read font file "%s".', $fontFile));
+            throw new NotFoundHttpException(\sprintf('Cannot read font file "%s".', $fontFile));
         }
 
         $this->profiler?->disable();
@@ -375,7 +389,7 @@ class ProfilerController
         $filename = $this->baseDir.\DIRECTORY_SEPARATOR.$file;
 
         if (preg_match("'(^|[/\\\\])\.'", $file) || !is_readable($filename)) {
-            throw new NotFoundHttpException(sprintf('The file "%s" cannot be opened.', $file));
+            throw new NotFoundHttpException(\sprintf('The file "%s" cannot be opened.', $file));
         }
 
         return $this->renderWithCspNonces($request, '@WebProfiler/Profiler/open.html.twig', [
@@ -390,6 +404,9 @@ class ProfilerController
         return $this->templateManager ??= new TemplateManager($this->profiler, $this->twig, $this->templates);
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
     private function denyAccessIfProfilerDisabled(): void
     {
         if (null === $this->profiler) {

@@ -20,6 +20,7 @@ use Symfony\Bridge\Monolog\Formatter\ConsoleFormatter;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -44,7 +45,6 @@ use Symfony\Component\VarDumper\Dumper\CliDumper;
  */
 final class ConsoleHandler extends AbstractProcessingHandler implements EventSubscriberInterface
 {
-    private ?OutputInterface $output;
     private array $verbosityLevelMap = [
         OutputInterface::VERBOSITY_QUIET => Level::Error,
         OutputInterface::VERBOSITY_NORMAL => Level::Warning,
@@ -52,7 +52,9 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
         OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
         OutputInterface::VERBOSITY_DEBUG => Level::Debug,
     ];
-    private array $consoleFormatterOptions;
+
+    private ?InputInterface $input = null;
+    private int $nestedCommandDepth = 0;
 
     /**
      * @param OutputInterface|null $output            The console output to use (the handler remains disabled when passing null
@@ -61,28 +63,52 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
      * @param array                $verbosityLevelMap Array that maps the OutputInterface verbosity to a minimum logging
      *                                                level (leave empty to use the default mapping)
      */
-    public function __construct(?OutputInterface $output = null, bool $bubble = true, array $verbosityLevelMap = [], array $consoleFormatterOptions = [])
-    {
+    public function __construct(
+        private ?OutputInterface $output = null,
+        bool $bubble = true,
+        array $verbosityLevelMap = [],
+        private array $consoleFormatterOptions = [],
+        private bool $interactiveOnly = false,
+    ) {
         parent::__construct(Level::Debug, $bubble);
-        $this->output = $output;
 
         if ($verbosityLevelMap) {
             $this->verbosityLevelMap = $verbosityLevelMap;
         }
-
-        $this->consoleFormatterOptions = $consoleFormatterOptions;
     }
 
     public function isHandling(LogRecord $record): bool
     {
-        return $this->updateLevel() && parent::isHandling($record);
+        return
+            $this->updateLevel()
+            && parent::isHandling($record)
+            && (!$this->interactiveOnly || $this->input?->isInteractive())
+        ;
+    }
+
+    public function getBubble(): bool
+    {
+        if ($this->interactiveOnly && $this->input?->isInteractive()) {
+            return false;
+        }
+
+        return parent::getBubble();
     }
 
     public function handle(LogRecord $record): bool
     {
-        // we have to update the logging level each time because the verbosity of the
-        // console output might have changed in the meantime (it is not immutable)
-        return $this->updateLevel() && parent::handle($record);
+        if (!$this->isHandling($record)) {
+            return false;
+        }
+
+        parent::handle($record);
+
+        return !$this->getBubble();
+    }
+
+    public function setInput(InputInterface $input): void
+    {
+        $this->input = $input;
     }
 
     /**
@@ -98,6 +124,8 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
      */
     public function close(): void
     {
+        $this->input = null;
+        $this->nestedCommandDepth = 0;
         $this->output = null;
 
         parent::close();
@@ -109,6 +137,12 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
      */
     public function onCommand(ConsoleCommandEvent $event): void
     {
+        $this->setInput($event->getInput());
+
+        if (1 !== ++$this->nestedCommandDepth) {
+            return;
+        }
+
         $output = $event->getOutput();
         if ($output instanceof ConsoleOutputInterface) {
             $output = $output->getErrorOutput();
@@ -122,7 +156,9 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
      */
     public function onTerminate(ConsoleTerminateEvent $event): void
     {
-        $this->close();
+        if ($this->nestedCommandDepth && !--$this->nestedCommandDepth) {
+            $this->close();
+        }
     }
 
     public static function getSubscribedEvents(): array
@@ -168,6 +204,8 @@ final class ConsoleHandler extends AbstractProcessingHandler implements EventSub
         $verbosity = $this->output->getVerbosity();
         if (isset($this->verbosityLevelMap[$verbosity])) {
             $this->setLevel($this->verbosityLevelMap[$verbosity]);
+        } elseif (\defined('\Symfony\Component\Console\Output\OutputInterface::VERBOSITY_SILENT') && OutputInterface::VERBOSITY_SILENT === $verbosity) {
+            return false;
         } else {
             $this->setLevel(Level::Debug);
         }

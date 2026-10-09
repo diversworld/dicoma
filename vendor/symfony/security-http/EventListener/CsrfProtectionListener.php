@@ -25,11 +25,9 @@ use Symfony\Component\Security\Http\Event\CheckPassportEvent;
  */
 class CsrfProtectionListener implements EventSubscriberInterface
 {
-    private CsrfTokenManagerInterface $csrfTokenManager;
-
-    public function __construct(CsrfTokenManagerInterface $csrfTokenManager)
-    {
-        $this->csrfTokenManager = $csrfTokenManager;
+    public function __construct(
+        private CsrfTokenManagerInterface $csrfTokenManager,
+    ) {
     }
 
     public function checkPassport(CheckPassportEvent $event): void
@@ -47,7 +45,7 @@ class CsrfProtectionListener implements EventSubscriberInterface
 
         $csrfToken = new CsrfToken($badge->getCsrfTokenId(), $badge->getCsrfToken());
 
-        if (false === $this->csrfTokenManager->isTokenValid($csrfToken)) {
+        if (!$this->csrfTokenManager->isTokenValid($csrfToken)) {
             throw new InvalidCsrfTokenException('Invalid CSRF token.');
         }
 

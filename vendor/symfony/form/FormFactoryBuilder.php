@@ -20,8 +20,6 @@ use Symfony\Component\Form\Extension\Core\CoreExtension;
  */
 class FormFactoryBuilder implements FormFactoryBuilderInterface
 {
-    private bool $forceCoreExtension;
-
     private ResolvedFormTypeFactoryInterface $resolvedTypeFactory;
 
     /**
@@ -44,9 +42,9 @@ class FormFactoryBuilder implements FormFactoryBuilderInterface
      */
     private array $typeGuessers = [];
 
-    public function __construct(bool $forceCoreExtension = false)
-    {
-        $this->forceCoreExtension = $forceCoreExtension;
+    public function __construct(
+        private bool $forceCoreExtension = false,
+    ) {
     }
 
     public function setResolvedTypeFactory(ResolvedFormTypeFactoryInterface $resolvedTypeFactory): static
@@ -137,7 +135,7 @@ class FormFactoryBuilder implements FormFactoryBuilderInterface
             }
         }
 
-        if (\count($this->types) > 0 || \count($this->typeExtensions) > 0 || \count($this->typeGuessers) > 0) {
+        if ($this->types || $this->typeExtensions || $this->typeGuessers) {
             if (\count($this->typeGuessers) > 1) {
                 $typeGuesser = new FormTypeGuesserChain($this->typeGuessers);
             } else {

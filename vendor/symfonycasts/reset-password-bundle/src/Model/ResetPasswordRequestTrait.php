@@ -11,6 +11,7 @@ namespace SymfonyCasts\Bundle\ResetPassword\Model;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Clock\Clock;
 
 /**
  * @author Jesse Rushlow <jr@rushlow.dev>
@@ -53,7 +54,7 @@ trait ResetPasswordRequestTrait
     /** @return void */
     protected function initialize(\DateTimeInterface $expiresAt, string $selector, string $hashedToken)
     {
-        $this->requestedAt = new \DateTimeImmutable('now');
+        $this->requestedAt = Clock::get()->now();
         $this->expiresAt = $expiresAt;
         $this->selector = $selector;
         $this->hashedToken = $hashedToken;
@@ -66,7 +67,7 @@ trait ResetPasswordRequestTrait
 
     public function isExpired(): bool
     {
-        return $this->expiresAt->getTimestamp() <= time();
+        return $this->expiresAt->getTimestamp() <= Clock::get()->now()->getTimestamp();
     }
 
     public function getExpiresAt(): \DateTimeInterface

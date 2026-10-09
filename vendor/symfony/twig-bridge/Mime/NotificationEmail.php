@@ -54,7 +54,7 @@ class NotificationEmail extends TemplatedEmail
         }
 
         if ($missingPackages) {
-            throw new \LogicException(sprintf('You cannot use "%s" if the "%s" Twig extension%s not available. Try running "%s".', static::class, implode('" and "', $missingPackages), \count($missingPackages) > 1 ? 's are' : ' is', 'composer require '.implode(' ', array_keys($missingPackages))));
+            throw new \LogicException(\sprintf('You cannot use "%s" if the "%s" Twig extension%s not available. Try running "%s".', static::class, implode('" and "', $missingPackages), \count($missingPackages) > 1 ? 's are' : ' is', 'composer require '.implode(' ', array_keys($missingPackages))));
         }
 
         parent::__construct($headers, $body);
@@ -88,7 +88,7 @@ class NotificationEmail extends TemplatedEmail
     public function markdown(string $content): static
     {
         if (!class_exists(MarkdownExtension::class)) {
-            throw new \LogicException(sprintf('You cannot use "%s" if the Markdown Twig extension is not available. Try running "composer require twig/markdown-extra".', __METHOD__));
+            throw new \LogicException(\sprintf('You cannot use "%s" if the Markdown Twig extension is not available. Try running "composer require twig/markdown-extra".', __METHOD__));
         }
 
         $this->context['markdown'] = true;
@@ -218,7 +218,7 @@ class NotificationEmail extends TemplatedEmail
         $importance = $this->context['importance'] ?? self::IMPORTANCE_LOW;
         $this->priority($this->determinePriority($importance));
         if ($this->context['importance']) {
-            $headers->setHeaderBody('Text', 'Subject', sprintf('[%s] %s', strtoupper($importance), $this->getSubject()));
+            $headers->setHeaderBody('Text', 'Subject', \sprintf('[%s] %s', strtoupper($importance), $this->getSubject()));
         }
 
         return $headers;
@@ -266,6 +266,10 @@ class NotificationEmail extends TemplatedEmail
      */
     public function __unserialize(array $data): void
     {
+        if (($data[1] ?? null) instanceof \Stringable) {
+            throw new \BadMethodCallException('Cannot unserialize '.self::class);
+        }
+
         if (4 === \count($data)) {
             [$this->context, $this->theme, $this->rendered, $parentData] = $data;
         } elseif (3 === \count($data)) {

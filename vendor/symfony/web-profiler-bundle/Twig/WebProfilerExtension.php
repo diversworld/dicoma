@@ -11,10 +11,13 @@
 
 namespace Symfony\Bundle\WebProfilerBundle\Twig;
 
+use Symfony\Component\Mime\Exception\InvalidArgumentException;
+use Symfony\Component\Mime\Part\AbstractPart;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\RawMessage;
 use Symfony\Component\VarDumper\Cloner\Data;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 use Twig\Environment;
-use Twig\Extension\EscaperExtension;
 use Twig\Extension\ProfilerExtension;
 use Twig\Profiler\Profile;
 use Twig\Runtime\EscaperRuntime;
@@ -61,7 +64,33 @@ class WebProfilerExtension extends ProfilerExtension
         return [
             new TwigFunction('profiler_dump', $this->dumpData(...), ['is_safe' => ['html'], 'needs_environment' => true]),
             new TwigFunction('profiler_dump_log', $this->dumpLog(...), ['is_safe' => ['html'], 'needs_environment' => true]),
+            new TwigFunction('profiler_mailer_body', $this->mailerBody(...)),
+            new TwigFunction('profiler_mailer_as_string', $this->mailerAsString(...)),
         ];
+    }
+
+    /**
+     * Returns null when the part refers to a file that cannot be read anymore.
+     */
+    public function mailerBody(DataPart $part): ?string
+    {
+        try {
+            return $part->getBody();
+        } catch (InvalidArgumentException) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns null when the message or the part refers to a file that cannot be read anymore.
+     */
+    public function mailerAsString(RawMessage|AbstractPart $message): ?string
+    {
+        try {
+            return $message->toString();
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 
     public function dumpData(Environment $env, Data $data, int $maxDepth = 0): string
@@ -109,17 +138,6 @@ class WebProfilerExtension extends ProfilerExtension
 
     private static function escape(Environment $env, string $s): string
     {
-        // Twig 3.10 and above
-        if (class_exists(EscaperRuntime::class)) {
-            return $env->getRuntime(EscaperRuntime::class)->escape($s);
-        }
-
-        // Twig 3.9
-        if (method_exists(EscaperExtension::class, 'escape')) {
-            return EscaperExtension::escape($env, $s);
-        }
-
-        // to be removed when support for Twig 3 is dropped
-        return twig_escape_filter($env, $s);
+        return $env->getRuntime(EscaperRuntime::class)->escape($s);
     }
 }

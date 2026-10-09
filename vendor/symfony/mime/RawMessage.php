@@ -18,13 +18,14 @@ use Symfony\Component\Mime\Exception\LogicException;
  */
 class RawMessage
 {
-    /** @var iterable|string|resource */
-    private $message;
     private bool $isGeneratorClosed;
 
-    public function __construct(iterable|string $message)
-    {
-        $this->message = $message;
+    /**
+     * @param iterable<string>|string|resource $message
+     */
+    public function __construct(
+        private $message,
+    ) {
     }
 
     public function __destruct()
@@ -66,7 +67,7 @@ class RawMessage
 
         if (\is_resource($this->message)) {
             rewind($this->message);
-            while ($line = fgets($this->message)) {
+            while (false !== $line = fgets($this->message)) {
                 yield $line;
             }
 

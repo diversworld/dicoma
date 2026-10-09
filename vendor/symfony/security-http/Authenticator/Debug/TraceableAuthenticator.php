@@ -30,10 +30,12 @@ use Symfony\Component\VarDumper\Caster\ClassStub;
  */
 final class TraceableAuthenticator implements AuthenticatorInterface, InteractiveAuthenticatorInterface, AuthenticationEntryPointInterface
 {
+    private ?bool $supports = false;
     private ?Passport $passport = null;
     private ?float $duration = null;
     private ClassStub|string $stub;
     private ?bool $authenticated = null;
+    private ?AuthenticationException $exception = null;
 
     public function __construct(private AuthenticatorInterface $authenticator)
     {
@@ -42,33 +44,35 @@ final class TraceableAuthenticator implements AuthenticatorInterface, Interactiv
     public function getInfo(): array
     {
         return [
-            'supports' => true,
+            'supports' => $this->supports,
             'passport' => $this->passport,
             'duration' => $this->duration,
             'stub' => $this->stub ??= class_exists(ClassStub::class) ? new ClassStub($this->authenticator::class) : $this->authenticator::class,
             'authenticated' => $this->authenticated,
             'badges' => array_map(
-                static function (BadgeInterface $badge): array {
-                    return [
-                        'stub' => class_exists(ClassStub::class) ? new ClassStub($badge::class) : $badge::class,
-                        'resolved' => $badge->isResolved(),
-                    ];
-                },
+                static fn (BadgeInterface $badge): array => [
+                    'stub' => class_exists(ClassStub::class) ? new ClassStub($badge::class) : $badge::class,
+                    'resolved' => $badge->isResolved(),
+                ],
                 $this->passport?->getBadges() ?? [],
             ),
+            'exception' => $this->exception,
         ];
     }
 
     public function supports(Request $request): ?bool
     {
-        return $this->authenticator->supports($request);
+        return $this->supports = $this->authenticator->supports($request);
     }
 
     public function authenticate(Request $request): Passport
     {
         $startTime = microtime(true);
-        $this->passport = $this->authenticator->authenticate($request);
-        $this->duration = microtime(true) - $startTime;
+        try {
+            $this->passport = $this->authenticator->authenticate($request);
+        } finally {
+            $this->duration = microtime(true) - $startTime;
+        }
 
         return $this->passport;
     }
@@ -88,6 +92,10 @@ final class TraceableAuthenticator implements AuthenticatorInterface, Interactiv
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
         $this->authenticated = false;
+        $this->exception = $exception->getPrevious() instanceof AuthenticationException
+            ? $exception->getPrevious()
+            : $exception
+        ;
 
         return $this->authenticator->onAuthenticationFailure($request, $exception);
     }

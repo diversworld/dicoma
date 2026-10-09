@@ -29,6 +29,7 @@ class NativeRequestHandler implements RequestHandlerInterface
      */
     private const FILE_KEYS = [
         'error',
+        'full_path',
         'name',
         'size',
         'tmp_name',
@@ -41,7 +42,7 @@ class NativeRequestHandler implements RequestHandlerInterface
     }
 
     /**
-     * @throws Exception\UnexpectedTypeException If the $request is not null
+     * @throws UnexpectedTypeException If the $request is not null
      */
     public function handleRequest(FormInterface $form, mixed $request = null): void
     {
@@ -78,11 +79,10 @@ class NativeRequestHandler implements RequestHandlerInterface
                 // Submit the form, but don't clear the default values
                 $form->submit(null, false);
 
-                $form->addError(new FormError(
-                    $form->getConfig()->getOption('upload_max_size_message')(),
-                    null,
-                    ['{{ max }}' => $this->serverParams->getNormalizedIniPostMaxSize()]
-                ));
+                $messageTemplate = $form->getConfig()->getOption('upload_max_size_message')();
+                $messageParameters = ['{{ max }}' => $this->serverParams->getNormalizedIniPostMaxSize()];
+
+                $form->addError(new FormError(strtr($messageTemplate, $messageParameters), $messageTemplate, $messageParameters));
 
                 return;
             }
@@ -112,7 +112,7 @@ class NativeRequestHandler implements RequestHandlerInterface
         }
 
         // Don't auto-submit the form unless at least one field is present.
-        if ('' === $name && \count(array_intersect_key($data, $form->all())) <= 0) {
+        if ('' === $name && !array_intersect_key($data, $form->all())) {
             return;
         }
 
@@ -186,9 +186,7 @@ class NativeRequestHandler implements RequestHandlerInterface
             return $data;
         }
 
-        // Remove extra key added by PHP 8.1.
-        unset($data['full_path']);
-        $keys = array_keys($data);
+        $keys = array_keys($data + ['full_path' => null]);
         sort($keys);
 
         if (self::FILE_KEYS !== $keys || !isset($data['name']) || !\is_array($data['name'])) {
@@ -207,7 +205,9 @@ class NativeRequestHandler implements RequestHandlerInterface
                 'type' => $data['type'][$key],
                 'tmp_name' => $data['tmp_name'][$key],
                 'size' => $data['size'][$key],
-            ]);
+            ] + (isset($data['full_path'][$key]) ? [
+                'full_path' => $data['full_path'][$key],
+            ] : []));
         }
 
         return $files;
@@ -219,7 +219,7 @@ class NativeRequestHandler implements RequestHandlerInterface
             return $data;
         }
 
-        $keys = array_keys($data);
+        $keys = array_keys($data + ['full_path' => null]);
         sort($keys);
 
         if (self::FILE_KEYS === $keys) {

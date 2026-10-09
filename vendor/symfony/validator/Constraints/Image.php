@@ -11,7 +11,11 @@
 
 namespace Symfony\Component\Validator\Constraints;
 
+use Symfony\Component\Validator\Attribute\HasNamedArguments;
+
 /**
+ * Validates that a file (or a path to a file) is a valid image.
+ *
  * @author Benjamin Dulau <benjamin.dulau@gmail.com>
  * @author Bernhard Schussek <bschussek@gmail.com>
  */
@@ -56,7 +60,7 @@ class Image extends File
         self::CORRUPTED_IMAGE_ERROR => 'CORRUPTED_IMAGE_ERROR',
     ];
 
-    public array|string $mimeTypes = 'image/*';
+    public array|string $mimeTypes = [];
     public ?int $minWidth = null;
     public ?int $maxWidth = null;
     public ?int $maxHeight = null;
@@ -86,6 +90,36 @@ class Image extends File
     public string $allowPortraitMessage = 'The image is portrait oriented ({{ width }}x{{ height }}px). Portrait oriented images are not allowed.';
     public string $corruptedMessage = 'The image file is corrupted.';
 
+    /**
+     * @param positive-int|string|null $maxSize                     The max size of the underlying file
+     * @param bool|null                $binaryFormat                Pass true to use binary-prefixed units (KiB, MiB, etc.) or false to use SI-prefixed units (kB, MB) in displayed messages. Pass null to guess the format from the maxSize option. (defaults to null)
+     * @param non-empty-string[]|null  $mimeTypes                   Acceptable media types
+     * @param positive-int|null        $filenameMaxLength           Maximum length of the file name
+     * @param string|null              $disallowEmptyMessage        Enable empty upload validation with this message in case of error
+     * @param string|null              $uploadIniSizeErrorMessage   Message if the file size exceeds the max size configured in php.ini
+     * @param string|null              $uploadFormSizeErrorMessage  Message if the file size exceeds the max size configured in the HTML input field
+     * @param string|null              $uploadPartialErrorMessage   Message if the file is only partially uploaded
+     * @param string|null              $uploadNoTmpDirErrorMessage  Message if there is no upload_tmp_dir in php.ini
+     * @param string|null              $uploadCantWriteErrorMessage Message if the uploaded file can not be stored in the temporary directory
+     * @param string|null              $uploadErrorMessage          Message if an unknown error occurred on upload
+     * @param string[]|null            $groups
+     * @param int<0, int>|null         $minWidth                    Minimum image width
+     * @param positive-int|null        $maxWidth                    Maximum image width
+     * @param positive-int|null        $maxHeight                   Maximum image height
+     * @param int<0, int>|null         $minHeight                   Minimum image weight
+     * @param positive-int|float|null  $maxRatio                    Maximum image ratio
+     * @param int<0, max>|float|null   $minRatio                    Minimum image ratio
+     * @param int<0, max>|float|null   $minPixels                   Minimum amount of pixels
+     * @param positive-int|float|null  $maxPixels                   Maximum amount of pixels
+     * @param bool|null                $allowSquare                 Whether to allow a square image (defaults to true)
+     * @param bool|null                $allowLandscape              Whether to allow a landscape image (defaults to true)
+     * @param bool|null                $allowPortrait               Whether to allow a portrait image (defaults to true)
+     * @param bool|null                $detectCorrupted             Whether to validate the image is not corrupted (defaults to false)
+     * @param string|null              $sizeNotDetectedMessage      Message if the system can not determine image size and there is a size constraint to validate
+     *
+     * @see https://www.iana.org/assignments/media-types/media-types.xhtml Existing media types
+     */
+    #[HasNamedArguments]
     public function __construct(
         ?array $options = null,
         int|string|null $maxSize = null,
@@ -132,7 +166,12 @@ class Image extends File
         ?string $allowPortraitMessage = null,
         ?string $corruptedMessage = null,
         ?array $groups = null,
-        mixed $payload = null
+        mixed $payload = null,
+        array|string|null $extensions = null,
+        ?string $extensionsMessage = null,
+        ?string $filenameCharset = null,
+        ?string $filenameCountUnit = null,
+        ?string $filenameCharsetMessage = null,
     ) {
         parent::__construct(
             $options,
@@ -155,7 +194,12 @@ class Image extends File
             $uploadExtensionErrorMessage,
             $uploadErrorMessage,
             $groups,
-            $payload
+            $payload,
+            $extensions,
+            $extensionsMessage,
+            $filenameCharset,
+            $filenameCountUnit,
+            $filenameCharsetMessage,
         );
 
         $this->minWidth = $minWidth ?? $this->minWidth;
@@ -183,6 +227,10 @@ class Image extends File
         $this->allowLandscapeMessage = $allowLandscapeMessage ?? $this->allowLandscapeMessage;
         $this->allowPortraitMessage = $allowPortraitMessage ?? $this->allowPortraitMessage;
         $this->corruptedMessage = $corruptedMessage ?? $this->corruptedMessage;
+
+        if ([] === $this->mimeTypes && [] === $this->extensions) {
+            $this->mimeTypes = 'image/*';
+        }
 
         if (!\in_array('image/*', (array) $this->mimeTypes, true) && !\array_key_exists('mimeTypesMessage', $options ?? []) && null === $mimeTypesMessage) {
             $this->mimeTypesMessage = 'The mime type of the file is invalid ({{ type }}). Allowed mime types are {{ types }}.';

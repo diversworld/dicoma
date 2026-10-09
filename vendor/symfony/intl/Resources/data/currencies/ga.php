@@ -54,6 +54,10 @@ return [
             'ARA',
             'Austral Airgintíneach',
         ],
+        'ARL' => [
+            'ARL',
+            'Peso Ley na hAirgintíne (1970–1983)',
+        ],
         'ARM' => [
             'ARM',
             'Peso na hAirgintíne (1881–1970)',
@@ -222,9 +226,17 @@ return [
             'CDF',
             'Franc an Chongó',
         ],
+        'CHE' => [
+            'CHE',
+            'Euro WIR',
+        ],
         'CHF' => [
             'CHF',
             'Franc na hEilvéise',
+        ],
+        'CHW' => [
+            'CHW',
+            'Franc WIR',
         ],
         'CLE' => [
             'CLE',
@@ -998,6 +1010,10 @@ return [
             'EC$',
             'Dollar na Cairibe Thoir',
         ],
+        'XCG' => [
+            'Cg.',
+            'gildear Chairib',
+        ],
         'XEU' => [
             'XEU',
             'Aonad Airgeadra Eorpach',
@@ -1038,6 +1054,10 @@ return [
             'YUN',
             'Dinar Inmhalartaithe Iúgslavach (1990–1992)',
         ],
+        'YUR' => [
+            'YUR',
+            'Dinar Leasaithe na hIúgsláive (1992–1993)',
+        ],
         'ZAL' => [
             'ZAL',
             'Rand na hAfraice Theas (airgeadúil)',
@@ -1065,6 +1085,14 @@ return [
         'ZWD' => [
             'ZWD',
             'Dollar Siombábach (1980–2008)',
+        ],
+        'ZWG' => [
+            'ZWG',
+            'ór na Siombáibe',
+        ],
+        'ZWL' => [
+            'ZWL',
+            'Dollar na Siombáibe (2009)',
         ],
     ],
 ];

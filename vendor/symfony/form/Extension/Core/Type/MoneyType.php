@@ -14,6 +14,7 @@ namespace Symfony\Component\Form\Extension\Core\Type;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Exception\LogicException;
 use Symfony\Component\Form\Extension\Core\DataTransformer\MoneyToLocalizedStringTransformer;
+use Symfony\Component\Form\Extension\Core\DataTransformer\StringToFloatTransformer;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
@@ -34,9 +35,14 @@ class MoneyType extends AbstractType
                 $options['grouping'],
                 $options['rounding_mode'],
                 $options['divisor'],
-                $options['html5'] ? 'en' : null
+                $options['html5'] ? 'en' : null,
+                $options['input'],
             ))
         ;
+
+        if ('string' === $options['input']) {
+            $builder->addModelTransformer(new StringToFloatTransformer($options['scale']));
+        }
     }
 
     public function buildView(FormView $view, FormInterface $form, array $options): void
@@ -45,6 +51,12 @@ class MoneyType extends AbstractType
 
         if ($options['html5']) {
             $view->vars['type'] = 'number';
+
+            if (!isset($view->vars['attr']['step'])) {
+                $view->vars['attr']['step'] = 'any';
+            }
+        } else {
+            $view->vars['attr']['inputmode'] = 0 === $options['scale'] ? 'numeric' : 'decimal';
         }
     }
 
@@ -59,6 +71,7 @@ class MoneyType extends AbstractType
             'compound' => false,
             'html5' => false,
             'invalid_message' => 'Please enter a valid money amount.',
+            'input' => 'float',
         ]);
 
         $resolver->setAllowedValues('rounding_mode', [
@@ -74,6 +87,8 @@ class MoneyType extends AbstractType
         $resolver->setAllowedTypes('scale', 'int');
 
         $resolver->setAllowedTypes('html5', 'bool');
+
+        $resolver->setAllowedValues('input', ['float', 'integer', 'string']);
 
         $resolver->setNormalizer('grouping', static function (Options $options, $value) {
             if ($value && $options['html5']) {
@@ -115,9 +130,13 @@ class MoneyType extends AbstractType
             // a single space leads to better readability in combination with input
             // fields
 
-            // the regex also considers non-break spaces (0xC2 or 0xA0 in UTF-8)
+            // directional marks are not part of the currency symbol
+            $pattern = preg_replace('/[\x{061C}\x{200E}\x{200F}]/u', '', $pattern);
 
-            preg_match('/^([^\s\xc2\xa0]*)[\s\xc2\xa0]*123(?:[,.]0+)?[\s\xc2\xa0]*([^\s\xc2\xa0]*)$/u', $pattern, $matches);
+            // the regex also considers non-break spaces (0xC2 or 0xA0 in UTF-8)
+            // and digits of any script, as used by Persian or Bengali locales
+
+            preg_match('/^([^\s\xc2\xa0\p{Nd}]*)[\s\xc2\xa0]*\p{Nd}(?:[^\s\xc2\xa0]*\p{Nd})?[\s\xc2\xa0]*([^\s\xc2\xa0\p{Nd}]*)$/u', $pattern, $matches);
 
             if (!empty($matches[1])) {
                 self::$patterns[$locale][$currency] = $matches[1].' {{ widget }}';

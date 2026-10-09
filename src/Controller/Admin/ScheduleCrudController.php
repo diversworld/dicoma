@@ -429,4 +429,3 @@ class ScheduleCrudController extends AbstractCrudController
         );
     }
 }
-

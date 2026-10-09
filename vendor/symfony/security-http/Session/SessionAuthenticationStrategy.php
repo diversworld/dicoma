@@ -31,11 +31,12 @@ class SessionAuthenticationStrategy implements SessionAuthenticationStrategyInte
     public const MIGRATE = 'migrate';
     public const INVALIDATE = 'invalidate';
 
-    private string $strategy;
     private ?ClearableTokenStorageInterface $csrfTokenStorage = null;
 
-    public function __construct(string $strategy, ?ClearableTokenStorageInterface $csrfTokenStorage = null)
-    {
+    public function __construct(
+        private string $strategy,
+        ?ClearableTokenStorageInterface $csrfTokenStorage = null,
+    ) {
         $this->strategy = $strategy;
 
         if (self::MIGRATE === $strategy) {
@@ -51,10 +52,7 @@ class SessionAuthenticationStrategy implements SessionAuthenticationStrategyInte
 
             case self::MIGRATE:
                 $request->getSession()->migrate(true);
-
-                if ($this->csrfTokenStorage) {
-                    $this->csrfTokenStorage->clear();
-                }
+                $this->csrfTokenStorage?->clear();
 
                 return;
 
@@ -64,7 +62,7 @@ class SessionAuthenticationStrategy implements SessionAuthenticationStrategyInte
                 return;
 
             default:
-                throw new \RuntimeException(sprintf('Invalid session authentication strategy "%s".', $this->strategy));
+                throw new \RuntimeException(\sprintf('Invalid session authentication strategy "%s".', $this->strategy));
         }
     }
 }

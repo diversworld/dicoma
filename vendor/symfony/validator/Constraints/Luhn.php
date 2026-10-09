@@ -11,10 +11,13 @@
 
 namespace Symfony\Component\Validator\Constraints;
 
+use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint;
 
 /**
- * Metadata for the LuhnValidator.
+ * Validates that a value (typically a credit card number) passes the Luhn algorithm.
+ *
+ * @see https://en.wikipedia.org/wiki/Luhn_algorithm
  *
  * @author Tim Nagel <t.nagel@infinite.net.au>
  * @author Greg Knapp http://gregk.me/2011/php-implementation-of-bank-card-luhn-algorithm/
@@ -33,12 +36,20 @@ class Luhn extends Constraint
 
     public string $message = 'Invalid card number.';
 
+    /**
+     * @param string[]|null $groups
+     */
+    #[HasNamedArguments]
     public function __construct(
         ?array $options = null,
         ?string $message = null,
         ?array $groups = null,
-        mixed $payload = null
+        mixed $payload = null,
     ) {
+        if (\is_array($options)) {
+            trigger_deprecation('symfony/validator', '7.3', 'Passing an array of options to configure the "%s" constraint is deprecated, use named arguments instead.', static::class);
+        }
+
         parent::__construct($options, $groups, $payload);
 
         $this->message = $message ?? $this->message;
