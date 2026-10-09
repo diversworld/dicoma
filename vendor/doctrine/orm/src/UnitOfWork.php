@@ -49,7 +49,7 @@ use Doctrine\Persistence\PropertyChangedListener;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
-use Throwable;
+use Symfony\Component\VarExporter\Hydrator;
 use UnexpectedValueException;
 
 use function array_chunk;
@@ -62,6 +62,7 @@ use function array_merge;
 use function array_sum;
 use function array_values;
 use function assert;
+use function count;
 use function current;
 use function func_get_arg;
 use function func_num_args;
@@ -77,6 +78,8 @@ use function spl_object_id;
 use function sprintf;
 use function strtolower;
 
+use const PHP_VERSION_ID;
+
 /**
  * The UnitOfWork is responsible for tracking changes to objects during an
  * "object-level" transaction and for writing out changes to the database
@@ -84,7 +87,7 @@ use function strtolower;
  *
  * Internal note: This class contains highly performance-sensitive code.
  *
- * @psalm-import-type AssociationMapping from ClassMetadata
+ * @phpstan-import-type AssociationMapping from ClassMetadata
  */
 class UnitOfWork implements PropertyChangedListener
 {
@@ -126,8 +129,7 @@ class UnitOfWork implements PropertyChangedListener
      * Since all classes in a hierarchy must share the same identifier set,
      * we always take the root class name of the hierarchy.
      *
-     * @var mixed[]
-     * @psalm-var array<class-string, array<string, object>>
+     * @var array<class-string, array<string, object>>
      */
     private $identityMap = [];
 
@@ -136,7 +138,7 @@ class UnitOfWork implements PropertyChangedListener
      * Keys are object ids (spl_object_id).
      *
      * @var mixed[]
-     * @psalm-var array<int, array<string, mixed>>
+     * @phpstan-var array<int, array<string, mixed>>
      */
     private $entityIdentifiers = [];
 
@@ -149,7 +151,7 @@ class UnitOfWork implements PropertyChangedListener
      *                A value will only really be copied if the value in the entity is modified
      *                by the user.
      *
-     * @psalm-var array<int, array<string, mixed>>
+     * @phpstan-var array<int, array<string, mixed>>
      */
     private $originalEntityData = [];
 
@@ -157,7 +159,7 @@ class UnitOfWork implements PropertyChangedListener
      * Map of entity changes. Keys are object ids (spl_object_id).
      * Filled at the beginning of a commit of the UnitOfWork and cleaned at the end.
      *
-     * @psalm-var array<int, array<string, array{mixed, mixed}>>
+     * @phpstan-var array<int, array<string, array{mixed, mixed}>>
      */
     private $entityChangeSets = [];
 
@@ -165,7 +167,7 @@ class UnitOfWork implements PropertyChangedListener
      * The (cached) states of any known entities.
      * Keys are object ids (spl_object_id).
      *
-     * @psalm-var array<int, self::STATE_*>
+     * @phpstan-var array<int, self::STATE_*>
      */
     private $entityStates = [];
 
@@ -174,35 +176,35 @@ class UnitOfWork implements PropertyChangedListener
      * This is only used for entities with a change tracking policy of DEFERRED_EXPLICIT.
      * Keys are object ids (spl_object_id).
      *
-     * @psalm-var array<class-string, array<int, mixed>>
+     * @var array<class-string, array<int, mixed>>
      */
     private $scheduledForSynchronization = [];
 
     /**
      * A list of all pending entity insertions.
      *
-     * @psalm-var array<int, object>
+     * @phpstan-var array<int, object>
      */
     private $entityInsertions = [];
 
     /**
      * A list of all pending entity updates.
      *
-     * @psalm-var array<int, object>
+     * @phpstan-var array<int, object>
      */
     private $entityUpdates = [];
 
     /**
      * Any pending extra updates that have been scheduled by persisters.
      *
-     * @psalm-var array<int, array{object, array<string, array{mixed, mixed}>}>
+     * @phpstan-var array<int, array{object, array<string, array{mixed, mixed}>}>
      */
     private $extraUpdates = [];
 
     /**
      * A list of all pending entity deletions.
      *
-     * @psalm-var array<int, object>
+     * @phpstan-var array<int, object>
      */
     private $entityDeletions = [];
 
@@ -222,14 +224,14 @@ class UnitOfWork implements PropertyChangedListener
     /**
      * All pending collection deletions.
      *
-     * @psalm-var array<int, PersistentCollection<array-key, object>>
+     * @phpstan-var array<int, PersistentCollection<array-key, object>>
      */
     private $collectionDeletions = [];
 
     /**
      * All pending collection updates.
      *
-     * @psalm-var array<int, PersistentCollection<array-key, object>>
+     * @phpstan-var array<int, PersistentCollection<array-key, object>>
      */
     private $collectionUpdates = [];
 
@@ -238,7 +240,7 @@ class UnitOfWork implements PropertyChangedListener
      * At the end of the UnitOfWork all these collections will make new snapshots
      * of their data.
      *
-     * @psalm-var array<int, PersistentCollection<array-key, object>>
+     * @phpstan-var array<int, PersistentCollection<array-key, object>>
      */
     private $visitedCollections = [];
 
@@ -249,7 +251,7 @@ class UnitOfWork implements PropertyChangedListener
      * Indexed by Collection object ID, which also serves as the key in self::$visitedCollections;
      * values are the key names that need to be removed.
      *
-     * @psalm-var array<int, array<array-key, true>>
+     * @phpstan-var array<int, array<array-key, true>>
      */
     private $pendingCollectionElementRemovals = [];
 
@@ -263,14 +265,14 @@ class UnitOfWork implements PropertyChangedListener
     /**
      * The entity persister instances used to persist entity instances.
      *
-     * @psalm-var array<string, EntityPersister>
+     * @phpstan-var array<string, EntityPersister>
      */
     private $persisters = [];
 
     /**
      * The collection persister instances used to persist collections.
      *
-     * @psalm-var array<array-key, CollectionPersister>
+     * @phpstan-var array<array-key, CollectionPersister>
      */
     private $collectionPersisters = [];
 
@@ -298,7 +300,7 @@ class UnitOfWork implements PropertyChangedListener
     /**
      * Orphaned entities that are scheduled for removal.
      *
-     * @psalm-var array<int, object>
+     * @phpstan-var array<int, object>
      */
     private $orphanRemovals = [];
 
@@ -312,7 +314,7 @@ class UnitOfWork implements PropertyChangedListener
     /**
      * Map of Entity Class-Names and corresponding IDs that should eager loaded when requested.
      *
-     * @psalm-var array<class-string, array<string, mixed>>
+     * @var array<class-string, array<string, mixed>>
      */
     private $eagerLoadingEntities = [];
 
@@ -427,6 +429,8 @@ class UnitOfWork implements PropertyChangedListener
         $conn = $this->em->getConnection();
         $conn->beginTransaction();
 
+        $successful = false;
+
         try {
             // Collection deletions (deletions of complete collections)
             foreach ($this->collectionDeletions as $collectionToDelete) {
@@ -478,16 +482,18 @@ class UnitOfWork implements PropertyChangedListener
 
                 throw new OptimisticLockException('Commit failed', $object);
             }
-        } catch (Throwable $e) {
-            $this->em->close();
 
-            if ($conn->isTransactionActive()) {
-                $conn->rollBack();
+            $successful = true;
+        } finally {
+            if (! $successful) {
+                $this->em->close();
+
+                if ($conn->isTransactionActive()) {
+                    $conn->rollBack();
+                }
+
+                $this->afterTransactionRolledBack();
             }
-
-            $this->afterTransactionRolledBack();
-
-            throw $e;
         }
 
         $this->afterTransactionComplete();
@@ -621,7 +627,7 @@ class UnitOfWork implements PropertyChangedListener
      * @param object $entity
      *
      * @return mixed[][]
-     * @psalm-return array<string, array{mixed, mixed}|PersistentCollection>
+     * @phpstan-return array<string, array{mixed, mixed}|PersistentCollection>
      */
     public function & getEntityChangeSet($entity)
     {
@@ -662,8 +668,8 @@ class UnitOfWork implements PropertyChangedListener
      *
      * @param ClassMetadata $class  The class descriptor of the entity.
      * @param object        $entity The entity for which to compute the changes.
-     * @psalm-param ClassMetadata<T> $class
-     * @psalm-param T $entity
+     * @phpstan-param ClassMetadata<T> $class
+     * @phpstan-param T $entity
      *
      * @return void
      *
@@ -932,7 +938,7 @@ class UnitOfWork implements PropertyChangedListener
      * Computes the changes of an association.
      *
      * @param mixed $value The value of the association.
-     * @psalm-param AssociationMapping $assoc The association mapping.
+     * @phpstan-param AssociationMapping $assoc The association mapping.
      *
      * @throws ORMInvalidArgumentException
      * @throws ORMException
@@ -1023,8 +1029,8 @@ class UnitOfWork implements PropertyChangedListener
 
     /**
      * @param object $entity
-     * @psalm-param ClassMetadata<T> $class
-     * @psalm-param T $entity
+     * @phpstan-param ClassMetadata<T> $class
+     * @phpstan-param T $entity
      *
      * @template T of object
      */
@@ -1057,7 +1063,9 @@ class UnitOfWork implements PropertyChangedListener
 
         $this->entityStates[$oid] = self::STATE_MANAGED;
 
-        $this->scheduleForInsert($entity);
+        if (! isset($this->entityInsertions[$oid])) {
+            $this->scheduleForInsert($entity);
+        }
     }
 
     /** @param mixed[] $idValue */
@@ -1083,8 +1091,8 @@ class UnitOfWork implements PropertyChangedListener
      *
      * @param ClassMetadata $class  The class descriptor of the entity.
      * @param object        $entity The entity for which to (re)calculate the change set.
-     * @psalm-param ClassMetadata<T> $class
-     * @psalm-param T $entity
+     * @phpstan-param ClassMetadata<T> $class
+     * @phpstan-param T $entity
      *
      * @return void
      *
@@ -1223,8 +1231,8 @@ class UnitOfWork implements PropertyChangedListener
 
     /**
      * @param object $entity
-     * @psalm-param ClassMetadata<T> $class
-     * @psalm-param T $entity
+     * @phpstan-param ClassMetadata<T> $class
+     * @phpstan-param T $entity
      *
      * @template T of object
      */
@@ -1595,7 +1603,7 @@ class UnitOfWork implements PropertyChangedListener
      * Extra updates for entities are stored as (entity, changeset) tuples.
      *
      * @param object $entity The entity for which to schedule an extra update.
-     * @psalm-param array<string, array{mixed, mixed}>  $changeset The changeset of the entity (what to update).
+     * @phpstan-param array<string, array{mixed, mixed}>  $changeset The changeset of the entity (what to update).
      *
      * @return void
      *
@@ -1821,10 +1829,10 @@ EXCEPTION
      *                         This parameter can be set to improve performance of entity state detection
      *                         by potentially avoiding a database lookup if the distinction between NEW and DETACHED
      *                         is either known or does not matter for the caller of the method.
-     * @psalm-param self::STATE_*|null $assume
+     * @phpstan-param self::STATE_*|null $assume
      *
      * @return int The entity state.
-     * @psalm-return self::STATE_*
+     * @phpstan-return self::STATE_*
      */
     public function getEntityState($entity, $assume = null)
     {
@@ -2027,7 +2035,7 @@ EXCEPTION
      * the already visited entities to prevent infinite recursions.
      *
      * @param object $entity The entity to persist.
-     * @psalm-param array<int, object> $visited The already visited entities.
+     * @phpstan-param array<int, object> $visited The already visited entities.
      *
      * @throws ORMInvalidArgumentException
      * @throws UnexpectedValueException
@@ -2112,7 +2120,7 @@ EXCEPTION
      * the already visited entities to prevent infinite recursions.
      *
      * @param object $entity The entity to delete.
-     * @psalm-param array<int, object> $visited The map of the already visited entities.
+     * @phpstan-param array<int, object> $visited The map of the already visited entities.
      *
      * @throws ORMInvalidArgumentException If the instance is a detached entity.
      * @throws UnexpectedValueException
@@ -2185,8 +2193,8 @@ EXCEPTION
      * Executes a merge operation on an entity.
      *
      * @param object $entity
-     * @psalm-param AssociationMapping|null $assoc
-     * @psalm-param array<int, object> $visited
+     * @phpstan-param AssociationMapping|null $assoc
+     * @phpstan-param array<int, object> $visited
      *
      * @return object The managed copy of the entity.
      *
@@ -2291,9 +2299,9 @@ EXCEPTION
     /**
      * @param object $entity
      * @param object $managedCopy
-     * @psalm-param ClassMetadata<T> $class
-     * @psalm-param T $entity
-     * @psalm-param T $managedCopy
+     * @phpstan-param ClassMetadata<T> $class
+     * @phpstan-param T $entity
+     * @phpstan-param T $managedCopy
      *
      * @throws OptimisticLockException
      *
@@ -2326,7 +2334,7 @@ EXCEPTION
      * Sets/adds associated managed copies into the previous entity's association field
      *
      * @param object $entity
-     * @psalm-param AssociationMapping $association
+     * @phpstan-param AssociationMapping $association
      */
     private function updateAssociationWithMergedEntity(
         $entity,
@@ -2441,8 +2449,8 @@ EXCEPTION
      * Executes a refresh operation on an entity.
      *
      * @param object $entity The entity to refresh.
-     * @psalm-param array<int, object>  $visited The already visited entities during cascades.
-     * @psalm-param LockMode::*|null $lockMode
+     * @phpstan-param array<int, object>  $visited The already visited entities during cascades.
+     * @phpstan-param LockMode::*|null $lockMode
      *
      * @throws ORMInvalidArgumentException If the entity is not MANAGED.
      * @throws TransactionRequiredException
@@ -2471,21 +2479,21 @@ EXCEPTION
             throw ORMInvalidArgumentException::entityNotManaged($entity);
         }
 
+        $this->cascadeRefresh($entity, $visited, $lockMode);
+
         $this->getEntityPersister($class->name)->refresh(
             array_combine($class->getIdentifierFieldNames(), $this->entityIdentifiers[$oid]),
             $entity,
             $lockMode
         );
-
-        $this->cascadeRefresh($entity, $visited, $lockMode);
     }
 
     /**
      * Cascades a refresh operation to associated entities.
      *
      * @param object $entity
-     * @psalm-param array<int, object> $visited
-     * @psalm-param LockMode::*|null $lockMode
+     * @phpstan-param array<int, object> $visited
+     * @phpstan-param LockMode::*|null $lockMode
      */
     private function cascadeRefresh($entity, array &$visited, ?int $lockMode = null): void
     {
@@ -2574,7 +2582,7 @@ EXCEPTION
      *
      * @param object $entity
      * @param object $managedCopy
-     * @psalm-param array<int, object> $visited
+     * @phpstan-param array<int, object> $visited
      */
     private function cascadeMerge($entity, $managedCopy, array &$visited): void
     {
@@ -2613,7 +2621,7 @@ EXCEPTION
      * Cascades the save operation to associated entities.
      *
      * @param object $entity
-     * @psalm-param array<int, object> $visited
+     * @phpstan-param array<int, object> $visited
      */
     private function cascadePersist($entity, array &$visited): void
     {
@@ -2678,7 +2686,7 @@ EXCEPTION
      * Cascades the delete operation to associated entities.
      *
      * @param object $entity
-     * @psalm-param array<int, object> $visited
+     * @phpstan-param array<int, object> $visited
      */
     private function cascadeRemove($entity, array &$visited): void
     {
@@ -2729,7 +2737,7 @@ EXCEPTION
      *
      * @param object                     $entity
      * @param int|DateTimeInterface|null $lockVersion
-     * @psalm-param LockMode::* $lockMode
+     * @phpstan-param LockMode::* $lockMode
      *
      * @throws ORMInvalidArgumentException
      * @throws TransactionRequiredException
@@ -2906,11 +2914,9 @@ EXCEPTION
      *
      * Internal note: Highly performance-sensitive method.
      *
-     * @param string  $className The name of the entity class.
-     * @param mixed[] $data      The data for the entity.
-     * @param mixed[] $hints     Any hints to account for during reconstitution/lookup of the entity.
-     * @psalm-param class-string $className
-     * @psalm-param array<string, mixed> $hints
+     * @param class-string         $className The name of the entity class.
+     * @param mixed[]              $data      The data for the entity.
+     * @param array<string, mixed> $hints     Any hints to account for during reconstitution/lookup of the entity.
      *
      * @return object The managed entity instance.
      *
@@ -2944,6 +2950,11 @@ EXCEPTION
 
             if ($this->isUninitializedObject($entity)) {
                 $entity->__setInitialized(true);
+
+                if ($this->em->getConfiguration()->isLazyGhostObjectEnabled()) {
+                    // Initialize properties that have default values to their default value (similar to what
+                    Hydrator::hydrate($entity, (array) $class->reflClass->newInstanceWithoutConstructor());
+                }
             } else {
                 if (
                     ! isset($hints[Query::HINT_REFRESH])
@@ -2968,7 +2979,7 @@ EXCEPTION
             $oid    = spl_object_id($entity);
             $this->registerManaged($entity, $id, $data);
 
-            if (isset($hints[Query::HINT_READ_ONLY])) {
+            if (isset($hints[Query::HINT_READ_ONLY]) && $hints[Query::HINT_READ_ONLY] === true) {
                 $this->readOnlyObjects[$oid] = true;
             }
         }
@@ -3162,8 +3173,14 @@ EXCEPTION
                     $reflField->setValue($entity, $pColl);
 
                     if ($hints['fetchMode'][$class->name][$field] === ClassMetadata::FETCH_EAGER) {
-                        $isIteration = isset($hints[Query::HINT_INTERNAL_ITERATION]) && $hints[Query::HINT_INTERNAL_ITERATION];
-                        if ($assoc['type'] === ClassMetadata::ONE_TO_MANY && ! $isIteration && ! $targetClass->isIdentifierComposite && ! isset($assoc['indexBy'])) {
+                        if (
+                            $assoc['type'] === ClassMetadata::ONE_TO_MANY
+                            // is iteration
+                            && ! (isset($hints[Query::HINT_INTERNAL_ITERATION]) && $hints[Query::HINT_INTERNAL_ITERATION])
+                            // is foreign key composite
+                            && ! ($targetClass->hasAssociation($assoc['mappedBy']) && count($targetClass->getAssociationMapping($assoc['mappedBy'])['joinColumns'] ?? []) > 1)
+                            && ! isset($assoc['indexBy'])
+                        ) {
                             $this->scheduleCollectionForBatchLoading($pColl, $class);
                         } else {
                             $this->loadCollection($pColl);
@@ -3221,7 +3238,7 @@ EXCEPTION
      *
      * @param PersistentCollection[] $collections
      * @param array<string, mixed>   $mapping
-     * @psalm-param array{
+     * @phpstan-param array{
      *     targetEntity: class-string,
      *     sourceEntity: class-string,
      *     mappedBy: string,
@@ -3339,7 +3356,7 @@ EXCEPTION
     /**
      * Gets the identity map of the UnitOfWork.
      *
-     * @psalm-return array<class-string, array<string, object>>
+     * @return array<class-string, array<string, object>>
      */
     public function getIdentityMap()
     {
@@ -3353,7 +3370,7 @@ EXCEPTION
      * @param object $entity
      *
      * @return mixed[]
-     * @psalm-return array<string, mixed>
+     * @phpstan-return array<string, mixed>
      */
     public function getOriginalEntityData($entity)
     {
@@ -3439,9 +3456,8 @@ EXCEPTION
      * Tries to find an entity with the given identifier in the identity map of
      * this UnitOfWork.
      *
-     * @param mixed  $id            The entity identifier to look for.
-     * @param string $rootClassName The name of the root class of the mapped entity hierarchy.
-     * @psalm-param class-string $rootClassName
+     * @param mixed        $id            The entity identifier to look for.
+     * @param class-string $rootClassName The name of the root class of the mapped entity hierarchy.
      *
      * @return object|false Returns the entity with the specified identifier if it exists in
      *                      this UnitOfWork, FALSE otherwise.
@@ -3493,8 +3509,7 @@ EXCEPTION
     /**
      * Gets the EntityPersister for an Entity.
      *
-     * @param string $entityName The name of the Entity.
-     * @psalm-param class-string $entityName
+     * @param class-string $entityName The name of the Entity.
      *
      * @return EntityPersister
      */
@@ -3538,7 +3553,7 @@ EXCEPTION
     /**
      * Gets a collection persister for a collection-valued association.
      *
-     * @psalm-param AssociationMapping $association
+     * @phpstan-param AssociationMapping $association
      *
      * @return CollectionPersister
      */
@@ -3640,7 +3655,7 @@ EXCEPTION
     /**
      * Gets the currently scheduled entity insertions in this UnitOfWork.
      *
-     * @psalm-return array<int, object>
+     * @phpstan-return array<int, object>
      */
     public function getScheduledEntityInsertions()
     {
@@ -3650,7 +3665,7 @@ EXCEPTION
     /**
      * Gets the currently scheduled entity updates in this UnitOfWork.
      *
-     * @psalm-return array<int, object>
+     * @phpstan-return array<int, object>
      */
     public function getScheduledEntityUpdates()
     {
@@ -3660,7 +3675,7 @@ EXCEPTION
     /**
      * Gets the currently scheduled entity deletions in this UnitOfWork.
      *
-     * @psalm-return array<int, object>
+     * @phpstan-return array<int, object>
      */
     public function getScheduledEntityDeletions()
     {
@@ -3670,7 +3685,7 @@ EXCEPTION
     /**
      * Gets the currently scheduled complete collection deletions
      *
-     * @psalm-return array<int, PersistentCollection<array-key, object>>
+     * @phpstan-return array<int, PersistentCollection<array-key, object>>
      */
     public function getScheduledCollectionDeletions()
     {
@@ -3680,7 +3695,7 @@ EXCEPTION
     /**
      * Gets the currently scheduled collection inserts, updates and deletes.
      *
-     * @psalm-return array<int, PersistentCollection<array-key, object>>
+     * @phpstan-return array<int, PersistentCollection<array-key, object>>
      */
     public function getScheduledCollectionUpdates()
     {
@@ -3712,7 +3727,7 @@ EXCEPTION
      *
      * @param mixed $obj
      *
-     * @psalm-assert-if-true InternalProxy $obj
+     * @phpstan-assert-if-true InternalProxy $obj
      */
     public function isUninitializedObject($obj): bool
     {
@@ -3880,7 +3895,9 @@ EXCEPTION
         foreach ($this->reflectionPropertiesGetter->getProperties($class->name) as $prop) {
             $name = $prop->name;
 
-            $prop->setAccessible(true);
+            if (PHP_VERSION_ID < 80100) {
+                $prop->setAccessible(true);
+            }
 
             if (! isset($class->associationMappings[$name])) {
                 if (! $class->isIdentifier($name)) {

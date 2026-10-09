@@ -18,9 +18,8 @@
 - Run `composer install`
 
 #### Configuration
-- Create a `.env` file
-- Copy the content of `.env.example` into `.env`
-- Run `php artisan
+- Configure the database connection and application secret in `.env.local`.
+- Verify the Symfony application with `php bin/console about`
 
 #### License
 - [GNU](https://www.gnu.org/licenses/gpl-3.0.html)

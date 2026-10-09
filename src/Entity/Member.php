@@ -2,16 +2,13 @@
 
 namespace App\Entity;
 
-<<<<<<< HEAD
 use App\Enum\MembershipStatus;
-=======
->>>>>>> origin/main
+
 use App\Repository\MemberRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-<<<<<<< HEAD
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
@@ -25,9 +22,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         )
     ]
 )]
-=======
 
->>>>>>> origin/main
 #[ORM\Entity(repositoryClass: MemberRepository::class)]
 class Member
 {
@@ -36,7 +31,6 @@ class Member
     #[ORM\Column]
     private ?int $id = null;
 
-<<<<<<< HEAD
     #[ORM\ManyToOne(
         targetEntity: Club::class,
         inversedBy: 'members'
@@ -68,8 +62,7 @@ class Member
     private MembershipStatus $membershipStatus =
         MembershipStatus::ACTIVE;
 
-=======
->>>>>>> origin/main
+
     #[ORM\Column(length: 100)]
     private ?string $firstname = null;
 
@@ -88,7 +81,6 @@ class Member
     #[ORM\Column(length: 25, nullable: true)]
     private ?string $phone = null;
 
-<<<<<<< HEAD
     /**
      * @var Collection<int, MemberSport>
      */
@@ -105,18 +97,11 @@ class Member
 
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $postalCode = null;
-=======
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $street = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $postal = null;
->>>>>>> origin/main
 
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $city = null;
 
-<<<<<<< HEAD
     #[ORM\Column(
         type: Types::TEXT,
         nullable: true
@@ -137,21 +122,12 @@ class Member
      * Qualifikationen ersetzt.
      */
     #[ORM\Column(length: 50, nullable: true)]
-=======
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $notes = null;
 
-    #[ORM\OneToOne(inversedBy: 'member', cascade: ['persist', 'remove'])]
-    private ?User $user = null;
-
-    #[ORM\Column(length: 20)]
->>>>>>> origin/main
     private ?string $category = null;
 
     #[ORM\Column(nullable: true)]
     private ?bool $published = null;
 
-<<<<<<< HEAD
     /**
      * Termine, bei denen dieses Mitglied als Ausbilder
      * eingetragen ist.
@@ -215,22 +191,11 @@ class Member
     )]
     private $plainPassword;
 
-=======
-    #[ORM\OneToMany(mappedBy: 'instructor', targetEntity: Schedule::class)]
-    private Collection $schedules;
 
-    #[ORM\OneToMany(mappedBy: 'students', targetEntity: Booking::class)]
-    private Collection $bookings;
-
-    #[ORM\Column(type: "string", length: 255, nullable: true)]
-    private ?string $status = null;
-
->>>>>>> origin/main
     public function __construct()
     {
         $this->schedules = new ArrayCollection();
         $this->bookings = new ArrayCollection();
-<<<<<<< HEAD
         $this->sports = new ArrayCollection();
         $this->qualifications = new ArrayCollection();
     }
@@ -238,27 +203,7 @@ class Member
     public function __toString(): string
     {
         return $this->getFullName();
-=======
-    }
-    /**
-     * @SecurityAssert\UserPassword(
-     *     message = "Wrong value for your current password"
-     * )
-     */
-    private $oldPassword;
 
-    /**
-     * @Assert\Length(
-     *     min = 6,
-     *     minMessage = "Password should by at least 6 chars long"
-     * )
-     */
-    private $plainPassword;
-
-    public function __tostring()
-    {
-        return $this->firstname . " " . $this->lastname;
->>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -266,7 +211,6 @@ class Member
         return $this->id;
     }
 
-<<<<<<< HEAD
     public function getClub(): ?Club
     {
         return $this->club;
@@ -330,27 +274,7 @@ class Member
     ): static {
         $this->membershipStatus = $membershipStatus;
 
-=======
-    public function getOldPassword(): string
-    {
-        return $this->oldPassword;
-    }
 
-    public function setOldPassword(string $oldPassword): self
-    {
-        $this->oldPassword = $oldPassword;
-        return $this;
-    }
-
-    public function getPlainPassword(): string
-    {
-        return $this->plainPassword;
-    }
-
-    public function setPlainPassword(string $password): self
-    {
-        $this->plainPassword = $password;
->>>>>>> origin/main
         return $this;
     }
 
@@ -359,14 +283,10 @@ class Member
         return $this->firstname;
     }
 
-<<<<<<< HEAD
     public function setFirstname(
         string $firstname
     ): static {
-=======
-    public function setFirstname(string $firstname): static
-    {
->>>>>>> origin/main
+
         $this->firstname = $firstname;
 
         return $this;
@@ -377,20 +297,15 @@ class Member
         return $this->lastname;
     }
 
-<<<<<<< HEAD
     public function setLastname(
         string $lastname
     ): static {
-=======
-    public function setLastname(string $lastname): static
-    {
->>>>>>> origin/main
+
         $this->lastname = $lastname;
 
         return $this;
     }
 
-<<<<<<< HEAD
     public function getFullName(): string
     {
         return trim(
@@ -402,21 +317,16 @@ class Member
         );
     }
 
-=======
->>>>>>> origin/main
+
     public function getBirthday(): ?\DateTimeInterface
     {
         return $this->birthday;
     }
 
-<<<<<<< HEAD
     public function setBirthday(
         \DateTimeInterface $birthday
     ): static {
-=======
-    public function setBirthday(\DateTimeInterface $birthday): static
-    {
->>>>>>> origin/main
+
         $this->birthday = $birthday;
 
         return $this;
@@ -470,7 +380,6 @@ class Member
         return $this;
     }
 
-<<<<<<< HEAD
     public function getPostalCode(): ?string
     {
         return $this->postalCode;
@@ -482,16 +391,7 @@ class Member
         $this->postalCode = $postalCode !== null
             ? trim($postalCode)
             : null;
-=======
-    public function getPostal(): ?int
-    {
-        return $this->postal;
-    }
 
-    public function setPostal(?int $postal): static
-    {
-        $this->postal = $postal;
->>>>>>> origin/main
 
         return $this;
     }
@@ -532,28 +432,22 @@ class Member
         return $this;
     }
 
-<<<<<<< HEAD
     /**
      * @deprecated
      */
-=======
->>>>>>> origin/main
+
     public function getCategory(): ?string
     {
         return $this->category;
     }
 
-<<<<<<< HEAD
     /**
      * @deprecated
      */
     public function setCategory(
         ?string $category
     ): static {
-=======
-    public function setCategory(string $category): static
-    {
->>>>>>> origin/main
+
         $this->category = $category;
 
         return $this;
@@ -564,20 +458,15 @@ class Member
         return $this->published;
     }
 
-<<<<<<< HEAD
     public function setPublished(
         ?bool $published
     ): static {
-=======
-    public function setPublished(?bool $published): static
-    {
->>>>>>> origin/main
+
         $this->published = $published;
 
         return $this;
     }
 
-<<<<<<< HEAD
     public function isActiveMember(): bool
     {
         return $this->membershipStatus
@@ -670,8 +559,7 @@ class Member
         }
     }
 
-=======
->>>>>>> origin/main
+
     /**
      * @return Collection<int, Schedule>
      */
@@ -680,14 +568,10 @@ class Member
         return $this->schedules;
     }
 
-<<<<<<< HEAD
     public function addSchedule(
         Schedule $schedule
     ): static {
-=======
-    public function addSchedule(Schedule $schedule): static
-    {
->>>>>>> origin/main
+
         if (!$this->schedules->contains($schedule)) {
             $this->schedules->add($schedule);
             $schedule->setInstructor($this);
@@ -696,17 +580,11 @@ class Member
         return $this;
     }
 
-<<<<<<< HEAD
     public function removeSchedule(
         Schedule $schedule
     ): static {
         if ($this->schedules->removeElement($schedule)) {
-=======
-    public function removeSchedule(Schedule $schedule): static
-    {
-        if ($this->schedules->removeElement($schedule)) {
-            // set the owning side to null (unless already changed)
->>>>>>> origin/main
+
             if ($schedule->getInstructor() === $this) {
                 $schedule->setInstructor(null);
             }
@@ -723,58 +601,40 @@ class Member
         return $this->bookings;
     }
 
-<<<<<<< HEAD
     public function addBooking(
         Booking $booking
     ): static {
         if (!$this->bookings->contains($booking)) {
             $this->bookings->add($booking);
             $booking->setMember($this);
-=======
-    public function addBooking(Booking $booking): static
-    {
-        if (!$this->bookings->contains($booking)) {
-            $this->bookings->add($booking);
-            $booking->setStudents($this);
->>>>>>> origin/main
+
         }
 
         return $this;
     }
 
-<<<<<<< HEAD
     public function removeBooking(
         Booking $booking
     ): static {
         if ($this->bookings->removeElement($booking)) {
             if ($booking->getMember() === $this) {
                 $booking->setMember(null);
-=======
-    public function removeBooking(Booking $booking): static
-    {
-        if ($this->bookings->removeElement($booking)) {
-            // set the owning side to null (unless already changed)
-            if ($booking->getStudents() === $this) {
-                $booking->setStudents(null);
->>>>>>> origin/main
+
             }
         }
 
         return $this;
     }
 
-<<<<<<< HEAD
     /**
      * @deprecated
      */
-=======
->>>>>>> origin/main
+
     public function getStatus(): ?string
     {
         return $this->status;
     }
 
-<<<<<<< HEAD
     /**
      * @deprecated
      */
@@ -866,11 +726,4 @@ class Member
         return $this;
     }
 }
-=======
-    public function setStatus(?string $status): self
-    {
-        $this->status = $status;
-        return $this;
-    }
-}
->>>>>>> origin/main
+

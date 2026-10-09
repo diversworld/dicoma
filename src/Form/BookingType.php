@@ -12,13 +12,11 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-<<<<<<< HEAD
 use App\Entity\Member;
 use App\Enum\BookingAttendanceStatus;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
-=======
->>>>>>> origin/main
+
 
 class BookingType extends AbstractType
 {
@@ -59,7 +57,6 @@ class BookingType extends AbstractType
                 'disabled' => !$options['admin_mode'], // Annahme: Nur Admins können den Wert ändern
                 'attr' => ['class' => 'form-control'],
             ])
-<<<<<<< HEAD
             ->add('member', EntityType::class, [
 				'class' => Member::class,
 				'label' => 'Mitglied',
@@ -88,21 +85,7 @@ class BookingType extends AbstractType
 				'label' => 'Anwesenheitsnotiz',
 				'required' => false,
 			]);
-=======
-            ->add('students', EntityType::class, [
-                'class' => User::class,
-                'choices' => $options['available_students'],
-                'choice_label' => function ($student) {
-                    // Hier sollte die Logik für die Anzeige des Namens stehen
-                    return $student->getFirstname() . ' ' . $student->getLastname();
-                }, // Annahme: Property für die Anzeige im Dropdown-Menü
-                'placeholder' => 'Bitte wählen',
-                'required' => true,
-                'disabled' => !$options['admin_mode'], // Annahme: Nur Admins können den Wert ändern
-                'attr' => ['class' => 'form-control'],
-            ])
-        ;
->>>>>>> origin/main
+
     }
 
     public function configureOptions(OptionsResolver $resolver): void

@@ -98,7 +98,7 @@ class Paginator implements Countable, IteratorAggregate
      * @param bool|null $useOutputWalkers
      *
      * @return $this
-     * @psalm-return static<T>
+     * @phpstan-return static<T>
      */
     public function setUseOutputWalkers($useOutputWalkers)
     {
@@ -130,7 +130,7 @@ class Paginator implements Countable, IteratorAggregate
      * {@inheritDoc}
      *
      * @return Traversable
-     * @psalm-return Traversable<array-key, T>
+     * @phpstan-return Traversable<array-key, T>
      */
     #[ReturnTypeWillChange]
     public function getIterator()
@@ -209,7 +209,7 @@ class Paginator implements Countable, IteratorAggregate
     /**
      * Appends a custom tree walker to the tree walkers hint.
      *
-     * @psalm-param class-string $walkerClass
+     * @param class-string $walkerClass
      */
     private function appendTreeWalker(Query $query, string $walkerClass): void
     {
@@ -228,7 +228,22 @@ class Paginator implements Countable, IteratorAggregate
      */
     private function getCountQuery(): Query
     {
-        $countQuery = $this->cloneQuery($this->query);
+        /*
+            As opposed to using self::cloneQuery, the following code does not transfer
+            a potentially existing result set mapping (either set directly by the user,
+            or taken from the parser result from a previous invocation of Query::parse())
+            to the new query object. This is fine, since we are going to completely change the
+            select clause, so a previously existing result set mapping (RSM) is probably wrong anyway.
+            In the case of using output walkers, we are even creating a new RSM down below.
+            In the case of using a tree walker, we want to have a new RSM created by the parser.
+        */
+        $countQuery = new Query($this->query->getEntityManager());
+        $countQuery->setDQL($this->query->getDQL());
+        $countQuery->setParameters(clone $this->query->getParameters());
+        $countQuery->setCacheable(false);
+        foreach ($this->query->getHints() as $name => $value) {
+            $countQuery->setHint($name, $value);
+        }
 
         if (! $countQuery->hasHint(CountWalker::HINT_DISTINCT)) {
             $countQuery->setHint(CountWalker::HINT_DISTINCT, true);

@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\AST\Functions;
+use Doctrine\ORM\Query\Exec\SqlFinalizer;
 use LogicException;
 use ReflectionClass;
 
@@ -35,9 +36,9 @@ use function substr;
  * An LL(*) recursive-descent parser for the context-free grammar of the Doctrine Query Language.
  * Parses a DQL query, reports any errors in it, and generates an AST.
  *
- * @psalm-import-type AssociationMapping from ClassMetadata
- * @psalm-type DqlToken = Token<TokenType::T_*, string>
- * @psalm-type QueryComponent = array{
+ * @phpstan-import-type AssociationMapping from ClassMetadata
+ * @phpstan-type DqlToken = Token<TokenType::T_*, string>
+ * @phpstan-type QueryComponent = array{
  *                 metadata?: ClassMetadata<object>,
  *                 parent?: string|null,
  *                 relation?: AssociationMapping|null,
@@ -51,7 +52,7 @@ class Parser
 {
     /**
      * @readonly Maps BUILT-IN string function names to AST class names.
-     * @psalm-var array<string, class-string<Functions\FunctionNode>>
+     * @var array<string, class-string<Functions\FunctionNode>>
      */
     private static $stringFunctions = [
         'concat'    => Functions\ConcatFunction::class,
@@ -64,7 +65,7 @@ class Parser
 
     /**
      * @readonly Maps BUILT-IN numeric function names to AST class names.
-     * @psalm-var array<string, class-string<Functions\FunctionNode>>
+     * @var array<string, class-string<Functions\FunctionNode>>
      */
     private static $numericFunctions = [
         'length'    => Functions\LengthFunction::class,
@@ -87,7 +88,7 @@ class Parser
 
     /**
      * @readonly Maps BUILT-IN datetime function names to AST class names.
-     * @psalm-var array<string, class-string<Functions\FunctionNode>>
+     * @var array<string, class-string<Functions\FunctionNode>>
      */
     private static $datetimeFunctions = [
         'current_date'      => Functions\CurrentDateFunction::class,
@@ -102,19 +103,19 @@ class Parser
      * and still need to be validated.
      */
 
-    /** @psalm-var list<array{token: DqlToken|null, expression: mixed, nestingLevel: int}> */
+    /** @phpstan-var list<array{token: DqlToken|null, expression: mixed, nestingLevel: int}> */
     private $deferredIdentificationVariables = [];
 
-    /** @psalm-var list<array{token: DqlToken|null, expression: AST\PartialObjectExpression, nestingLevel: int}> */
+    /** @phpstan-var list<array{token: DqlToken|null, expression: AST\PartialObjectExpression, nestingLevel: int}> */
     private $deferredPartialObjectExpressions = [];
 
-    /** @psalm-var list<array{token: DqlToken|null, expression: AST\PathExpression, nestingLevel: int}> */
+    /** @phpstan-var list<array{token: DqlToken|null, expression: AST\PathExpression, nestingLevel: int}> */
     private $deferredPathExpressions = [];
 
-    /** @psalm-var list<array{token: DqlToken|null, expression: mixed, nestingLevel: int}> */
+    /** @phpstan-var list<array{token: DqlToken|null, expression: mixed, nestingLevel: int}> */
     private $deferredResultVariables = [];
 
-    /** @psalm-var list<array{token: DqlToken|null, expression: AST\NewObjectExpression, nestingLevel: int}> */
+    /** @phpstan-var list<array{token: DqlToken|null, expression: AST\NewObjectExpression, nestingLevel: int}> */
     private $deferredNewObjectExpressions = [];
 
     /**
@@ -148,7 +149,7 @@ class Parser
     /**
      * Map of declared query components in the parsed query.
      *
-     * @psalm-var array<string, QueryComponent>
+     * @phpstan-var array<string, QueryComponent>
      */
     private $queryComponents = [];
 
@@ -159,10 +160,13 @@ class Parser
      */
     private $nestingLevel = 0;
 
+    /** @var int */
+    private $withJoinConditionNestingLevel = 0;
+
     /**
      * Any additional custom tree walkers that modify the AST.
      *
-     * @psalm-var list<class-string<TreeWalker>>
+     * @var list<class-string<TreeWalker>>
      */
     private $customTreeWalkers = [];
 
@@ -173,7 +177,7 @@ class Parser
      */
     private $customOutputWalker;
 
-    /** @psalm-var array<string, AST\SelectExpression> */
+    /** @phpstan-var array<string, AST\SelectExpression> */
     private $identVariableExpressions = [];
 
     /**
@@ -193,21 +197,26 @@ class Parser
      * Sets a custom tree walker that produces output.
      * This tree walker will be run last over the AST, after any other walkers.
      *
-     * @param string $className
-     * @psalm-param class-string<SqlWalker> $className
+     * @param class-string<SqlWalker> $className
      *
      * @return void
      */
     public function setCustomOutputTreeWalker($className)
     {
+        Deprecation::trigger(
+            'doctrine/orm',
+            'https://github.com/doctrine/orm/pull/11641',
+            '%s is deprecated, set the output walker class with the \Doctrine\ORM\Query::HINT_CUSTOM_OUTPUT_WALKER query hint instead',
+            __METHOD__
+        );
+
         $this->customOutputWalker = $className;
     }
 
     /**
      * Adds a custom tree walker for modifying the AST.
      *
-     * @param string $className
-     * @psalm-param class-string<TreeWalker> $className
+     * @param class-string<TreeWalker> $className
      *
      * @return void
      */
@@ -391,11 +400,26 @@ class Parser
             $this->queryComponents = $treeWalkerChain->getQueryComponents();
         }
 
-        $outputWalkerClass = $this->customOutputWalker ?: SqlWalker::class;
+        $outputWalkerClass = $this->customOutputWalker ?: SqlOutputWalker::class;
         $outputWalker      = new $outputWalkerClass($this->query, $this->parserResult, $this->queryComponents);
 
-        // Assign an SQL executor to the parser result
-        $this->parserResult->setSqlExecutor($outputWalker->getExecutor($AST));
+        if ($outputWalker instanceof OutputWalker) {
+            $finalizer = $outputWalker->getFinalizer($AST);
+            $this->parserResult->setSqlFinalizer($finalizer);
+        } else {
+            Deprecation::trigger(
+                'doctrine/orm',
+                'https://github.com/doctrine/orm/pull/11188/',
+                'Your output walker class %s should implement %s in order to provide a %s. This also means the output walker should not use the query firstResult/maxResult values, which should be read from the query by the SqlFinalizer only.',
+                $outputWalkerClass,
+                OutputWalker::class,
+                SqlFinalizer::class
+            );
+            // @phpstan-ignore method.deprecated
+            $executor = $outputWalker->getExecutor($AST);
+            // @phpstan-ignore method.deprecated
+            $this->parserResult->setSqlExecutor($executor);
+        }
 
         return $this->parserResult;
     }
@@ -436,10 +460,10 @@ class Parser
      *
      * @param string       $expected Expected string.
      * @param mixed[]|null $token    Got token.
-     * @psalm-param DqlToken|null $token
+     * @phpstan-param DqlToken|null $token
      *
      * @return void
-     * @psalm-return no-return
+     * @phpstan-return no-return
      *
      * @throws QueryException
      */
@@ -463,10 +487,10 @@ class Parser
      *
      * @param string       $message Optional message.
      * @param mixed[]|null $token   Optional token.
-     * @psalm-param DqlToken|null $token
+     * @phpstan-param DqlToken|null $token
      *
      * @return void
-     * @psalm-return no-return
+     * @phpstan-return no-return
      *
      * @throws QueryException
      */
@@ -501,7 +525,7 @@ class Parser
      * @param bool $resetPeek Reset peek after finding the closing parenthesis.
      *
      * @return mixed[]
-     * @psalm-return DqlToken|null
+     * @phpstan-return DqlToken|null
      */
     private function peekBeyondClosingParenthesis(bool $resetPeek = true)
     {
@@ -535,7 +559,7 @@ class Parser
     /**
      * Checks if the given token indicates a mathematical operator.
      *
-     * @psalm-param DqlToken|null $token
+     * @phpstan-param DqlToken|null $token
      */
     private function isMathOperator($token): bool
     {
@@ -561,7 +585,7 @@ class Parser
     /**
      * Checks whether the given token type indicates an aggregate function.
      *
-     * @psalm-param TokenType::T_* $tokenType
+     * @phpstan-param TokenType::T_* $tokenType
      *
      * @return bool TRUE if the token type is an aggregate function, FALSE otherwise.
      */
@@ -981,6 +1005,7 @@ class Parser
             return $this->lexer->token->value;
         }
 
+        // @phpstan-ignore classConstant.deprecated
         $this->match(TokenType::T_ALIASED_NAME);
 
         assert($this->lexer->token !== null);
@@ -1098,7 +1123,7 @@ class Parser
      * PathExpression ::= IdentificationVariable {"." identifier}*
      *
      * @param int $expectedTypes
-     * @psalm-param int-mask-of<AST\PathExpression::TYPE_*> $expectedTypes
+     * @phpstan-param int-mask-of<AST\PathExpression::TYPE_*> $expectedTypes
      *
      * @return AST\PathExpression
      */
@@ -1444,7 +1469,7 @@ class Parser
             $orderByItems[] = $this->OrderByItem();
         }
 
-        return new AST\OrderByClause($orderByItems);
+        return new AST\OrderByClause($orderByItems, $this->withJoinConditionNestingLevel === 0);
     }
 
     /**
@@ -1532,7 +1557,7 @@ class Parser
 
         assert($this->lexer->lookahead !== null);
         switch (true) {
-            case $this->isMathOperator($peek):
+            case $this->isMathOperator($peek) || $this->isMathOperator($glimpse):
                 $expr = $this->SimpleArithmeticExpression();
                 break;
 
@@ -1750,7 +1775,13 @@ class Parser
         if ($adhocConditions) {
             $this->match(TokenType::T_WITH);
 
-            $join->conditionalExpression = $this->ConditionalExpression();
+            try {
+                $this->withJoinConditionNestingLevel++;
+
+                $join->conditionalExpression = $this->ConditionalExpression();
+            } finally {
+                $this->withJoinConditionNestingLevel--;
+            }
         }
 
         return $join;
@@ -1844,12 +1875,6 @@ class Parser
      */
     public function PartialObjectExpression()
     {
-        Deprecation::trigger(
-            'doctrine/orm',
-            'https://github.com/doctrine/orm/issues/8471',
-            'PARTIAL syntax in DQL is deprecated.'
-        );
-
         $this->match(TokenType::T_PARTIAL);
 
         $partialFieldSet = [];
@@ -1978,7 +2003,7 @@ class Parser
     }
 
     /**
-     * ScalarExpression ::= SimpleArithmeticExpression | StringPrimary | DateTimePrimary |
+     * ScalarExpression ::= SimpleArithmeticExpression | StringPrimary | DatetimePrimary |
      *                      StateFieldPathExpression | BooleanPrimary | CaseExpression |
      *                      InstanceOfExpression
      *
@@ -2061,14 +2086,14 @@ class Parser
     }
 
     /**
-     * CaseExpression ::= GeneralCaseExpression | SimpleCaseExpression | CoalesceExpression | NullifExpression
+     * CaseExpression ::= GeneralCaseExpression | SimpleCaseExpression | CoalesceExpression | NullIfExpression
      * GeneralCaseExpression ::= "CASE" WhenClause {WhenClause}* "ELSE" ScalarExpression "END"
      * WhenClause ::= "WHEN" ConditionalExpression "THEN" ScalarExpression
      * SimpleCaseExpression ::= "CASE" CaseOperand SimpleWhenClause {SimpleWhenClause}* "ELSE" ScalarExpression "END"
-     * CaseOperand ::= StateFieldPathExpression | TypeDiscriminator
+     * CaseOperand ::= StateFieldPathExpression
      * SimpleWhenClause ::= "WHEN" ScalarExpression "THEN" ScalarExpression
      * CoalesceExpression ::= "COALESCE" "(" ScalarExpression {"," ScalarExpression}* ")"
-     * NullifExpression ::= "NULLIF" "(" ScalarExpression "," ScalarExpression ")"
+     * NullIfExpression ::= "NULLIF" "(" ScalarExpression "," ScalarExpression ")"
      *
      * @return mixed One of the possible expressions or subexpressions.
      */
@@ -2172,7 +2197,7 @@ class Parser
 
     /**
      * SimpleCaseExpression ::= "CASE" CaseOperand SimpleWhenClause {SimpleWhenClause}* "ELSE" ScalarExpression "END"
-     * CaseOperand ::= StateFieldPathExpression | TypeDiscriminator
+     * CaseOperand ::= StateFieldPathExpression
      *
      * @return AST\SimpleCaseExpression
      */
@@ -2575,6 +2600,8 @@ class Parser
      *         AST\InstanceOfExpression|
      *         AST\LikeExpression|
      *         AST\NullComparisonExpression)
+     *
+     * @phpstan-ignore return.deprecatedClass
      */
     public function SimpleConditionalExpression()
     {
@@ -3585,7 +3612,7 @@ class Parser
     }
 
     /**
-     * FunctionsReturningDateTime ::=
+     * FunctionsReturningDatetime ::=
      *     "CURRENT_DATE" |
      *     "CURRENT_TIME" |
      *     "CURRENT_TIMESTAMP" |

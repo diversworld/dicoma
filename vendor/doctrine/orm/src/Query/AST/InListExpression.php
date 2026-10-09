@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Doctrine\ORM\Query\AST;
 
+/** @phpstan-ignore class.extendsDeprecatedClass */
 class InListExpression extends InExpression
 {
     /** @var non-empty-list<mixed> */
@@ -13,8 +14,10 @@ class InListExpression extends InExpression
     public function __construct(ArithmeticExpression $expression, array $literals, bool $not = false)
     {
         $this->literals = $literals;
-        $this->not      = $not;
+        // @phpstan-ignore property.deprecatedClass
+        $this->not = $not;
 
+        // @phpstan-ignore method.deprecatedClass
         parent::__construct($expression);
     }
 }

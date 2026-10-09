@@ -32,8 +32,7 @@ class ResultCommand extends AbstractEntityManagerCommand
 {
     use CommandCompatibility;
 
-    /** @return void */
-    protected function configure()
+    private function doConfigure(): void
     {
         $this->setName('orm:clear-cache:result')
              ->setDescription('Clear all result cache of the various cache drivers')
@@ -63,8 +62,9 @@ EOT
     {
         $ui = (new SymfonyStyle($input, $output))->getErrorStyle();
 
-        $em          = $this->getEntityManager($input);
-        $cache       = $em->getConfiguration()->getResultCache();
+        $em    = $this->getEntityManager($input);
+        $cache = $em->getConfiguration()->getResultCache();
+        // @phpstan-ignore method.deprecated
         $cacheDriver = method_exists(Configuration::class, 'getResultCacheImpl') ? $em->getConfiguration()->getResultCacheImpl() : null;
 
         if (! $cacheDriver && ! $cache) {

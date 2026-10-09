@@ -29,7 +29,7 @@ use function reset;
 /**
  * Default query cache implementation.
  *
- * @psalm-import-type AssociationMapping from ClassMetadata
+ * @phpstan-import-type AssociationMapping from ClassMetadata
  */
 class DefaultQueryCache implements QueryCache
 {
@@ -103,7 +103,8 @@ class DefaultQueryCache implements QueryCache
         };
 
         $cacheKeys = new CollectionCacheEntry(array_map($generateKeys, $cacheEntry->result));
-        $entries   = $region->getMultiple($cacheKeys) ?? [];
+        /** @phpstan-ignore method.deprecatedInterface */
+        $entries = $region->getMultiple($cacheKeys) ?? [];
 
         // @TODO - move to cache hydration component
         foreach ($cacheEntry->result as $index => $entry) {
@@ -167,8 +168,9 @@ class DefaultQueryCache implements QueryCache
                     return new EntityCacheKey($assocMetadata->rootEntityName, $id);
                 };
 
-                $collection   = new PersistentCollection($this->em, $assocMetadata, new ArrayCollection());
-                $assocKeys    = new CollectionCacheEntry(array_map($generateKeys, $assoc['list']));
+                $collection = new PersistentCollection($this->em, $assocMetadata, new ArrayCollection());
+                $assocKeys  = new CollectionCacheEntry(array_map($generateKeys, $assoc['list']));
+                /** @phpstan-ignore method.deprecatedInterface */
                 $assocEntries = $assocRegion->getMultiple($assocKeys);
 
                 foreach ($assoc['list'] as $assocIndex => $assocId) {
@@ -262,7 +264,6 @@ class DefaultQueryCache implements QueryCache
         $region = $persister->getCacheRegion();
 
         $cm = $this->em->getClassMetadata($entityName);
-        assert($cm instanceof ClassMetadata);
 
         foreach ($result as $index => $entity) {
             $identifier = $this->uow->getEntityIdentifier($entity);
@@ -331,7 +332,7 @@ class DefaultQueryCache implements QueryCache
      * @param mixed              $assocValue
      *
      * @return mixed[]|null
-     * @psalm-return array{targetEntity: class-string, type: mixed, list?: array[], identifier?: array}|null
+     * @phpstan-return array{targetEntity: class-string, type: mixed, list?: array[], identifier?: array}|null
      */
     private function storeAssociationCache(QueryCacheKey $key, array $assoc, $assocValue): ?array
     {
@@ -386,7 +387,7 @@ class DefaultQueryCache implements QueryCache
      * @param object $entity
      *
      * @return mixed[]|object|null
-     * @psalm-return list<mixed>|object|null
+     * @phpstan-return list<mixed>|object|null
      */
     private function getAssociationValue(
         ResultSetMapping $rsm,
@@ -414,10 +415,10 @@ class DefaultQueryCache implements QueryCache
 
     /**
      * @param mixed $value
-     * @psalm-param array<array-key, array{field: string, class: string}> $path
+     * @phpstan-param array<array-key, array{field: string, class: string}> $path
      *
      * @return mixed[]|object|null
-     * @psalm-return list<mixed>|object|null
+     * @phpstan-return list<mixed>|object|null
      */
     private function getAssociationPathValue($value, array $path)
     {

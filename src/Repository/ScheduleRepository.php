@@ -3,19 +3,15 @@
 namespace App\Repository;
 
 use App\Entity\Schedule;
-<<<<<<< HEAD
 use App\Entity\Booking;
-=======
->>>>>>> origin/main
+
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\Persistence\ManagerRegistry;
-<<<<<<< HEAD
 use App\Entity\Courses;
 use App\Entity\TrainingUnitType;
-=======
->>>>>>> origin/main
+
 
 /**
  * @extends ServiceEntityRepository
@@ -75,7 +71,6 @@ class ScheduleRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
-<<<<<<< HEAD
 	
 	public function countForCourseAndTrainingUnitType(
 		Courses $course,
@@ -137,8 +132,7 @@ class ScheduleRepository extends ServiceEntityRepository
 			->getResult();
 	}
 	
-=======
->>>>>>> origin/main
+
 //    /**
 //     * @return Schedule[] Returns an array of Schedule objects
 //     */

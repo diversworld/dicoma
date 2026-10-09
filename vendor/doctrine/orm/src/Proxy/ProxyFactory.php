@@ -172,9 +172,12 @@ EOPHP;
 
             $this->isLazyGhostObjectEnabled = false;
 
+            // @phpstan-ignore new.deprecatedClass, method.deprecatedClass
             $proxyGenerator = new ProxyGenerator($proxyDir, $proxyNs);
+            // @phpstan-ignore classConstant.deprecatedInterface, method.deprecatedClass
             $proxyGenerator->setPlaceholder('baseProxyInterface', LegacyProxy::class);
 
+            // @phpstan-ignore method.deprecatedClass
             parent::__construct($proxyGenerator, $em->getMetadataFactory(), $autoGenerate);
         }
 
@@ -204,6 +207,7 @@ EOPHP;
     public function getProxy($className, array $identifier)
     {
         if (! $this->isLazyGhostObjectEnabled) {
+            // @phpstan-ignore method.deprecatedClass
             return parent::getProxy($className, $identifier);
         }
 
@@ -225,6 +229,7 @@ EOPHP;
     public function generateProxyClasses(array $classes, $proxyDir = null)
     {
         if (! $this->isLazyGhostObjectEnabled) {
+            // @phpstan-ignore method.deprecatedClass
             return parent::generateProxyClasses($classes, $proxyDir);
         }
 
@@ -293,7 +298,7 @@ EOPHP;
      *
      * @deprecated ProxyFactory::createInitializer() is deprecated and will be removed in version 3.0 of doctrine/orm.
      *
-     * @psalm-return Closure(CommonProxy):void
+     * @phpstan-return Closure(CommonProxy):void
      *
      * @throws EntityNotFoundException
      */
@@ -377,7 +382,7 @@ EOPHP;
             $class = $entityPersister->getClassMetadata();
 
             foreach ($class->getReflectionProperties() as $property) {
-                if (isset($identifier[$property->name]) || ! $class->hasField($property->name) && ! $class->hasAssociation($property->name)) {
+                if (isset($identifier[$property->name])) {
                     continue;
                 }
 
@@ -391,7 +396,7 @@ EOPHP;
      *
      * @deprecated ProxyFactory::createCloner() is deprecated and will be removed in version 3.0 of doctrine/orm.
      *
-     * @psalm-return Closure(CommonProxy):void
+     * @phpstan-return Closure(CommonProxy):void
      *
      * @throws EntityNotFoundException
      */
@@ -421,7 +426,10 @@ EOPHP;
                     continue;
                 }
 
-                $property->setAccessible(true);
+                if (PHP_VERSION_ID < 80100) {
+                    $property->setAccessible(true);
+                }
+
                 $property->setValue($proxy, $property->getValue($original));
             }
         };
@@ -447,7 +455,7 @@ EOPHP;
             foreach ($reflector->getProperties($filter) as $property) {
                 $name = $property->name;
 
-                if ($property->isStatic() || (($class->hasField($name) || $class->hasAssociation($name)) && ! isset($identifiers[$name]))) {
+                if ($property->isStatic() || ! isset($identifiers[$name])) {
                     continue;
                 }
 
@@ -567,6 +575,7 @@ EOPHP;
 
     private function generateUseLazyGhostTrait(ClassMetadata $class): string
     {
+        // @phpstan-ignore staticMethod.deprecated (Because we support Symfony < 7.3)
         $code = ProxyHelper::generateLazyGhost($class->getReflectionClass());
         $code = substr($code, 7 + (int) strpos($code, "\n{"));
         $code = substr($code, 0, (int) strpos($code, "\n}"));

@@ -4,7 +4,6 @@ namespace App\Entity;
 
 use App\Repository\BookingRepository;
 use Doctrine\DBAL\Types\Types;
-<<<<<<< HEAD
 use App\Enum\BookingAttendanceStatus;
 use App\Enum\CourseParticipantStatus;
 use Doctrine\ORM\Mapping as ORM;
@@ -23,13 +22,7 @@ class Booking
 		$this->makeupBookings = new ArrayCollection();
 	}
 	
-=======
-use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: BookingRepository::class)]
-class Booking
-{
->>>>>>> origin/main
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -47,7 +40,6 @@ class Booking
     #[ORM\ManyToOne(targetEntity: Schedule::class, inversedBy: 'bookings', cascade:["persist"])]
     private $schedule = null;
 
-<<<<<<< HEAD
 	#[ORM\ManyToOne(targetEntity: Member::class,inversedBy: 'bookings')]
 	#[ORM\JoinColumn(name: 'students_id',referencedColumnName: 'id',nullable: true,onDelete: 'SET NULL')]
 	private ?Member $member = null;
@@ -70,21 +62,15 @@ class Booking
 	 */
 	#[ORM\OneToMany(mappedBy: 'makeupFor',targetEntity: self::class)]
 	private Collection $makeupBookings;
-=======
-    #[ORM\ManyToOne(targetEntity: Member::class, inversedBy: 'bookings', cascade:["persist"])]
-    private $students;
->>>>>>> origin/main
+
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
     public function __toString()
     {
-<<<<<<< HEAD
         return $this->bookingnumber ?? '';
-=======
-        return $this->bookingnumber;
->>>>>>> origin/main
+
     }
 
     public function getId(): ?int
@@ -128,7 +114,6 @@ class Booking
         return $this;
     }
 
-<<<<<<< HEAD
 	public function getAttendanceStatus(): BookingAttendanceStatus
 	{
 		return $this->attendanceStatus;
@@ -190,19 +175,7 @@ class Booking
 
 		return $this;
 	}
-=======
-    public function getStudents(): ?Member
-    {
-        return $this->students;
-    }
 
-    public function setStudents(?Member $students): static
-    {
-        $this->students = $students;
-
-        return $this;
-    }
->>>>>>> origin/main
 
     public function getNotes(): ?string
     {
@@ -228,7 +201,6 @@ class Booking
         return $this;
     }
 
-<<<<<<< HEAD
 	public function getMakeupFor(): ?self
 	{
 		return $this->makeupFor;
@@ -317,7 +289,5 @@ class Booking
 		return $this->attendanceStatus
 			=== BookingAttendanceStatus::MAKEUP_REQUIRED;
 	}
-=======
 
->>>>>>> origin/main
 }

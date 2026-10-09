@@ -43,7 +43,7 @@ class FileLockRegion implements ConcurrentRegion
     /** @var string */
     private $directory;
 
-    /** @psalm-var numeric-string */
+    /** @phpstan-var numeric-string */
     private $lockLifetime;
 
     /**
@@ -156,6 +156,7 @@ class FileLockRegion implements ConcurrentRegion
             return null;
         }
 
+        /** @phpstan-ignore method.deprecatedInterface */
         return $this->region->getMultiple($collection);
     }
 

@@ -14,15 +14,20 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\QuoteStrategy;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\Query;
+use Doctrine\ORM\Query\AST\DeleteStatement;
 use Doctrine\ORM\Query\AST\OrderByClause;
 use Doctrine\ORM\Query\AST\PathExpression;
 use Doctrine\ORM\Query\AST\SelectExpression;
 use Doctrine\ORM\Query\AST\SelectStatement;
+use Doctrine\ORM\Query\AST\UpdateStatement;
+use Doctrine\ORM\Query\Exec\SingleSelectSqlFinalizer;
+use Doctrine\ORM\Query\Exec\SqlFinalizer;
 use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\ParserResult;
 use Doctrine\ORM\Query\QueryException;
 use Doctrine\ORM\Query\ResultSetMapping;
-use Doctrine\ORM\Query\SqlWalker;
+use Doctrine\ORM\Query\SqlOutputWalker;
+use LogicException;
 use RuntimeException;
 
 use function array_diff;
@@ -48,9 +53,9 @@ use function substr;
  * Works with composite keys but cannot deal with queries that have multiple
  * root entities (e.g. `SELECT f, b from Foo, Bar`)
  *
- * @psalm-import-type QueryComponent from Parser
+ * @phpstan-import-type QueryComponent from Parser
  */
-class LimitSubqueryOutputWalker extends SqlWalker
+class LimitSubqueryOutputWalker extends SqlOutputWalker
 {
     private const ORDER_BY_PATH_EXPRESSION = '/(?<![a-z0-9_])%s\.%s(?![a-z0-9_])/i';
 
@@ -93,22 +98,31 @@ class LimitSubqueryOutputWalker extends SqlWalker
      * @param Query        $query
      * @param ParserResult $parserResult
      * @param mixed[]      $queryComponents
-     * @psalm-param array<string, QueryComponent> $queryComponents
+     * @phpstan-param array<string, QueryComponent> $queryComponents
      */
     public function __construct($query, $parserResult, array $queryComponents)
     {
         $this->platform = $query->getEntityManager()->getConnection()->getDatabasePlatform();
         $this->rsm      = $parserResult->getResultSetMapping();
 
-        // Reset limit and offset
-        $this->firstResult = $query->getFirstResult();
-        $this->maxResults  = $query->getMaxResults();
-        $query->setFirstResult(0)->setMaxResults(null);
+        $cloneQuery = clone $query;
 
-        $this->em            = $query->getEntityManager();
+        $cloneQuery->setParameters(clone $query->getParameters());
+        $cloneQuery->setCacheable(false);
+
+        foreach ($query->getHints() as $name => $value) {
+            $cloneQuery->setHint($name, $value);
+        }
+
+        // Reset limit and offset
+        $this->firstResult = $cloneQuery->getFirstResult();
+        $this->maxResults  = $cloneQuery->getMaxResults();
+        $cloneQuery->setFirstResult(0)->setMaxResults(null);
+
+        $this->em            = $cloneQuery->getEntityManager();
         $this->quoteStrategy = $this->em->getConfiguration()->getQuoteStrategy();
 
-        parent::__construct($query, $parserResult, $queryComponents);
+        parent::__construct($cloneQuery, $parserResult, $queryComponents);
     }
 
     /**
@@ -135,7 +149,9 @@ class LimitSubqueryOutputWalker extends SqlWalker
         $selectAliasToExpressionMap = [];
         // Get any aliases that are available for select expressions.
         foreach ($AST->selectClause->selectExpressions as $selectExpression) {
-            $selectAliasToExpressionMap[$selectExpression->fieldIdentificationVariable] = $selectExpression->expression;
+            if ($selectExpression->fieldIdentificationVariable !== null) {
+                $selectAliasToExpressionMap[$selectExpression->fieldIdentificationVariable] = $selectExpression->expression;
+            }
         }
 
         // Rebuild string orderby expressions to use the select expression they're referencing
@@ -158,11 +174,33 @@ class LimitSubqueryOutputWalker extends SqlWalker
      */
     public function walkSelectStatement(SelectStatement $AST)
     {
-        if ($this->platformSupportsRowNumber()) {
-            return $this->walkSelectStatementWithRowNumber($AST);
+        $sqlFinalizer = $this->getFinalizer($AST);
+
+        $query = $this->getQuery();
+
+        $abstractSqlExecutor = $sqlFinalizer->createExecutor($query);
+
+        return $abstractSqlExecutor->getSqlStatements();
+    }
+
+    /**
+     * @param DeleteStatement|UpdateStatement|SelectStatement $AST
+     *
+     * @return SingleSelectSqlFinalizer
+     */
+    public function getFinalizer($AST): SqlFinalizer
+    {
+        if (! $AST instanceof SelectStatement) {
+            throw new LogicException(self::class . ' is to be used on SelectStatements only');
         }
 
-        return $this->walkSelectStatementWithoutRowNumber($AST);
+        if ($this->platformSupportsRowNumber()) {
+            $sql = $this->createSqlWithRowNumber($AST);
+        } else {
+            $sql = $this->createSqlWithoutRowNumber($AST);
+        }
+
+        return new SingleSelectSqlFinalizer($sql);
     }
 
     /**
@@ -174,6 +212,16 @@ class LimitSubqueryOutputWalker extends SqlWalker
      * @throws RuntimeException
      */
     public function walkSelectStatementWithRowNumber(SelectStatement $AST)
+    {
+        // Apply the limit and offset.
+        return $this->platform->modifyLimitQuery(
+            $this->createSqlWithRowNumber($AST),
+            $this->maxResults,
+            $this->firstResult
+        );
+    }
+
+    private function createSqlWithRowNumber(SelectStatement $AST): string
     {
         $hasOrderBy   = false;
         $outerOrderBy = ' ORDER BY dctrn_minrownum ASC';
@@ -203,13 +251,6 @@ class LimitSubqueryOutputWalker extends SqlWalker
             $sql .= $orderGroupBy . $outerOrderBy;
         }
 
-        // Apply the limit and offset.
-        $sql = $this->platform->modifyLimitQuery(
-            $sql,
-            $this->maxResults,
-            $this->firstResult
-        );
-
         // Add the columns to the ResultSetMapping. It's not really nice but
         // it works. Preferably I'd clear the RSM or simply create a new one
         // but that is not possible from inside the output walker, so we dirty
@@ -232,6 +273,16 @@ class LimitSubqueryOutputWalker extends SqlWalker
      * @throws RuntimeException
      */
     public function walkSelectStatementWithoutRowNumber(SelectStatement $AST, $addMissingItemsFromOrderByToSelect = true)
+    {
+        // Apply the limit and offset.
+        return $this->platform->modifyLimitQuery(
+            $this->createSqlWithoutRowNumber($AST, $addMissingItemsFromOrderByToSelect),
+            $this->maxResults,
+            $this->firstResult
+        );
+    }
+
+    private function createSqlWithoutRowNumber(SelectStatement $AST, bool $addMissingItemsFromOrderByToSelect = true): string
     {
         // We don't want to call this recursively!
         if ($AST->orderByClause instanceof OrderByClause && $addMissingItemsFromOrderByToSelect) {
@@ -259,13 +310,6 @@ class LimitSubqueryOutputWalker extends SqlWalker
 
         // https://github.com/doctrine/orm/issues/2630
         $sql = $this->preserveSqlOrdering($sqlIdentifier, $innerSql, $sql, $orderByClause);
-
-        // Apply the limit and offset.
-        $sql = $this->platform->modifyLimitQuery(
-            $sql,
-            $this->maxResults,
-            $this->firstResult
-        );
 
         // Add the columns to the ResultSetMapping. It's not really nice but
         // it works. Preferably I'd clear the RSM or simply create a new one
@@ -402,7 +446,7 @@ class LimitSubqueryOutputWalker extends SqlWalker
 
     /**
      * @return string[][]
-     * @psalm-return array{0: list<non-empty-string>, 1: list<string>}
+     * @phpstan-return array{0: list<non-empty-string>, 1: list<string>}
      */
     private function generateSqlAliasReplacements(): array
     {

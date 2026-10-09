@@ -7,11 +7,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TankCheckArticleRepository::class)]
-<<<<<<< HEAD
 #[ORM\HasLifecycleCallbacks]
-=======
-#[ORM\HasLifecycleCallbacks()]
->>>>>>> origin/main
+
 class TankCheckArticle
 {
     #[ORM\Id]
@@ -22,7 +19,6 @@ class TankCheckArticle
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
-<<<<<<< HEAD
     #[ORM\Column(
         type: Types::DECIMAL,
         precision: 10,
@@ -37,25 +33,16 @@ class TankCheckArticle
         nullable: true
     )]
     private ?string $priceBrutto = null;
-=======
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?float $priceNetto = null;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
-    private ?float $priceBrutto = null;
->>>>>>> origin/main
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
-<<<<<<< HEAD
     #[ORM\ManyToOne(
         targetEntity: TankCheck::class,
         inversedBy: 'articles'
     )]
-=======
-    #[ORM\ManyToOne(targetEntity: TankCheck::class, inversedBy: 'articles')]
->>>>>>> origin/main
+
     #[ORM\JoinColumn(nullable: false)]
     private ?TankCheck $tankCheck = null;
 
@@ -68,11 +55,7 @@ class TankCheckArticle
     #[ORM\Column(nullable: true)]
     private ?int $size = null;
 
-<<<<<<< HEAD
-=======
-    // Getter und Setter
 
->>>>>>> origin/main
     public function getId(): ?int
     {
         return $this->id;
@@ -90,40 +73,28 @@ class TankCheckArticle
         return $this;
     }
 
-<<<<<<< HEAD
     public function getPriceNetto(): ?string
-=======
-    public function getPriceNetto(): ?float
->>>>>>> origin/main
+
     {
         return $this->priceNetto;
     }
 
-<<<<<<< HEAD
     public function setPriceNetto(string $priceNetto): static
-=======
-    public function setPriceNetto(float $priceNetto): static
->>>>>>> origin/main
+
     {
         $this->priceNetto = $priceNetto;
 
         return $this;
     }
 
-<<<<<<< HEAD
     public function getPriceBrutto(): ?string
-=======
-    public function getPriceBrutto(): ?float
->>>>>>> origin/main
+
     {
         return $this->priceBrutto;
     }
 
-<<<<<<< HEAD
     public function setPriceBrutto(?string $priceBrutto): static
-=======
-    public function setPriceBrutto(?float $priceBrutto): static
->>>>>>> origin/main
+
     {
         $this->priceBrutto = $priceBrutto;
 
@@ -166,27 +137,10 @@ class TankCheckArticle
         return $this;
     }
 
-<<<<<<< HEAD
     public function setDefault(bool $isDefault): static
     {
         return $this->setIsDefault($isDefault);
-=======
-    #[ORM\PrePersist]
-    #[ORM\PreUpdate]
-    public function calculatePriceBrutto()
-    {
-        $this->priceBrutto = $this->priceNetto * 1.19;
-    }
 
-    /**
-     * Convert the entity to its string representation.
-     *
-     * @return string
-     */
-    public function __toString(): string
-    {
-        return $this->title ?? 'n/a';
->>>>>>> origin/main
     }
 
     public function isStandard(): ?bool
@@ -213,7 +167,6 @@ class TankCheckArticle
         return $this;
     }
 
-<<<<<<< HEAD
     #[ORM\PrePersist]
     #[ORM\PreUpdate]
     public function calculatePriceBrutto(): void
@@ -242,12 +195,6 @@ class TankCheckArticle
     public function __toString(): string
     {
         return $this->title ?? 'n/a';
-=======
-    public function setDefault(bool $isDefault): static
-    {
-        $this->isDefault = $isDefault;
 
-        return $this;
->>>>>>> origin/main
     }
 }

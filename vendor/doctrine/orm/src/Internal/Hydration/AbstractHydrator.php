@@ -25,10 +25,12 @@ use TypeError;
 use function array_map;
 use function array_merge;
 use function count;
+use function current;
 use function end;
 use function get_debug_type;
 use function in_array;
 use function is_array;
+use function is_object;
 use function sprintf;
 
 /**
@@ -112,7 +114,7 @@ abstract class AbstractHydrator
      *
      * @param Result|ResultStatement $stmt
      * @param ResultSetMapping       $resultSetMapping
-     * @psalm-param array<string, mixed> $hints
+     * @phpstan-param array<string, mixed> $hints
      *
      * @return IterableResult
      */
@@ -142,7 +144,7 @@ abstract class AbstractHydrator
      * Initiates a row-by-row hydration.
      *
      * @param Result|ResultStatement $stmt
-     * @psalm-param array<string, mixed> $hints
+     * @phpstan-param array<string, mixed> $hints
      *
      * @return Generator<array-key, mixed>
      *
@@ -201,8 +203,10 @@ abstract class AbstractHydrator
                     } else {
                         yield from $result;
                     }
-                } else {
+                } elseif (is_object(current($result))) {
                     yield $result;
+                } else {
+                    yield array_merge(...$result);
                 }
             }
         } finally {
@@ -233,7 +237,7 @@ abstract class AbstractHydrator
      *
      * @param Result|ResultStatement $stmt
      * @param ResultSetMapping       $resultSetMapping
-     * @psalm-param array<string, string> $hints
+     * @phpstan-param array<string, string> $hints
      *
      * @return mixed[]
      */
@@ -390,14 +394,14 @@ abstract class AbstractHydrator
      * the values applied. Scalar values are kept in a specific key 'scalars'.
      *
      * @param mixed[] $data SQL Result Row.
-     * @psalm-param array<string, string> $id                 Dql-Alias => ID-Hash.
-     * @psalm-param array<string, bool>   $nonemptyComponents Does this DQL-Alias has at least one non NULL value?
+     * @phpstan-param array<string, string> $id                 Dql-Alias => ID-Hash.
+     * @phpstan-param array<string, bool>   $nonemptyComponents Does this DQL-Alias has at least one non NULL value?
      *
      * @return array<string, array<string, mixed>> An array with all the fields
      *                                             (name => value) of the data
      *                                             row, grouped by their
      *                                             component alias.
-     * @psalm-return array{
+     * @phpstan-return array{
      *                   data: array<array-key, array>,
      *                   newObjects?: array<array-key, array{
      *                       class: mixed,
@@ -495,10 +499,10 @@ abstract class AbstractHydrator
      * of elements as before.
      *
      * @param mixed[] $data
-     * @psalm-param array<string, mixed> $data
+     * @phpstan-param array<string, mixed> $data
      *
      * @return mixed[] The processed row.
-     * @psalm-return array<string, mixed>
+     * @phpstan-return array<string, mixed>
      */
     protected function gatherScalarRowData(&$data)
     {
@@ -533,7 +537,7 @@ abstract class AbstractHydrator
      * @param string $key Column name
      *
      * @return mixed[]|null
-     * @psalm-return array<string, mixed>|null
+     * @phpstan-return array<string, mixed>|null
      */
     protected function hydrateColumnInfo($key)
     {
@@ -630,7 +634,7 @@ abstract class AbstractHydrator
 
     /**
      * @return string[]
-     * @psalm-return non-empty-list<string>
+     * @phpstan-return non-empty-list<string>
      */
     private function getDiscriminatorValues(ClassMetadata $classMetadata): array
     {

@@ -10,7 +10,6 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-<<<<<<< HEAD
 #[UniqueEntity(
     fields: ['user'],
     message: 'Für diesen Benutzernamen existiert bereits ein Konto.'
@@ -27,11 +26,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_ADMIN = 'ROLE_ADMIN';
     public const ROLE_SUPER_ADMIN = 'ROLE_SUPER_ADMIN';
 
-=======
-#[UniqueEntity(fields: ['user'], message: 'There is already an account with this user')]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
-{
->>>>>>> origin/main
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -40,21 +35,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 180, unique: true)]
     private ?string $user = null;
 
-<<<<<<< HEAD
     /**
      * @var list<string>
      */
-=======
->>>>>>> origin/main
+
     #[ORM\Column]
     private array $roles = [];
 
     /**
-<<<<<<< HEAD
      * @var string|null Das gehashte Passwort
-=======
-     * @var string The hashed password
->>>>>>> origin/main
+
      */
     #[ORM\Column]
     private ?string $password = null;
@@ -68,7 +58,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'boolean')]
     private bool $isVerified = false;
 
-<<<<<<< HEAD
     /**
      * Wird nicht in der Datenbank gespeichert.
      */
@@ -77,14 +66,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __toString(): string
     {
         return (string) $this->user;
-=======
-    // This field will not be persisted in the database
-    private ?string $plainPassword = null;
 
-    public function __toString()
-    {
-        return $this->user;
->>>>>>> origin/main
     }
 
     public function getId(): ?int
@@ -99,30 +81,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setUser(string $user): static
     {
-<<<<<<< HEAD
         $this->user = trim($user);
 
         return $this;
     }
 
-=======
-        $this->user = $user;
-        return $this;
-    }
 
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
->>>>>>> origin/main
     public function getUserIdentifier(): string
     {
         return (string) $this->user;
     }
 
     /**
-<<<<<<< HEAD
      * Liefert die tatsächlich gespeicherten Rollen.
      *
      * Im Gegensatz zu getRoles() werden hier keine
@@ -208,31 +178,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getPassword(): string
     {
         return (string) $this->password;
-=======
-     * @see UserInterface
-     */
-    public function getRoles(): array
-    {
-        $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
 
-        return array_unique($roles);
-    }
-
-    public function setRoles(array $roles): static
-    {
-        $this->roles = $roles;
-        return $this;
-    }
-
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
-    public function getPassword(): string
-    {
-        return $this->password;
->>>>>>> origin/main
     }
 
     public function setPassword(string $password): static
@@ -252,7 +198,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->plainPassword;
     }
 
-<<<<<<< HEAD
     public function setPlainPassword(?string $plainPassword): static
     {
         $this->plainPassword = $plainPassword;
@@ -262,26 +207,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
-=======
-    public function setPlainPassword(string $plainPassword): static
-    {
-        $this->plainPassword = $plainPassword;
 
-        // Ensure that the plain password is not kept longer than necessary
-        if (!empty($plainPassword)) {
-            $this->plainPassword = $plainPassword;
-        }
-
-        return $this;
-    }
-
-    /**
-     * @see UserInterface
-     */
-    public function eraseCredentials(): void
-    {
-        // If you store any temporary, sensitive data on the user, clear it here
->>>>>>> origin/main
         $this->plainPassword = null;
     }
 
@@ -292,18 +218,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setMember(?Member $member): static
     {
-<<<<<<< HEAD
-=======
-        // unset the owning side of the relation if necessary
->>>>>>> origin/main
+
         if ($member === null && $this->member !== null) {
             $this->member->setUser(null);
         }
 
-<<<<<<< HEAD
-=======
-        // set the owning side of the relation if necessary
->>>>>>> origin/main
+
         if ($member !== null && $member->getUser() !== $this) {
             $member->setUser($this);
         }
@@ -320,11 +240,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setEmail(string $email): static
     {
-<<<<<<< HEAD
         $this->email = trim($email);
-=======
-        $this->email = $email;
->>>>>>> origin/main
+
 
         return $this;
     }
@@ -334,14 +251,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->isVerified;
     }
 
-<<<<<<< HEAD
     public function isVerified(): bool
     {
         return $this->isVerified;
     }
 
-=======
->>>>>>> origin/main
+
     public function setIsVerified(bool $isVerified): static
     {
         $this->isVerified = $isVerified;
@@ -358,7 +273,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return '******';
     }
-<<<<<<< HEAD
 
     /**
      * Rollen, die in Benutzerverwaltung/Formularen angeboten werden können.
@@ -378,6 +292,5 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             'Super-Administrator' => self::ROLE_SUPER_ADMIN,
         ];
     }
-=======
->>>>>>> origin/main
+
 }
