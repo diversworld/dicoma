@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Courses{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        <h1>Edit Courses</h1>
+        <div class="row text-bg-dark text-center">
+            <div class="col-md-12">
+                <ul class="list-inline">
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">Zurück</a>
+                    </li>
+                    <li class="list-inline-item">
+                        {{ include('courses/_delete_form.html.twig') }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {{ include('courses/_form.html.twig') }}
+
+    </div>
+</section>
+<!-- File modal moved from files/index.html.twig to here -->
+<div class="modal fade" id="fileModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Verfügbare Bilder</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <div class="row">
+                    {% for file in files %}
+                        <div class="img-wrapper col-md-6">
+                            <img src="{{ asset('images/kurse/' ~ file) }}" width="100" alt="{{ file }}" class="img-responsive" />
+                            <button class="choose-file-btn" data-filename="{{ file }}">Choose</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="button" id="uploadButton">Upload new image</button>
+            <input type="file" id="uploadInput" style="display:none">
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-icon" id="selectFile">Select</button>
+                <button type="button" class="btn btn-icon" data-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

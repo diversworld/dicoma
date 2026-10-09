@@ -1,0 +1,21 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}Planungsvorlage duplizieren{% endblock %}
+
+{% block main %}
+    <p>Die Vorlage <strong>{{ original.name }}</strong> wird einschließlich ihrer Ausbildungstermine kopiert.</p>
+    <p><strong>Verein:</strong> {{ original.club }}<br>
+       <strong>Ausbildungstermine:</strong> {{ original.entries|length }}</p>
+
+    <form method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('duplicate_schedule_template_' ~ original.id) }}">
+        <div class="mb-3">
+            <label for="duplicate-template-name" class="form-label">Name der neuen Vorlage</label>
+            <input id="duplicate-template-name" name="name" type="text"
+                   class="form-control" required maxlength="150"
+                   value="{{ suggestedName }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Vorlage duplizieren</button>
+        <a href="{{ backUrl }}" class="btn btn-secondary">Abbrechen</a>
+    </form>
+{% endblock %}

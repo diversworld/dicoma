@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}TankCheck index{% endblock %}
+
+{% block body %}
+<section class="portfolio-work">
+    <div class="container">
+        <h1>Übersicht Prüfungen</h1>
+        <div class="col-md-3">
+            <div class="block">
+                <a href="{{ path('app_tank_check_new') }}" class="btn btn-transparent btn-solid-border">Neu anlegen</a>
+            </div>
+        </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>CheckDate</th>
+                <th>VendorName</th>
+                <th>Notes</th>
+                <th>CostInformation</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for tank_check in tank_checks %}
+            <tr>
+                <td>{{ tank_check.checkDate ? tank_check.checkDate|date('d.m.Y') : '' }}</td>
+                <td>{{ tank_check.vendorName }}</td>
+                <td>{{ tank_check.notes | raw }}</td>
+                <td>{{ tank_check.costInformation | raw}}</td>
+                <td>
+                    <a href="{{ path('app_tank_check_show', {'id': tank_check.id}) }}">show</a>
+                    <a href="{{ path('app_tank_check_edit', {'id': tank_check.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+{% endblock %}

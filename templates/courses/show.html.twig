@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ parent() }} -> Kurs anzeigen{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        <h1>Kursdetails</h1>
+        <div class="row text-bg-dark text-center">
+            <div class="col-md-12">
+                <ul class="list-inline">
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">zurück</a>
+                    </li>
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_courses_edit', { 'id': course.id, 'selectedFile':  course.image }) }}" class="btn btn-transparent btn-solid-border">Bearbeiten</a>
+                    </li>
+                    <li class="list-inline-item">
+                        {{ include('courses/_delete_form.html.twig') }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+        <div class="card mb-12">
+            <div class="row g-0">
+                <div class="col-md-3">
+                    <img class="img-fluid rounded-start" src="{{asset('images/kurse/' ~ course.image)}}" alt="Brevetbild">
+                </div>
+                <div class="col-md-9">
+                    <div class="card-header">{{ course.title }}</div>
+                    <div class="card-body">
+                        <h5 class="card-title">Kursbeschreibung</h5>
+                        <p class="card-text">{{ course.description|raw }}</p>
+                        <h5 class="card-title">Voraussetzungen</h5>
+                        <p class="card-text">{{ course.requirements|raw }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+        <div class="row">
+            <div    class="col-md-12">
+                <h2>Kurstermine</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Kursname</th>
+                            <th scope="col">Startdatum</th>
+                            <th scope="col">Ort</th>
+                            <th scope="col">Preis</th>
+                            <th scope="col">Anzahl Buchungen</th>
+                            <th scope="col">Buchen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                {% for schedule in schedules %}
+                    <tr>
+                        <td>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <a  href="{{ path('app_schedule_edit', {id: schedule.id}) }}" role=""Button>{{ schedule.title }}</a>
+                            {% else %}
+                                {{ schedule.title }}
+                            {% endif %}</td>
+                        <td>{{ schedule.startDate ? schedule.startDate|date('d.m.Y') : '' }}</td>
+                        <td>{{ schedule.location }}<br>
+                            {{ schedule.locationStreet }}<br>
+                            {{ schedule.locationPostal }}{{ schedule.locationCity }}
+                        </td>
+                        <td>{{ schedule.price }}</td>
+                        <td>{{ schedule.bookingCount }}</td>
+                        <td>
+                            {% if is_granted('ROLE_USER') %}
+                                <a class="fa-solid fa-cart-shopping" href="{{ path('app_booking_book', {id: schedule.id, user: app.user.username}) }}" role=""Button></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

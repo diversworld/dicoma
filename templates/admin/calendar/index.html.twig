@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiCoMa – Kurskalender</title>
+<style>
+:root { font-family: system-ui,-apple-system,"Segoe UI",sans-serif; color-scheme:light; }
+* { box-sizing:border-box; }
+body { margin:0; background:#f5f7fa; color:#243044; }
+.top { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; background:white; border-bottom:1px solid #dbe1ea; }
+main { max-width:1480px; margin:auto; padding:24px; }
+.card { background:#fff; border:1px solid #dce2e9; border-radius:10px; padding:16px; margin-bottom:16px; }
+.filters { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+.filters>div { flex:1; min-width:150px; }
+label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
+select { width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:5px; background:white; }
+.btn { display:inline-block; border:1px solid #cbd5e1; background:white; color:#25354e; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:14px; cursor:pointer; }
+.btn.active,.btn.primary { background:#235dc3; color:white; border-color:#235dc3; }
+.nav { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.nav h1 { font-size:21px; margin:0; }
+.jump { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.jump input { padding:7px; border:1px solid #cbd5e1; border-radius:5px; }
+.conflict-list { color:#9b2727; }
+.scroll { overflow-x:auto; }
+.month { width:100%; min-width:980px; border-collapse:collapse; table-layout:fixed; }
+.month th,.month td { border:1px solid #e0e5ed; padding:8px; vertical-align:top; }
+.month th { background:#f1f4f9; text-align:left; }
+.month td { height:130px; }
+.outside { background:#f7f8fa; }
+.event { display:block; text-decoration:none; background:#eaf1ff; border-left:4px solid #3065c7; color:#193f82; padding:6px; margin:5px 0; border-radius:4px; font-size:12px; overflow-wrap:anywhere; }
+.event small { display:block; color:#52647e; margin-top:2px; }
+.event.conflict { background:#ffe6e6; border-left-color:#c62828; color:#8b1919; }
+.event.incomplete { background:#fff2d9; border-left-color:#bd7b00; color:#6f4700; }
+.warning { color:#9b2727; background:#fff0ee; border:1px solid #f0b2ad; border-radius:6px; padding:10px; margin-bottom:14px; }
+.hint { font-size:13px; color:#69768a; }
+/* One continuous vertical timeline per day. Each appointment is positioned
+   relative to 06:00, not to the start of a table row. */
+.week-grid { display:grid; grid-template-columns:72px repeat(7,minmax(145px,1fr)); min-width:1120px; border-top:1px solid #dce2e9; border-left:1px solid #dce2e9; }
+.week-grid.day-grid { grid-template-columns:72px minmax(260px,1fr); min-width:360px; }
+.week-head { padding:9px 5px; text-align:center; background:#f1f4f9; border-right:1px solid #dce2e9; border-bottom:1px solid #dce2e9; font-size:13px; font-weight:700; }
+.week-other { padding:6px; min-height:54px; border-right:1px solid #dce2e9; border-bottom:1px solid #dce2e9; background:#fafbfd; }
+.week-other .event { font-size:11px; }
+.time-axis { height:1088px; position:relative; border-right:1px solid #dce2e9; background:repeating-linear-gradient(to bottom,#f7f9fc 0,#f7f9fc 63px,#dce2e9 63px,#dce2e9 64px); }
+.time-mark { position:absolute; left:5px; font-size:11px; color:#52647e; transform:translateY(-5px); }
+.day-track { position:relative; height:1088px; border-right:1px solid #dce2e9; background:repeating-linear-gradient(to bottom,#fff 0,#fff 31px,#f1f4f9 31px,#f1f4f9 32px,#fff 32px,#fff 63px,#dce2e9 63px,#dce2e9 64px); }
+.week-event { position:absolute; z-index:1; overflow:hidden; min-height:22px; border-left:4px solid #3065c7; border-radius:3px; background:#dce9ff; color:#143d81; padding:4px; font-size:11px; text-decoration:none; overflow-wrap:anywhere; }
+.week-event.conflict { background:#ffdcdc; border-color:#c62828; color:#851919; }
+.week-event.incomplete { background:#fff2d9; border-color:#bd7b00; color:#6f4700; }
+.week-event:focus-visible { outline:3px solid #111; z-index:5; }
+dialog.details { width:min(520px,calc(100vw - 28px)); border:1px solid #cbd5e1; border-radius:12px; padding:22px; color:#243044; box-shadow:0 16px 55px #15253a40; }
+dialog.details::backdrop { background:#0008; }
+.details dl { display:grid; grid-template-columns:125px 1fr; gap:10px; }
+.details dt { font-weight:700; }
+.details dd { margin:0; overflow-wrap:anywhere; }
+.details footer { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
+@media(max-width:700px) { main { padding:12px; } .top { padding:12px; } .nav h1 { font-size:17px; } }
+</style>
+</head>
+<body>
+<header class="top"><strong>DiCoMa · Kurskalender</strong><a class="btn" href="{{ path('admin') }}">Zurück zur Verwaltung</a></header>
+<main>
+<form class="card filters" method="get" action="{{ path('admin_course_calendar') }}">
+<input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="month" value="{{ month|date('Y-m') }}">
+{% if view == 'week' %}<input type="hidden" name="week" value="{{ weekStart|date('Y-m-d') }}">{% elseif view == 'day' %}<input type="hidden" name="day" value="{{ selectedDay|date('Y-m-d') }}">{% endif %}
+{% set filterDefinitions = [{key:'club',label:'Verein',values:options.clubs},{key:'course',label:'Kurs',values:options.courses},{key:'instructor',label:'Instruktor',values:options.instructors}] %}
+{% for filter in filterDefinitions %}
+<div><label for="filter-{{ filter.key }}">{{ filter.label }}</label><select id="filter-{{ filter.key }}" name="{{ filter.key }}"><option value="">Alle</option>{% for id,name in filter.values %}<option value="{{ id }}" {% if (filters[filter.key]|default('') ~ '') == (id ~ '') %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+{% endfor %}
+<button class="btn primary" type="submit">Filtern</button><a class="btn" href="{{ path('admin_course_calendar', {view:view,month:month|date('Y-m'),day:selectedDay|date('Y-m-d'),week:weekStart|date('Y-m-d')}) }}">Zurücksetzen</a>
+</form>
+<div class="card jump"><a class="btn" href="{{ todayUrl }}">Heute</a><form method="get" action="{{ path('admin_course_calendar') }}"><input type="hidden" name="view" value="day"><label for="jump-day">Zu Datum springen</label><input type="date" id="jump-day" name="day" value="{{ selectedDay|date('Y-m-d') }}" required>{% for key, value in filters %}{% if value is not null %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}<button class="btn" type="submit">Anzeigen</button></form></div>
+<div class="card nav"><div><a class="btn {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="btn {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="btn {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a></div><a class="btn" href="{{ prevUrl }}">← Zurück</a><h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}Woche ab {{ weekStart|date('d.m.Y') }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1><a class="btn" href="{{ nextUrl }}">Weiter →</a></div>
+{% if conflictPairs > 0 %}<div class="warning" role="status">Achtung: {{ conflictPairs }} Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.</div>{% endif %}
+<div class="card scroll">
+{% if view == 'month' %}
+<table class="month"><thead><tr>{% for name in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}<th>{{ name }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in weeks %}<tr>{% for day in week %}<td class="{{ day.current ? '' : 'outside' }}"><strong>{{ day.number }}</strong>
+{% for event in day.events %}<a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }}{% if event.end %}–{{ event.end }}{% endif %} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}<small>{{ event.course }}</small>{% if event.instructor %}<small>{{ event.instructor }}</small>{% endif %}{% if event.location %}<small>{{ event.location }}</small>{% endif %}</a>{% endfor %}
+</td>{% endfor %}</tr>{% endfor %}
+</tbody></table>
+{% else %}
+{% set days = view == 'day' ? (weeks|first) : (weeks|first) %}
+<p class="hint">Stundenraster 06:00–23:00 Uhr. Gleichzeitige Termine werden nebeneinander dargestellt. Termine ohne vollständige Zeitangaben stehen im Tageskopf. Termine über Mitternacht werden am Starttag angezeigt.</p>
+<div class="week-grid {{ view == 'day' ? 'day-grid' : '' }}">
+<div class="week-head">Zeit</div>{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="week-head">{{ ['So','Mo','Di','Mi','Do','Fr','Sa'][day.date|date('w')] }} {{ day.label }}</div>{% endif %}{% endfor %}
+<div class="week-other">Weitere</div>
+{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="week-other">{% for event in day.events %}{% if event.incomplete or event.startMinutes < 360 or event.startMinutes >= 1380 %}<a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}</a>{% endif %}{% endfor %}</div>{% endif %}{% endfor %}
+<div class="time-axis">{% for hour in 6..22 %}<span class="time-mark" style="top:{{ (hour - 6) * 64 }}px">{{ '%02d'|format(hour) }}:00</span>{% endfor %}</div>
+{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="day-track">
+{% for event in day.events %}
+{% if not event.incomplete and event.startMinutes >= 360 and event.startMinutes < 1380 %}
+{% set top = (event.startMinutes - 360) / 60 * 64 %}
+{% set fullHeight = event.durationMinutes / 60 * 64 %}
+{% set availableHeight = 1088 - top %}
+{% set height = fullHeight > availableHeight ? availableHeight : fullHeight %}
+{% set height = height > 22 ? height : 22 %}
+{% set laneWidth = 100 / event.layoutColumns %}
+<a class="week-event {{ event.conflict ? 'conflict' : '' }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}" title="{{ event.title }} · {{ event.course }} · {{ event.instructor }}" style="top:{{ top|round(0) }}px;height:{{ height|round(0) }}px;left:calc({{ (event.layoutColumn * laneWidth)|round(5) }}% + 2px);width:calc({{ laneWidth|round(5) }}% - 4px)">{{ event.time }} {{ event.title }}{% if event.end %} – {{ event.end }}{% endif %}</a>
+{% endif %}
+{% endfor %}
+</div>{% endif %}{% endfor %}
+</div>
+{% endif %}
+</div>
+<dialog id="event-details" class="details" aria-labelledby="event-details-title">
+  <h2 id="event-details-title">Termindetails</h2>
+  <dl>
+    <dt>Datum</dt><dd id="detail-date"></dd>
+    <dt>Uhrzeit</dt><dd id="detail-time"></dd>
+    <dt>Kurs</dt><dd id="detail-course"></dd>
+    <dt>Instruktor</dt><dd id="detail-instructor"></dd>
+    <dt>Ort</dt><dd id="detail-location"></dd>
+    <dt>Status</dt><dd id="detail-status"></dd>
+    <dt>Überschneidungen</dt><dd id="detail-conflicts" class="conflict-list"></dd>
+  </dl>
+  <footer><form id="detail-duplicate" method="post" action=""><input type="hidden" name="_token" id="detail-duplicate-token"><button class="btn" type="submit" onclick="return confirm('Termin ohne Buchungen duplizieren?')">Termin kopieren</button></form><form method="dialog"><button class="btn" type="submit">Schließen</button></form><a class="btn primary" id="detail-edit" href="#">Termin bearbeiten</a></footer>
+</dialog>
+<script>
+(function () {
+  const dialog = document.getElementById('event-details');
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  document.addEventListener('click', function (event) {
+    const link = event.target.closest('a[data-event-detail]');
+    if (!link) return;
+    let data;
+    try { data = JSON.parse(link.getAttribute('data-event-detail')); } catch (e) { return; }
+    event.preventDefault();
+    const put = (id, value) => { document.getElementById(id).textContent = value || '—'; };
+    put('event-details-title', data.title);
+    put('detail-date', data.date ? data.date.split('-').reverse().join('.') : '');
+    put('detail-time', data.time ? data.time + (data.end ? ' – ' + data.end : '') + ' Uhr' : '');
+    put('detail-course', data.course);
+    put('detail-instructor', data.instructor);
+    put('detail-location', data.location);
+    put('detail-status', data.conflict ? 'Terminkonflikt' : (data.incomplete ? 'Planung unvollständig' : 'Geplant'));
+    put('detail-conflicts', Array.isArray(data.conflictWith) && data.conflictWith.length ? data.conflictWith.join(' · ') : 'Keine');
+    document.getElementById('detail-duplicate').action = data.duplicateUrl;
+    document.getElementById('detail-duplicate-token').value = data.duplicateToken;
+    document.getElementById('detail-edit').href = link.href;
+    dialog.showModal();
+  });
+})();
+</script>
+</main></body></html>

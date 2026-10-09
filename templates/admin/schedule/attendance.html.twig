@@ -1,0 +1,115 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    Anwesenheit erfassen
+{% endblock %}
+
+{% block main %}
+
+    <div class="mb-4">
+        <h2 class="mb-2">
+            {{ schedule.title }}
+        </h2>
+
+        <div class="text-muted">
+            {% if schedule.startDate %}
+                {{ schedule.startDate|date('d.m.Y') }}
+            {% endif %}
+
+            {% if schedule.startTime %}
+                · {{ schedule.startTime|date('H:i') }} Uhr
+            {% endif %}
+
+            {% if schedule.courses %}
+                · {{ schedule.courses }}
+            {% endif %}
+        </div>
+    </div>
+
+    {{ form_start(form) }}
+
+    <div class="table-responsive">
+        <table class="table datagrid">
+
+            <thead>
+                <tr>
+                    <th>Teilnehmer</th>
+                    <th>Anwesenheit</th>
+                    <th>Bemerkung</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            {% for bookingForm in form.bookings %}
+
+                {% set booking = bookingForm.vars.data %}
+
+                <tr>
+
+                    <td>
+                        {% if booking.member %}
+                            <strong>
+                                {{ booking.member.fullName }}
+                            </strong>
+
+                            {% if booking.member.memberNumber %}
+                                <div class="text-muted">
+                                    Mitgliedsnummer:
+                                    {{ booking.member.memberNumber }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td style="min-width: 240px;">
+                        {{
+                            form_widget(
+                                bookingForm.attendanceStatus
+                            )
+                        }}
+
+                        {{
+                            form_errors(
+                                bookingForm.attendanceStatus
+                            )
+                        }}
+                    </td>
+
+                    <td style="min-width: 350px;">
+                        {{
+                            form_widget(
+                                bookingForm.attendanceNotes
+                            )
+                        }}
+
+                        {{
+                            form_errors(
+                                bookingForm.attendanceNotes
+                            )
+                        }}
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+
+        <div class="mt-4 d-flex gap-2">
+			{{ form_widget(form.markAllPresent) }}
+			{{ form_widget(form.save) }}
+		</div>
+
+    </div>
+
+    {{ form_end(form) }}
+
+{% endblock %}

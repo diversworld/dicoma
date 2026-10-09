@@ -1,0 +1,717 @@
+
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    Terminplanung: {{ course }}
+{% endblock %}
+
+{% block main %}
+
+    {{ form_start(form) }}
+    {{ form_errors(form) }}
+
+    <div
+        id="schedule-conflict-warning"
+        class="alert alert-danger"
+        role="alert"
+        hidden
+    ></div>
+
+
+    <section class="card mb-3" id="series-planner">
+        <div class="card-body">
+            <h3 class="h5 mb-3">Terminserie planen</h3>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3"><label class="form-label" for="series-type">Ausbildungseinheit</label><select class="form-select" id="series-type"></select></div>
+                <div class="col-md-2"><label class="form-label" for="series-date">Erster Termin</label><input class="form-control" type="date" id="series-date"></div>
+                <div class="col-md-2"><label class="form-label" for="series-time">Beginn</label><input class="form-control" type="time" id="series-time" value="19:00"></div>
+                <div class="col-md-2"><label class="form-label" for="series-hours">Dauer (Std.)</label><input class="form-control" type="number" id="series-hours" min="0.25" max="24" step="0.25" value="2"></div>
+                <div class="col-md-2"><label class="form-label" for="series-gap">Wiederholung</label><select class="form-select" id="series-gap"><option value="1">Täglich</option><option value="7" selected>Wöchentlich</option><option value="14">Alle 2 Wochen</option></select></div>
+                <div class="col-md-1"><label class="form-label" for="series-count">Anzahl</label><input class="form-control" type="number" id="series-count" min="1" max="200" value="5"></div>
+                <div class="col-md-4"><label class="form-label" for="series-location">Ort (optional)</label><input class="form-control" id="series-location" type="text"></div>
+                <div class="col-md-4"><label class="form-label" for="series-instructor">Instruktor (optional)</label><select class="form-select" id="series-instructor"><option value="">Nicht ändern</option></select></div>
+                <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="series-overwrite"><label class="form-check-label" for="series-overwrite">Bereits geplante Termine überschreiben</label></div></div>
+            </div>
+            <div class="mt-2"><label class="form-label" for="series-exclusions">Ausnahmetage (optional, je Datum eine Zeile oder durch Komma getrennt)</label><textarea id="series-exclusions" class="form-control" rows="2" placeholder="2026-10-23, 2026-10-30"></textarea><small class="text-muted">Ein Serientermin auf einem Ausnahmetag wird um das Wiederholungsintervall verschoben; die weiteren Termine folgen anschliessend diesem Rhythmus.</small></div>
+            <div class="mt-3"><button type="button" class="btn btn-secondary" id="series-preview-button">Vorschau erstellen</button> <button type="button" class="btn btn-primary" id="series-apply-button" disabled>Vorschau ins Formular übernehmen</button></div>
+            <div id="series-feedback" class="mt-2" role="status" aria-live="polite"></div>
+            <div class="table-responsive mt-2"><table class="table table-sm" id="series-preview-table" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Dauer</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+        </div>
+    </section>
+
+
+    <section class="card mb-3" id="weekend-planner">
+        <div class="card-body">
+            <h3 class="h5 mb-2">Freiwasser-Wochenende planen (2 + 2 + 1)</h3>
+            <p class="text-muted small">Standard: Freitag 1+2, Samstag 3+4, Sonntag 5. Tagesabstaende sind frei aenderbar. Bestehende Termine bleiben geschuetzt.</p>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3"><label class="form-label" for="weekend-date">Startdatum</label><input id="weekend-date" class="form-control" type="date"></div>
+                <div class="col-md-4"><label class="form-label" for="weekend-location">Ort (optional)</label><input id="weekend-location" class="form-control" type="text"></div>
+                <div class="col-md-3"><label class="form-label" for="weekend-instructor">Instruktor (optional)</label><select id="weekend-instructor" class="form-select"><option value="">Nicht aendern</option></select></div>
+                <div class="col-md-2"><div class="form-check"><input id="weekend-overwrite" class="form-check-input" type="checkbox"><label class="form-check-label" for="weekend-overwrite">Bestehende Termine ueberschreiben</label></div></div>
+            </div>
+            <div class="mt-2"><label class="form-label" for="weekend-exclusions">Ausnahmetage (optional)</label><textarea id="weekend-exclusions" class="form-control" rows="2" placeholder="2026-10-17"></textarea><small class="text-muted">Betroffene Freiwassereinheiten werden auf den naechsten freien Kalendertag verschoben. Die Uhrzeiten bleiben unveraendert.</small></div>
+            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Einheit</th><th>Tage nach Start</th><th>Beginn</th><th>Dauer (Std.)</th></tr></thead><tbody>
+                {% set weekendUnits = [
+                    {number: 1, offset: 0, time: '17:00'},
+                    {number: 2, offset: 0, time: '19:00'},
+                    {number: 3, offset: 1, time: '09:00'},
+                    {number: 4, offset: 1, time: '11:00'},
+                    {number: 5, offset: 2, time: '09:00'}
+                ] %}
+                {% for unit in weekendUnits %}
+                <tr>
+                    <td>Freiwasser {{ unit.number }}</td>
+                    <td><input id="weekend-offset-{{ unit.number }}" type="number" min="0" max="365" step="1" value="{{ unit.offset }}" class="form-control" aria-label="Tage nach Start fuer Freiwasser {{ unit.number }}"></td>
+                    <td><input id="weekend-time-{{ unit.number }}" type="time" class="form-control" value="{{ unit.time }}"></td>
+                    <td><input id="weekend-hours-{{ unit.number }}" type="number" min="0.25" max="24" step="0.25" value="1.5" class="form-control"></td>
+                </tr>
+                {% endfor %}
+            </tbody></table></div>
+            <div class="mt-2"><button type="button" id="weekend-preview-button" class="btn btn-secondary">Wochenende anzeigen</button> <button type="button" id="weekend-apply-button" class="btn btn-primary" disabled>Wochenende ins Formular uebernehmen</button></div>
+            <div id="weekend-feedback" class="mt-2" role="status" aria-live="polite"></div>
+            <div class="table-responsive mt-2"><table id="weekend-preview-table" class="table table-sm" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Ende</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+        </div>
+    </section>
+
+    <section class="card mb-3" id="saved-template-planner">
+        <div class="card-body">
+            <h3 class="h5 mb-2">Gespeicherte Planungsvorlage anwenden</h3>
+            <p class="text-muted small">Nur Vorlagen des Kursvereins. Die Vorlage befüllt ausschließlich vorhandene Kurstermine; es werden keine neuen Termine angelegt.</p>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5"><label class="form-label" for="saved-template-select">Vorlage</label>
+                    <select id="saved-template-select" class="form-select"><option value="">Vorlage auswählen</option>
+                    {% for plan in templatePlans %}<option value="{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3"><label class="form-label" for="saved-template-date">Startdatum (Tag 0)</label><input type="date" id="saved-template-date" class="form-control"></div>
+                <div class="col-md-4"><div class="form-check"><input type="checkbox" id="saved-template-overwrite" class="form-check-input"><label for="saved-template-overwrite" class="form-check-label">Bereits geplante Termine überschreiben</label></div></div>
+            </div>
+            <div class="mt-3"><button type="button" class="btn btn-secondary" id="saved-template-preview-button">Vorlage prüfen</button> <button type="button" class="btn btn-primary" id="saved-template-apply-button" disabled>Vorschau ins Formular übernehmen</button></div>
+            <div id="saved-template-feedback" class="mt-2" role="status" aria-live="polite"></div>
+            <div class="table-responsive mt-2"><table class="table table-sm" id="saved-template-preview-table" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Dauer</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+        </div>
+    </section>
+    <script type="application/json" id="saved-template-data">{{ templatePlans|json_encode(15)|raw }}</script>
+
+    <div class="table-responsive">
+        <table class="table datagrid">
+            <thead>
+                <tr>
+                    <th>Einheit</th>
+                    <th>Datum</th>
+                    <th>Beginn</th>
+                    <th>Dauer (Std.)</th>
+                    <th>Ende</th>
+                    <th>Ort</th>
+                    <th>Instruktor</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in form.schedules %}
+                    <tr data-schedule-row data-training-type-id="{{ row.vars.data.trainingUnitType ? row.vars.data.trainingUnitType.id : '' }}" data-training-sequence="{{ row.vars.data.trainingUnitSequence ?? '' }}">
+                        <td>
+                            {{ row.vars.data.title }}
+                        </td>
+
+                        <td>
+                            {{ form_widget(row.startDate) }}
+                            {{ form_errors(row.startDate) }}
+                        </td>
+
+                        <td>
+                            {{ form_widget(row.startTime) }}
+                            {{ form_errors(row.startTime) }}
+                        </td>
+
+                        <td>
+                            {{ form_widget(row.durationHours) }}
+                            {{ form_errors(row.durationHours) }}
+                        </td>
+
+                        <td>
+                            <strong data-time-end>—</strong>
+                        </td>
+
+                        <td>
+                            {{ form_widget(row.location) }}
+                            {{ form_errors(row.location) }}
+                        </td>
+
+                        <td>
+                            {{ form_widget(row.instructor) }}
+                            {{ form_errors(row.instructor) }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Terminplanung speichern
+    </button>
+
+    {{ form_end(form) }}
+
+{% endblock %}
+
+{% block body_javascript %}
+    {{ parent() }}
+
+    <script>
+    (function () {
+        function initializeSchedulePlanning() {
+            const rows = Array.from(
+                document.querySelectorAll('[data-schedule-row]')
+            );
+
+            if (rows.length === 0) {
+                return;
+            }
+
+            function getMinutes(start, duration) {
+                if (!start || !duration) {
+                    return null;
+                }
+
+                const parts = start.split(':');
+
+                if (parts.length < 2) {
+                    return null;
+                }
+
+                const hours = Number(parts[0]);
+                const minutes = Number(parts[1]);
+
+                const durationHours = Number(
+                    duration.replace(',', '.')
+                );
+
+                if (
+                    !Number.isInteger(hours) ||
+                    !Number.isInteger(minutes) ||
+                    hours < 0 ||
+                    hours > 23 ||
+                    minutes < 0 ||
+                    minutes > 59 ||
+                    !Number.isFinite(durationHours) ||
+                    durationHours <= 0
+                ) {
+                    return null;
+                }
+
+                const startMinutes = hours * 60 + minutes;
+
+                return {
+                    start: startMinutes,
+                    end: startMinutes +
+                        Math.round(durationHours * 60)
+                };
+            }
+
+            function formatTime(minutes) {
+                const normalized =
+                    ((minutes % 1440) + 1440) % 1440;
+
+                return (
+                    String(
+                        Math.floor(normalized / 60)
+                    ).padStart(2, '0')
+                    + ':'
+                    + String(
+                        normalized % 60
+                    ).padStart(2, '0')
+                );
+            }
+
+            function updateEndTime(row) {
+                const start = row.querySelector(
+                    '[data-time-start]'
+                )?.value;
+
+                const duration = row.querySelector(
+                    '[data-time-duration]'
+                )?.value;
+
+                const output = row.querySelector(
+                    '[data-time-end]'
+                );
+
+                if (!output) {
+                    return;
+                }
+
+                const times = getMinutes(start, duration);
+
+                output.textContent = times
+                    ? formatTime(times.end)
+                    : '—';
+            }
+
+            function checkScheduleConflicts() {
+                const appointments = [];
+                const conflicts = [];
+
+                rows.forEach(function (row) {
+                    row.classList.remove('table-danger');
+
+                    const date = row.querySelector(
+                        'input[name$="[startDate]"]'
+                    )?.value;
+
+                    const start = row.querySelector(
+                        '[data-time-start]'
+                    )?.value;
+
+                    const duration = row.querySelector(
+                        '[data-time-duration]'
+                    )?.value;
+
+                    const instructor = row.querySelector(
+                        'select[name$="[instructor]"]'
+                    )?.value;
+
+                    const times = getMinutes(
+                        start,
+                        duration
+                    );
+
+                    if (
+                        !date ||
+                        !instructor ||
+                        !times
+                    ) {
+                        return;
+                    }
+
+                    appointments.push({
+                        row: row,
+                        date: date,
+                        instructor: instructor,
+                        start: times.start,
+                        end: times.end,
+                        title: row.cells[0]
+                            ?.textContent.trim() ?? ''
+                    });
+                });
+
+                for (
+                    let i = 0;
+                    i < appointments.length;
+                    i++
+                ) {
+                    for (
+                        let j = i + 1;
+                        j < appointments.length;
+                        j++
+                    ) {
+                        const a = appointments[i];
+                        const b = appointments[j];
+
+                        if (
+                            a.date !== b.date ||
+                            a.instructor !== b.instructor
+                        ) {
+                            continue;
+                        }
+
+                        if (
+                            a.start < b.end &&
+                            b.start < a.end
+                        ) {
+                            a.row.classList.add(
+                                'table-danger'
+                            );
+
+                            b.row.classList.add(
+                                'table-danger'
+                            );
+
+                            conflicts.push(
+                                a.title + ' ↔ ' + b.title
+                            );
+                        }
+                    }
+                }
+
+                const warning = document.getElementById(
+                    'schedule-conflict-warning'
+                );
+
+                if (!warning) {
+                    return;
+                }
+
+                if (conflicts.length === 0) {
+                    warning.hidden = true;
+                    warning.textContent = '';
+                    return;
+                }
+
+                warning.hidden = false;
+
+                warning.textContent =
+                    'Achtung: ' +
+                    conflicts.length +
+                    ' Terminüberschneidung(en): ' +
+                    conflicts.join(', ');
+            }
+
+            function updatePlanning() {
+                rows.forEach(updateEndTime);
+                checkScheduleConflicts();
+            }
+
+            rows.forEach(function (row) {
+                row.querySelectorAll(
+                    'input, select'
+                ).forEach(function (input) {
+                    input.addEventListener(
+                        'input',
+                        updatePlanning
+                    );
+
+                    input.addEventListener(
+                        'change',
+                        updatePlanning
+                    );
+                });
+            });
+
+
+            function localDate(iso, offset) { const [y,m,d] = iso.split('-').map(Number); return new Date(Date.UTC(y,m-1,d+offset)).toISOString().slice(0,10); }
+                function excludedDates(raw) {
+                    const dates = raw.split(/[\s,;]+/).map(v => v.trim()).filter(Boolean);
+                    if (dates.some(date => !validDate(date))) return null;
+                    return new Set(dates);
+                }
+                function nextAllowedDate(iso, excluded, increment) {
+                    let date = iso;
+                    for (let tries = 0; tries < 1000; tries++) {
+                        if (!excluded.has(date)) return date;
+                        date = localDate(date, increment);
+                    }
+                    throw new Error('Zu viele aufeinanderfolgende Ausnahmetage.');
+                }
+            function validDate(iso) { return /^\d{4}-\d{2}-\d{2}$/.test(iso) && localDate(iso, 0) === iso; }
+            function setField(input, value) { if (!input) return; input.value = value; input.dispatchEvent(new Event('input', {bubbles:true})); input.dispatchEvent(new Event('change', {bubbles:true})); }
+            function dateInput(row) { return row.querySelector('input[name$="[startDate]"]'); }
+            function startInput(row) { return row.querySelector('[data-time-start]'); }
+            function hoursInput(row) { return row.querySelector('[data-time-duration]'); }
+            function locationInput(row) { return row.querySelector('input[name$="[location]"]'); }
+            function instructorInput(row) { return row.querySelector('select[name$="[instructor]"]'); }
+            function isPlanned(row) { return Boolean(dateInput(row)?.value || startInput(row)?.value || hoursInput(row)?.value); }
+            function rowTitle(row) { return row.cells[0]?.textContent.trim() || ''; }
+
+            // Terminserie: nur vorhandene Schedule-Zeilen befuellen.
+            const seriesRoot = document.getElementById('series-planner');
+            if (seriesRoot) {
+                const field = id => document.getElementById('series-' + id);
+                const typeSelect = field('type');
+                const instructorSelect = field('instructor');
+                const previewButton = document.getElementById('series-preview-button');
+                const applyButton = document.getElementById('series-apply-button');
+                const feedback = field('feedback');
+                const previewTable = document.getElementById('series-preview-table');
+                const previewBody = previewTable.querySelector('tbody');
+                const grouped = new Map();
+                const rowGroup = title => title.replace(/\s+\d+$/, '').trim();
+                rows.forEach(row => {
+                    const group = rowGroup(rowTitle(row));
+                    if (!grouped.has(group)) grouped.set(group, []);
+                    grouped.get(group).push(row);
+                });
+                for (const name of grouped.keys()) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    typeSelect.appendChild(option);
+                }
+                // Instructor values are taken from the existing Symfony form.
+                const firstInstructor = rows.map(row => row.querySelector('select[name$="[instructor]"]')).find(Boolean);
+                if (firstInstructor) {
+                    Array.from(firstInstructor.options).forEach(option => {
+                        if (!option.value) return;
+                        instructorSelect.add(new Option(option.textContent, option.value));
+                    });
+                }
+                let proposal = null;
+                function invalidate() {
+                    proposal = null;
+                    applyButton.disabled = true;
+                    previewTable.hidden = true;
+                    previewBody.replaceChildren();
+                    feedback.textContent = '';
+                }
+                seriesRoot.querySelectorAll('input, select').forEach(el => {
+                    el.addEventListener('input', invalidate);
+                    el.addEventListener('change', invalidate);
+                });
+                previewButton.addEventListener('click', () => {
+                    invalidate();
+                    const iso = field('date').value;
+                    const time = field('time').value;
+                    const hours = Number(field('hours').value.replace(',', '.'));
+                    const gap = Number(field('gap').value);
+                    const count = Number(field('count').value);
+                    const selected = grouped.get(typeSelect.value) || [];
+                    if (!validDate(iso) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) ||
+                        !Number.isFinite(hours) || hours <= 0 || hours > 24 ||
+                        !Number.isInteger(count) || count < 1 || count > 200 ||
+                        !Number.isInteger(gap) || gap < 1) {
+                        feedback.textContent = 'Bitte Datum, Uhrzeit, Dauer, Anzahl und Wiederholung korrekt eingeben.';
+                        return;
+                    }
+                    const overwrite = field('overwrite').checked;
+                    const targets = selected.filter(row => overwrite || !isPlanned(row)).slice(0, count);
+                        const excluded = excludedDates(field('exclusions').value);
+                        if (excluded === null) {
+                            feedback.textContent = 'Ausnahmetage bitte im Format JJJJ-MM-TT eingeben.';
+                            return;
+                        }
+                        try {
+                            let nextDate = iso;
+                            proposal = targets.map(row => {
+                                const date = nextAllowedDate(nextDate, excluded, gap);
+                                nextDate = localDate(date, gap);
+                                return {row, date, time, hours};
+                            });
+                        } catch (error) {
+                            feedback.textContent = error.message;
+                            return;
+                        }
+                    if (!proposal.length) {
+                        feedback.textContent = 'Keine passenden freien Termine vorhanden. Bereits geplante Termine bleiben geschuetzt.';
+                        return;
+                    }
+                    proposal.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, String(item.hours).replace('.', ','), isPlanned(item.row) ? 'Ueberschreiben' : 'Eintragen'];
+                        values.forEach(value => { const td=document.createElement('td'); td.textContent=value; tr.appendChild(td); });
+                        previewBody.appendChild(tr);
+                    });
+                    previewTable.hidden = false;
+                    applyButton.disabled = false;
+                    feedback.textContent = `${proposal.length} von ${count} angeforderten Terminen in der Vorschau. Noch nicht gespeichert.`;
+                });
+                applyButton.addEventListener('click', () => {
+                    if (!proposal) return;
+                    const overwrite = field('overwrite').checked;
+                    const location = field('location').value;
+                    const instructor = field('instructor').value;
+                    let applied = 0;
+                    proposal.forEach(item => {
+                        if (!overwrite && isPlanned(item.row)) return;
+                        setField(dateInput(item.row), item.date);
+                        setField(startInput(item.row), item.time);
+                        setField(hoursInput(item.row), String(item.hours));
+                        if (location && (overwrite || !locationInput(item.row)?.value)) setField(locationInput(item.row), location);
+                        if (instructor && (overwrite || !instructorInput(item.row)?.value)) setField(instructorInput(item.row), instructor);
+                        applied++;
+                    });
+                    updatePlanning();
+                    invalidate();
+                    feedback.textContent = `${applied} Termine ins Formular uebernommen. Bitte Konflikte pruefen und unten "Terminplanung speichern" klicken.`;
+                });
+            }
+
+
+            // Freiwasser-Wochenende: bestehende Termine 1..5 befuellen.
+            const weekendRoot = document.getElementById('weekend-planner');
+            if (weekendRoot) {
+                const el = id => document.getElementById('weekend-' + id);
+                const previewButton = el('preview-button');
+                const applyButton = el('apply-button');
+                const previewTable = el('preview-table');
+                const previewBody = previewTable.querySelector('tbody');
+                const feedback = el('feedback');
+                const instructor = el('instructor');
+                const sourceInstructor = rows.map(row => instructorInput(row)).find(Boolean);
+                if (sourceInstructor) {
+                    Array.from(sourceInstructor.options).forEach(option => {
+                        if (option.value) instructor.add(new Option(option.textContent, option.value));
+                    });
+                }
+                let weekendProposal = null;
+                const clearWeekend = () => {
+                    weekendProposal = null;
+                    applyButton.disabled = true;
+                    previewTable.hidden = true;
+                    previewBody.replaceChildren();
+                    feedback.textContent = '';
+                };
+                weekendRoot.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('input', clearWeekend);
+                    input.addEventListener('change', clearWeekend);
+                });
+                previewButton.addEventListener('click', () => {
+                    clearWeekend();
+                    const date = el('date').value;
+                    if (!validDate(date)) {
+                        feedback.textContent = 'Bitte ein gueltiges Startdatum auswaehlen.';
+                        return;
+                    }
+                    const freiwasser = rows.filter(row => /^Freiwasser\s+[1-5]$/.test(rowTitle(row)));
+                    const byNumber = new Map(freiwasser.map(row => [Number(rowTitle(row).match(/(\d+)$/)[1]), row]));
+                    if ([1,2,3,4,5].some(n => !byNumber.has(n))) {
+                        feedback.textContent = 'Es werden Freiwasser 1 bis Freiwasser 5 als vorhandene Kurstermine benoetigt.';
+                        return;
+                    }
+                    const excluded = excludedDates(el('exclusions').value);
+                    if (excluded === null) {
+                        feedback.textContent = 'Ausnahmetage bitte im Format JJJJ-MM-TT eingeben.';
+                        return;
+                    }
+                    const overwrite = el('overwrite').checked;
+                    const proposal = [];
+                    for (let n = 1; n <= 5; n++) {
+                        const row = byNumber.get(n);
+                        const time = el('time-' + n).value;
+                        const hours = Number(el('hours-' + n).value.replace(',', '.'));
+                        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !Number.isFinite(hours) || hours <= 0 || hours > 24) {
+                            feedback.textContent = 'Bitte fuer alle fuenf Einheiten gueltige Startzeiten und Dauern eingeben.';
+                            return;
+                        }
+                        const offset = Number(el('offset-' + n).value);
+                        if (!Number.isInteger(offset) || offset < 0 || offset > 365) {
+                            feedback.textContent = 'Tagesabstand muss eine ganze Zahl zwischen 0 und 365 sein.';
+                            return;
+                        }
+                        let plannedDate;
+                        try {
+                            plannedDate = nextAllowedDate(localDate(date, offset), excluded, 1);
+                        } catch (error) {
+                            feedback.textContent = error.message;
+                            return;
+                        }
+                        proposal.push({row, date: plannedDate, time, hours, skip: !overwrite && isPlanned(row)});
+                    }
+                    weekendProposal = proposal;
+                    proposal.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const times = getMinutes(item.time, String(item.hours));
+                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, times ? formatTime(times.end) : '—', item.skip ? 'Bestehenden Termin behalten' : (isPlanned(item.row) ? 'Ueberschreiben' : 'Eintragen')];
+                        values.forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); });
+                        previewBody.appendChild(tr);
+                    });
+                    previewTable.hidden = false;
+                    applyButton.disabled = !proposal.some(item => !item.skip);
+                    feedback.textContent = `${proposal.filter(item => !item.skip).length} von 5 Terminen koennen uebernommen werden. Noch nicht gespeichert.`;
+                });
+                applyButton.addEventListener('click', () => {
+                    if (!weekendProposal) return;
+                    const overwrite = el('overwrite').checked;
+                    const location = el('location').value;
+                    const instructorValue = instructor.value;
+                    let count = 0;
+                    weekendProposal.forEach(item => {
+                        if (item.skip || (!overwrite && isPlanned(item.row))) return;
+                        setField(dateInput(item.row), item.date);
+                        setField(startInput(item.row), item.time);
+                        setField(hoursInput(item.row), String(item.hours));
+                        if (location && (overwrite || !locationInput(item.row)?.value)) setField(locationInput(item.row), location);
+                        if (instructorValue && (overwrite || !instructorInput(item.row)?.value)) setField(instructorInput(item.row), instructorValue);
+                        count++;
+                    });
+                    updatePlanning();
+                    clearWeekend();
+                    feedback.textContent = `${count} Freiwassertermine ins Formular uebernommen. Konflikte pruefen und danach unten speichern.`;
+                });
+            }
+
+
+            // Gespeicherte Vorlagen: stabile Zuordnung über Typ-ID + Sequenz.
+            const savedRoot = document.getElementById('saved-template-planner');
+            if (savedRoot) {
+                const plans = JSON.parse(document.getElementById('saved-template-data').textContent || '[]');
+                const get = suffix => document.getElementById('saved-template-' + suffix);
+                const previewButton = get('preview-button');
+                const applyButton = get('apply-button');
+                const table = get('preview-table');
+                const tbody = table.querySelector('tbody');
+                const feedback = get('feedback');
+                const rowMap = new Map();
+                rows.forEach(row => {
+                    const typeId = row.dataset.trainingTypeId;
+                    const sequence = row.dataset.trainingSequence;
+                    if (typeId && sequence) rowMap.set(typeId + ':' + sequence, row);
+                });
+                let proposal = null;
+                const clear = () => {
+                    proposal = null;
+                    applyButton.disabled = true;
+                    table.hidden = true;
+                    tbody.replaceChildren();
+                    feedback.textContent = '';
+                };
+                savedRoot.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('input', clear);
+                    input.addEventListener('change', clear);
+                });
+                previewButton.addEventListener('click', () => {
+                    clear();
+                    const plan = plans.find(p => String(p.id) === get('select').value);
+                    const date = get('date').value;
+                    if (!plan || !validDate(date)) {
+                        feedback.textContent = 'Bitte eine Vorlage und ein gültiges Startdatum auswählen.';
+                        return;
+                    }
+                    const overwrite = get('overwrite').checked;
+                    const used = new Set();
+                    proposal = plan.entries.map(entry => {
+                        const key = String(entry.typeId) + ':' + String(entry.sequence);
+                        const row = rowMap.get(key);
+                        const duplicate = used.has(key);
+                        used.add(key);
+                        const valid = Number.isInteger(entry.dayOffset) && entry.dayOffset >= 0 && entry.dayOffset <= 3650
+                            && /^([01]\d|2[0-3]):[0-5]\d$/.test(entry.time || '')
+                            && Number.isInteger(entry.minutes) && entry.minutes > 0 && entry.minutes <= 1440;
+                        const skip = !row || duplicate || !valid || (!overwrite && isPlanned(row));
+                        const reason = !row ? 'Kein passender Kurstermin' : duplicate ? 'Doppelte Vorlage' : !valid ? 'Ungültige Vorlagendaten' : skip ? 'Bereits geplant' : 'Übernehmen';
+                        return {row, date: valid ? localDate(date, entry.dayOffset) : '', time: entry.time, hours: entry.minutes / 60, skip, reason, key};
+                    });
+                    proposal.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const values = [item.row ? rowTitle(item.row) : item.key, item.date, item.time || '—', String(item.hours).replace('.', ','), item.reason];
+                        values.forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); });
+                        tbody.appendChild(tr);
+                    });
+                    table.hidden = false;
+                    const available = proposal.filter(item => !item.skip).length;
+                    applyButton.disabled = available === 0;
+                    feedback.textContent = `${available} von ${proposal.length} Einträgen können übernommen werden. Noch nicht gespeichert.`;
+                });
+                applyButton.addEventListener('click', () => {
+                    if (!proposal) return;
+                    const overwrite = get('overwrite').checked;
+                    let count = 0;
+                    proposal.forEach(item => {
+                        if (item.skip || (!overwrite && isPlanned(item.row))) return;
+                        setField(dateInput(item.row), item.date);
+                        setField(startInput(item.row), item.time);
+                        setField(hoursInput(item.row), String(item.hours));
+                        count++;
+                    });
+                    updatePlanning();
+                    clear();
+                    feedback.textContent = `${count} Termine ins Formular übernommen. Konflikte prüfen und anschließend Terminplanung speichern.`;
+                });
+            }
+
+            updatePlanning();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener(
+                'DOMContentLoaded',
+                initializeSchedulePlanning,
+                { once: true }
+            );
+        } else {
+            initializeSchedulePlanning();
+        }
+    })();
+    </script>
+{% endblock %}

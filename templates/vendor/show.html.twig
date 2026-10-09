@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Vendor{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        <h1>Vendor</h1>
+        <div class="row text-bg-dark text-center">
+            <div class="col-md-12">
+                <ul class="list-inline">
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_vendor_index') }}" class="btn btn-transparent btn-solid-border">zurück</a>
+                    </li>
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_vendor_edit', {'id': vendor.id}) }}" class="btn btn-transparent btn-solid-border">Bearbeiten</a>
+                    </li>
+                    <li class="list-inline-item">
+                        {{ include('vendor/_delete_form.html.twig') }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+        <div class="card mb-12">
+            <div class="row g-0">
+                <div class="col-md-9">
+                    <div class="card-header">{{ vendor.name }}</div>
+                    <div class="card-body">
+                        <h5 class="card-title">Firma</h5>
+                        <p class="card-text">{{ vendor.name }}</p>
+                        <h5 class="card-title">Adresse</h5>
+                        <p class="card-text">{{ vendor.street }}</p>
+                        <p class="card-text">{{ vendor.postal }} {{ vendor.city }}</p>
+                        <h5 class="card-title">Kontakt</h5>
+                        <p class="card-text">{{ vendor.email }}</p>
+                        <p class="card-text">{{ vendor.phone }}</p>
+                        <p class="card-text">{{ vendor.website }}</p>
+                        <h5 class="card-title">Bemerkungen</h5>
+                        <p class="card-text">{{ vendor.notes|raw }}</p>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+    </div>
+</section>
+{% endblock %}

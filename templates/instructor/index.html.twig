@@ -1,0 +1,156 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Instructor index{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        <h1> Übersicht Instruktoren</h1>
+        <div class="row">
+            {%  if is_granted('ROLE_ADMIN') %}
+                <div class="col-md-3">
+                    <div class="block">
+                        <a href="{{ path('app_instructor_new') }}" class="btn btn-transparent btn-solid-border">Neuen Instruktor erstellen</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row row-cols-3 row-cols-md-3 g-3">
+            {% for instructor in instructors %}
+                <!--
+                <div class="col">
+                    <div class="card">
+                        <svg class="bd-placeholder-img card-img-top" width="100%" height="140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Image cap" preserveAspectRatio="xMidYMid slice" focusable="false">
+                            <title>{{ instructor.firstname }} {{ instructor.lastname }}</title>
+                            <rect width="100%" height="100%" fill="#868e96"></rect>
+                            <text x="40%" y="50%" fill="#dee2e6" dy=".3em">Bild</text>
+                        </svg>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ instructor.firstname }} {{ instructor.lastname }}</h5>
+                            <p class="card-text">
+                                Telefon: {{ instructor.phone }}<br>
+                                Mobil: {{ instructor.mobile }}
+                            </p>
+                            <p class="card-text">
+                                E-Mail: {{ instructor.email }}
+                            </p>
+                            <p class="card-text">
+                                Adresse:<br>
+                                {{ instructor.street }}<br>
+                                {{ instructor.postal }} {{ instructor.city }}
+                            </p>
+                            <p class="card-text">
+                                {% if instructor.published =='true' %}
+                                    Status: Aktiv
+                                {% else %}
+                                    Status: Inaktiv
+                                {% endif %}</p>
+                            <p class="card-text">
+                                <a href="{{ path('app_instructor_show', {'id': instructor.id}) }}"><i class="ion-ios-eye"></i></a>
+                                {%  if is_granted('ROLE_ADMIN') %}
+                                    <a href="{{ path('app_instructor_edit', {'id': instructor.id}) }}"><i class="ion-edit"></i></a>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+-->
+                <div class="col">
+                    <div class="card">
+                        <div class="row g-0">
+                            <div class="col-md-4">
+                                <svg class="bd-placeholder-img card-img-top" width="100%" height="200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Image cap" preserveAspectRatio="xMidYMid slice" focusable="false">
+                                    <title>{{ instructor.firstname }} {{ instructor.lastname }}</title>
+                                    <rect width="100%" height="100%" fill="#868e96"></rect>
+                                    <text x="50%" y="50%" fill="#dee2e6" dy=".3em">{{ instructor.firstname }} {{ instructor.lastname }}</text>
+                                </svg>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ instructor.firstname }} {{ instructor.lastname }}</h5>
+                                    <p class="card-text">
+                                    Telefon:<br>{{ instructor.phone }}<br>
+                                    Mobil:<br>{{ instructor.mobile }}
+                                </p>
+                                <p class="card-text">
+                                    E-Mail:<br>{{ instructor.email }}
+                                </p>
+                                <p class="card-text">
+                                    Adresse:<br>
+                                    {%  if instructor.street %}
+                                    {{ instructor.street }}<br>
+                                    {{ instructor.postal }} {{ instructor.city }}
+                                    {% else %}
+                                        &nbsp;<br>&nbsp;
+                                    {% endif %}
+                                </p>
+                                    <p class="card-text">
+                                        {% if instructor.published =='true' %}
+                                            Status: Aktiv
+                                        {% else %}
+                                            Status: Inaktiv
+                                        {% endif %}</p>
+                                    <p class="card-text">
+                                        <a href="{{ path('app_instructor_show', {'id': instructor.id}) }}"><i class="ion-ios-eye"></i></a>
+                                        {%  if is_granted('ROLE_ADMIN') %}
+                                            <a href="{{ path('app_instructor_edit', {'id': instructor.id}) }}"><i class="ion-edit"></i></a>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p colspan="12">no records found</p>
+            {% endfor %}
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Firstname</th>
+                            <th>Lastname</th>
+                            <th>E-Mail</th>
+                            <th>Status</th>
+                            <th>actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for instructor in instructors %}
+                        <tr>
+                            <td>{{ instructor.firstname }}</td>
+                            <td>{{ instructor.lastname }}</td>
+                            <td>{{ instructor.email }}</td>
+                            <td>
+                                {% if instructor.published =='true' %}
+                                Aktiv
+                                {% else %}
+                                Inaktiv
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('app_instructor_show', {'id': instructor.id}) }}"><i class="ion-ios-eye"></i></a>
+                                {%  if is_granted('ROLE_ADMIN') %}
+                                    <a href="{{ path('app_instructor_edit', {'id': instructor.id}) }}"><i class="ion-edit"></i></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="12">no records found</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

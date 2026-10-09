@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% trans %}Vendor{% endtrans %}{% endblock %}
+
+{% block body %}
+<section class="portfolio-work section">
+    <div class="container">
+        <h1>{% trans %}Vendor{% endtrans %}</h1>
+        <div class="col-md-3">
+            <div class="block">
+                <a href="{{ path('app_vendor_new') }}" class="btn btn-transparent btn-solid-border">{% trans %}Create new{% endtrans %}</a>
+            </div>
+        </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{% trans %}Name{% endtrans %}</th>
+                <th>{% trans %}City{% endtrans %}</th>
+                <th>{% trans %}Phone{% endtrans %}</th>
+                <th>{% trans %}Email{% endtrans %}</th>
+                <th>{% trans %}Website{% endtrans %}</th>
+                <th>{% trans %}actions{% endtrans %}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for vendor in vendors %}
+            <tr>
+                <td>{{ vendor.name }}</td>
+                <td>{{ vendor.city }}</td>
+                <td>{{ vendor.phone }}</td>
+                <td>{{ vendor.email }}</td>
+                <td>{{ vendor.website }}</td>
+                <td>
+                    <a href="{{ path('app_vendor_show', {'id': vendor.id}) }}">show</a>
+                    <a href="{{ path('app_vendor_edit', {'id': vendor.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="10">{% trans %}no records found{% endtrans %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endblock %}

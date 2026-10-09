@@ -1,0 +1,80 @@
+
+{{ form_start(form) }}
+{% if form_errors(form) %}
+    <div class="alert alert-danger" role="alert">
+        {{ form_errors(form) }}
+    </div>
+{% endif %}
+<div class="row">
+    <div class="col-md-4">
+        {{ form_row(form.firstname) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_row(form.lastname) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        {{ form_row(form.birthday) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-5">
+        {{ form_row(form.street) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        {{ form_row(form.postal) }}
+    </div>
+    <div class="col-md-6">
+        {{ form_row(form.city) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-5">
+        {{ form_row(form.email) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        {{ form_row(form.phone) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_row(form.mobile) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        {{ form_row(form.user) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-3">
+        {{ form_row(form.plainPassword) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-8">
+        {{ form_row(form.notes) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        {{ form_row(form.category) }}
+    </div>
+    <div class="col-md-2">
+        {{ form_row(form.status) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        {{ form_row(form.published) }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        {{ form_row(form.submit) }}
+    </div>
+</div>
+{{ form_end(form) }}

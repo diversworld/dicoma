@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tank index{% endblock %}
+
+{% block body %}
+<section class="portfolio-work section">
+    <div class="container">
+        <h1>Tank index</h1>
+        <div class="col-md-3">
+            <div class="block">
+                <a href="{{ path('app_tank_new') }}" class="btn btn-transparent btn-solid-border">{% trans %}Create new{% endtrans %}</a>
+            </div>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Inventory</th>
+                    <th>Serielnumber</th>
+                    <th>Size</th>
+                    <th>BuyDate</th>
+                    <th>LastCheckDate</th>
+                    <th>NextCheckDate</th>
+                    <th>Notes</th>
+                    <th>OxigenClean</th>
+                    <th>actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for tank in tanks %}
+                <tr>
+                    <td>{{ tank.inventory }}</td>
+                    <td>{{ tank.serialnumber }}</td>
+                    <td>{{ tank.size }}</td>
+                    <td>{{ tank.buyDate ? tank.buyDate|date('Y-m-d') : '' }}</td>
+                    <td>{{ tank.lastCheckDate ? tank.lastCheckDate|date('d.m.Y') : '' }}</td>
+                    <td>{{ tank.nextCheckDate ? tank.nextCheckDate|date('d.m.Y') : '' }}</td>
+                    <td>{{ tank.notes }}</td>
+                    <td>{{ tank.oxigenClean ? 'Yes' : 'No' }}</td>
+                    <td>
+                        <a href="{{ path('app_tank_show', {'id': tank.id}) }}">show</a>
+                        <a href="{{ path('app_tank_edit', {'id': tank.id}) }}">edit</a>
+                        {% if nextCheck %}
+                            <a href="{{ path('app_book_inspection', {'tankId': tank.id, 'checkId': nextCheck.id}) }}">
+                                <img src="/public/images/icons/tuev-logo.jpg" alt="Book Inspection" />
+                            </a>
+                        {% else %}
+                            //<img src="/public/images/marker.png" alt="Inspection Not Available" />
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="10">no records found</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

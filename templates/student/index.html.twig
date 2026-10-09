@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Schüler index{% endblock %}
+
+{% block body %}
+<section class="about section">
+    <div class="container">
+        <h1> Übersicht Schüler</h1>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="block">
+                    <a href="{{ path('app_student_new') }}" class="btn btn-transparent btn-solid-border">Neuen Schüler erstellen</a>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            &nbsp;
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Firstname</th>
+                            <th>Lastname</th>
+                            <th>E-Mail</th>
+                            <th>Status</th>
+                            <th>actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.firstname }}</td>
+                            <td>{{ student.lastname }}</td>
+                            <td>{{ student.email }}</td>
+                            <td>
+                                {% if student.published =='true' %}
+                                Aktiv
+                                {% else %}
+                                Inaktiv
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('app_student_show', {'id': student.id}) }}">show</a>
+                                <a href="{{ path('app_student_edit', {'id': student.id}) }}">edit</a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="12">no records found</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <a href="{{ path('app_student_new') }}">Create new</a>
+    </div>
+</section>
+{% endblock %}

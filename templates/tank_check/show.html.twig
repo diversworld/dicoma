@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}TankCheck{% endblock %}
+
+{% block body %}
+<section class="portfolio-work section">
+    <div class="container">
+        <h1>TankCheck</h1>
+        <div class="row text-bg-dark text-center">
+            <div class="col-md-12">
+                <ul class="list-inline">
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_tank_check_index') }}" class="btn btn-transparent btn-solid-border">zurück</a>
+                    </li>
+                    <li class="list-inline-item">
+                        <a href="{{ path('app_tank_check_edit', {'id': tank_check.id}) }}" class="btn btn-transparent btn-solid-border">Bearbeiten</a>
+                    </li>
+                    <li class="list-inline-item">
+                        {{ include('tank_check/_delete_form.html.twig') }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <table class="table">
+            <tbody>
+                <tr>
+                    <th>CheckDate</th>
+                    <td>{{ tank_check.checkDate ? tank_check.checkDate|date('d.m.Y') : '' }}</td>
+                </tr>
+                <tr>
+                    <th>VendorName</th>
+                    <td>{{ tank_check.vendorName }}</td>
+                </tr>
+                <tr>
+                    <th>Notes</th>
+                    <td>{{ tank_check.notes }}</td>
+                </tr>
+                <tr>
+                    <th>CostInformation</th>
+                    <td>{{ tank_check.costInformation }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="block">
+                    <a href="{{ path('app_tank_check_article_new', {'tank_check_id': tank_check.id}) }}" class="btn btn-transparent btn-solid-border">Neuen Artikel anlegen</a>
+                </div>
+            </div>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th style="width: 380px">Artikel</th>
+                    <th >Notizen</th>
+                    <th style="width: 100px" class="text-right">Preis (netto)</th>
+                    <th style="width: 100px" class="text-right">Preis (rutto)</th>
+                    <th style="width: 100px"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for tank_check_article in tank_check_articles %}
+                    <tr>
+                        <td style="width:180px;">{{ tank_check_article.title }}</td>
+                        <td>{{ tank_check_article.notes | raw }}</td>
+                        <td class="text-right">{{ tank_check_article.priceNetto | number_format(2, ',', '.') }} €</td>
+                        <td class="text-right">{{ tank_check_article.priceBrutto | number_format(2, ',', '.') }} €</td>
+                        <td>
+                            <a href="{{ path('app_tank_check_article_show', {'id': tank_check_article.id}) }}"><ion class="ion-eye"></ion></a>&nbsp;&nbsp;|&nbsp;
+                            <a href="{{ path('app_tank_check_article_edit', {'id': tank_check_article.id}) }}"><ion class="ion-edit"></ion></a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6">no records found</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+{# template/courses/_form.html.twig #}
+{% if form_errors(form) %}
+    <div class="alert alert-danger">
+        {{ form_errors(form) }}
+    </div>
+{% endif %}
+{{ form_start(form, {'method': 'POST'}) }}
+    <div class="row form-group">
+        <div class="col-md-6">
+            <div class="block">
+                {{ form_row(form.title) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-4">
+            {% if course.image %}
+                <img src="{{ asset('images/kurse/'  ~ '/' ~ course.image) }}" width="200px" alt="Brevetbild">
+            {% endif %}
+        </div>
+        <div class="col-md-5">
+            {{ form_label(form.image) }}
+            {{ form_widget(form.image) }}
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-4">
+            <div class="block">
+                {{ form_row(form.category) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-12">
+            <div class="block">
+                {{ form_row(form.description) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-12">
+            <div class="block">
+                {{ form_row(form.requirements) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-md-12">
+            <div class="block">
+                {{ form_row(form.notes) }}
+            </div>
+        </div>
+    </div>
+    <div class="row form-group">&nbsp;
+    </div>
+    <div class="row form-group">
+        <div class="col-md-6">
+            <div class="block">
+                {{ form_row(form.submit) }}
+            </div>
+        </div>
+    </div>
+{{ form_end(form) }}
+
