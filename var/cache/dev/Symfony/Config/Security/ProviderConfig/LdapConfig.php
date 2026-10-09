@@ -16,13 +16,15 @@ class LdapConfig
     private $searchPassword;
     private $extraFields;
     private $defaultRoles;
+    private $roleFetcher;
     private $uidKey;
     private $filter;
     private $passwordAttribute;
     private $_usedProperties = [];
 
     /**
-     * @default 'ldap'
+     * @example ldap
+     * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
      */
@@ -100,6 +102,19 @@ class LdapConfig
     }
 
     /**
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function roleFetcher($value): static
+    {
+        $this->_usedProperties['roleFetcher'] = true;
+        $this->roleFetcher = $value;
+
+        return $this;
+    }
+
+    /**
      * @default 'sAMAccountName'
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -138,64 +153,70 @@ class LdapConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('base_dn', $value)) {
+        if (array_key_exists('base_dn', $config)) {
             $this->_usedProperties['baseDn'] = true;
-            $this->baseDn = $value['base_dn'];
-            unset($value['base_dn']);
+            $this->baseDn = $config['base_dn'];
+            unset($config['base_dn']);
         }
 
-        if (array_key_exists('search_dn', $value)) {
+        if (array_key_exists('search_dn', $config)) {
             $this->_usedProperties['searchDn'] = true;
-            $this->searchDn = $value['search_dn'];
-            unset($value['search_dn']);
+            $this->searchDn = $config['search_dn'];
+            unset($config['search_dn']);
         }
 
-        if (array_key_exists('search_password', $value)) {
+        if (array_key_exists('search_password', $config)) {
             $this->_usedProperties['searchPassword'] = true;
-            $this->searchPassword = $value['search_password'];
-            unset($value['search_password']);
+            $this->searchPassword = $config['search_password'];
+            unset($config['search_password']);
         }
 
-        if (array_key_exists('extra_fields', $value)) {
+        if (array_key_exists('extra_fields', $config)) {
             $this->_usedProperties['extraFields'] = true;
-            $this->extraFields = $value['extra_fields'];
-            unset($value['extra_fields']);
+            $this->extraFields = $config['extra_fields'];
+            unset($config['extra_fields']);
         }
 
-        if (array_key_exists('default_roles', $value)) {
+        if (array_key_exists('default_roles', $config)) {
             $this->_usedProperties['defaultRoles'] = true;
-            $this->defaultRoles = $value['default_roles'];
-            unset($value['default_roles']);
+            $this->defaultRoles = $config['default_roles'];
+            unset($config['default_roles']);
         }
 
-        if (array_key_exists('uid_key', $value)) {
+        if (array_key_exists('role_fetcher', $config)) {
+            $this->_usedProperties['roleFetcher'] = true;
+            $this->roleFetcher = $config['role_fetcher'];
+            unset($config['role_fetcher']);
+        }
+
+        if (array_key_exists('uid_key', $config)) {
             $this->_usedProperties['uidKey'] = true;
-            $this->uidKey = $value['uid_key'];
-            unset($value['uid_key']);
+            $this->uidKey = $config['uid_key'];
+            unset($config['uid_key']);
         }
 
-        if (array_key_exists('filter', $value)) {
+        if (array_key_exists('filter', $config)) {
             $this->_usedProperties['filter'] = true;
-            $this->filter = $value['filter'];
-            unset($value['filter']);
+            $this->filter = $config['filter'];
+            unset($config['filter']);
         }
 
-        if (array_key_exists('password_attribute', $value)) {
+        if (array_key_exists('password_attribute', $config)) {
             $this->_usedProperties['passwordAttribute'] = true;
-            $this->passwordAttribute = $value['password_attribute'];
-            unset($value['password_attribute']);
+            $this->passwordAttribute = $config['password_attribute'];
+            unset($config['password_attribute']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -219,6 +240,9 @@ class LdapConfig
         }
         if (isset($this->_usedProperties['defaultRoles'])) {
             $output['default_roles'] = $this->defaultRoles;
+        }
+        if (isset($this->_usedProperties['roleFetcher'])) {
+            $output['role_fetcher'] = $this->roleFetcher;
         }
         if (isset($this->_usedProperties['uidKey'])) {
             $output['uid_key'] = $this->uidKey;

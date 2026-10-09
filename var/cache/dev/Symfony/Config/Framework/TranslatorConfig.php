@@ -4,6 +4,7 @@ namespace Symfony\Config\Framework;
 
 require_once __DIR__.\DIRECTORY_SEPARATOR.'Translator'.\DIRECTORY_SEPARATOR.'PseudoLocalizationConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'Translator'.\DIRECTORY_SEPARATOR.'ProviderConfig.php';
+require_once __DIR__.\DIRECTORY_SEPARATOR.'Translator'.\DIRECTORY_SEPARATOR.'GlobalConfig.php';
 
 use Symfony\Component\Config\Loader\ParamConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -22,6 +23,7 @@ class TranslatorConfig
     private $paths;
     private $pseudoLocalization;
     private $providers;
+    private $globals;
     private $_usedProperties = [];
 
     /**
@@ -90,7 +92,7 @@ class TranslatorConfig
     }
 
     /**
-     * The default path used to load translations
+     * The default path used to load translations.
      * @default '%kernel.project_dir%/translations'
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -117,13 +119,13 @@ class TranslatorConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false,"accents":true,"expansion_factor":1,"brackets":true,"parse_html":false,"localizable_html_attributes":[]}
      * @return \Symfony\Config\Framework\Translator\PseudoLocalizationConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Framework\Translator\PseudoLocalizationConfig : static)
      */
-    public function pseudoLocalization(array $value = []): \Symfony\Config\Framework\Translator\PseudoLocalizationConfig|static
+    public function pseudoLocalization(array|bool $value = []): \Symfony\Config\Framework\Translator\PseudoLocalizationConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['pseudoLocalization'] = true;
@@ -143,8 +145,8 @@ class TranslatorConfig
     }
 
     /**
-     * Translation providers you can read/write your translations from
-    */
+     * Translation providers you can read/write your translations from.
+     */
     public function provider(string $name, array $value = []): \Symfony\Config\Framework\Translator\ProviderConfig
     {
         if (!isset($this->providers[$name])) {
@@ -157,64 +159,97 @@ class TranslatorConfig
         return $this->providers[$name];
     }
 
-    public function __construct(array $value = [])
+    /**
+     * @template TValue of string|array
+     * @param TValue $value
+     * Global parameters.
+     * @example 3.14
+     * @return \Symfony\Config\Framework\Translator\GlobalConfig|$this
+     * @psalm-return (TValue is array ? \Symfony\Config\Framework\Translator\GlobalConfig : static)
+     */
+    public function global(string $name, string|array $value = []): \Symfony\Config\Framework\Translator\GlobalConfig|static
     {
-        if (array_key_exists('enabled', $value)) {
+        if (!\is_array($value)) {
+            $this->_usedProperties['globals'] = true;
+            $this->globals[$name] = $value;
+
+            return $this;
+        }
+
+        if (!isset($this->globals[$name]) || !$this->globals[$name] instanceof \Symfony\Config\Framework\Translator\GlobalConfig) {
+            $this->_usedProperties['globals'] = true;
+            $this->globals[$name] = new \Symfony\Config\Framework\Translator\GlobalConfig($value);
+        } elseif (1 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "global()" has already been initialized. You cannot pass values the second time you call global().');
+        }
+
+        return $this->globals[$name];
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('fallbacks', $value)) {
+        if (array_key_exists('fallbacks', $config)) {
             $this->_usedProperties['fallbacks'] = true;
-            $this->fallbacks = $value['fallbacks'];
-            unset($value['fallbacks']);
+            $this->fallbacks = $config['fallbacks'];
+            unset($config['fallbacks']);
         }
 
-        if (array_key_exists('logging', $value)) {
+        if (array_key_exists('logging', $config)) {
             $this->_usedProperties['logging'] = true;
-            $this->logging = $value['logging'];
-            unset($value['logging']);
+            $this->logging = $config['logging'];
+            unset($config['logging']);
         }
 
-        if (array_key_exists('formatter', $value)) {
+        if (array_key_exists('formatter', $config)) {
             $this->_usedProperties['formatter'] = true;
-            $this->formatter = $value['formatter'];
-            unset($value['formatter']);
+            $this->formatter = $config['formatter'];
+            unset($config['formatter']);
         }
 
-        if (array_key_exists('cache_dir', $value)) {
+        if (array_key_exists('cache_dir', $config)) {
             $this->_usedProperties['cacheDir'] = true;
-            $this->cacheDir = $value['cache_dir'];
-            unset($value['cache_dir']);
+            $this->cacheDir = $config['cache_dir'];
+            unset($config['cache_dir']);
         }
 
-        if (array_key_exists('default_path', $value)) {
+        if (array_key_exists('default_path', $config)) {
             $this->_usedProperties['defaultPath'] = true;
-            $this->defaultPath = $value['default_path'];
-            unset($value['default_path']);
+            $this->defaultPath = $config['default_path'];
+            unset($config['default_path']);
         }
 
-        if (array_key_exists('paths', $value)) {
+        if (array_key_exists('paths', $config)) {
             $this->_usedProperties['paths'] = true;
-            $this->paths = $value['paths'];
-            unset($value['paths']);
+            $this->paths = $config['paths'];
+            unset($config['paths']);
         }
 
-        if (array_key_exists('pseudo_localization', $value)) {
+        if (array_key_exists('pseudo_localization', $config)) {
             $this->_usedProperties['pseudoLocalization'] = true;
-            $this->pseudoLocalization = \is_array($value['pseudo_localization']) ? new \Symfony\Config\Framework\Translator\PseudoLocalizationConfig($value['pseudo_localization']) : $value['pseudo_localization'];
-            unset($value['pseudo_localization']);
+            $this->pseudoLocalization = \is_array($config['pseudo_localization']) ? new \Symfony\Config\Framework\Translator\PseudoLocalizationConfig($config['pseudo_localization']) : $config['pseudo_localization'];
+            unset($config['pseudo_localization']);
         }
 
-        if (array_key_exists('providers', $value)) {
+        if (array_key_exists('providers', $config)) {
             $this->_usedProperties['providers'] = true;
-            $this->providers = array_map(fn ($v) => new \Symfony\Config\Framework\Translator\ProviderConfig($v), $value['providers']);
-            unset($value['providers']);
+            $this->providers = array_map(fn ($v) => new \Symfony\Config\Framework\Translator\ProviderConfig($v), $config['providers']);
+            unset($config['providers']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('globals', $config)) {
+            $this->_usedProperties['globals'] = true;
+            $this->globals = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Framework\Translator\GlobalConfig($v) : $v, $config['globals']);
+            unset($config['globals']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -247,6 +282,9 @@ class TranslatorConfig
         }
         if (isset($this->_usedProperties['providers'])) {
             $output['providers'] = array_map(fn ($v) => $v->toArray(), $this->providers);
+        }
+        if (isset($this->_usedProperties['globals'])) {
+            $output['globals'] = array_map(fn ($v) => $v instanceof \Symfony\Config\Framework\Translator\GlobalConfig ? $v->toArray() : $v, $this->globals);
         }
 
         return $output;

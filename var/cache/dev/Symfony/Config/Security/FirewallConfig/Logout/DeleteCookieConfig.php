@@ -82,40 +82,40 @@ class DeleteCookieConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('path', $value)) {
+        if (array_key_exists('path', $config)) {
             $this->_usedProperties['path'] = true;
-            $this->path = $value['path'];
-            unset($value['path']);
+            $this->path = $config['path'];
+            unset($config['path']);
         }
 
-        if (array_key_exists('domain', $value)) {
+        if (array_key_exists('domain', $config)) {
             $this->_usedProperties['domain'] = true;
-            $this->domain = $value['domain'];
-            unset($value['domain']);
+            $this->domain = $config['domain'];
+            unset($config['domain']);
         }
 
-        if (array_key_exists('secure', $value)) {
+        if (array_key_exists('secure', $config)) {
             $this->_usedProperties['secure'] = true;
-            $this->secure = $value['secure'];
-            unset($value['secure']);
+            $this->secure = $config['secure'];
+            unset($config['secure']);
         }
 
-        if (array_key_exists('samesite', $value)) {
+        if (array_key_exists('samesite', $config)) {
             $this->_usedProperties['samesite'] = true;
-            $this->samesite = $value['samesite'];
-            unset($value['samesite']);
+            $this->samesite = $config['samesite'];
+            unset($config['samesite']);
         }
 
-        if (array_key_exists('partitioned', $value)) {
+        if (array_key_exists('partitioned', $config)) {
             $this->_usedProperties['partitioned'] = true;
-            $this->partitioned = $value['partitioned'];
-            unset($value['partitioned']);
+            $this->partitioned = $config['partitioned'];
+            unset($config['partitioned']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

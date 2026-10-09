@@ -15,10 +15,11 @@ class RetryStrategyConfig
     private $delay;
     private $multiplier;
     private $maxDelay;
+    private $jitter;
     private $_usedProperties = [];
 
     /**
-     * Service id to override the retry strategy entirely
+     * Service id to override the retry strategy entirely.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -45,7 +46,7 @@ class RetryStrategyConfig
     }
 
     /**
-     * Time in ms to delay (or the initial value when multiplier is used)
+     * Time in ms to delay (or the initial value when multiplier is used).
      * @default 1000
      * @param ParamConfigurator|int $value
      * @return $this
@@ -59,7 +60,7 @@ class RetryStrategyConfig
     }
 
     /**
-     * If greater than 1, delay will grow exponentially for each retry: this delay = (delay * (multiple ^ retries))
+     * If greater than 1, delay will grow exponentially for each retry: this delay = (delay * (multiple ^ retries)).
      * @default 2
      * @param ParamConfigurator|float $value
      * @return $this
@@ -73,7 +74,7 @@ class RetryStrategyConfig
     }
 
     /**
-     * Max time in ms that a retry should ever be delayed (0 = infinite)
+     * Max time in ms that a retry should ever be delayed (0 = infinite).
      * @default 0
      * @param ParamConfigurator|int $value
      * @return $this
@@ -86,40 +87,60 @@ class RetryStrategyConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * Randomness to apply to the delay (between 0 and 1).
+     * @default 0.1
+     * @param ParamConfigurator|float $value
+     * @return $this
+     */
+    public function jitter($value): static
     {
-        if (array_key_exists('service', $value)) {
+        $this->_usedProperties['jitter'] = true;
+        $this->jitter = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('max_retries', $value)) {
+        if (array_key_exists('max_retries', $config)) {
             $this->_usedProperties['maxRetries'] = true;
-            $this->maxRetries = $value['max_retries'];
-            unset($value['max_retries']);
+            $this->maxRetries = $config['max_retries'];
+            unset($config['max_retries']);
         }
 
-        if (array_key_exists('delay', $value)) {
+        if (array_key_exists('delay', $config)) {
             $this->_usedProperties['delay'] = true;
-            $this->delay = $value['delay'];
-            unset($value['delay']);
+            $this->delay = $config['delay'];
+            unset($config['delay']);
         }
 
-        if (array_key_exists('multiplier', $value)) {
+        if (array_key_exists('multiplier', $config)) {
             $this->_usedProperties['multiplier'] = true;
-            $this->multiplier = $value['multiplier'];
-            unset($value['multiplier']);
+            $this->multiplier = $config['multiplier'];
+            unset($config['multiplier']);
         }
 
-        if (array_key_exists('max_delay', $value)) {
+        if (array_key_exists('max_delay', $config)) {
             $this->_usedProperties['maxDelay'] = true;
-            $this->maxDelay = $value['max_delay'];
-            unset($value['max_delay']);
+            $this->maxDelay = $config['max_delay'];
+            unset($config['max_delay']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('jitter', $config)) {
+            $this->_usedProperties['jitter'] = true;
+            $this->jitter = $config['jitter'];
+            unset($config['jitter']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -140,6 +161,9 @@ class RetryStrategyConfig
         }
         if (isset($this->_usedProperties['maxDelay'])) {
             $output['max_delay'] = $this->maxDelay;
+        }
+        if (isset($this->_usedProperties['jitter'])) {
+            $output['jitter'] = $this->jitter;
         }
 
         return $output;

@@ -40,22 +40,22 @@ class RemoteUserConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('user', $value)) {
+        if (array_key_exists('user', $config)) {
             $this->_usedProperties['user'] = true;
-            $this->user = $value['user'];
-            unset($value['user']);
+            $this->user = $config['user'];
+            unset($config['user']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

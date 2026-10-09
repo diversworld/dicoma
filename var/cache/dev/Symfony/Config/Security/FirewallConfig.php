@@ -162,7 +162,7 @@ class FirewallConfig
     }
 
     /**
-     * An enabled authenticator name or a service id that implements "Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface"
+     * An enabled authenticator name or a service id that implements "Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface".
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -227,22 +227,9 @@ class FirewallConfig
         return $this;
     }
 
-    /**
-     * @template TValue
-     * @param TValue $value
-     * @return \Symfony\Config\Security\FirewallConfig\LogoutConfig|$this
-     * @psalm-return (TValue is array ? \Symfony\Config\Security\FirewallConfig\LogoutConfig : static)
-     */
-    public function logout(mixed $value = []): \Symfony\Config\Security\FirewallConfig\LogoutConfig|static
+    public function logout(array $value = []): \Symfony\Config\Security\FirewallConfig\LogoutConfig
     {
-        if (!\is_array($value)) {
-            $this->_usedProperties['logout'] = true;
-            $this->logout = $value;
-
-            return $this;
-        }
-
-        if (!$this->logout instanceof \Symfony\Config\Security\FirewallConfig\LogoutConfig) {
+        if (null === $this->logout) {
             $this->_usedProperties['logout'] = true;
             $this->logout = new \Symfony\Config\Security\FirewallConfig\LogoutConfig($value);
         } elseif (0 < \func_num_args()) {
@@ -434,184 +421,184 @@ class FirewallConfig
         return $this->rememberMe;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('pattern', $value)) {
+        if (array_key_exists('pattern', $config)) {
             $this->_usedProperties['pattern'] = true;
-            $this->pattern = $value['pattern'];
-            unset($value['pattern']);
+            $this->pattern = $config['pattern'];
+            unset($config['pattern']);
         }
 
-        if (array_key_exists('host', $value)) {
+        if (array_key_exists('host', $config)) {
             $this->_usedProperties['host'] = true;
-            $this->host = $value['host'];
-            unset($value['host']);
+            $this->host = $config['host'];
+            unset($config['host']);
         }
 
-        if (array_key_exists('methods', $value)) {
+        if (array_key_exists('methods', $config)) {
             $this->_usedProperties['methods'] = true;
-            $this->methods = $value['methods'];
-            unset($value['methods']);
+            $this->methods = $config['methods'];
+            unset($config['methods']);
         }
 
-        if (array_key_exists('security', $value)) {
+        if (array_key_exists('security', $config)) {
             $this->_usedProperties['security'] = true;
-            $this->security = $value['security'];
-            unset($value['security']);
+            $this->security = $config['security'];
+            unset($config['security']);
         }
 
-        if (array_key_exists('user_checker', $value)) {
+        if (array_key_exists('user_checker', $config)) {
             $this->_usedProperties['userChecker'] = true;
-            $this->userChecker = $value['user_checker'];
-            unset($value['user_checker']);
+            $this->userChecker = $config['user_checker'];
+            unset($config['user_checker']);
         }
 
-        if (array_key_exists('request_matcher', $value)) {
+        if (array_key_exists('request_matcher', $config)) {
             $this->_usedProperties['requestMatcher'] = true;
-            $this->requestMatcher = $value['request_matcher'];
-            unset($value['request_matcher']);
+            $this->requestMatcher = $config['request_matcher'];
+            unset($config['request_matcher']);
         }
 
-        if (array_key_exists('access_denied_url', $value)) {
+        if (array_key_exists('access_denied_url', $config)) {
             $this->_usedProperties['accessDeniedUrl'] = true;
-            $this->accessDeniedUrl = $value['access_denied_url'];
-            unset($value['access_denied_url']);
+            $this->accessDeniedUrl = $config['access_denied_url'];
+            unset($config['access_denied_url']);
         }
 
-        if (array_key_exists('access_denied_handler', $value)) {
+        if (array_key_exists('access_denied_handler', $config)) {
             $this->_usedProperties['accessDeniedHandler'] = true;
-            $this->accessDeniedHandler = $value['access_denied_handler'];
-            unset($value['access_denied_handler']);
+            $this->accessDeniedHandler = $config['access_denied_handler'];
+            unset($config['access_denied_handler']);
         }
 
-        if (array_key_exists('entry_point', $value)) {
+        if (array_key_exists('entry_point', $config)) {
             $this->_usedProperties['entryPoint'] = true;
-            $this->entryPoint = $value['entry_point'];
-            unset($value['entry_point']);
+            $this->entryPoint = $config['entry_point'];
+            unset($config['entry_point']);
         }
 
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('stateless', $value)) {
+        if (array_key_exists('stateless', $config)) {
             $this->_usedProperties['stateless'] = true;
-            $this->stateless = $value['stateless'];
-            unset($value['stateless']);
+            $this->stateless = $config['stateless'];
+            unset($config['stateless']);
         }
 
-        if (array_key_exists('lazy', $value)) {
+        if (array_key_exists('lazy', $config)) {
             $this->_usedProperties['lazy'] = true;
-            $this->lazy = $value['lazy'];
-            unset($value['lazy']);
+            $this->lazy = $config['lazy'];
+            unset($config['lazy']);
         }
 
-        if (array_key_exists('context', $value)) {
+        if (array_key_exists('context', $config)) {
             $this->_usedProperties['context'] = true;
-            $this->context = $value['context'];
-            unset($value['context']);
+            $this->context = $config['context'];
+            unset($config['context']);
         }
 
-        if (array_key_exists('logout', $value)) {
+        if (array_key_exists('logout', $config)) {
             $this->_usedProperties['logout'] = true;
-            $this->logout = \is_array($value['logout']) ? new \Symfony\Config\Security\FirewallConfig\LogoutConfig($value['logout']) : $value['logout'];
-            unset($value['logout']);
+            $this->logout = new \Symfony\Config\Security\FirewallConfig\LogoutConfig($config['logout']);
+            unset($config['logout']);
         }
 
-        if (array_key_exists('switch_user', $value)) {
+        if (array_key_exists('switch_user', $config)) {
             $this->_usedProperties['switchUser'] = true;
-            $this->switchUser = new \Symfony\Config\Security\FirewallConfig\SwitchUserConfig($value['switch_user']);
-            unset($value['switch_user']);
+            $this->switchUser = new \Symfony\Config\Security\FirewallConfig\SwitchUserConfig($config['switch_user']);
+            unset($config['switch_user']);
         }
 
-        if (array_key_exists('required_badges', $value)) {
+        if (array_key_exists('required_badges', $config)) {
             $this->_usedProperties['requiredBadges'] = true;
-            $this->requiredBadges = $value['required_badges'];
-            unset($value['required_badges']);
+            $this->requiredBadges = $config['required_badges'];
+            unset($config['required_badges']);
         }
 
-        if (array_key_exists('custom_authenticators', $value)) {
+        if (array_key_exists('custom_authenticators', $config)) {
             $this->_usedProperties['customAuthenticators'] = true;
-            $this->customAuthenticators = $value['custom_authenticators'];
-            unset($value['custom_authenticators']);
+            $this->customAuthenticators = $config['custom_authenticators'];
+            unset($config['custom_authenticators']);
         }
 
-        if (array_key_exists('login_throttling', $value)) {
+        if (array_key_exists('login_throttling', $config)) {
             $this->_usedProperties['loginThrottling'] = true;
-            $this->loginThrottling = new \Symfony\Config\Security\FirewallConfig\LoginThrottlingConfig($value['login_throttling']);
-            unset($value['login_throttling']);
+            $this->loginThrottling = new \Symfony\Config\Security\FirewallConfig\LoginThrottlingConfig($config['login_throttling']);
+            unset($config['login_throttling']);
         }
 
-        if (array_key_exists('x509', $value)) {
+        if (array_key_exists('x509', $config)) {
             $this->_usedProperties['x509'] = true;
-            $this->x509 = new \Symfony\Config\Security\FirewallConfig\X509Config($value['x509']);
-            unset($value['x509']);
+            $this->x509 = new \Symfony\Config\Security\FirewallConfig\X509Config($config['x509']);
+            unset($config['x509']);
         }
 
-        if (array_key_exists('remote_user', $value)) {
+        if (array_key_exists('remote_user', $config)) {
             $this->_usedProperties['remoteUser'] = true;
-            $this->remoteUser = new \Symfony\Config\Security\FirewallConfig\RemoteUserConfig($value['remote_user']);
-            unset($value['remote_user']);
+            $this->remoteUser = new \Symfony\Config\Security\FirewallConfig\RemoteUserConfig($config['remote_user']);
+            unset($config['remote_user']);
         }
 
-        if (array_key_exists('login_link', $value)) {
+        if (array_key_exists('login_link', $config)) {
             $this->_usedProperties['loginLink'] = true;
-            $this->loginLink = new \Symfony\Config\Security\FirewallConfig\LoginLinkConfig($value['login_link']);
-            unset($value['login_link']);
+            $this->loginLink = new \Symfony\Config\Security\FirewallConfig\LoginLinkConfig($config['login_link']);
+            unset($config['login_link']);
         }
 
-        if (array_key_exists('form_login', $value)) {
+        if (array_key_exists('form_login', $config)) {
             $this->_usedProperties['formLogin'] = true;
-            $this->formLogin = new \Symfony\Config\Security\FirewallConfig\FormLoginConfig($value['form_login']);
-            unset($value['form_login']);
+            $this->formLogin = new \Symfony\Config\Security\FirewallConfig\FormLoginConfig($config['form_login']);
+            unset($config['form_login']);
         }
 
-        if (array_key_exists('form_login_ldap', $value)) {
+        if (array_key_exists('form_login_ldap', $config)) {
             $this->_usedProperties['formLoginLdap'] = true;
-            $this->formLoginLdap = new \Symfony\Config\Security\FirewallConfig\FormLoginLdapConfig($value['form_login_ldap']);
-            unset($value['form_login_ldap']);
+            $this->formLoginLdap = new \Symfony\Config\Security\FirewallConfig\FormLoginLdapConfig($config['form_login_ldap']);
+            unset($config['form_login_ldap']);
         }
 
-        if (array_key_exists('json_login', $value)) {
+        if (array_key_exists('json_login', $config)) {
             $this->_usedProperties['jsonLogin'] = true;
-            $this->jsonLogin = new \Symfony\Config\Security\FirewallConfig\JsonLoginConfig($value['json_login']);
-            unset($value['json_login']);
+            $this->jsonLogin = new \Symfony\Config\Security\FirewallConfig\JsonLoginConfig($config['json_login']);
+            unset($config['json_login']);
         }
 
-        if (array_key_exists('json_login_ldap', $value)) {
+        if (array_key_exists('json_login_ldap', $config)) {
             $this->_usedProperties['jsonLoginLdap'] = true;
-            $this->jsonLoginLdap = new \Symfony\Config\Security\FirewallConfig\JsonLoginLdapConfig($value['json_login_ldap']);
-            unset($value['json_login_ldap']);
+            $this->jsonLoginLdap = new \Symfony\Config\Security\FirewallConfig\JsonLoginLdapConfig($config['json_login_ldap']);
+            unset($config['json_login_ldap']);
         }
 
-        if (array_key_exists('access_token', $value)) {
+        if (array_key_exists('access_token', $config)) {
             $this->_usedProperties['accessToken'] = true;
-            $this->accessToken = new \Symfony\Config\Security\FirewallConfig\AccessTokenConfig($value['access_token']);
-            unset($value['access_token']);
+            $this->accessToken = new \Symfony\Config\Security\FirewallConfig\AccessTokenConfig($config['access_token']);
+            unset($config['access_token']);
         }
 
-        if (array_key_exists('http_basic', $value)) {
+        if (array_key_exists('http_basic', $config)) {
             $this->_usedProperties['httpBasic'] = true;
-            $this->httpBasic = new \Symfony\Config\Security\FirewallConfig\HttpBasicConfig($value['http_basic']);
-            unset($value['http_basic']);
+            $this->httpBasic = new \Symfony\Config\Security\FirewallConfig\HttpBasicConfig($config['http_basic']);
+            unset($config['http_basic']);
         }
 
-        if (array_key_exists('http_basic_ldap', $value)) {
+        if (array_key_exists('http_basic_ldap', $config)) {
             $this->_usedProperties['httpBasicLdap'] = true;
-            $this->httpBasicLdap = new \Symfony\Config\Security\FirewallConfig\HttpBasicLdapConfig($value['http_basic_ldap']);
-            unset($value['http_basic_ldap']);
+            $this->httpBasicLdap = new \Symfony\Config\Security\FirewallConfig\HttpBasicLdapConfig($config['http_basic_ldap']);
+            unset($config['http_basic_ldap']);
         }
 
-        if (array_key_exists('remember_me', $value)) {
+        if (array_key_exists('remember_me', $config)) {
             $this->_usedProperties['rememberMe'] = true;
-            $this->rememberMe = new \Symfony\Config\Security\FirewallConfig\RememberMeConfig($value['remember_me']);
-            unset($value['remember_me']);
+            $this->rememberMe = new \Symfony\Config\Security\FirewallConfig\RememberMeConfig($config['remember_me']);
+            unset($config['remember_me']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -658,7 +645,7 @@ class FirewallConfig
             $output['context'] = $this->context;
         }
         if (isset($this->_usedProperties['logout'])) {
-            $output['logout'] = $this->logout instanceof \Symfony\Config\Security\FirewallConfig\LogoutConfig ? $this->logout->toArray() : $this->logout;
+            $output['logout'] = $this->logout->toArray();
         }
         if (isset($this->_usedProperties['switchUser'])) {
             $output['switch_user'] = $this->switchUser->toArray();

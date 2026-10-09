@@ -14,7 +14,7 @@ class MailerConfig
     private $_usedProperties = [];
 
     /**
-     * A service implementing the "Symfony\Component\Mime\HtmlToTextConverter\HtmlToTextConverterInterface"
+     * A service implementing the "Symfony\Component\Mime\HtmlToTextConverter\HtmlToTextConverterInterface".
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -27,16 +27,16 @@ class MailerConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('html_to_text_converter', $value)) {
+        if (array_key_exists('html_to_text_converter', $config)) {
             $this->_usedProperties['htmlToTextConverter'] = true;
-            $this->htmlToTextConverter = $value['html_to_text_converter'];
-            unset($value['html_to_text_converter']);
+            $this->htmlToTextConverter = $config['html_to_text_converter'];
+            unset($config['html_to_text_converter']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

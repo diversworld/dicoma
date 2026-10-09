@@ -56,28 +56,28 @@ class WebhookConfig
         return $this->routing[$type];
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('message_bus', $value)) {
+        if (array_key_exists('message_bus', $config)) {
             $this->_usedProperties['messageBus'] = true;
-            $this->messageBus = $value['message_bus'];
-            unset($value['message_bus']);
+            $this->messageBus = $config['message_bus'];
+            unset($config['message_bus']);
         }
 
-        if (array_key_exists('routing', $value)) {
+        if (array_key_exists('routing', $config)) {
             $this->_usedProperties['routing'] = true;
-            $this->routing = array_map(fn ($v) => new \Symfony\Config\Framework\Webhook\RoutingConfig($v), $value['routing']);
-            unset($value['routing']);
+            $this->routing = array_map(fn ($v) => new \Symfony\Config\Framework\Webhook\RoutingConfig($v), $config['routing']);
+            unset($config['routing']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

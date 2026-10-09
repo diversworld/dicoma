@@ -11,6 +11,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 class PropertyInfoConfig 
 {
     private $enabled;
+    private $withConstructorExtractor;
     private $_usedProperties = [];
 
     /**
@@ -26,16 +27,36 @@ class PropertyInfoConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * Registers the constructor extractor.
+     * @default null
+     * @param ParamConfigurator|bool $value
+     * @return $this
+     */
+    public function withConstructorExtractor($value): static
     {
-        if (array_key_exists('enabled', $value)) {
+        $this->_usedProperties['withConstructorExtractor'] = true;
+        $this->withConstructorExtractor = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('with_constructor_extractor', $config)) {
+            $this->_usedProperties['withConstructorExtractor'] = true;
+            $this->withConstructorExtractor = $config['with_constructor_extractor'];
+            unset($config['with_constructor_extractor']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -44,6 +65,9 @@ class PropertyInfoConfig
         $output = [];
         if (isset($this->_usedProperties['enabled'])) {
             $output['enabled'] = $this->enabled;
+        }
+        if (isset($this->_usedProperties['withConstructorExtractor'])) {
+            $output['with_constructor_extractor'] = $this->withConstructorExtractor;
         }
 
         return $output;

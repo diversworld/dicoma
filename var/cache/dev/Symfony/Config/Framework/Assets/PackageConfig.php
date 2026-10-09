@@ -20,7 +20,7 @@ class PackageConfig
     private $_usedProperties = [];
 
     /**
-     * Throw an exception if an entry is missing from the manifest.json
+     * Throw an exception if an entry is missing from the manifest.json.
      * @default false
      * @param ParamConfigurator|bool $value
      * @return $this
@@ -98,11 +98,11 @@ class PackageConfig
     }
 
     /**
-     * @param ParamConfigurator|list<ParamConfigurator|mixed>|mixed $value
+     * @param ParamConfigurator|list<ParamConfigurator|mixed>|string $value
      *
      * @return $this
      */
-    public function baseUrls(mixed $value): static
+    public function baseUrls(ParamConfigurator|string|array $value): static
     {
         $this->_usedProperties['baseUrls'] = true;
         $this->baseUrls = $value;
@@ -110,52 +110,52 @@ class PackageConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('strict_mode', $value)) {
+        if (array_key_exists('strict_mode', $config)) {
             $this->_usedProperties['strictMode'] = true;
-            $this->strictMode = $value['strict_mode'];
-            unset($value['strict_mode']);
+            $this->strictMode = $config['strict_mode'];
+            unset($config['strict_mode']);
         }
 
-        if (array_key_exists('version_strategy', $value)) {
+        if (array_key_exists('version_strategy', $config)) {
             $this->_usedProperties['versionStrategy'] = true;
-            $this->versionStrategy = $value['version_strategy'];
-            unset($value['version_strategy']);
+            $this->versionStrategy = $config['version_strategy'];
+            unset($config['version_strategy']);
         }
 
-        if (array_key_exists('version', $value)) {
+        if (array_key_exists('version', $config)) {
             $this->_usedProperties['version'] = true;
-            $this->version = $value['version'];
-            unset($value['version']);
+            $this->version = $config['version'];
+            unset($config['version']);
         }
 
-        if (array_key_exists('version_format', $value)) {
+        if (array_key_exists('version_format', $config)) {
             $this->_usedProperties['versionFormat'] = true;
-            $this->versionFormat = $value['version_format'];
-            unset($value['version_format']);
+            $this->versionFormat = $config['version_format'];
+            unset($config['version_format']);
         }
 
-        if (array_key_exists('json_manifest_path', $value)) {
+        if (array_key_exists('json_manifest_path', $config)) {
             $this->_usedProperties['jsonManifestPath'] = true;
-            $this->jsonManifestPath = $value['json_manifest_path'];
-            unset($value['json_manifest_path']);
+            $this->jsonManifestPath = $config['json_manifest_path'];
+            unset($config['json_manifest_path']);
         }
 
-        if (array_key_exists('base_path', $value)) {
+        if (array_key_exists('base_path', $config)) {
             $this->_usedProperties['basePath'] = true;
-            $this->basePath = $value['base_path'];
-            unset($value['base_path']);
+            $this->basePath = $config['base_path'];
+            unset($config['base_path']);
         }
 
-        if (array_key_exists('base_urls', $value)) {
+        if (array_key_exists('base_urls', $config)) {
             $this->_usedProperties['baseUrls'] = true;
-            $this->baseUrls = $value['base_urls'];
-            unset($value['base_urls']);
+            $this->baseUrls = $config['base_urls'];
+            unset($config['base_urls']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

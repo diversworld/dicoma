@@ -40,22 +40,22 @@ class EventConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('type', $value)) {
+        if (array_key_exists('type', $config)) {
             $this->_usedProperties['type'] = true;
-            $this->type = $value['type'];
-            unset($value['type']);
+            $this->type = $config['type'];
+            unset($config['type']);
         }
 
-        if (array_key_exists('method', $value)) {
+        if (array_key_exists('method', $config)) {
             $this->_usedProperties['method'] = true;
-            $this->method = $value['method'];
-            unset($value['method']);
+            $this->method = $config['method'];
+            unset($config['method']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

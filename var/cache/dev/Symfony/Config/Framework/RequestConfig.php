@@ -30,7 +30,7 @@ class RequestConfig
     /**
      * @return $this
      */
-    public function format(string $name, mixed $value): static
+    public function format(string $name, ParamConfigurator|string|array $value): static
     {
         $this->_usedProperties['formats'] = true;
         $this->formats[$name] = $value;
@@ -38,22 +38,22 @@ class RequestConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('formats', $value)) {
+        if (array_key_exists('formats', $config)) {
             $this->_usedProperties['formats'] = true;
-            $this->formats = $value['formats'];
-            unset($value['formats']);
+            $this->formats = $config['formats'];
+            unset($config['formats']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

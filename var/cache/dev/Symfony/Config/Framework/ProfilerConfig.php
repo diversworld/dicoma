@@ -46,7 +46,7 @@ class ProfilerConfig
     }
 
     /**
-     * The name of the parameter to use to enable or disable collection on a per request basis
+     * The name of the parameter to use to enable or disable collection on a per request basis.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -99,7 +99,7 @@ class ProfilerConfig
     }
 
     /**
-     * Enables the serializer data collector and profiler panel
+     * Enables the serializer data collector and profiler panel.
      * @default false
      * @param ParamConfigurator|bool $value
      * @return $this
@@ -112,52 +112,52 @@ class ProfilerConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('collect', $value)) {
+        if (array_key_exists('collect', $config)) {
             $this->_usedProperties['collect'] = true;
-            $this->collect = $value['collect'];
-            unset($value['collect']);
+            $this->collect = $config['collect'];
+            unset($config['collect']);
         }
 
-        if (array_key_exists('collect_parameter', $value)) {
+        if (array_key_exists('collect_parameter', $config)) {
             $this->_usedProperties['collectParameter'] = true;
-            $this->collectParameter = $value['collect_parameter'];
-            unset($value['collect_parameter']);
+            $this->collectParameter = $config['collect_parameter'];
+            unset($config['collect_parameter']);
         }
 
-        if (array_key_exists('only_exceptions', $value)) {
+        if (array_key_exists('only_exceptions', $config)) {
             $this->_usedProperties['onlyExceptions'] = true;
-            $this->onlyExceptions = $value['only_exceptions'];
-            unset($value['only_exceptions']);
+            $this->onlyExceptions = $config['only_exceptions'];
+            unset($config['only_exceptions']);
         }
 
-        if (array_key_exists('only_main_requests', $value)) {
+        if (array_key_exists('only_main_requests', $config)) {
             $this->_usedProperties['onlyMainRequests'] = true;
-            $this->onlyMainRequests = $value['only_main_requests'];
-            unset($value['only_main_requests']);
+            $this->onlyMainRequests = $config['only_main_requests'];
+            unset($config['only_main_requests']);
         }
 
-        if (array_key_exists('dsn', $value)) {
+        if (array_key_exists('dsn', $config)) {
             $this->_usedProperties['dsn'] = true;
-            $this->dsn = $value['dsn'];
-            unset($value['dsn']);
+            $this->dsn = $config['dsn'];
+            unset($config['dsn']);
         }
 
-        if (array_key_exists('collect_serializer_data', $value)) {
+        if (array_key_exists('collect_serializer_data', $config)) {
             $this->_usedProperties['collectSerializerData'] = true;
-            $this->collectSerializerData = $value['collect_serializer_data'];
-            unset($value['collect_serializer_data']);
+            $this->collectSerializerData = $config['collect_serializer_data'];
+            unset($config['collect_serializer_data']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

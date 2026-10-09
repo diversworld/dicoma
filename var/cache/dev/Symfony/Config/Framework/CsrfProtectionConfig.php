@@ -11,11 +11,14 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 class CsrfProtectionConfig 
 {
     private $enabled;
+    private $statelessTokenIds;
+    private $checkHeader;
+    private $cookieName;
     private $_usedProperties = [];
 
     /**
      * @default null
-     * @param ParamConfigurator|bool $value
+     * @param ParamConfigurator|mixed $value
      * @return $this
      */
     public function enabled($value): static
@@ -26,16 +29,75 @@ class CsrfProtectionConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * @param ParamConfigurator|list<ParamConfigurator|mixed> $value
+     *
+     * @return $this
+     */
+    public function statelessTokenIds(ParamConfigurator|array $value): static
     {
-        if (array_key_exists('enabled', $value)) {
+        $this->_usedProperties['statelessTokenIds'] = true;
+        $this->statelessTokenIds = $value;
+
+        return $this;
+    }
+
+    /**
+     * Whether to check the CSRF token in a header in addition to a cookie when using stateless protection.
+     * @default false
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function checkHeader($value): static
+    {
+        $this->_usedProperties['checkHeader'] = true;
+        $this->checkHeader = $value;
+
+        return $this;
+    }
+
+    /**
+     * The name of the cookie to use when using stateless protection.
+     * @default 'csrf-token'
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function cookieName($value): static
+    {
+        $this->_usedProperties['cookieName'] = true;
+        $this->cookieName = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('stateless_token_ids', $config)) {
+            $this->_usedProperties['statelessTokenIds'] = true;
+            $this->statelessTokenIds = $config['stateless_token_ids'];
+            unset($config['stateless_token_ids']);
+        }
+
+        if (array_key_exists('check_header', $config)) {
+            $this->_usedProperties['checkHeader'] = true;
+            $this->checkHeader = $config['check_header'];
+            unset($config['check_header']);
+        }
+
+        if (array_key_exists('cookie_name', $config)) {
+            $this->_usedProperties['cookieName'] = true;
+            $this->cookieName = $config['cookie_name'];
+            unset($config['cookie_name']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -44,6 +106,15 @@ class CsrfProtectionConfig
         $output = [];
         if (isset($this->_usedProperties['enabled'])) {
             $output['enabled'] = $this->enabled;
+        }
+        if (isset($this->_usedProperties['statelessTokenIds'])) {
+            $output['stateless_token_ids'] = $this->statelessTokenIds;
+        }
+        if (isset($this->_usedProperties['checkHeader'])) {
+            $output['check_header'] = $this->checkHeader;
+        }
+        if (isset($this->_usedProperties['cookieName'])) {
+            $output['cookie_name'] = $this->cookieName;
         }
 
         return $output;

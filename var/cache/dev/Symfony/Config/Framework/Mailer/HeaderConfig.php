@@ -27,16 +27,16 @@ class HeaderConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('value', $value)) {
+        if (array_key_exists('value', $config)) {
             $this->_usedProperties['value'] = true;
-            $this->value = $value['value'];
-            unset($value['value']);
+            $this->value = $config['value'];
+            unset($config['value']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

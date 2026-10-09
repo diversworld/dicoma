@@ -2,6 +2,8 @@
 
 namespace Symfony\Config\Framework;
 
+require_once __DIR__.\DIRECTORY_SEPARATOR.'AssetMapper'.\DIRECTORY_SEPARATOR.'PrecompressConfig.php';
+
 use Symfony\Component\Config\Loader\ParamConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
@@ -22,6 +24,7 @@ class AssetMapperConfig
     private $importmapPolyfill;
     private $importmapScriptAttributes;
     private $vendorDir;
+    private $precompress;
     private $_usedProperties = [];
 
     /**
@@ -62,7 +65,7 @@ class AssetMapperConfig
     }
 
     /**
-     * If true, any files starting with "." will be excluded from the asset mapper
+     * If true, any files starting with "." will be excluded from the asset mapper.
      * @default true
      * @param ParamConfigurator|bool $value
      * @return $this
@@ -76,7 +79,7 @@ class AssetMapperConfig
     }
 
     /**
-     * If true, a "dev server" will return the assets from the public directory (true in "debug" mode only by default)
+     * If true, a "dev server" will return the assets from the public directory (true in "debug" mode only by default).
      * @default true
      * @param ParamConfigurator|bool $value
      * @return $this
@@ -90,7 +93,7 @@ class AssetMapperConfig
     }
 
     /**
-     * The public path where the assets will be written to (and served from when "server" is true)
+     * The public path where the assets will be written to (and served from when "server" is true).
      * @default '/assets/'
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -181,82 +184,115 @@ class AssetMapperConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * @template TValue of array|bool
+     * @param TValue $value
+     * Precompress assets with Brotli, Zstandard and gzip.
+     * @default {"enabled":false,"formats":[],"extensions":[]}
+     * @return \Symfony\Config\Framework\AssetMapper\PrecompressConfig|$this
+     * @psalm-return (TValue is array ? \Symfony\Config\Framework\AssetMapper\PrecompressConfig : static)
+     */
+    public function precompress(array|bool $value = []): \Symfony\Config\Framework\AssetMapper\PrecompressConfig|static
     {
-        if (array_key_exists('enabled', $value)) {
+        if (!\is_array($value)) {
+            $this->_usedProperties['precompress'] = true;
+            $this->precompress = $value;
+
+            return $this;
+        }
+
+        if (!$this->precompress instanceof \Symfony\Config\Framework\AssetMapper\PrecompressConfig) {
+            $this->_usedProperties['precompress'] = true;
+            $this->precompress = new \Symfony\Config\Framework\AssetMapper\PrecompressConfig($value);
+        } elseif (0 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "precompress()" has already been initialized. You cannot pass values the second time you call precompress().');
+        }
+
+        return $this->precompress;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('paths', $value)) {
+        if (array_key_exists('paths', $config)) {
             $this->_usedProperties['paths'] = true;
-            $this->paths = $value['paths'];
-            unset($value['paths']);
+            $this->paths = $config['paths'];
+            unset($config['paths']);
         }
 
-        if (array_key_exists('excluded_patterns', $value)) {
+        if (array_key_exists('excluded_patterns', $config)) {
             $this->_usedProperties['excludedPatterns'] = true;
-            $this->excludedPatterns = $value['excluded_patterns'];
-            unset($value['excluded_patterns']);
+            $this->excludedPatterns = $config['excluded_patterns'];
+            unset($config['excluded_patterns']);
         }
 
-        if (array_key_exists('exclude_dotfiles', $value)) {
+        if (array_key_exists('exclude_dotfiles', $config)) {
             $this->_usedProperties['excludeDotfiles'] = true;
-            $this->excludeDotfiles = $value['exclude_dotfiles'];
-            unset($value['exclude_dotfiles']);
+            $this->excludeDotfiles = $config['exclude_dotfiles'];
+            unset($config['exclude_dotfiles']);
         }
 
-        if (array_key_exists('server', $value)) {
+        if (array_key_exists('server', $config)) {
             $this->_usedProperties['server'] = true;
-            $this->server = $value['server'];
-            unset($value['server']);
+            $this->server = $config['server'];
+            unset($config['server']);
         }
 
-        if (array_key_exists('public_prefix', $value)) {
+        if (array_key_exists('public_prefix', $config)) {
             $this->_usedProperties['publicPrefix'] = true;
-            $this->publicPrefix = $value['public_prefix'];
-            unset($value['public_prefix']);
+            $this->publicPrefix = $config['public_prefix'];
+            unset($config['public_prefix']);
         }
 
-        if (array_key_exists('missing_import_mode', $value)) {
+        if (array_key_exists('missing_import_mode', $config)) {
             $this->_usedProperties['missingImportMode'] = true;
-            $this->missingImportMode = $value['missing_import_mode'];
-            unset($value['missing_import_mode']);
+            $this->missingImportMode = $config['missing_import_mode'];
+            unset($config['missing_import_mode']);
         }
 
-        if (array_key_exists('extensions', $value)) {
+        if (array_key_exists('extensions', $config)) {
             $this->_usedProperties['extensions'] = true;
-            $this->extensions = $value['extensions'];
-            unset($value['extensions']);
+            $this->extensions = $config['extensions'];
+            unset($config['extensions']);
         }
 
-        if (array_key_exists('importmap_path', $value)) {
+        if (array_key_exists('importmap_path', $config)) {
             $this->_usedProperties['importmapPath'] = true;
-            $this->importmapPath = $value['importmap_path'];
-            unset($value['importmap_path']);
+            $this->importmapPath = $config['importmap_path'];
+            unset($config['importmap_path']);
         }
 
-        if (array_key_exists('importmap_polyfill', $value)) {
+        if (array_key_exists('importmap_polyfill', $config)) {
             $this->_usedProperties['importmapPolyfill'] = true;
-            $this->importmapPolyfill = $value['importmap_polyfill'];
-            unset($value['importmap_polyfill']);
+            $this->importmapPolyfill = $config['importmap_polyfill'];
+            unset($config['importmap_polyfill']);
         }
 
-        if (array_key_exists('importmap_script_attributes', $value)) {
+        if (array_key_exists('importmap_script_attributes', $config)) {
             $this->_usedProperties['importmapScriptAttributes'] = true;
-            $this->importmapScriptAttributes = $value['importmap_script_attributes'];
-            unset($value['importmap_script_attributes']);
+            $this->importmapScriptAttributes = $config['importmap_script_attributes'];
+            unset($config['importmap_script_attributes']);
         }
 
-        if (array_key_exists('vendor_dir', $value)) {
+        if (array_key_exists('vendor_dir', $config)) {
             $this->_usedProperties['vendorDir'] = true;
-            $this->vendorDir = $value['vendor_dir'];
-            unset($value['vendor_dir']);
+            $this->vendorDir = $config['vendor_dir'];
+            unset($config['vendor_dir']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('precompress', $config)) {
+            $this->_usedProperties['precompress'] = true;
+            $this->precompress = \is_array($config['precompress']) ? new \Symfony\Config\Framework\AssetMapper\PrecompressConfig($config['precompress']) : $config['precompress'];
+            unset($config['precompress']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -298,6 +334,9 @@ class AssetMapperConfig
         }
         if (isset($this->_usedProperties['vendorDir'])) {
             $output['vendor_dir'] = $this->vendorDir;
+        }
+        if (isset($this->_usedProperties['precompress'])) {
+            $output['precompress'] = $this->precompress instanceof \Symfony\Config\Framework\AssetMapper\PrecompressConfig ? $this->precompress->toArray() : $this->precompress;
         }
 
         return $output;

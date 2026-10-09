@@ -25,7 +25,7 @@ class SecondLevelCacheConfig
     private $_usedProperties = [];
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @default {"type":null}
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionCacheDriverConfig|$this
@@ -139,58 +139,58 @@ class SecondLevelCacheConfig
         return $this->loggers[$name];
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('region_cache_driver', $value)) {
+        if (array_key_exists('region_cache_driver', $config)) {
             $this->_usedProperties['regionCacheDriver'] = true;
-            $this->regionCacheDriver = \is_array($value['region_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionCacheDriverConfig($value['region_cache_driver']) : $value['region_cache_driver'];
-            unset($value['region_cache_driver']);
+            $this->regionCacheDriver = \is_array($config['region_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionCacheDriverConfig($config['region_cache_driver']) : $config['region_cache_driver'];
+            unset($config['region_cache_driver']);
         }
 
-        if (array_key_exists('region_lock_lifetime', $value)) {
+        if (array_key_exists('region_lock_lifetime', $config)) {
             $this->_usedProperties['regionLockLifetime'] = true;
-            $this->regionLockLifetime = $value['region_lock_lifetime'];
-            unset($value['region_lock_lifetime']);
+            $this->regionLockLifetime = $config['region_lock_lifetime'];
+            unset($config['region_lock_lifetime']);
         }
 
-        if (array_key_exists('log_enabled', $value)) {
+        if (array_key_exists('log_enabled', $config)) {
             $this->_usedProperties['logEnabled'] = true;
-            $this->logEnabled = $value['log_enabled'];
-            unset($value['log_enabled']);
+            $this->logEnabled = $config['log_enabled'];
+            unset($config['log_enabled']);
         }
 
-        if (array_key_exists('region_lifetime', $value)) {
+        if (array_key_exists('region_lifetime', $config)) {
             $this->_usedProperties['regionLifetime'] = true;
-            $this->regionLifetime = $value['region_lifetime'];
-            unset($value['region_lifetime']);
+            $this->regionLifetime = $config['region_lifetime'];
+            unset($config['region_lifetime']);
         }
 
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('factory', $value)) {
+        if (array_key_exists('factory', $config)) {
             $this->_usedProperties['factory'] = true;
-            $this->factory = $value['factory'];
-            unset($value['factory']);
+            $this->factory = $config['factory'];
+            unset($config['factory']);
         }
 
-        if (array_key_exists('regions', $value)) {
+        if (array_key_exists('regions', $config)) {
             $this->_usedProperties['regions'] = true;
-            $this->regions = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionConfig($v), $value['regions']);
-            unset($value['regions']);
+            $this->regions = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionConfig($v), $config['regions']);
+            unset($config['regions']);
         }
 
-        if (array_key_exists('loggers', $value)) {
+        if (array_key_exists('loggers', $config)) {
             $this->_usedProperties['loggers'] = true;
-            $this->loggers = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\LoggerConfig($v), $value['loggers']);
-            unset($value['loggers']);
+            $this->loggers = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\LoggerConfig($v), $config['loggers']);
+            unset($config['loggers']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

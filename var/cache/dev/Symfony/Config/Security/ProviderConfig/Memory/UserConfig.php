@@ -40,22 +40,22 @@ class UserConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('password', $value)) {
+        if (array_key_exists('password', $config)) {
             $this->_usedProperties['password'] = true;
-            $this->password = $value['password'];
-            unset($value['password']);
+            $this->password = $config['password'];
+            unset($config['password']);
         }
 
-        if (array_key_exists('roles', $value)) {
+        if (array_key_exists('roles', $config)) {
             $this->_usedProperties['roles'] = true;
-            $this->roles = $value['roles'];
-            unset($value['roles']);
+            $this->roles = $config['roles'];
+            unset($config['roles']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

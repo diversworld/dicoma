@@ -44,22 +44,22 @@ class PhpErrorsConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('log', $value)) {
+        if (array_key_exists('log', $config)) {
             $this->_usedProperties['log'] = true;
-            $this->log = $value['log'];
-            unset($value['log']);
+            $this->log = $config['log'];
+            unset($config['log']);
         }
 
-        if (array_key_exists('throw', $value)) {
+        if (array_key_exists('throw', $config)) {
             $this->_usedProperties['throw'] = true;
-            $this->throw = $value['throw'];
-            unset($value['throw']);
+            $this->throw = $config['throw'];
+            unset($config['throw']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

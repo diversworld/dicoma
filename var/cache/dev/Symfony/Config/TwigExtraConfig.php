@@ -9,6 +9,7 @@ require_once __DIR__.\DIRECTORY_SEPARATOR.'TwigExtra'.\DIRECTORY_SEPARATOR.'Intl
 require_once __DIR__.\DIRECTORY_SEPARATOR.'TwigExtra'.\DIRECTORY_SEPARATOR.'CssinlinerConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'TwigExtra'.\DIRECTORY_SEPARATOR.'InkyConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'TwigExtra'.\DIRECTORY_SEPARATOR.'StringConfig.php';
+require_once __DIR__.\DIRECTORY_SEPARATOR.'TwigExtra'.\DIRECTORY_SEPARATOR.'CommonmarkConfig.php';
 
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
@@ -24,17 +25,21 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     private $cssinliner;
     private $inky;
     private $string;
+    private $commonmark;
     private $_usedProperties = [];
+    private $_hasDeprecatedCalls = false;
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\CacheConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\CacheConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function cache(array $value = []): \Symfony\Config\TwigExtra\CacheConfig|static
+    public function cache(array|bool $value = []): \Symfony\Config\TwigExtra\CacheConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['cache'] = true;
             $this->cache = $value;
@@ -53,14 +58,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
-     * @default {"enabled":false}
+     * @default {"enabled":true}
      * @return \Symfony\Config\TwigExtra\HtmlConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\HtmlConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function html(array $value = []): \Symfony\Config\TwigExtra\HtmlConfig|static
+    public function html(array|bool $value = []): \Symfony\Config\TwigExtra\HtmlConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['html'] = true;
             $this->html = $value;
@@ -79,14 +86,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\MarkdownConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\MarkdownConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function markdown(array $value = []): \Symfony\Config\TwigExtra\MarkdownConfig|static
+    public function markdown(array|bool $value = []): \Symfony\Config\TwigExtra\MarkdownConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['markdown'] = true;
             $this->markdown = $value;
@@ -105,14 +114,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\IntlConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\IntlConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function intl(array $value = []): \Symfony\Config\TwigExtra\IntlConfig|static
+    public function intl(array|bool $value = []): \Symfony\Config\TwigExtra\IntlConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['intl'] = true;
             $this->intl = $value;
@@ -131,14 +142,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\CssinlinerConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\CssinlinerConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function cssinliner(array $value = []): \Symfony\Config\TwigExtra\CssinlinerConfig|static
+    public function cssinliner(array|bool $value = []): \Symfony\Config\TwigExtra\CssinlinerConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['cssinliner'] = true;
             $this->cssinliner = $value;
@@ -157,14 +170,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\InkyConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\InkyConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function inky(array $value = []): \Symfony\Config\TwigExtra\InkyConfig|static
+    public function inky(array|bool $value = []): \Symfony\Config\TwigExtra\InkyConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['inky'] = true;
             $this->inky = $value;
@@ -183,14 +198,16 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false}
      * @return \Symfony\Config\TwigExtra\StringConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\TwigExtra\StringConfig : static)
+     * @deprecated since Symfony 7.4
      */
-    public function string(array $value = []): \Symfony\Config\TwigExtra\StringConfig|static
+    public function string(array|bool $value = []): \Symfony\Config\TwigExtra\StringConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['string'] = true;
             $this->string = $value;
@@ -208,57 +225,79 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
         return $this->string;
     }
 
+    /**
+     * @deprecated since Symfony 7.4
+     */
+    public function commonmark(array $value = []): \Symfony\Config\TwigExtra\CommonmarkConfig
+    {
+        $this->_hasDeprecatedCalls = true;
+        if (null === $this->commonmark) {
+            $this->_usedProperties['commonmark'] = true;
+            $this->commonmark = new \Symfony\Config\TwigExtra\CommonmarkConfig($value);
+        } elseif (0 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "commonmark()" has already been initialized. You cannot pass values the second time you call commonmark().');
+        }
+
+        return $this->commonmark;
+    }
+
     public function getExtensionAlias(): string
     {
         return 'twig_extra';
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('cache', $value)) {
+        if (array_key_exists('cache', $config)) {
             $this->_usedProperties['cache'] = true;
-            $this->cache = \is_array($value['cache']) ? new \Symfony\Config\TwigExtra\CacheConfig($value['cache']) : $value['cache'];
-            unset($value['cache']);
+            $this->cache = \is_array($config['cache']) ? new \Symfony\Config\TwigExtra\CacheConfig($config['cache']) : $config['cache'];
+            unset($config['cache']);
         }
 
-        if (array_key_exists('html', $value)) {
+        if (array_key_exists('html', $config)) {
             $this->_usedProperties['html'] = true;
-            $this->html = \is_array($value['html']) ? new \Symfony\Config\TwigExtra\HtmlConfig($value['html']) : $value['html'];
-            unset($value['html']);
+            $this->html = \is_array($config['html']) ? new \Symfony\Config\TwigExtra\HtmlConfig($config['html']) : $config['html'];
+            unset($config['html']);
         }
 
-        if (array_key_exists('markdown', $value)) {
+        if (array_key_exists('markdown', $config)) {
             $this->_usedProperties['markdown'] = true;
-            $this->markdown = \is_array($value['markdown']) ? new \Symfony\Config\TwigExtra\MarkdownConfig($value['markdown']) : $value['markdown'];
-            unset($value['markdown']);
+            $this->markdown = \is_array($config['markdown']) ? new \Symfony\Config\TwigExtra\MarkdownConfig($config['markdown']) : $config['markdown'];
+            unset($config['markdown']);
         }
 
-        if (array_key_exists('intl', $value)) {
+        if (array_key_exists('intl', $config)) {
             $this->_usedProperties['intl'] = true;
-            $this->intl = \is_array($value['intl']) ? new \Symfony\Config\TwigExtra\IntlConfig($value['intl']) : $value['intl'];
-            unset($value['intl']);
+            $this->intl = \is_array($config['intl']) ? new \Symfony\Config\TwigExtra\IntlConfig($config['intl']) : $config['intl'];
+            unset($config['intl']);
         }
 
-        if (array_key_exists('cssinliner', $value)) {
+        if (array_key_exists('cssinliner', $config)) {
             $this->_usedProperties['cssinliner'] = true;
-            $this->cssinliner = \is_array($value['cssinliner']) ? new \Symfony\Config\TwigExtra\CssinlinerConfig($value['cssinliner']) : $value['cssinliner'];
-            unset($value['cssinliner']);
+            $this->cssinliner = \is_array($config['cssinliner']) ? new \Symfony\Config\TwigExtra\CssinlinerConfig($config['cssinliner']) : $config['cssinliner'];
+            unset($config['cssinliner']);
         }
 
-        if (array_key_exists('inky', $value)) {
+        if (array_key_exists('inky', $config)) {
             $this->_usedProperties['inky'] = true;
-            $this->inky = \is_array($value['inky']) ? new \Symfony\Config\TwigExtra\InkyConfig($value['inky']) : $value['inky'];
-            unset($value['inky']);
+            $this->inky = \is_array($config['inky']) ? new \Symfony\Config\TwigExtra\InkyConfig($config['inky']) : $config['inky'];
+            unset($config['inky']);
         }
 
-        if (array_key_exists('string', $value)) {
+        if (array_key_exists('string', $config)) {
             $this->_usedProperties['string'] = true;
-            $this->string = \is_array($value['string']) ? new \Symfony\Config\TwigExtra\StringConfig($value['string']) : $value['string'];
-            unset($value['string']);
+            $this->string = \is_array($config['string']) ? new \Symfony\Config\TwigExtra\StringConfig($config['string']) : $config['string'];
+            unset($config['string']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('commonmark', $config)) {
+            $this->_usedProperties['commonmark'] = true;
+            $this->commonmark = new \Symfony\Config\TwigExtra\CommonmarkConfig($config['commonmark']);
+            unset($config['commonmark']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -285,6 +324,12 @@ class TwigExtraConfig implements \Symfony\Component\Config\Builder\ConfigBuilder
         }
         if (isset($this->_usedProperties['string'])) {
             $output['string'] = $this->string instanceof \Symfony\Config\TwigExtra\StringConfig ? $this->string->toArray() : $this->string;
+        }
+        if (isset($this->_usedProperties['commonmark'])) {
+            $output['commonmark'] = $this->commonmark->toArray();
+        }
+        if ($this->_hasDeprecatedCalls) {
+            trigger_deprecation('symfony/config', '7.4', 'Calling any fluent method on "%s" is deprecated; pass the configuration to the constructor instead.', $this::class);
         }
 
         return $output;

@@ -48,14 +48,12 @@ class TransportConfig
     }
 
     /**
-     * @param ParamConfigurator|list<ParamConfigurator|mixed> $value
-     *
      * @return $this
      */
-    public function options(ParamConfigurator|array $value): static
+    public function option(string $key, mixed $value): static
     {
         $this->_usedProperties['options'] = true;
-        $this->options = $value;
+        $this->options[$key] = $value;
 
         return $this;
     }
@@ -75,13 +73,13 @@ class TransportConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
-     * @default {"service":null,"max_retries":3,"delay":1000,"multiplier":2,"max_delay":0}
+     * @default {"service":null,"max_retries":3,"delay":1000,"multiplier":2,"max_delay":0,"jitter":0.1}
      * @return \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig : static)
      */
-    public function retryStrategy(mixed $value = []): \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig|static
+    public function retryStrategy(string|array $value = []): \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['retryStrategy'] = true;
@@ -101,7 +99,7 @@ class TransportConfig
     }
 
     /**
-     * Rate limiter name to use when processing messages
+     * Rate limiter name to use when processing messages.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -114,46 +112,46 @@ class TransportConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('dsn', $value)) {
+        if (array_key_exists('dsn', $config)) {
             $this->_usedProperties['dsn'] = true;
-            $this->dsn = $value['dsn'];
-            unset($value['dsn']);
+            $this->dsn = $config['dsn'];
+            unset($config['dsn']);
         }
 
-        if (array_key_exists('serializer', $value)) {
+        if (array_key_exists('serializer', $config)) {
             $this->_usedProperties['serializer'] = true;
-            $this->serializer = $value['serializer'];
-            unset($value['serializer']);
+            $this->serializer = $config['serializer'];
+            unset($config['serializer']);
         }
 
-        if (array_key_exists('options', $value)) {
+        if (array_key_exists('options', $config)) {
             $this->_usedProperties['options'] = true;
-            $this->options = $value['options'];
-            unset($value['options']);
+            $this->options = $config['options'];
+            unset($config['options']);
         }
 
-        if (array_key_exists('failure_transport', $value)) {
+        if (array_key_exists('failure_transport', $config)) {
             $this->_usedProperties['failureTransport'] = true;
-            $this->failureTransport = $value['failure_transport'];
-            unset($value['failure_transport']);
+            $this->failureTransport = $config['failure_transport'];
+            unset($config['failure_transport']);
         }
 
-        if (array_key_exists('retry_strategy', $value)) {
+        if (array_key_exists('retry_strategy', $config)) {
             $this->_usedProperties['retryStrategy'] = true;
-            $this->retryStrategy = \is_array($value['retry_strategy']) ? new \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig($value['retry_strategy']) : $value['retry_strategy'];
-            unset($value['retry_strategy']);
+            $this->retryStrategy = \is_array($config['retry_strategy']) ? new \Symfony\Config\Framework\Messenger\TransportConfig\RetryStrategyConfig($config['retry_strategy']) : $config['retry_strategy'];
+            unset($config['retry_strategy']);
         }
 
-        if (array_key_exists('rate_limiter', $value)) {
+        if (array_key_exists('rate_limiter', $config)) {
             $this->_usedProperties['rateLimiter'] = true;
-            $this->rateLimiter = $value['rate_limiter'];
-            unset($value['rate_limiter']);
+            $this->rateLimiter = $config['rate_limiter'];
+            unset($config['rate_limiter']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

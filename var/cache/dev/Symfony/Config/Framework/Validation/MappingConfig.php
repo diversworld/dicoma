@@ -26,16 +26,16 @@ class MappingConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('paths', $value)) {
+        if (array_key_exists('paths', $config)) {
             $this->_usedProperties['paths'] = true;
-            $this->paths = $value['paths'];
-            unset($value['paths']);
+            $this->paths = $config['paths'];
+            unset($config['paths']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

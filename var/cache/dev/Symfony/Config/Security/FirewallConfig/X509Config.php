@@ -68,34 +68,34 @@ class X509Config
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('user', $value)) {
+        if (array_key_exists('user', $config)) {
             $this->_usedProperties['user'] = true;
-            $this->user = $value['user'];
-            unset($value['user']);
+            $this->user = $config['user'];
+            unset($config['user']);
         }
 
-        if (array_key_exists('credentials', $value)) {
+        if (array_key_exists('credentials', $config)) {
             $this->_usedProperties['credentials'] = true;
-            $this->credentials = $value['credentials'];
-            unset($value['credentials']);
+            $this->credentials = $config['credentials'];
+            unset($config['credentials']);
         }
 
-        if (array_key_exists('user_identifier', $value)) {
+        if (array_key_exists('user_identifier', $config)) {
             $this->_usedProperties['userIdentifier'] = true;
-            $this->userIdentifier = $value['user_identifier'];
-            unset($value['user_identifier']);
+            $this->userIdentifier = $config['user_identifier'];
+            unset($config['user_identifier']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

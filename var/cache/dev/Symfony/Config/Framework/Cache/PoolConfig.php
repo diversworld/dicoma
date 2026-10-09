@@ -20,11 +20,11 @@ class PoolConfig
     private $_usedProperties = [];
 
     /**
-     * @param ParamConfigurator|list<ParamConfigurator|mixed>|mixed $value
+     * @param ParamConfigurator|list<ParamConfigurator|mixed>|string $value
      *
      * @return $this
      */
-    public function adapters(mixed $value): static
+    public function adapters(ParamConfigurator|string|array $value): static
     {
         $this->_usedProperties['adapters'] = true;
         $this->adapters = $value;
@@ -59,7 +59,7 @@ class PoolConfig
     }
 
     /**
-     * Default lifetime of the pool
+     * Default lifetime of the pool.
      * @example "300" for 5 minutes expressed in seconds, "PT5M" for five minutes expressed as ISO 8601 time interval, or "5 minutes" as a date expression
      * @default null
      * @param ParamConfigurator|mixed $value
@@ -114,52 +114,52 @@ class PoolConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('adapters', $value)) {
+        if (array_key_exists('adapters', $config)) {
             $this->_usedProperties['adapters'] = true;
-            $this->adapters = $value['adapters'];
-            unset($value['adapters']);
+            $this->adapters = $config['adapters'];
+            unset($config['adapters']);
         }
 
-        if (array_key_exists('tags', $value)) {
+        if (array_key_exists('tags', $config)) {
             $this->_usedProperties['tags'] = true;
-            $this->tags = $value['tags'];
-            unset($value['tags']);
+            $this->tags = $config['tags'];
+            unset($config['tags']);
         }
 
-        if (array_key_exists('public', $value)) {
+        if (array_key_exists('public', $config)) {
             $this->_usedProperties['public'] = true;
-            $this->public = $value['public'];
-            unset($value['public']);
+            $this->public = $config['public'];
+            unset($config['public']);
         }
 
-        if (array_key_exists('default_lifetime', $value)) {
+        if (array_key_exists('default_lifetime', $config)) {
             $this->_usedProperties['defaultLifetime'] = true;
-            $this->defaultLifetime = $value['default_lifetime'];
-            unset($value['default_lifetime']);
+            $this->defaultLifetime = $config['default_lifetime'];
+            unset($config['default_lifetime']);
         }
 
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('early_expiration_message_bus', $value)) {
+        if (array_key_exists('early_expiration_message_bus', $config)) {
             $this->_usedProperties['earlyExpirationMessageBus'] = true;
-            $this->earlyExpirationMessageBus = $value['early_expiration_message_bus'];
-            unset($value['early_expiration_message_bus']);
+            $this->earlyExpirationMessageBus = $config['early_expiration_message_bus'];
+            unset($config['early_expiration_message_bus']);
         }
 
-        if (array_key_exists('clearer', $value)) {
+        if (array_key_exists('clearer', $config)) {
             $this->_usedProperties['clearer'] = true;
-            $this->clearer = $value['clearer'];
-            unset($value['clearer']);
+            $this->clearer = $config['clearer'];
+            unset($config['clearer']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

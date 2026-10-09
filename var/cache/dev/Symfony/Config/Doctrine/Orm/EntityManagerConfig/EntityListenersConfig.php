@@ -26,16 +26,16 @@ class EntityListenersConfig
         return $this->entities[$class];
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('entities', $value)) {
+        if (array_key_exists('entities', $config)) {
             $this->_usedProperties['entities'] = true;
-            $this->entities = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListeners\EntityConfig($v), $value['entities']);
-            unset($value['entities']);
+            $this->entities = array_map(fn ($v) => new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListeners\EntityConfig($v), $config['entities']);
+            unset($config['entities']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

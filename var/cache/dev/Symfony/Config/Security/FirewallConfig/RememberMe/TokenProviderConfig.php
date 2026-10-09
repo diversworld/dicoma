@@ -17,7 +17,7 @@ class TokenProviderConfig
     private $_usedProperties = [];
 
     /**
-     * The service ID of a custom rememberme token provider.
+     * The service ID of a custom remember-me token provider.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -31,13 +31,13 @@ class TokenProviderConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false,"connection":null}
      * @return \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig : static)
      */
-    public function doctrine(array $value = []): \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig|static
+    public function doctrine(array|bool $value = []): \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['doctrine'] = true;
@@ -56,22 +56,22 @@ class TokenProviderConfig
         return $this->doctrine;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('doctrine', $value)) {
+        if (array_key_exists('doctrine', $config)) {
             $this->_usedProperties['doctrine'] = true;
-            $this->doctrine = \is_array($value['doctrine']) ? new \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig($value['doctrine']) : $value['doctrine'];
-            unset($value['doctrine']);
+            $this->doctrine = \is_array($config['doctrine']) ? new \Symfony\Config\Security\FirewallConfig\RememberMe\TokenProvider\DoctrineConfig($config['doctrine']) : $config['doctrine'];
+            unset($config['doctrine']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

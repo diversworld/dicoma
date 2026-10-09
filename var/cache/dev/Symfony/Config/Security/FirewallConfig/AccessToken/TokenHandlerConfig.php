@@ -4,6 +4,7 @@ namespace Symfony\Config\Security\FirewallConfig\AccessToken;
 
 require_once __DIR__.\DIRECTORY_SEPARATOR.'TokenHandler'.\DIRECTORY_SEPARATOR.'OidcUserInfoConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'TokenHandler'.\DIRECTORY_SEPARATOR.'OidcConfig.php';
+require_once __DIR__.\DIRECTORY_SEPARATOR.'TokenHandler'.\DIRECTORY_SEPARATOR.'CasConfig.php';
 
 use Symfony\Component\Config\Loader\ParamConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -16,6 +17,8 @@ class TokenHandlerConfig
     private $id;
     private $oidcUserInfo;
     private $oidc;
+    private $cas;
+    private $oauth2;
     private $_usedProperties = [];
 
     /**
@@ -32,7 +35,7 @@ class TokenHandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcUserInfoConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcUserInfoConfig : static)
@@ -68,28 +71,65 @@ class TokenHandlerConfig
         return $this->oidc;
     }
 
-    public function __construct(array $value = [])
+    public function cas(array $value = []): \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\CasConfig
     {
-        if (array_key_exists('id', $value)) {
+        if (null === $this->cas) {
+            $this->_usedProperties['cas'] = true;
+            $this->cas = new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\CasConfig($value);
+        } elseif (0 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "cas()" has already been initialized. You cannot pass values the second time you call cas().');
+        }
+
+        return $this->cas;
+    }
+
+    /**
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function oauth2($value): static
+    {
+        $this->_usedProperties['oauth2'] = true;
+        $this->oauth2 = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('id', $config)) {
             $this->_usedProperties['id'] = true;
-            $this->id = $value['id'];
-            unset($value['id']);
+            $this->id = $config['id'];
+            unset($config['id']);
         }
 
-        if (array_key_exists('oidc_user_info', $value)) {
+        if (array_key_exists('oidc_user_info', $config)) {
             $this->_usedProperties['oidcUserInfo'] = true;
-            $this->oidcUserInfo = \is_array($value['oidc_user_info']) ? new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcUserInfoConfig($value['oidc_user_info']) : $value['oidc_user_info'];
-            unset($value['oidc_user_info']);
+            $this->oidcUserInfo = \is_array($config['oidc_user_info']) ? new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcUserInfoConfig($config['oidc_user_info']) : $config['oidc_user_info'];
+            unset($config['oidc_user_info']);
         }
 
-        if (array_key_exists('oidc', $value)) {
+        if (array_key_exists('oidc', $config)) {
             $this->_usedProperties['oidc'] = true;
-            $this->oidc = new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcConfig($value['oidc']);
-            unset($value['oidc']);
+            $this->oidc = new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\OidcConfig($config['oidc']);
+            unset($config['oidc']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('cas', $config)) {
+            $this->_usedProperties['cas'] = true;
+            $this->cas = new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandler\CasConfig($config['cas']);
+            unset($config['cas']);
+        }
+
+        if (array_key_exists('oauth2', $config)) {
+            $this->_usedProperties['oauth2'] = true;
+            $this->oauth2 = $config['oauth2'];
+            unset($config['oauth2']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -104,6 +144,12 @@ class TokenHandlerConfig
         }
         if (isset($this->_usedProperties['oidc'])) {
             $output['oidc'] = $this->oidc->toArray();
+        }
+        if (isset($this->_usedProperties['cas'])) {
+            $output['cas'] = $this->cas->toArray();
+        }
+        if (isset($this->_usedProperties['oauth2'])) {
+            $output['oauth2'] = $this->oauth2;
         }
 
         return $output;

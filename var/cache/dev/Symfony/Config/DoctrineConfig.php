@@ -15,15 +15,18 @@ class DoctrineConfig implements \Symfony\Component\Config\Builder\ConfigBuilderI
     private $dbal;
     private $orm;
     private $_usedProperties = [];
+    private $_hasDeprecatedCalls = false;
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\DbalConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\DbalConfig : static)
+     * @deprecated since Symfony 7.4
      */
     public function dbal(mixed $value = []): \Symfony\Config\Doctrine\DbalConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['dbal'] = true;
             $this->dbal = $value;
@@ -42,13 +45,15 @@ class DoctrineConfig implements \Symfony\Component\Config\Builder\ConfigBuilderI
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\OrmConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\OrmConfig : static)
+     * @deprecated since Symfony 7.4
      */
     public function orm(mixed $value = []): \Symfony\Config\Doctrine\OrmConfig|static
     {
+        $this->_hasDeprecatedCalls = true;
         if (!\is_array($value)) {
             $this->_usedProperties['orm'] = true;
             $this->orm = $value;
@@ -71,22 +76,22 @@ class DoctrineConfig implements \Symfony\Component\Config\Builder\ConfigBuilderI
         return 'doctrine';
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('dbal', $value)) {
+        if (array_key_exists('dbal', $config)) {
             $this->_usedProperties['dbal'] = true;
-            $this->dbal = \is_array($value['dbal']) ? new \Symfony\Config\Doctrine\DbalConfig($value['dbal']) : $value['dbal'];
-            unset($value['dbal']);
+            $this->dbal = \is_array($config['dbal']) ? new \Symfony\Config\Doctrine\DbalConfig($config['dbal']) : $config['dbal'];
+            unset($config['dbal']);
         }
 
-        if (array_key_exists('orm', $value)) {
+        if (array_key_exists('orm', $config)) {
             $this->_usedProperties['orm'] = true;
-            $this->orm = \is_array($value['orm']) ? new \Symfony\Config\Doctrine\OrmConfig($value['orm']) : $value['orm'];
-            unset($value['orm']);
+            $this->orm = \is_array($config['orm']) ? new \Symfony\Config\Doctrine\OrmConfig($config['orm']) : $config['orm'];
+            unset($config['orm']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -98,6 +103,9 @@ class DoctrineConfig implements \Symfony\Component\Config\Builder\ConfigBuilderI
         }
         if (isset($this->_usedProperties['orm'])) {
             $output['orm'] = $this->orm instanceof \Symfony\Config\Doctrine\OrmConfig ? $this->orm->toArray() : $this->orm;
+        }
+        if ($this->_hasDeprecatedCalls) {
+            trigger_deprecation('symfony/config', '7.4', 'Calling any fluent method on "%s" is deprecated; pass the configuration to the constructor instead.', $this::class);
         }
 
         return $output;

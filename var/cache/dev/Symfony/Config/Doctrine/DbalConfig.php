@@ -33,7 +33,7 @@ class DbalConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\Dbal\TypeConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\Dbal\TypeConfig : static)
@@ -69,7 +69,7 @@ class DbalConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\Dbal\ConnectionConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\Dbal\ConnectionConfig : static)
@@ -93,34 +93,34 @@ class DbalConfig
         return $this->connections[$name];
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('default_connection', $value)) {
+        if (array_key_exists('default_connection', $config)) {
             $this->_usedProperties['defaultConnection'] = true;
-            $this->defaultConnection = $value['default_connection'];
-            unset($value['default_connection']);
+            $this->defaultConnection = $config['default_connection'];
+            unset($config['default_connection']);
         }
 
-        if (array_key_exists('types', $value)) {
+        if (array_key_exists('types', $config)) {
             $this->_usedProperties['types'] = true;
-            $this->types = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Dbal\TypeConfig($v) : $v, $value['types']);
-            unset($value['types']);
+            $this->types = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Dbal\TypeConfig($v) : $v, $config['types']);
+            unset($config['types']);
         }
 
-        if (array_key_exists('driver_schemes', $value)) {
+        if (array_key_exists('driver_schemes', $config)) {
             $this->_usedProperties['driverSchemes'] = true;
-            $this->driverSchemes = $value['driver_schemes'];
-            unset($value['driver_schemes']);
+            $this->driverSchemes = $config['driver_schemes'];
+            unset($config['driver_schemes']);
         }
 
-        if (array_key_exists('connections', $value)) {
+        if (array_key_exists('connections', $config)) {
             $this->_usedProperties['connections'] = true;
-            $this->connections = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Dbal\ConnectionConfig($v) : $v, $value['connections']);
-            unset($value['connections']);
+            $this->connections = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Dbal\ConnectionConfig($v) : $v, $config['connections']);
+            unset($config['connections']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

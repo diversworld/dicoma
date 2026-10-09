@@ -40,22 +40,22 @@ class EmailPrototypeConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('id', $value)) {
+        if (array_key_exists('id', $config)) {
             $this->_usedProperties['id'] = true;
-            $this->id = $value['id'];
-            unset($value['id']);
+            $this->id = $config['id'];
+            unset($config['id']);
         }
 
-        if (array_key_exists('method', $value)) {
+        if (array_key_exists('method', $config)) {
             $this->_usedProperties['method'] = true;
-            $this->method = $value['method'];
-            unset($value['method']);
+            $this->method = $config['method'];
+            unset($config['method']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

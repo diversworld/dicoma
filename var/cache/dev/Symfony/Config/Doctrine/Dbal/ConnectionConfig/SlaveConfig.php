@@ -128,7 +128,7 @@ class SlaveConfig
     /**
      * @default null
      * @param ParamConfigurator|bool $value
-     * @deprecated The "doctrine.dbal.override_url" configuration key is deprecated.
+     * @deprecated Since doctrine/doctrine-bundle 2.4: The "doctrine.dbal.override_url" configuration key is deprecated.
      * @return $this
      */
     public function overrideUrl($value): static
@@ -140,6 +140,7 @@ class SlaveConfig
     }
 
     /**
+     * Adds the given suffix to the configured database name, this option has no effects for the SQLite platform
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -303,7 +304,7 @@ class SlaveConfig
     }
 
     /**
-     * Override the default database (postgres) to connect to for PostgreSQL connexion.
+     * Override the default database (postgres) to connect to for PostgreSQL connection.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -456,190 +457,190 @@ class SlaveConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('url', $value)) {
+        if (array_key_exists('url', $config)) {
             $this->_usedProperties['url'] = true;
-            $this->url = $value['url'];
-            unset($value['url']);
+            $this->url = $config['url'];
+            unset($config['url']);
         }
 
-        if (array_key_exists('dbname', $value)) {
+        if (array_key_exists('dbname', $config)) {
             $this->_usedProperties['dbname'] = true;
-            $this->dbname = $value['dbname'];
-            unset($value['dbname']);
+            $this->dbname = $config['dbname'];
+            unset($config['dbname']);
         }
 
-        if (array_key_exists('host', $value)) {
+        if (array_key_exists('host', $config)) {
             $this->_usedProperties['host'] = true;
-            $this->host = $value['host'];
-            unset($value['host']);
+            $this->host = $config['host'];
+            unset($config['host']);
         }
 
-        if (array_key_exists('port', $value)) {
+        if (array_key_exists('port', $config)) {
             $this->_usedProperties['port'] = true;
-            $this->port = $value['port'];
-            unset($value['port']);
+            $this->port = $config['port'];
+            unset($config['port']);
         }
 
-        if (array_key_exists('user', $value)) {
+        if (array_key_exists('user', $config)) {
             $this->_usedProperties['user'] = true;
-            $this->user = $value['user'];
-            unset($value['user']);
+            $this->user = $config['user'];
+            unset($config['user']);
         }
 
-        if (array_key_exists('password', $value)) {
+        if (array_key_exists('password', $config)) {
             $this->_usedProperties['password'] = true;
-            $this->password = $value['password'];
-            unset($value['password']);
+            $this->password = $config['password'];
+            unset($config['password']);
         }
 
-        if (array_key_exists('override_url', $value)) {
+        if (array_key_exists('override_url', $config)) {
             $this->_usedProperties['overrideUrl'] = true;
-            $this->overrideUrl = $value['override_url'];
-            unset($value['override_url']);
+            $this->overrideUrl = $config['override_url'];
+            unset($config['override_url']);
         }
 
-        if (array_key_exists('dbname_suffix', $value)) {
+        if (array_key_exists('dbname_suffix', $config)) {
             $this->_usedProperties['dbnameSuffix'] = true;
-            $this->dbnameSuffix = $value['dbname_suffix'];
-            unset($value['dbname_suffix']);
+            $this->dbnameSuffix = $config['dbname_suffix'];
+            unset($config['dbname_suffix']);
         }
 
-        if (array_key_exists('application_name', $value)) {
+        if (array_key_exists('application_name', $config)) {
             $this->_usedProperties['applicationName'] = true;
-            $this->applicationName = $value['application_name'];
-            unset($value['application_name']);
+            $this->applicationName = $config['application_name'];
+            unset($config['application_name']);
         }
 
-        if (array_key_exists('charset', $value)) {
+        if (array_key_exists('charset', $config)) {
             $this->_usedProperties['charset'] = true;
-            $this->charset = $value['charset'];
-            unset($value['charset']);
+            $this->charset = $config['charset'];
+            unset($config['charset']);
         }
 
-        if (array_key_exists('path', $value)) {
+        if (array_key_exists('path', $config)) {
             $this->_usedProperties['path'] = true;
-            $this->path = $value['path'];
-            unset($value['path']);
+            $this->path = $config['path'];
+            unset($config['path']);
         }
 
-        if (array_key_exists('memory', $value)) {
+        if (array_key_exists('memory', $config)) {
             $this->_usedProperties['memory'] = true;
-            $this->memory = $value['memory'];
-            unset($value['memory']);
+            $this->memory = $config['memory'];
+            unset($config['memory']);
         }
 
-        if (array_key_exists('unix_socket', $value)) {
+        if (array_key_exists('unix_socket', $config)) {
             $this->_usedProperties['unixSocket'] = true;
-            $this->unixSocket = $value['unix_socket'];
-            unset($value['unix_socket']);
+            $this->unixSocket = $config['unix_socket'];
+            unset($config['unix_socket']);
         }
 
-        if (array_key_exists('persistent', $value)) {
+        if (array_key_exists('persistent', $config)) {
             $this->_usedProperties['persistent'] = true;
-            $this->persistent = $value['persistent'];
-            unset($value['persistent']);
+            $this->persistent = $config['persistent'];
+            unset($config['persistent']);
         }
 
-        if (array_key_exists('protocol', $value)) {
+        if (array_key_exists('protocol', $config)) {
             $this->_usedProperties['protocol'] = true;
-            $this->protocol = $value['protocol'];
-            unset($value['protocol']);
+            $this->protocol = $config['protocol'];
+            unset($config['protocol']);
         }
 
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('servicename', $value)) {
+        if (array_key_exists('servicename', $config)) {
             $this->_usedProperties['servicename'] = true;
-            $this->servicename = $value['servicename'];
-            unset($value['servicename']);
+            $this->servicename = $config['servicename'];
+            unset($config['servicename']);
         }
 
-        if (array_key_exists('sessionMode', $value)) {
+        if (array_key_exists('sessionMode', $config)) {
             $this->_usedProperties['sessionMode'] = true;
-            $this->sessionMode = $value['sessionMode'];
-            unset($value['sessionMode']);
+            $this->sessionMode = $config['sessionMode'];
+            unset($config['sessionMode']);
         }
 
-        if (array_key_exists('server', $value)) {
+        if (array_key_exists('server', $config)) {
             $this->_usedProperties['server'] = true;
-            $this->server = $value['server'];
-            unset($value['server']);
+            $this->server = $config['server'];
+            unset($config['server']);
         }
 
-        if (array_key_exists('default_dbname', $value)) {
+        if (array_key_exists('default_dbname', $config)) {
             $this->_usedProperties['defaultDbname'] = true;
-            $this->defaultDbname = $value['default_dbname'];
-            unset($value['default_dbname']);
+            $this->defaultDbname = $config['default_dbname'];
+            unset($config['default_dbname']);
         }
 
-        if (array_key_exists('sslmode', $value)) {
+        if (array_key_exists('sslmode', $config)) {
             $this->_usedProperties['sslmode'] = true;
-            $this->sslmode = $value['sslmode'];
-            unset($value['sslmode']);
+            $this->sslmode = $config['sslmode'];
+            unset($config['sslmode']);
         }
 
-        if (array_key_exists('sslrootcert', $value)) {
+        if (array_key_exists('sslrootcert', $config)) {
             $this->_usedProperties['sslrootcert'] = true;
-            $this->sslrootcert = $value['sslrootcert'];
-            unset($value['sslrootcert']);
+            $this->sslrootcert = $config['sslrootcert'];
+            unset($config['sslrootcert']);
         }
 
-        if (array_key_exists('sslcert', $value)) {
+        if (array_key_exists('sslcert', $config)) {
             $this->_usedProperties['sslcert'] = true;
-            $this->sslcert = $value['sslcert'];
-            unset($value['sslcert']);
+            $this->sslcert = $config['sslcert'];
+            unset($config['sslcert']);
         }
 
-        if (array_key_exists('sslkey', $value)) {
+        if (array_key_exists('sslkey', $config)) {
             $this->_usedProperties['sslkey'] = true;
-            $this->sslkey = $value['sslkey'];
-            unset($value['sslkey']);
+            $this->sslkey = $config['sslkey'];
+            unset($config['sslkey']);
         }
 
-        if (array_key_exists('sslcrl', $value)) {
+        if (array_key_exists('sslcrl', $config)) {
             $this->_usedProperties['sslcrl'] = true;
-            $this->sslcrl = $value['sslcrl'];
-            unset($value['sslcrl']);
+            $this->sslcrl = $config['sslcrl'];
+            unset($config['sslcrl']);
         }
 
-        if (array_key_exists('pooled', $value)) {
+        if (array_key_exists('pooled', $config)) {
             $this->_usedProperties['pooled'] = true;
-            $this->pooled = $value['pooled'];
-            unset($value['pooled']);
+            $this->pooled = $config['pooled'];
+            unset($config['pooled']);
         }
 
-        if (array_key_exists('MultipleActiveResultSets', $value)) {
+        if (array_key_exists('MultipleActiveResultSets', $config)) {
             $this->_usedProperties['multipleActiveResultSets'] = true;
-            $this->multipleActiveResultSets = $value['MultipleActiveResultSets'];
-            unset($value['MultipleActiveResultSets']);
+            $this->multipleActiveResultSets = $config['MultipleActiveResultSets'];
+            unset($config['MultipleActiveResultSets']);
         }
 
-        if (array_key_exists('use_savepoints', $value)) {
+        if (array_key_exists('use_savepoints', $config)) {
             $this->_usedProperties['useSavepoints'] = true;
-            $this->useSavepoints = $value['use_savepoints'];
-            unset($value['use_savepoints']);
+            $this->useSavepoints = $config['use_savepoints'];
+            unset($config['use_savepoints']);
         }
 
-        if (array_key_exists('instancename', $value)) {
+        if (array_key_exists('instancename', $config)) {
             $this->_usedProperties['instancename'] = true;
-            $this->instancename = $value['instancename'];
-            unset($value['instancename']);
+            $this->instancename = $config['instancename'];
+            unset($config['instancename']);
         }
 
-        if (array_key_exists('connectstring', $value)) {
+        if (array_key_exists('connectstring', $config)) {
             $this->_usedProperties['connectstring'] = true;
-            $this->connectstring = $value['connectstring'];
-            unset($value['connectstring']);
+            $this->connectstring = $config['connectstring'];
+            unset($config['connectstring']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

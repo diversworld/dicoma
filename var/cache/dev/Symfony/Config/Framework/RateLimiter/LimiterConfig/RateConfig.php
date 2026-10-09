@@ -29,7 +29,7 @@ class RateConfig
     }
 
     /**
-     * Amount of tokens to add each interval
+     * Amount of tokens to add each interval.
      * @default 1
      * @param ParamConfigurator|int $value
      * @return $this
@@ -42,22 +42,22 @@ class RateConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('interval', $value)) {
+        if (array_key_exists('interval', $config)) {
             $this->_usedProperties['interval'] = true;
-            $this->interval = $value['interval'];
-            unset($value['interval']);
+            $this->interval = $config['interval'];
+            unset($config['interval']);
         }
 
-        if (array_key_exists('amount', $value)) {
+        if (array_key_exists('amount', $config)) {
             $this->_usedProperties['amount'] = true;
-            $this->amount = $value['amount'];
-            unset($value['amount']);
+            $this->amount = $config['amount'];
+            unset($config['amount']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

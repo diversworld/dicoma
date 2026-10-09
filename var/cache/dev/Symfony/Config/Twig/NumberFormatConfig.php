@@ -54,28 +54,28 @@ class NumberFormatConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('decimals', $value)) {
+        if (array_key_exists('decimals', $config)) {
             $this->_usedProperties['decimals'] = true;
-            $this->decimals = $value['decimals'];
-            unset($value['decimals']);
+            $this->decimals = $config['decimals'];
+            unset($config['decimals']);
         }
 
-        if (array_key_exists('decimal_point', $value)) {
+        if (array_key_exists('decimal_point', $config)) {
             $this->_usedProperties['decimalPoint'] = true;
-            $this->decimalPoint = $value['decimal_point'];
-            unset($value['decimal_point']);
+            $this->decimalPoint = $config['decimal_point'];
+            unset($config['decimal_point']);
         }
 
-        if (array_key_exists('thousands_separator', $value)) {
+        if (array_key_exists('thousands_separator', $config)) {
             $this->_usedProperties['thousandsSeparator'] = true;
-            $this->thousandsSeparator = $value['thousands_separator'];
-            unset($value['thousands_separator']);
+            $this->thousandsSeparator = $config['thousands_separator'];
+            unset($config['thousands_separator']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

@@ -40,22 +40,22 @@ class MiddlewareConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('id', $value)) {
+        if (array_key_exists('id', $config)) {
             $this->_usedProperties['id'] = true;
-            $this->id = $value['id'];
-            unset($value['id']);
+            $this->id = $config['id'];
+            unset($config['id']);
         }
 
-        if (array_key_exists('arguments', $value)) {
+        if (array_key_exists('arguments', $config)) {
             $this->_usedProperties['arguments'] = true;
-            $this->arguments = $value['arguments'];
-            unset($value['arguments']);
+            $this->arguments = $config['arguments'];
+            unset($config['arguments']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

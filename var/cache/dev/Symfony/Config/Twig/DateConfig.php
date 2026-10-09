@@ -42,7 +42,7 @@ class DateConfig
     }
 
     /**
-     * The timezone used when formatting dates, when set to null, the timezone returned by date_default_timezone_get() is used
+     * The timezone used when formatting dates, when set to null, the timezone returned by date_default_timezone_get() is used.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -55,28 +55,28 @@ class DateConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('format', $value)) {
+        if (array_key_exists('format', $config)) {
             $this->_usedProperties['format'] = true;
-            $this->format = $value['format'];
-            unset($value['format']);
+            $this->format = $config['format'];
+            unset($config['format']);
         }
 
-        if (array_key_exists('interval_format', $value)) {
+        if (array_key_exists('interval_format', $config)) {
             $this->_usedProperties['intervalFormat'] = true;
-            $this->intervalFormat = $value['interval_format'];
-            unset($value['interval_format']);
+            $this->intervalFormat = $config['interval_format'];
+            unset($config['interval_format']);
         }
 
-        if (array_key_exists('timezone', $value)) {
+        if (array_key_exists('timezone', $config)) {
             $this->_usedProperties['timezone'] = true;
-            $this->timezone = $value['timezone'];
-            unset($value['timezone']);
+            $this->timezone = $config['timezone'];
+            unset($config['timezone']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

@@ -206,94 +206,94 @@ class JsonLoginLdapConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('remember_me', $value)) {
+        if (array_key_exists('remember_me', $config)) {
             $this->_usedProperties['rememberMe'] = true;
-            $this->rememberMe = $value['remember_me'];
-            unset($value['remember_me']);
+            $this->rememberMe = $config['remember_me'];
+            unset($config['remember_me']);
         }
 
-        if (array_key_exists('success_handler', $value)) {
+        if (array_key_exists('success_handler', $config)) {
             $this->_usedProperties['successHandler'] = true;
-            $this->successHandler = $value['success_handler'];
-            unset($value['success_handler']);
+            $this->successHandler = $config['success_handler'];
+            unset($config['success_handler']);
         }
 
-        if (array_key_exists('failure_handler', $value)) {
+        if (array_key_exists('failure_handler', $config)) {
             $this->_usedProperties['failureHandler'] = true;
-            $this->failureHandler = $value['failure_handler'];
-            unset($value['failure_handler']);
+            $this->failureHandler = $config['failure_handler'];
+            unset($config['failure_handler']);
         }
 
-        if (array_key_exists('check_path', $value)) {
+        if (array_key_exists('check_path', $config)) {
             $this->_usedProperties['checkPath'] = true;
-            $this->checkPath = $value['check_path'];
-            unset($value['check_path']);
+            $this->checkPath = $config['check_path'];
+            unset($config['check_path']);
         }
 
-        if (array_key_exists('use_forward', $value)) {
+        if (array_key_exists('use_forward', $config)) {
             $this->_usedProperties['useForward'] = true;
-            $this->useForward = $value['use_forward'];
-            unset($value['use_forward']);
+            $this->useForward = $config['use_forward'];
+            unset($config['use_forward']);
         }
 
-        if (array_key_exists('login_path', $value)) {
+        if (array_key_exists('login_path', $config)) {
             $this->_usedProperties['loginPath'] = true;
-            $this->loginPath = $value['login_path'];
-            unset($value['login_path']);
+            $this->loginPath = $config['login_path'];
+            unset($config['login_path']);
         }
 
-        if (array_key_exists('username_path', $value)) {
+        if (array_key_exists('username_path', $config)) {
             $this->_usedProperties['usernamePath'] = true;
-            $this->usernamePath = $value['username_path'];
-            unset($value['username_path']);
+            $this->usernamePath = $config['username_path'];
+            unset($config['username_path']);
         }
 
-        if (array_key_exists('password_path', $value)) {
+        if (array_key_exists('password_path', $config)) {
             $this->_usedProperties['passwordPath'] = true;
-            $this->passwordPath = $value['password_path'];
-            unset($value['password_path']);
+            $this->passwordPath = $config['password_path'];
+            unset($config['password_path']);
         }
 
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('dn_string', $value)) {
+        if (array_key_exists('dn_string', $config)) {
             $this->_usedProperties['dnString'] = true;
-            $this->dnString = $value['dn_string'];
-            unset($value['dn_string']);
+            $this->dnString = $config['dn_string'];
+            unset($config['dn_string']);
         }
 
-        if (array_key_exists('query_string', $value)) {
+        if (array_key_exists('query_string', $config)) {
             $this->_usedProperties['queryString'] = true;
-            $this->queryString = $value['query_string'];
-            unset($value['query_string']);
+            $this->queryString = $config['query_string'];
+            unset($config['query_string']);
         }
 
-        if (array_key_exists('search_dn', $value)) {
+        if (array_key_exists('search_dn', $config)) {
             $this->_usedProperties['searchDn'] = true;
-            $this->searchDn = $value['search_dn'];
-            unset($value['search_dn']);
+            $this->searchDn = $config['search_dn'];
+            unset($config['search_dn']);
         }
 
-        if (array_key_exists('search_password', $value)) {
+        if (array_key_exists('search_password', $config)) {
             $this->_usedProperties['searchPassword'] = true;
-            $this->searchPassword = $value['search_password'];
-            unset($value['search_password']);
+            $this->searchPassword = $config['search_password'];
+            unset($config['search_password']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

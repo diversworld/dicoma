@@ -82,40 +82,40 @@ class AccessDecisionManagerConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('strategy', $value)) {
+        if (array_key_exists('strategy', $config)) {
             $this->_usedProperties['strategy'] = true;
-            $this->strategy = $value['strategy'];
-            unset($value['strategy']);
+            $this->strategy = $config['strategy'];
+            unset($config['strategy']);
         }
 
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('strategy_service', $value)) {
+        if (array_key_exists('strategy_service', $config)) {
             $this->_usedProperties['strategyService'] = true;
-            $this->strategyService = $value['strategy_service'];
-            unset($value['strategy_service']);
+            $this->strategyService = $config['strategy_service'];
+            unset($config['strategy_service']);
         }
 
-        if (array_key_exists('allow_if_all_abstain', $value)) {
+        if (array_key_exists('allow_if_all_abstain', $config)) {
             $this->_usedProperties['allowIfAllAbstain'] = true;
-            $this->allowIfAllAbstain = $value['allow_if_all_abstain'];
-            unset($value['allow_if_all_abstain']);
+            $this->allowIfAllAbstain = $config['allow_if_all_abstain'];
+            unset($config['allow_if_all_abstain']);
         }
 
-        if (array_key_exists('allow_if_equal_granted_denied', $value)) {
+        if (array_key_exists('allow_if_equal_granted_denied', $config)) {
             $this->_usedProperties['allowIfEqualGrantedDenied'] = true;
-            $this->allowIfEqualGrantedDenied = $value['allow_if_equal_granted_denied'];
-            unset($value['allow_if_equal_granted_denied']);
+            $this->allowIfEqualGrantedDenied = $config['allow_if_equal_granted_denied'];
+            unset($config['allow_if_equal_granted_denied']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

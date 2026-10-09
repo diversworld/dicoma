@@ -56,28 +56,28 @@ class ControllerResolverConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('auto_mapping', $value)) {
+        if (array_key_exists('auto_mapping', $config)) {
             $this->_usedProperties['autoMapping'] = true;
-            $this->autoMapping = $value['auto_mapping'];
-            unset($value['auto_mapping']);
+            $this->autoMapping = $config['auto_mapping'];
+            unset($config['auto_mapping']);
         }
 
-        if (array_key_exists('evict_cache', $value)) {
+        if (array_key_exists('evict_cache', $config)) {
             $this->_usedProperties['evictCache'] = true;
-            $this->evictCache = $value['evict_cache'];
-            unset($value['evict_cache']);
+            $this->evictCache = $config['evict_cache'];
+            unset($config['evict_cache']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

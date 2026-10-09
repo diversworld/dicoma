@@ -29,7 +29,9 @@ class EntityManagerConfig
     private $autoMapping;
     private $namingStrategy;
     private $quoteStrategy;
+    private $typedFieldMapper;
     private $entityListenerResolver;
+    private $fetchModeSubselectBatchSize;
     private $repositoryFactory;
     private $schemaIgnoreClasses;
     private $reportFieldsWhereDeclared;
@@ -39,10 +41,11 @@ class EntityManagerConfig
     private $mappings;
     private $dql;
     private $filters;
+    private $identityGenerationPreferences;
     private $_usedProperties = [];
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @default {"type":null}
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\QueryCacheDriverConfig|$this
@@ -68,7 +71,7 @@ class EntityManagerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MetadataCacheDriverConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MetadataCacheDriverConfig : static)
@@ -93,7 +96,7 @@ class EntityManagerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @default {"type":null}
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\ResultCacheDriverConfig|$this
@@ -119,7 +122,7 @@ class EntityManagerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListenersConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListenersConfig : static)
@@ -222,6 +225,19 @@ class EntityManagerConfig
     }
 
     /**
+     * @default 'doctrine.orm.typed_field_mapper.default'
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function typedFieldMapper($value): static
+    {
+        $this->_usedProperties['typedFieldMapper'] = true;
+        $this->typedFieldMapper = $value;
+
+        return $this;
+    }
+
+    /**
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -230,6 +246,19 @@ class EntityManagerConfig
     {
         $this->_usedProperties['entityListenerResolver'] = true;
         $this->entityListenerResolver = $value;
+
+        return $this;
+    }
+
+    /**
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function fetchModeSubselectBatchSize($value): static
+    {
+        $this->_usedProperties['fetchModeSubselectBatchSize'] = true;
+        $this->fetchModeSubselectBatchSize = $value;
 
         return $this;
     }
@@ -275,7 +304,7 @@ class EntityManagerConfig
     }
 
     /**
-     * Set to "true" to opt-in to the new mapping driver mode that was added in Doctrine ORM 2.14 and will be mandatory in ORM 3.0. See https://github.com/doctrine/orm/pull/6728.
+     * Set to "true" to opt-in to the new mapping driver mode that was added in Doctrine ORM 2.14. See https://github.com/doctrine/orm/pull/6728.
      * @default false
      * @param ParamConfigurator|bool $value
      * @return $this
@@ -312,12 +341,12 @@ class EntityManagerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array|bool
      * @param TValue $value
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig : static)
      */
-    public function mapping(string $name, string|array $value = []): \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig|static
+    public function mapping(string $name, string|array|bool $value = []): \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['mappings'] = true;
@@ -349,7 +378,7 @@ class EntityManagerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * Register SQL Filters in the entity manager
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\FilterConfig|$this
@@ -374,130 +403,159 @@ class EntityManagerConfig
         return $this->filters[$name];
     }
 
-    public function __construct(array $value = [])
+    /**
+     * @return $this
+     */
+    public function identityGenerationPreference(string $platform, mixed $value): static
     {
-        if (array_key_exists('query_cache_driver', $value)) {
+        $this->_usedProperties['identityGenerationPreferences'] = true;
+        $this->identityGenerationPreferences[$platform] = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('query_cache_driver', $config)) {
             $this->_usedProperties['queryCacheDriver'] = true;
-            $this->queryCacheDriver = \is_array($value['query_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\QueryCacheDriverConfig($value['query_cache_driver']) : $value['query_cache_driver'];
-            unset($value['query_cache_driver']);
+            $this->queryCacheDriver = \is_array($config['query_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\QueryCacheDriverConfig($config['query_cache_driver']) : $config['query_cache_driver'];
+            unset($config['query_cache_driver']);
         }
 
-        if (array_key_exists('metadata_cache_driver', $value)) {
+        if (array_key_exists('metadata_cache_driver', $config)) {
             $this->_usedProperties['metadataCacheDriver'] = true;
-            $this->metadataCacheDriver = \is_array($value['metadata_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MetadataCacheDriverConfig($value['metadata_cache_driver']) : $value['metadata_cache_driver'];
-            unset($value['metadata_cache_driver']);
+            $this->metadataCacheDriver = \is_array($config['metadata_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MetadataCacheDriverConfig($config['metadata_cache_driver']) : $config['metadata_cache_driver'];
+            unset($config['metadata_cache_driver']);
         }
 
-        if (array_key_exists('result_cache_driver', $value)) {
+        if (array_key_exists('result_cache_driver', $config)) {
             $this->_usedProperties['resultCacheDriver'] = true;
-            $this->resultCacheDriver = \is_array($value['result_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\ResultCacheDriverConfig($value['result_cache_driver']) : $value['result_cache_driver'];
-            unset($value['result_cache_driver']);
+            $this->resultCacheDriver = \is_array($config['result_cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\ResultCacheDriverConfig($config['result_cache_driver']) : $config['result_cache_driver'];
+            unset($config['result_cache_driver']);
         }
 
-        if (array_key_exists('entity_listeners', $value)) {
+        if (array_key_exists('entity_listeners', $config)) {
             $this->_usedProperties['entityListeners'] = true;
-            $this->entityListeners = \is_array($value['entity_listeners']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListenersConfig($value['entity_listeners']) : $value['entity_listeners'];
-            unset($value['entity_listeners']);
+            $this->entityListeners = \is_array($config['entity_listeners']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\EntityListenersConfig($config['entity_listeners']) : $config['entity_listeners'];
+            unset($config['entity_listeners']);
         }
 
-        if (array_key_exists('connection', $value)) {
+        if (array_key_exists('connection', $config)) {
             $this->_usedProperties['connection'] = true;
-            $this->connection = $value['connection'];
-            unset($value['connection']);
+            $this->connection = $config['connection'];
+            unset($config['connection']);
         }
 
-        if (array_key_exists('class_metadata_factory_name', $value)) {
+        if (array_key_exists('class_metadata_factory_name', $config)) {
             $this->_usedProperties['classMetadataFactoryName'] = true;
-            $this->classMetadataFactoryName = $value['class_metadata_factory_name'];
-            unset($value['class_metadata_factory_name']);
+            $this->classMetadataFactoryName = $config['class_metadata_factory_name'];
+            unset($config['class_metadata_factory_name']);
         }
 
-        if (array_key_exists('default_repository_class', $value)) {
+        if (array_key_exists('default_repository_class', $config)) {
             $this->_usedProperties['defaultRepositoryClass'] = true;
-            $this->defaultRepositoryClass = $value['default_repository_class'];
-            unset($value['default_repository_class']);
+            $this->defaultRepositoryClass = $config['default_repository_class'];
+            unset($config['default_repository_class']);
         }
 
-        if (array_key_exists('auto_mapping', $value)) {
+        if (array_key_exists('auto_mapping', $config)) {
             $this->_usedProperties['autoMapping'] = true;
-            $this->autoMapping = $value['auto_mapping'];
-            unset($value['auto_mapping']);
+            $this->autoMapping = $config['auto_mapping'];
+            unset($config['auto_mapping']);
         }
 
-        if (array_key_exists('naming_strategy', $value)) {
+        if (array_key_exists('naming_strategy', $config)) {
             $this->_usedProperties['namingStrategy'] = true;
-            $this->namingStrategy = $value['naming_strategy'];
-            unset($value['naming_strategy']);
+            $this->namingStrategy = $config['naming_strategy'];
+            unset($config['naming_strategy']);
         }
 
-        if (array_key_exists('quote_strategy', $value)) {
+        if (array_key_exists('quote_strategy', $config)) {
             $this->_usedProperties['quoteStrategy'] = true;
-            $this->quoteStrategy = $value['quote_strategy'];
-            unset($value['quote_strategy']);
+            $this->quoteStrategy = $config['quote_strategy'];
+            unset($config['quote_strategy']);
         }
 
-        if (array_key_exists('entity_listener_resolver', $value)) {
+        if (array_key_exists('typed_field_mapper', $config)) {
+            $this->_usedProperties['typedFieldMapper'] = true;
+            $this->typedFieldMapper = $config['typed_field_mapper'];
+            unset($config['typed_field_mapper']);
+        }
+
+        if (array_key_exists('entity_listener_resolver', $config)) {
             $this->_usedProperties['entityListenerResolver'] = true;
-            $this->entityListenerResolver = $value['entity_listener_resolver'];
-            unset($value['entity_listener_resolver']);
+            $this->entityListenerResolver = $config['entity_listener_resolver'];
+            unset($config['entity_listener_resolver']);
         }
 
-        if (array_key_exists('repository_factory', $value)) {
+        if (array_key_exists('fetch_mode_subselect_batch_size', $config)) {
+            $this->_usedProperties['fetchModeSubselectBatchSize'] = true;
+            $this->fetchModeSubselectBatchSize = $config['fetch_mode_subselect_batch_size'];
+            unset($config['fetch_mode_subselect_batch_size']);
+        }
+
+        if (array_key_exists('repository_factory', $config)) {
             $this->_usedProperties['repositoryFactory'] = true;
-            $this->repositoryFactory = $value['repository_factory'];
-            unset($value['repository_factory']);
+            $this->repositoryFactory = $config['repository_factory'];
+            unset($config['repository_factory']);
         }
 
-        if (array_key_exists('schema_ignore_classes', $value)) {
+        if (array_key_exists('schema_ignore_classes', $config)) {
             $this->_usedProperties['schemaIgnoreClasses'] = true;
-            $this->schemaIgnoreClasses = $value['schema_ignore_classes'];
-            unset($value['schema_ignore_classes']);
+            $this->schemaIgnoreClasses = $config['schema_ignore_classes'];
+            unset($config['schema_ignore_classes']);
         }
 
-        if (array_key_exists('report_fields_where_declared', $value)) {
+        if (array_key_exists('report_fields_where_declared', $config)) {
             $this->_usedProperties['reportFieldsWhereDeclared'] = true;
-            $this->reportFieldsWhereDeclared = $value['report_fields_where_declared'];
-            unset($value['report_fields_where_declared']);
+            $this->reportFieldsWhereDeclared = $config['report_fields_where_declared'];
+            unset($config['report_fields_where_declared']);
         }
 
-        if (array_key_exists('validate_xml_mapping', $value)) {
+        if (array_key_exists('validate_xml_mapping', $config)) {
             $this->_usedProperties['validateXmlMapping'] = true;
-            $this->validateXmlMapping = $value['validate_xml_mapping'];
-            unset($value['validate_xml_mapping']);
+            $this->validateXmlMapping = $config['validate_xml_mapping'];
+            unset($config['validate_xml_mapping']);
         }
 
-        if (array_key_exists('second_level_cache', $value)) {
+        if (array_key_exists('second_level_cache', $config)) {
             $this->_usedProperties['secondLevelCache'] = true;
-            $this->secondLevelCache = new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCacheConfig($value['second_level_cache']);
-            unset($value['second_level_cache']);
+            $this->secondLevelCache = new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCacheConfig($config['second_level_cache']);
+            unset($config['second_level_cache']);
         }
 
-        if (array_key_exists('hydrators', $value)) {
+        if (array_key_exists('hydrators', $config)) {
             $this->_usedProperties['hydrators'] = true;
-            $this->hydrators = $value['hydrators'];
-            unset($value['hydrators']);
+            $this->hydrators = $config['hydrators'];
+            unset($config['hydrators']);
         }
 
-        if (array_key_exists('mappings', $value)) {
+        if (array_key_exists('mappings', $config)) {
             $this->_usedProperties['mappings'] = true;
-            $this->mappings = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig($v) : $v, $value['mappings']);
-            unset($value['mappings']);
+            $this->mappings = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\MappingConfig($v) : $v, $config['mappings']);
+            unset($config['mappings']);
         }
 
-        if (array_key_exists('dql', $value)) {
+        if (array_key_exists('dql', $config)) {
             $this->_usedProperties['dql'] = true;
-            $this->dql = new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\DqlConfig($value['dql']);
-            unset($value['dql']);
+            $this->dql = new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\DqlConfig($config['dql']);
+            unset($config['dql']);
         }
 
-        if (array_key_exists('filters', $value)) {
+        if (array_key_exists('filters', $config)) {
             $this->_usedProperties['filters'] = true;
-            $this->filters = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\FilterConfig($v) : $v, $value['filters']);
-            unset($value['filters']);
+            $this->filters = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\FilterConfig($v) : $v, $config['filters']);
+            unset($config['filters']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('identity_generation_preferences', $config)) {
+            $this->_usedProperties['identityGenerationPreferences'] = true;
+            $this->identityGenerationPreferences = $config['identity_generation_preferences'];
+            unset($config['identity_generation_preferences']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -534,8 +592,14 @@ class EntityManagerConfig
         if (isset($this->_usedProperties['quoteStrategy'])) {
             $output['quote_strategy'] = $this->quoteStrategy;
         }
+        if (isset($this->_usedProperties['typedFieldMapper'])) {
+            $output['typed_field_mapper'] = $this->typedFieldMapper;
+        }
         if (isset($this->_usedProperties['entityListenerResolver'])) {
             $output['entity_listener_resolver'] = $this->entityListenerResolver;
+        }
+        if (isset($this->_usedProperties['fetchModeSubselectBatchSize'])) {
+            $output['fetch_mode_subselect_batch_size'] = $this->fetchModeSubselectBatchSize;
         }
         if (isset($this->_usedProperties['repositoryFactory'])) {
             $output['repository_factory'] = $this->repositoryFactory;
@@ -563,6 +627,9 @@ class EntityManagerConfig
         }
         if (isset($this->_usedProperties['filters'])) {
             $output['filters'] = array_map(fn ($v) => $v instanceof \Symfony\Config\Doctrine\Orm\EntityManagerConfig\FilterConfig ? $v->toArray() : $v, $this->filters);
+        }
+        if (isset($this->_usedProperties['identityGenerationPreferences'])) {
+            $output['identity_generation_preferences'] = $this->identityGenerationPreferences;
         }
 
         return $output;

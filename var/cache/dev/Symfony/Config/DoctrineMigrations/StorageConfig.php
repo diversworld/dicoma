@@ -17,7 +17,7 @@ class StorageConfig
     /**
      * The default metadata storage, implemented as a table in the database.
      * @default {"table_name":null,"version_column_name":null,"version_column_length":null,"executed_at_column_name":null,"execution_time_column_name":null}
-    */
+     */
     public function tableStorage(array $value = []): \Symfony\Config\DoctrineMigrations\Storage\TableStorageConfig
     {
         if (null === $this->tableStorage) {
@@ -30,16 +30,16 @@ class StorageConfig
         return $this->tableStorage;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('table_storage', $value)) {
+        if (array_key_exists('table_storage', $config)) {
             $this->_usedProperties['tableStorage'] = true;
-            $this->tableStorage = new \Symfony\Config\DoctrineMigrations\Storage\TableStorageConfig($value['table_storage']);
-            unset($value['table_storage']);
+            $this->tableStorage = new \Symfony\Config\DoctrineMigrations\Storage\TableStorageConfig($config['table_storage']);
+            unset($config['table_storage']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

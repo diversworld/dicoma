@@ -82,40 +82,40 @@ class TableStorageConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('table_name', $value)) {
+        if (array_key_exists('table_name', $config)) {
             $this->_usedProperties['tableName'] = true;
-            $this->tableName = $value['table_name'];
-            unset($value['table_name']);
+            $this->tableName = $config['table_name'];
+            unset($config['table_name']);
         }
 
-        if (array_key_exists('version_column_name', $value)) {
+        if (array_key_exists('version_column_name', $config)) {
             $this->_usedProperties['versionColumnName'] = true;
-            $this->versionColumnName = $value['version_column_name'];
-            unset($value['version_column_name']);
+            $this->versionColumnName = $config['version_column_name'];
+            unset($config['version_column_name']);
         }
 
-        if (array_key_exists('version_column_length', $value)) {
+        if (array_key_exists('version_column_length', $config)) {
             $this->_usedProperties['versionColumnLength'] = true;
-            $this->versionColumnLength = $value['version_column_length'];
-            unset($value['version_column_length']);
+            $this->versionColumnLength = $config['version_column_length'];
+            unset($config['version_column_length']);
         }
 
-        if (array_key_exists('executed_at_column_name', $value)) {
+        if (array_key_exists('executed_at_column_name', $config)) {
             $this->_usedProperties['executedAtColumnName'] = true;
-            $this->executedAtColumnName = $value['executed_at_column_name'];
-            unset($value['executed_at_column_name']);
+            $this->executedAtColumnName = $config['executed_at_column_name'];
+            unset($config['executed_at_column_name']);
         }
 
-        if (array_key_exists('execution_time_column_name', $value)) {
+        if (array_key_exists('execution_time_column_name', $config)) {
             $this->_usedProperties['executionTimeColumnName'] = true;
-            $this->executionTimeColumnName = $value['execution_time_column_name'];
-            unset($value['execution_time_column_name']);
+            $this->executionTimeColumnName = $config['execution_time_column_name'];
+            unset($config['execution_time_column_name']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

@@ -68,34 +68,34 @@ class SecretsConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('vault_directory', $value)) {
+        if (array_key_exists('vault_directory', $config)) {
             $this->_usedProperties['vaultDirectory'] = true;
-            $this->vaultDirectory = $value['vault_directory'];
-            unset($value['vault_directory']);
+            $this->vaultDirectory = $config['vault_directory'];
+            unset($config['vault_directory']);
         }
 
-        if (array_key_exists('local_dotenv_file', $value)) {
+        if (array_key_exists('local_dotenv_file', $config)) {
             $this->_usedProperties['localDotenvFile'] = true;
-            $this->localDotenvFile = $value['local_dotenv_file'];
-            unset($value['local_dotenv_file']);
+            $this->localDotenvFile = $config['local_dotenv_file'];
+            unset($config['local_dotenv_file']);
         }
 
-        if (array_key_exists('decryption_env_var', $value)) {
+        if (array_key_exists('decryption_env_var', $config)) {
             $this->_usedProperties['decryptionEnvVar'] = true;
-            $this->decryptionEnvVar = $value['decryption_env_var'];
-            unset($value['decryption_env_var']);
+            $this->decryptionEnvVar = $config['decryption_env_var'];
+            unset($config['decryption_env_var']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

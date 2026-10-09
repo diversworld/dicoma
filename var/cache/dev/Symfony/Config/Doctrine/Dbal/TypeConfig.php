@@ -30,7 +30,7 @@ class TypeConfig
     /**
      * @default null
      * @param ParamConfigurator|bool $value
-     * @deprecated The doctrine-bundle type commenting features were removed; the corresponding config parameter was deprecated in 2.0 and will be dropped in 3.0.
+     * @deprecated Since doctrine/doctrine-bundle 2.0: The doctrine-bundle type commenting features were removed; the corresponding config parameter was deprecated in 2.0 and will be dropped in 3.0.
      * @return $this
      */
     public function commented($value): static
@@ -41,22 +41,22 @@ class TypeConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('class', $value)) {
+        if (array_key_exists('class', $config)) {
             $this->_usedProperties['class'] = true;
-            $this->class = $value['class'];
-            unset($value['class']);
+            $this->class = $config['class'];
+            unset($config['class']);
         }
 
-        if (array_key_exists('commented', $value)) {
+        if (array_key_exists('commented', $config)) {
             $this->_usedProperties['commented'] = true;
-            $this->commented = $value['commented'];
-            unset($value['commented']);
+            $this->commented = $config['commented'];
+            unset($config['commented']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

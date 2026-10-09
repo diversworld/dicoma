@@ -96,46 +96,46 @@ class PseudoLocalizationConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('accents', $value)) {
+        if (array_key_exists('accents', $config)) {
             $this->_usedProperties['accents'] = true;
-            $this->accents = $value['accents'];
-            unset($value['accents']);
+            $this->accents = $config['accents'];
+            unset($config['accents']);
         }
 
-        if (array_key_exists('expansion_factor', $value)) {
+        if (array_key_exists('expansion_factor', $config)) {
             $this->_usedProperties['expansionFactor'] = true;
-            $this->expansionFactor = $value['expansion_factor'];
-            unset($value['expansion_factor']);
+            $this->expansionFactor = $config['expansion_factor'];
+            unset($config['expansion_factor']);
         }
 
-        if (array_key_exists('brackets', $value)) {
+        if (array_key_exists('brackets', $config)) {
             $this->_usedProperties['brackets'] = true;
-            $this->brackets = $value['brackets'];
-            unset($value['brackets']);
+            $this->brackets = $config['brackets'];
+            unset($config['brackets']);
         }
 
-        if (array_key_exists('parse_html', $value)) {
+        if (array_key_exists('parse_html', $config)) {
             $this->_usedProperties['parseHtml'] = true;
-            $this->parseHtml = $value['parse_html'];
-            unset($value['parse_html']);
+            $this->parseHtml = $config['parse_html'];
+            unset($config['parse_html']);
         }
 
-        if (array_key_exists('localizable_html_attributes', $value)) {
+        if (array_key_exists('localizable_html_attributes', $config)) {
             $this->_usedProperties['localizableHtmlAttributes'] = true;
-            $this->localizableHtmlAttributes = $value['localizable_html_attributes'];
-            unset($value['localizable_html_attributes']);
+            $this->localizableHtmlAttributes = $config['localizable_html_attributes'];
+            unset($config['localizable_html_attributes']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

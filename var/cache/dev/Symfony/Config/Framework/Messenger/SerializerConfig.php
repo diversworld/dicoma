@@ -32,7 +32,7 @@ class SerializerConfig
 
     /**
      * @default {"format":"json","context":[]}
-    */
+     */
     public function symfonySerializer(array $value = []): \Symfony\Config\Framework\Messenger\Serializer\SymfonySerializerConfig
     {
         if (null === $this->symfonySerializer) {
@@ -45,22 +45,22 @@ class SerializerConfig
         return $this->symfonySerializer;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('default_serializer', $value)) {
+        if (array_key_exists('default_serializer', $config)) {
             $this->_usedProperties['defaultSerializer'] = true;
-            $this->defaultSerializer = $value['default_serializer'];
-            unset($value['default_serializer']);
+            $this->defaultSerializer = $config['default_serializer'];
+            unset($config['default_serializer']);
         }
 
-        if (array_key_exists('symfony_serializer', $value)) {
+        if (array_key_exists('symfony_serializer', $config)) {
             $this->_usedProperties['symfonySerializer'] = true;
-            $this->symfonySerializer = new \Symfony\Config\Framework\Messenger\Serializer\SymfonySerializerConfig($value['symfony_serializer']);
-            unset($value['symfony_serializer']);
+            $this->symfonySerializer = new \Symfony\Config\Framework\Messenger\Serializer\SymfonySerializerConfig($config['symfony_serializer']);
+            unset($config['symfony_serializer']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

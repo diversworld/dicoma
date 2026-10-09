@@ -26,16 +26,16 @@ class MemoryConfig
         return $this->users[$identifier];
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('users', $value)) {
+        if (array_key_exists('users', $config)) {
             $this->_usedProperties['users'] = true;
-            $this->users = array_map(fn ($v) => new \Symfony\Config\Security\ProviderConfig\Memory\UserConfig($v), $value['users']);
-            unset($value['users']);
+            $this->users = array_map(fn ($v) => new \Symfony\Config\Security\ProviderConfig\Memory\UserConfig($v), $config['users']);
+            unset($config['users']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

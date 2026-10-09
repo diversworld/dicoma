@@ -180,82 +180,82 @@ class HttpCacheConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('debug', $value)) {
+        if (array_key_exists('debug', $config)) {
             $this->_usedProperties['debug'] = true;
-            $this->debug = $value['debug'];
-            unset($value['debug']);
+            $this->debug = $config['debug'];
+            unset($config['debug']);
         }
 
-        if (array_key_exists('trace_level', $value)) {
+        if (array_key_exists('trace_level', $config)) {
             $this->_usedProperties['traceLevel'] = true;
-            $this->traceLevel = $value['trace_level'];
-            unset($value['trace_level']);
+            $this->traceLevel = $config['trace_level'];
+            unset($config['trace_level']);
         }
 
-        if (array_key_exists('trace_header', $value)) {
+        if (array_key_exists('trace_header', $config)) {
             $this->_usedProperties['traceHeader'] = true;
-            $this->traceHeader = $value['trace_header'];
-            unset($value['trace_header']);
+            $this->traceHeader = $config['trace_header'];
+            unset($config['trace_header']);
         }
 
-        if (array_key_exists('default_ttl', $value)) {
+        if (array_key_exists('default_ttl', $config)) {
             $this->_usedProperties['defaultTtl'] = true;
-            $this->defaultTtl = $value['default_ttl'];
-            unset($value['default_ttl']);
+            $this->defaultTtl = $config['default_ttl'];
+            unset($config['default_ttl']);
         }
 
-        if (array_key_exists('private_headers', $value)) {
+        if (array_key_exists('private_headers', $config)) {
             $this->_usedProperties['privateHeaders'] = true;
-            $this->privateHeaders = $value['private_headers'];
-            unset($value['private_headers']);
+            $this->privateHeaders = $config['private_headers'];
+            unset($config['private_headers']);
         }
 
-        if (array_key_exists('skip_response_headers', $value)) {
+        if (array_key_exists('skip_response_headers', $config)) {
             $this->_usedProperties['skipResponseHeaders'] = true;
-            $this->skipResponseHeaders = $value['skip_response_headers'];
-            unset($value['skip_response_headers']);
+            $this->skipResponseHeaders = $config['skip_response_headers'];
+            unset($config['skip_response_headers']);
         }
 
-        if (array_key_exists('allow_reload', $value)) {
+        if (array_key_exists('allow_reload', $config)) {
             $this->_usedProperties['allowReload'] = true;
-            $this->allowReload = $value['allow_reload'];
-            unset($value['allow_reload']);
+            $this->allowReload = $config['allow_reload'];
+            unset($config['allow_reload']);
         }
 
-        if (array_key_exists('allow_revalidate', $value)) {
+        if (array_key_exists('allow_revalidate', $config)) {
             $this->_usedProperties['allowRevalidate'] = true;
-            $this->allowRevalidate = $value['allow_revalidate'];
-            unset($value['allow_revalidate']);
+            $this->allowRevalidate = $config['allow_revalidate'];
+            unset($config['allow_revalidate']);
         }
 
-        if (array_key_exists('stale_while_revalidate', $value)) {
+        if (array_key_exists('stale_while_revalidate', $config)) {
             $this->_usedProperties['staleWhileRevalidate'] = true;
-            $this->staleWhileRevalidate = $value['stale_while_revalidate'];
-            unset($value['stale_while_revalidate']);
+            $this->staleWhileRevalidate = $config['stale_while_revalidate'];
+            unset($config['stale_while_revalidate']);
         }
 
-        if (array_key_exists('stale_if_error', $value)) {
+        if (array_key_exists('stale_if_error', $config)) {
             $this->_usedProperties['staleIfError'] = true;
-            $this->staleIfError = $value['stale_if_error'];
-            unset($value['stale_if_error']);
+            $this->staleIfError = $config['stale_if_error'];
+            unset($config['stale_if_error']);
         }
 
-        if (array_key_exists('terminate_on_cache_hit', $value)) {
+        if (array_key_exists('terminate_on_cache_hit', $config)) {
             $this->_usedProperties['terminateOnCacheHit'] = true;
-            $this->terminateOnCacheHit = $value['terminate_on_cache_hit'];
-            unset($value['terminate_on_cache_hit']);
+            $this->terminateOnCacheHit = $config['terminate_on_cache_hit'];
+            unset($config['terminate_on_cache_hit']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

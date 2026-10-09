@@ -22,7 +22,7 @@ class RegionConfig
     private $_usedProperties = [];
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @default {"type":null}
      * @return \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionConfig\CacheDriverConfig|$this
@@ -125,52 +125,52 @@ class RegionConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('cache_driver', $value)) {
+        if (array_key_exists('cache_driver', $config)) {
             $this->_usedProperties['cacheDriver'] = true;
-            $this->cacheDriver = \is_array($value['cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionConfig\CacheDriverConfig($value['cache_driver']) : $value['cache_driver'];
-            unset($value['cache_driver']);
+            $this->cacheDriver = \is_array($config['cache_driver']) ? new \Symfony\Config\Doctrine\Orm\EntityManagerConfig\SecondLevelCache\RegionConfig\CacheDriverConfig($config['cache_driver']) : $config['cache_driver'];
+            unset($config['cache_driver']);
         }
 
-        if (array_key_exists('lock_path', $value)) {
+        if (array_key_exists('lock_path', $config)) {
             $this->_usedProperties['lockPath'] = true;
-            $this->lockPath = $value['lock_path'];
-            unset($value['lock_path']);
+            $this->lockPath = $config['lock_path'];
+            unset($config['lock_path']);
         }
 
-        if (array_key_exists('lock_lifetime', $value)) {
+        if (array_key_exists('lock_lifetime', $config)) {
             $this->_usedProperties['lockLifetime'] = true;
-            $this->lockLifetime = $value['lock_lifetime'];
-            unset($value['lock_lifetime']);
+            $this->lockLifetime = $config['lock_lifetime'];
+            unset($config['lock_lifetime']);
         }
 
-        if (array_key_exists('type', $value)) {
+        if (array_key_exists('type', $config)) {
             $this->_usedProperties['type'] = true;
-            $this->type = $value['type'];
-            unset($value['type']);
+            $this->type = $config['type'];
+            unset($config['type']);
         }
 
-        if (array_key_exists('lifetime', $value)) {
+        if (array_key_exists('lifetime', $config)) {
             $this->_usedProperties['lifetime'] = true;
-            $this->lifetime = $value['lifetime'];
-            unset($value['lifetime']);
+            $this->lifetime = $config['lifetime'];
+            unset($config['lifetime']);
         }
 
-        if (array_key_exists('service', $value)) {
+        if (array_key_exists('service', $config)) {
             $this->_usedProperties['service'] = true;
-            $this->service = $value['service'];
-            unset($value['service']);
+            $this->service = $config['service'];
+            unset($config['service']);
         }
 
-        if (array_key_exists('name', $value)) {
+        if (array_key_exists('name', $config)) {
             $this->_usedProperties['name'] = true;
-            $this->name = $value['name'];
-            unset($value['name']);
+            $this->name = $config['name'];
+            unset($config['name']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

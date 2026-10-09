@@ -96,46 +96,46 @@ class PropertyAccessConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('magic_call', $value)) {
+        if (array_key_exists('magic_call', $config)) {
             $this->_usedProperties['magicCall'] = true;
-            $this->magicCall = $value['magic_call'];
-            unset($value['magic_call']);
+            $this->magicCall = $config['magic_call'];
+            unset($config['magic_call']);
         }
 
-        if (array_key_exists('magic_get', $value)) {
+        if (array_key_exists('magic_get', $config)) {
             $this->_usedProperties['magicGet'] = true;
-            $this->magicGet = $value['magic_get'];
-            unset($value['magic_get']);
+            $this->magicGet = $config['magic_get'];
+            unset($config['magic_get']);
         }
 
-        if (array_key_exists('magic_set', $value)) {
+        if (array_key_exists('magic_set', $config)) {
             $this->_usedProperties['magicSet'] = true;
-            $this->magicSet = $value['magic_set'];
-            unset($value['magic_set']);
+            $this->magicSet = $config['magic_set'];
+            unset($config['magic_set']);
         }
 
-        if (array_key_exists('throw_exception_on_invalid_index', $value)) {
+        if (array_key_exists('throw_exception_on_invalid_index', $config)) {
             $this->_usedProperties['throwExceptionOnInvalidIndex'] = true;
-            $this->throwExceptionOnInvalidIndex = $value['throw_exception_on_invalid_index'];
-            unset($value['throw_exception_on_invalid_index']);
+            $this->throwExceptionOnInvalidIndex = $config['throw_exception_on_invalid_index'];
+            unset($config['throw_exception_on_invalid_index']);
         }
 
-        if (array_key_exists('throw_exception_on_invalid_property_path', $value)) {
+        if (array_key_exists('throw_exception_on_invalid_property_path', $config)) {
             $this->_usedProperties['throwExceptionOnInvalidPropertyPath'] = true;
-            $this->throwExceptionOnInvalidPropertyPath = $value['throw_exception_on_invalid_property_path'];
-            unset($value['throw_exception_on_invalid_property_path']);
+            $this->throwExceptionOnInvalidPropertyPath = $config['throw_exception_on_invalid_property_path'];
+            unset($config['throw_exception_on_invalid_property_path']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

@@ -96,46 +96,46 @@ class MappingConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('mapping', $value)) {
+        if (array_key_exists('mapping', $config)) {
             $this->_usedProperties['mapping'] = true;
-            $this->mapping = $value['mapping'];
-            unset($value['mapping']);
+            $this->mapping = $config['mapping'];
+            unset($config['mapping']);
         }
 
-        if (array_key_exists('type', $value)) {
+        if (array_key_exists('type', $config)) {
             $this->_usedProperties['type'] = true;
-            $this->type = $value['type'];
-            unset($value['type']);
+            $this->type = $config['type'];
+            unset($config['type']);
         }
 
-        if (array_key_exists('dir', $value)) {
+        if (array_key_exists('dir', $config)) {
             $this->_usedProperties['dir'] = true;
-            $this->dir = $value['dir'];
-            unset($value['dir']);
+            $this->dir = $config['dir'];
+            unset($config['dir']);
         }
 
-        if (array_key_exists('alias', $value)) {
+        if (array_key_exists('alias', $config)) {
             $this->_usedProperties['alias'] = true;
-            $this->alias = $value['alias'];
-            unset($value['alias']);
+            $this->alias = $config['alias'];
+            unset($config['alias']);
         }
 
-        if (array_key_exists('prefix', $value)) {
+        if (array_key_exists('prefix', $config)) {
             $this->_usedProperties['prefix'] = true;
-            $this->prefix = $value['prefix'];
-            unset($value['prefix']);
+            $this->prefix = $config['prefix'];
+            unset($config['prefix']);
         }
 
-        if (array_key_exists('is_bundle', $value)) {
+        if (array_key_exists('is_bundle', $config)) {
             $this->_usedProperties['isBundle'] = true;
-            $this->isBundle = $value['is_bundle'];
-            unset($value['is_bundle']);
+            $this->isBundle = $config['is_bundle'];
+            unset($config['is_bundle']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

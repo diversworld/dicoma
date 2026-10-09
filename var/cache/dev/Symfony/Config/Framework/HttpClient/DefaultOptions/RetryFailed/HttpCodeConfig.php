@@ -28,11 +28,11 @@ class HttpCodeConfig
     }
 
     /**
-     * @param ParamConfigurator|list<ParamConfigurator|mixed> $value
+     * @param ParamConfigurator|list<ParamConfigurator|mixed>|string $value
      *
      * @return $this
      */
-    public function methods(ParamConfigurator|array $value): static
+    public function methods(ParamConfigurator|string|array $value): static
     {
         $this->_usedProperties['methods'] = true;
         $this->methods = $value;
@@ -40,22 +40,22 @@ class HttpCodeConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('code', $value)) {
+        if (array_key_exists('code', $config)) {
             $this->_usedProperties['code'] = true;
-            $this->code = $value['code'];
-            unset($value['code']);
+            $this->code = $config['code'];
+            unset($config['code']);
         }
 
-        if (array_key_exists('methods', $value)) {
+        if (array_key_exists('methods', $config)) {
             $this->_usedProperties['methods'] = true;
-            $this->methods = $value['methods'];
-            unset($value['methods']);
+            $this->methods = $config['methods'];
+            unset($config['methods']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

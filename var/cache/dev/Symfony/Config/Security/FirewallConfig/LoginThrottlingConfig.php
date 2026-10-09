@@ -14,6 +14,8 @@ class LoginThrottlingConfig
     private $maxAttempts;
     private $interval;
     private $lockFactory;
+    private $cachePool;
+    private $storageService;
     private $_usedProperties = [];
 
     /**
@@ -57,8 +59,8 @@ class LoginThrottlingConfig
     }
 
     /**
-     * The service ID of the lock factory used by the login rate limiter (or null to disable locking)
-     * @default null
+     * The service ID of the lock factory used by the login rate limiter ("auto" to use the default one when the Lock component is configured, or null to disable locking).
+     * @default 'auto'
      * @param ParamConfigurator|mixed $value
      * @return $this
      */
@@ -70,34 +72,74 @@ class LoginThrottlingConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * The cache pool to use for storing the limiter state
+     * @default 'cache.rate_limiter'
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function cachePool($value): static
     {
-        if (array_key_exists('limiter', $value)) {
+        $this->_usedProperties['cachePool'] = true;
+        $this->cachePool = $value;
+
+        return $this;
+    }
+
+    /**
+     * The service ID of a custom storage implementation, this precedes any configured "cache_pool"
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function storageService($value): static
+    {
+        $this->_usedProperties['storageService'] = true;
+        $this->storageService = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('limiter', $config)) {
             $this->_usedProperties['limiter'] = true;
-            $this->limiter = $value['limiter'];
-            unset($value['limiter']);
+            $this->limiter = $config['limiter'];
+            unset($config['limiter']);
         }
 
-        if (array_key_exists('max_attempts', $value)) {
+        if (array_key_exists('max_attempts', $config)) {
             $this->_usedProperties['maxAttempts'] = true;
-            $this->maxAttempts = $value['max_attempts'];
-            unset($value['max_attempts']);
+            $this->maxAttempts = $config['max_attempts'];
+            unset($config['max_attempts']);
         }
 
-        if (array_key_exists('interval', $value)) {
+        if (array_key_exists('interval', $config)) {
             $this->_usedProperties['interval'] = true;
-            $this->interval = $value['interval'];
-            unset($value['interval']);
+            $this->interval = $config['interval'];
+            unset($config['interval']);
         }
 
-        if (array_key_exists('lock_factory', $value)) {
+        if (array_key_exists('lock_factory', $config)) {
             $this->_usedProperties['lockFactory'] = true;
-            $this->lockFactory = $value['lock_factory'];
-            unset($value['lock_factory']);
+            $this->lockFactory = $config['lock_factory'];
+            unset($config['lock_factory']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('cache_pool', $config)) {
+            $this->_usedProperties['cachePool'] = true;
+            $this->cachePool = $config['cache_pool'];
+            unset($config['cache_pool']);
+        }
+
+        if (array_key_exists('storage_service', $config)) {
+            $this->_usedProperties['storageService'] = true;
+            $this->storageService = $config['storage_service'];
+            unset($config['storage_service']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -115,6 +157,12 @@ class LoginThrottlingConfig
         }
         if (isset($this->_usedProperties['lockFactory'])) {
             $output['lock_factory'] = $this->lockFactory;
+        }
+        if (isset($this->_usedProperties['cachePool'])) {
+            $output['cache_pool'] = $this->cachePool;
+        }
+        if (isset($this->_usedProperties['storageService'])) {
+            $output['storage_service'] = $this->storageService;
         }
 
         return $output;

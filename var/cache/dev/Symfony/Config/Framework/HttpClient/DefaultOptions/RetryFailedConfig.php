@@ -36,7 +36,7 @@ class RetryFailedConfig
     }
 
     /**
-     * service id to override the retry strategy
+     * service id to override the retry strategy.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -50,22 +50,11 @@ class RetryFailedConfig
     }
 
     /**
-     * @template TValue
-     * @param TValue $value
-     * A list of HTTP status code that triggers a retry
-     * @return \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig|$this
-     * @psalm-return (TValue is array ? \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig : static)
+     * A list of HTTP status code that triggers a retry.
      */
-    public function httpCode(string $code, array $value = []): \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig|static
+    public function httpCode(string $code, array $value = []): \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig
     {
-        if (!\is_array($value)) {
-            $this->_usedProperties['httpCodes'] = true;
-            $this->httpCodes[$code] = $value;
-
-            return $this;
-        }
-
-        if (!isset($this->httpCodes[$code]) || !$this->httpCodes[$code] instanceof \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig) {
+        if (!isset($this->httpCodes[$code])) {
             $this->_usedProperties['httpCodes'] = true;
             $this->httpCodes[$code] = new \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig($value);
         } elseif (1 < \func_num_args()) {
@@ -89,7 +78,7 @@ class RetryFailedConfig
     }
 
     /**
-     * Time in ms to delay (or the initial value when multiplier is used)
+     * Time in ms to delay (or the initial value when multiplier is used).
      * @default 1000
      * @param ParamConfigurator|int $value
      * @return $this
@@ -103,7 +92,7 @@ class RetryFailedConfig
     }
 
     /**
-     * If greater than 1, delay will grow exponentially for each retry: delay * (multiple ^ retries)
+     * If greater than 1, delay will grow exponentially for each retry: delay * (multiple ^ retries).
      * @default 2
      * @param ParamConfigurator|float $value
      * @return $this
@@ -117,7 +106,7 @@ class RetryFailedConfig
     }
 
     /**
-     * Max time in ms that a retry should ever be delayed (0 = infinite)
+     * Max time in ms that a retry should ever be delayed (0 = infinite).
      * @default 0
      * @param ParamConfigurator|int $value
      * @return $this
@@ -131,7 +120,7 @@ class RetryFailedConfig
     }
 
     /**
-     * Randomness in percent (between 0 and 1) to apply to the delay
+     * Randomness in percent (between 0 and 1) to apply to the delay.
      * @default 0.1
      * @param ParamConfigurator|float $value
      * @return $this
@@ -144,58 +133,58 @@ class RetryFailedConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('retry_strategy', $value)) {
+        if (array_key_exists('retry_strategy', $config)) {
             $this->_usedProperties['retryStrategy'] = true;
-            $this->retryStrategy = $value['retry_strategy'];
-            unset($value['retry_strategy']);
+            $this->retryStrategy = $config['retry_strategy'];
+            unset($config['retry_strategy']);
         }
 
-        if (array_key_exists('http_codes', $value)) {
+        if (array_key_exists('http_codes', $config)) {
             $this->_usedProperties['httpCodes'] = true;
-            $this->httpCodes = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig($v) : $v, $value['http_codes']);
-            unset($value['http_codes']);
+            $this->httpCodes = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Framework\HttpClient\DefaultOptions\RetryFailed\HttpCodeConfig($v) : $v, $config['http_codes']);
+            unset($config['http_codes']);
         }
 
-        if (array_key_exists('max_retries', $value)) {
+        if (array_key_exists('max_retries', $config)) {
             $this->_usedProperties['maxRetries'] = true;
-            $this->maxRetries = $value['max_retries'];
-            unset($value['max_retries']);
+            $this->maxRetries = $config['max_retries'];
+            unset($config['max_retries']);
         }
 
-        if (array_key_exists('delay', $value)) {
+        if (array_key_exists('delay', $config)) {
             $this->_usedProperties['delay'] = true;
-            $this->delay = $value['delay'];
-            unset($value['delay']);
+            $this->delay = $config['delay'];
+            unset($config['delay']);
         }
 
-        if (array_key_exists('multiplier', $value)) {
+        if (array_key_exists('multiplier', $config)) {
             $this->_usedProperties['multiplier'] = true;
-            $this->multiplier = $value['multiplier'];
-            unset($value['multiplier']);
+            $this->multiplier = $config['multiplier'];
+            unset($config['multiplier']);
         }
 
-        if (array_key_exists('max_delay', $value)) {
+        if (array_key_exists('max_delay', $config)) {
             $this->_usedProperties['maxDelay'] = true;
-            $this->maxDelay = $value['max_delay'];
-            unset($value['max_delay']);
+            $this->maxDelay = $config['max_delay'];
+            unset($config['max_delay']);
         }
 
-        if (array_key_exists('jitter', $value)) {
+        if (array_key_exists('jitter', $config)) {
             $this->_usedProperties['jitter'] = true;
-            $this->jitter = $value['jitter'];
-            unset($value['jitter']);
+            $this->jitter = $config['jitter'];
+            unset($config['jitter']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

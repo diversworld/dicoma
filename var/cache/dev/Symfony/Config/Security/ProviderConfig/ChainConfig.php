@@ -26,16 +26,16 @@ class ChainConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('providers', $value)) {
+        if (array_key_exists('providers', $config)) {
             $this->_usedProperties['providers'] = true;
-            $this->providers = $value['providers'];
-            unset($value['providers']);
+            $this->providers = $config['providers'];
+            unset($config['providers']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

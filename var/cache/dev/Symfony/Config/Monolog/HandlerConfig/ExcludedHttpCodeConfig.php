@@ -40,22 +40,22 @@ class ExcludedHttpCodeConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('code', $value)) {
+        if (array_key_exists('code', $config)) {
             $this->_usedProperties['code'] = true;
-            $this->code = $value['code'];
-            unset($value['code']);
+            $this->code = $config['code'];
+            unset($config['code']);
         }
 
-        if (array_key_exists('urls', $value)) {
+        if (array_key_exists('urls', $config)) {
             $this->_usedProperties['urls'] = true;
-            $this->urls = $value['urls'];
-            unset($value['urls']);
+            $this->urls = $config['urls'];
+            unset($config['urls']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

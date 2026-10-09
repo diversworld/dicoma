@@ -100,13 +100,13 @@ class AccessTokenConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @example "App\\Security\\CustomTokenHandler"
      * @return \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig : static)
      */
-    public function tokenHandler(mixed $value = []): \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig|static
+    public function tokenHandler(string|array $value = []): \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['tokenHandler'] = true;
@@ -125,52 +125,52 @@ class AccessTokenConfig
         return $this->tokenHandler;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('provider', $value)) {
+        if (array_key_exists('provider', $config)) {
             $this->_usedProperties['provider'] = true;
-            $this->provider = $value['provider'];
-            unset($value['provider']);
+            $this->provider = $config['provider'];
+            unset($config['provider']);
         }
 
-        if (array_key_exists('remember_me', $value)) {
+        if (array_key_exists('remember_me', $config)) {
             $this->_usedProperties['rememberMe'] = true;
-            $this->rememberMe = $value['remember_me'];
-            unset($value['remember_me']);
+            $this->rememberMe = $config['remember_me'];
+            unset($config['remember_me']);
         }
 
-        if (array_key_exists('success_handler', $value)) {
+        if (array_key_exists('success_handler', $config)) {
             $this->_usedProperties['successHandler'] = true;
-            $this->successHandler = $value['success_handler'];
-            unset($value['success_handler']);
+            $this->successHandler = $config['success_handler'];
+            unset($config['success_handler']);
         }
 
-        if (array_key_exists('failure_handler', $value)) {
+        if (array_key_exists('failure_handler', $config)) {
             $this->_usedProperties['failureHandler'] = true;
-            $this->failureHandler = $value['failure_handler'];
-            unset($value['failure_handler']);
+            $this->failureHandler = $config['failure_handler'];
+            unset($config['failure_handler']);
         }
 
-        if (array_key_exists('realm', $value)) {
+        if (array_key_exists('realm', $config)) {
             $this->_usedProperties['realm'] = true;
-            $this->realm = $value['realm'];
-            unset($value['realm']);
+            $this->realm = $config['realm'];
+            unset($config['realm']);
         }
 
-        if (array_key_exists('token_extractors', $value)) {
+        if (array_key_exists('token_extractors', $config)) {
             $this->_usedProperties['tokenExtractors'] = true;
-            $this->tokenExtractors = $value['token_extractors'];
-            unset($value['token_extractors']);
+            $this->tokenExtractors = $config['token_extractors'];
+            unset($config['token_extractors']);
         }
 
-        if (array_key_exists('token_handler', $value)) {
+        if (array_key_exists('token_handler', $config)) {
             $this->_usedProperties['tokenHandler'] = true;
-            $this->tokenHandler = \is_array($value['token_handler']) ? new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig($value['token_handler']) : $value['token_handler'];
-            unset($value['token_handler']);
+            $this->tokenHandler = \is_array($config['token_handler']) ? new \Symfony\Config\Security\FirewallConfig\AccessToken\TokenHandlerConfig($config['token_handler']) : $config['token_handler'];
+            unset($config['token_handler']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

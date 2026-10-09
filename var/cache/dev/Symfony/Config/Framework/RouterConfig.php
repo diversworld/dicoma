@@ -61,8 +61,9 @@ class RouterConfig
     }
 
     /**
-     * @default '%kernel.cache_dir%'
+     * @default '%kernel.build_dir%'
      * @param ParamConfigurator|mixed $value
+     * @deprecated Since symfony/framework-bundle 7.1: Setting the "framework.router.cache_dir" configuration option is deprecated. It will be removed in version 8.0.
      * @return $this
      */
     public function cacheDir($value): static
@@ -74,7 +75,7 @@ class RouterConfig
     }
 
     /**
-     * The default URI used to generate URLs in a non-HTTP context
+     * The default URI used to generate URLs in a non-HTTP context.
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -115,9 +116,9 @@ class RouterConfig
 
     /**
      * set to true to throw an exception when a parameter does not match the requirements
-    set to false to disable exceptions when a parameter does not match the requirements (and return null instead)
-    set to null to disable parameter checks against requirements
-    'true' is the preferred configuration in development mode, while 'false' or 'null' might be preferred in production
+     * set to false to disable exceptions when a parameter does not match the requirements (and return null instead)
+     * set to null to disable parameter checks against requirements
+     * 'true' is the preferred configuration in development mode, while 'false' or 'null' might be preferred in production
      * @default true
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -143,64 +144,64 @@ class RouterConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('resource', $value)) {
+        if (array_key_exists('resource', $config)) {
             $this->_usedProperties['resource'] = true;
-            $this->resource = $value['resource'];
-            unset($value['resource']);
+            $this->resource = $config['resource'];
+            unset($config['resource']);
         }
 
-        if (array_key_exists('type', $value)) {
+        if (array_key_exists('type', $config)) {
             $this->_usedProperties['type'] = true;
-            $this->type = $value['type'];
-            unset($value['type']);
+            $this->type = $config['type'];
+            unset($config['type']);
         }
 
-        if (array_key_exists('cache_dir', $value)) {
+        if (array_key_exists('cache_dir', $config)) {
             $this->_usedProperties['cacheDir'] = true;
-            $this->cacheDir = $value['cache_dir'];
-            unset($value['cache_dir']);
+            $this->cacheDir = $config['cache_dir'];
+            unset($config['cache_dir']);
         }
 
-        if (array_key_exists('default_uri', $value)) {
+        if (array_key_exists('default_uri', $config)) {
             $this->_usedProperties['defaultUri'] = true;
-            $this->defaultUri = $value['default_uri'];
-            unset($value['default_uri']);
+            $this->defaultUri = $config['default_uri'];
+            unset($config['default_uri']);
         }
 
-        if (array_key_exists('http_port', $value)) {
+        if (array_key_exists('http_port', $config)) {
             $this->_usedProperties['httpPort'] = true;
-            $this->httpPort = $value['http_port'];
-            unset($value['http_port']);
+            $this->httpPort = $config['http_port'];
+            unset($config['http_port']);
         }
 
-        if (array_key_exists('https_port', $value)) {
+        if (array_key_exists('https_port', $config)) {
             $this->_usedProperties['httpsPort'] = true;
-            $this->httpsPort = $value['https_port'];
-            unset($value['https_port']);
+            $this->httpsPort = $config['https_port'];
+            unset($config['https_port']);
         }
 
-        if (array_key_exists('strict_requirements', $value)) {
+        if (array_key_exists('strict_requirements', $config)) {
             $this->_usedProperties['strictRequirements'] = true;
-            $this->strictRequirements = $value['strict_requirements'];
-            unset($value['strict_requirements']);
+            $this->strictRequirements = $config['strict_requirements'];
+            unset($config['strict_requirements']);
         }
 
-        if (array_key_exists('utf8', $value)) {
+        if (array_key_exists('utf8', $config)) {
             $this->_usedProperties['utf8'] = true;
-            $this->utf8 = $value['utf8'];
-            unset($value['utf8']);
+            $this->utf8 = $config['utf8'];
+            unset($config['utf8']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

@@ -3,6 +3,7 @@
 namespace Symfony\Config\Framework\HttpClient;
 
 require_once __DIR__.\DIRECTORY_SEPARATOR.'ScopedClientConfig'.\DIRECTORY_SEPARATOR.'PeerFingerprintConfig.php';
+require_once __DIR__.\DIRECTORY_SEPARATOR.'ScopedClientConfig'.\DIRECTORY_SEPARATOR.'CachingConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'ScopedClientConfig'.\DIRECTORY_SEPARATOR.'RetryFailedConfig.php';
 
 use Symfony\Component\Config\Loader\ParamConfigurator;
@@ -37,7 +38,10 @@ class ScopedClientConfig
     private $passphrase;
     private $ciphers;
     private $peerFingerprint;
+    private $cryptoMethod;
     private $extra;
+    private $rateLimiter;
+    private $caching;
     private $retryFailed;
     private $_usedProperties = [];
 
@@ -341,7 +345,7 @@ class ScopedClientConfig
     }
 
     /**
-     * A list of TLS ciphers separated by colons, commas or spaces (e.g. "RC3-SHA:TLS13-AES-128-GCM-SHA256"...)
+     * A list of TLS ciphers separated by colons, commas or spaces (e.g. "RC3-SHA:TLS13-AES-128-GCM-SHA256"...).
      * @default null
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -356,7 +360,7 @@ class ScopedClientConfig
 
     /**
      * Associative array: hashing algorithm => hash(es).
-    */
+     */
     public function peerFingerprint(array $value = []): \Symfony\Config\Framework\HttpClient\ScopedClientConfig\PeerFingerprintConfig
     {
         if (null === $this->peerFingerprint) {
@@ -370,26 +374,79 @@ class ScopedClientConfig
     }
 
     /**
-     * @param ParamConfigurator|list<ParamConfigurator|mixed> $value
-     *
+     * The minimum version of TLS to accept; must be one of STREAM_CRYPTO_METHOD_TLSv*_CLIENT constants.
+     * @default null
+     * @param ParamConfigurator|mixed $value
      * @return $this
      */
-    public function extra(ParamConfigurator|array $value): static
+    public function cryptoMethod($value): static
     {
-        $this->_usedProperties['extra'] = true;
-        $this->extra = $value;
+        $this->_usedProperties['cryptoMethod'] = true;
+        $this->cryptoMethod = $value;
 
         return $this;
     }
 
     /**
-     * @template TValue
+     * @return $this
+     */
+    public function extra(string $name, mixed $value): static
+    {
+        $this->_usedProperties['extra'] = true;
+        $this->extra[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Rate limiter name to use for throttling requests.
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function rateLimiter($value): static
+    {
+        $this->_usedProperties['rateLimiter'] = true;
+        $this->rateLimiter = $value;
+
+        return $this;
+    }
+
+    /**
+     * @template TValue of array|bool
+     * @param TValue $value
+     * Caching configuration.
+     * @default {"enabled":false,"cache_pool":"cache.http_client","shared":true,"max_ttl":null}
+     * @return \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig|$this
+     * @psalm-return (TValue is array ? \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig : static)
+     */
+    public function caching(array|bool $value = []): \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig|static
+    {
+        if (!\is_array($value)) {
+            $this->_usedProperties['caching'] = true;
+            $this->caching = $value;
+
+            return $this;
+        }
+
+        if (!$this->caching instanceof \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig) {
+            $this->_usedProperties['caching'] = true;
+            $this->caching = new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig($value);
+        } elseif (0 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "caching()" has already been initialized. You cannot pass values the second time you call caching().');
+        }
+
+        return $this->caching;
+    }
+
+    /**
+     * @template TValue of array|bool
      * @param TValue $value
      * @default {"enabled":false,"retry_strategy":null,"http_codes":[],"max_retries":3,"delay":1000,"multiplier":2,"max_delay":0,"jitter":0.1}
      * @return \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig : static)
      */
-    public function retryFailed(mixed $value = []): \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig|static
+    public function retryFailed(array|bool $value = []): \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig|static
     {
         if (!\is_array($value)) {
             $this->_usedProperties['retryFailed'] = true;
@@ -408,166 +465,184 @@ class ScopedClientConfig
         return $this->retryFailed;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('scope', $value)) {
+        if (array_key_exists('scope', $config)) {
             $this->_usedProperties['scope'] = true;
-            $this->scope = $value['scope'];
-            unset($value['scope']);
+            $this->scope = $config['scope'];
+            unset($config['scope']);
         }
 
-        if (array_key_exists('base_uri', $value)) {
+        if (array_key_exists('base_uri', $config)) {
             $this->_usedProperties['baseUri'] = true;
-            $this->baseUri = $value['base_uri'];
-            unset($value['base_uri']);
+            $this->baseUri = $config['base_uri'];
+            unset($config['base_uri']);
         }
 
-        if (array_key_exists('auth_basic', $value)) {
+        if (array_key_exists('auth_basic', $config)) {
             $this->_usedProperties['authBasic'] = true;
-            $this->authBasic = $value['auth_basic'];
-            unset($value['auth_basic']);
+            $this->authBasic = $config['auth_basic'];
+            unset($config['auth_basic']);
         }
 
-        if (array_key_exists('auth_bearer', $value)) {
+        if (array_key_exists('auth_bearer', $config)) {
             $this->_usedProperties['authBearer'] = true;
-            $this->authBearer = $value['auth_bearer'];
-            unset($value['auth_bearer']);
+            $this->authBearer = $config['auth_bearer'];
+            unset($config['auth_bearer']);
         }
 
-        if (array_key_exists('auth_ntlm', $value)) {
+        if (array_key_exists('auth_ntlm', $config)) {
             $this->_usedProperties['authNtlm'] = true;
-            $this->authNtlm = $value['auth_ntlm'];
-            unset($value['auth_ntlm']);
+            $this->authNtlm = $config['auth_ntlm'];
+            unset($config['auth_ntlm']);
         }
 
-        if (array_key_exists('query', $value)) {
+        if (array_key_exists('query', $config)) {
             $this->_usedProperties['query'] = true;
-            $this->query = $value['query'];
-            unset($value['query']);
+            $this->query = $config['query'];
+            unset($config['query']);
         }
 
-        if (array_key_exists('headers', $value)) {
+        if (array_key_exists('headers', $config)) {
             $this->_usedProperties['headers'] = true;
-            $this->headers = $value['headers'];
-            unset($value['headers']);
+            $this->headers = $config['headers'];
+            unset($config['headers']);
         }
 
-        if (array_key_exists('max_redirects', $value)) {
+        if (array_key_exists('max_redirects', $config)) {
             $this->_usedProperties['maxRedirects'] = true;
-            $this->maxRedirects = $value['max_redirects'];
-            unset($value['max_redirects']);
+            $this->maxRedirects = $config['max_redirects'];
+            unset($config['max_redirects']);
         }
 
-        if (array_key_exists('http_version', $value)) {
+        if (array_key_exists('http_version', $config)) {
             $this->_usedProperties['httpVersion'] = true;
-            $this->httpVersion = $value['http_version'];
-            unset($value['http_version']);
+            $this->httpVersion = $config['http_version'];
+            unset($config['http_version']);
         }
 
-        if (array_key_exists('resolve', $value)) {
+        if (array_key_exists('resolve', $config)) {
             $this->_usedProperties['resolve'] = true;
-            $this->resolve = $value['resolve'];
-            unset($value['resolve']);
+            $this->resolve = $config['resolve'];
+            unset($config['resolve']);
         }
 
-        if (array_key_exists('proxy', $value)) {
+        if (array_key_exists('proxy', $config)) {
             $this->_usedProperties['proxy'] = true;
-            $this->proxy = $value['proxy'];
-            unset($value['proxy']);
+            $this->proxy = $config['proxy'];
+            unset($config['proxy']);
         }
 
-        if (array_key_exists('no_proxy', $value)) {
+        if (array_key_exists('no_proxy', $config)) {
             $this->_usedProperties['noProxy'] = true;
-            $this->noProxy = $value['no_proxy'];
-            unset($value['no_proxy']);
+            $this->noProxy = $config['no_proxy'];
+            unset($config['no_proxy']);
         }
 
-        if (array_key_exists('timeout', $value)) {
+        if (array_key_exists('timeout', $config)) {
             $this->_usedProperties['timeout'] = true;
-            $this->timeout = $value['timeout'];
-            unset($value['timeout']);
+            $this->timeout = $config['timeout'];
+            unset($config['timeout']);
         }
 
-        if (array_key_exists('max_duration', $value)) {
+        if (array_key_exists('max_duration', $config)) {
             $this->_usedProperties['maxDuration'] = true;
-            $this->maxDuration = $value['max_duration'];
-            unset($value['max_duration']);
+            $this->maxDuration = $config['max_duration'];
+            unset($config['max_duration']);
         }
 
-        if (array_key_exists('bindto', $value)) {
+        if (array_key_exists('bindto', $config)) {
             $this->_usedProperties['bindto'] = true;
-            $this->bindto = $value['bindto'];
-            unset($value['bindto']);
+            $this->bindto = $config['bindto'];
+            unset($config['bindto']);
         }
 
-        if (array_key_exists('verify_peer', $value)) {
+        if (array_key_exists('verify_peer', $config)) {
             $this->_usedProperties['verifyPeer'] = true;
-            $this->verifyPeer = $value['verify_peer'];
-            unset($value['verify_peer']);
+            $this->verifyPeer = $config['verify_peer'];
+            unset($config['verify_peer']);
         }
 
-        if (array_key_exists('verify_host', $value)) {
+        if (array_key_exists('verify_host', $config)) {
             $this->_usedProperties['verifyHost'] = true;
-            $this->verifyHost = $value['verify_host'];
-            unset($value['verify_host']);
+            $this->verifyHost = $config['verify_host'];
+            unset($config['verify_host']);
         }
 
-        if (array_key_exists('cafile', $value)) {
+        if (array_key_exists('cafile', $config)) {
             $this->_usedProperties['cafile'] = true;
-            $this->cafile = $value['cafile'];
-            unset($value['cafile']);
+            $this->cafile = $config['cafile'];
+            unset($config['cafile']);
         }
 
-        if (array_key_exists('capath', $value)) {
+        if (array_key_exists('capath', $config)) {
             $this->_usedProperties['capath'] = true;
-            $this->capath = $value['capath'];
-            unset($value['capath']);
+            $this->capath = $config['capath'];
+            unset($config['capath']);
         }
 
-        if (array_key_exists('local_cert', $value)) {
+        if (array_key_exists('local_cert', $config)) {
             $this->_usedProperties['localCert'] = true;
-            $this->localCert = $value['local_cert'];
-            unset($value['local_cert']);
+            $this->localCert = $config['local_cert'];
+            unset($config['local_cert']);
         }
 
-        if (array_key_exists('local_pk', $value)) {
+        if (array_key_exists('local_pk', $config)) {
             $this->_usedProperties['localPk'] = true;
-            $this->localPk = $value['local_pk'];
-            unset($value['local_pk']);
+            $this->localPk = $config['local_pk'];
+            unset($config['local_pk']);
         }
 
-        if (array_key_exists('passphrase', $value)) {
+        if (array_key_exists('passphrase', $config)) {
             $this->_usedProperties['passphrase'] = true;
-            $this->passphrase = $value['passphrase'];
-            unset($value['passphrase']);
+            $this->passphrase = $config['passphrase'];
+            unset($config['passphrase']);
         }
 
-        if (array_key_exists('ciphers', $value)) {
+        if (array_key_exists('ciphers', $config)) {
             $this->_usedProperties['ciphers'] = true;
-            $this->ciphers = $value['ciphers'];
-            unset($value['ciphers']);
+            $this->ciphers = $config['ciphers'];
+            unset($config['ciphers']);
         }
 
-        if (array_key_exists('peer_fingerprint', $value)) {
+        if (array_key_exists('peer_fingerprint', $config)) {
             $this->_usedProperties['peerFingerprint'] = true;
-            $this->peerFingerprint = new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\PeerFingerprintConfig($value['peer_fingerprint']);
-            unset($value['peer_fingerprint']);
+            $this->peerFingerprint = new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\PeerFingerprintConfig($config['peer_fingerprint']);
+            unset($config['peer_fingerprint']);
         }
 
-        if (array_key_exists('extra', $value)) {
+        if (array_key_exists('crypto_method', $config)) {
+            $this->_usedProperties['cryptoMethod'] = true;
+            $this->cryptoMethod = $config['crypto_method'];
+            unset($config['crypto_method']);
+        }
+
+        if (array_key_exists('extra', $config)) {
             $this->_usedProperties['extra'] = true;
-            $this->extra = $value['extra'];
-            unset($value['extra']);
+            $this->extra = $config['extra'];
+            unset($config['extra']);
         }
 
-        if (array_key_exists('retry_failed', $value)) {
+        if (array_key_exists('rate_limiter', $config)) {
+            $this->_usedProperties['rateLimiter'] = true;
+            $this->rateLimiter = $config['rate_limiter'];
+            unset($config['rate_limiter']);
+        }
+
+        if (array_key_exists('caching', $config)) {
+            $this->_usedProperties['caching'] = true;
+            $this->caching = \is_array($config['caching']) ? new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig($config['caching']) : $config['caching'];
+            unset($config['caching']);
+        }
+
+        if (array_key_exists('retry_failed', $config)) {
             $this->_usedProperties['retryFailed'] = true;
-            $this->retryFailed = \is_array($value['retry_failed']) ? new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig($value['retry_failed']) : $value['retry_failed'];
-            unset($value['retry_failed']);
+            $this->retryFailed = \is_array($config['retry_failed']) ? new \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig($config['retry_failed']) : $config['retry_failed'];
+            unset($config['retry_failed']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -646,8 +721,17 @@ class ScopedClientConfig
         if (isset($this->_usedProperties['peerFingerprint'])) {
             $output['peer_fingerprint'] = $this->peerFingerprint->toArray();
         }
+        if (isset($this->_usedProperties['cryptoMethod'])) {
+            $output['crypto_method'] = $this->cryptoMethod;
+        }
         if (isset($this->_usedProperties['extra'])) {
             $output['extra'] = $this->extra;
+        }
+        if (isset($this->_usedProperties['rateLimiter'])) {
+            $output['rate_limiter'] = $this->rateLimiter;
+        }
+        if (isset($this->_usedProperties['caching'])) {
+            $output['caching'] = $this->caching instanceof \Symfony\Config\Framework\HttpClient\ScopedClientConfig\CachingConfig ? $this->caching->toArray() : $this->caching;
         }
         if (isset($this->_usedProperties['retryFailed'])) {
             $output['retry_failed'] = $this->retryFailed instanceof \Symfony\Config\Framework\HttpClient\ScopedClientConfig\RetryFailedConfig ? $this->retryFailed->toArray() : $this->retryFailed;

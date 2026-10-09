@@ -54,28 +54,28 @@ class DefaultMiddlewareConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('allow_no_handlers', $value)) {
+        if (array_key_exists('allow_no_handlers', $config)) {
             $this->_usedProperties['allowNoHandlers'] = true;
-            $this->allowNoHandlers = $value['allow_no_handlers'];
-            unset($value['allow_no_handlers']);
+            $this->allowNoHandlers = $config['allow_no_handlers'];
+            unset($config['allow_no_handlers']);
         }
 
-        if (array_key_exists('allow_no_senders', $value)) {
+        if (array_key_exists('allow_no_senders', $config)) {
             $this->_usedProperties['allowNoSenders'] = true;
-            $this->allowNoSenders = $value['allow_no_senders'];
-            unset($value['allow_no_senders']);
+            $this->allowNoSenders = $config['allow_no_senders'];
+            unset($config['allow_no_senders']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 

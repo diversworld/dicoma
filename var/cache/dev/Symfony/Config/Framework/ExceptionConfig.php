@@ -12,6 +12,7 @@ class ExceptionConfig
 {
     private $logLevel;
     private $statusCode;
+    private $logChannel;
     private $_usedProperties = [];
 
     /**
@@ -42,22 +43,42 @@ class ExceptionConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    /**
+     * The channel of log message. Null to let Symfony decide.
+     * @default null
+     * @param ParamConfigurator|mixed $value
+     * @return $this
+     */
+    public function logChannel($value): static
     {
-        if (array_key_exists('log_level', $value)) {
+        $this->_usedProperties['logChannel'] = true;
+        $this->logChannel = $value;
+
+        return $this;
+    }
+
+    public function __construct(array $config = [])
+    {
+        if (array_key_exists('log_level', $config)) {
             $this->_usedProperties['logLevel'] = true;
-            $this->logLevel = $value['log_level'];
-            unset($value['log_level']);
+            $this->logLevel = $config['log_level'];
+            unset($config['log_level']);
         }
 
-        if (array_key_exists('status_code', $value)) {
+        if (array_key_exists('status_code', $config)) {
             $this->_usedProperties['statusCode'] = true;
-            $this->statusCode = $value['status_code'];
-            unset($value['status_code']);
+            $this->statusCode = $config['status_code'];
+            unset($config['status_code']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if (array_key_exists('log_channel', $config)) {
+            $this->_usedProperties['logChannel'] = true;
+            $this->logChannel = $config['log_channel'];
+            unset($config['log_channel']);
+        }
+
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -69,6 +90,9 @@ class ExceptionConfig
         }
         if (isset($this->_usedProperties['statusCode'])) {
             $output['status_code'] = $this->statusCode;
+        }
+        if (isset($this->_usedProperties['logChannel'])) {
+            $output['log_channel'] = $this->logChannel;
         }
 
         return $output;

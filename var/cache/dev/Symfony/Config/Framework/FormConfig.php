@@ -30,11 +30,22 @@ class FormConfig
     }
 
     /**
-     * @default {"enabled":null,"field_name":"_token"}
-    */
-    public function csrfProtection(array $value = []): \Symfony\Config\Framework\Form\CsrfProtectionConfig
+     * @template TValue of array|bool
+     * @param TValue $value
+     * @default {"enabled":null,"token_id":null,"field_name":"_token","field_attr":{"data-controller":"csrf-protection"}}
+     * @return \Symfony\Config\Framework\Form\CsrfProtectionConfig|$this
+     * @psalm-return (TValue is array ? \Symfony\Config\Framework\Form\CsrfProtectionConfig : static)
+     */
+    public function csrfProtection(array|bool $value = []): \Symfony\Config\Framework\Form\CsrfProtectionConfig|static
     {
-        if (null === $this->csrfProtection) {
+        if (!\is_array($value)) {
+            $this->_usedProperties['csrfProtection'] = true;
+            $this->csrfProtection = $value;
+
+            return $this;
+        }
+
+        if (!$this->csrfProtection instanceof \Symfony\Config\Framework\Form\CsrfProtectionConfig) {
             $this->_usedProperties['csrfProtection'] = true;
             $this->csrfProtection = new \Symfony\Config\Framework\Form\CsrfProtectionConfig($value);
         } elseif (0 < \func_num_args()) {
@@ -44,22 +55,22 @@ class FormConfig
         return $this->csrfProtection;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('enabled', $value)) {
+        if (array_key_exists('enabled', $config)) {
             $this->_usedProperties['enabled'] = true;
-            $this->enabled = $value['enabled'];
-            unset($value['enabled']);
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
         }
 
-        if (array_key_exists('csrf_protection', $value)) {
+        if (array_key_exists('csrf_protection', $config)) {
             $this->_usedProperties['csrfProtection'] = true;
-            $this->csrfProtection = new \Symfony\Config\Framework\Form\CsrfProtectionConfig($value['csrf_protection']);
-            unset($value['csrf_protection']);
+            $this->csrfProtection = \is_array($config['csrf_protection']) ? new \Symfony\Config\Framework\Form\CsrfProtectionConfig($config['csrf_protection']) : $config['csrf_protection'];
+            unset($config['csrf_protection']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -70,7 +81,7 @@ class FormConfig
             $output['enabled'] = $this->enabled;
         }
         if (isset($this->_usedProperties['csrfProtection'])) {
-            $output['csrf_protection'] = $this->csrfProtection->toArray();
+            $output['csrf_protection'] = $this->csrfProtection instanceof \Symfony\Config\Framework\Form\CsrfProtectionConfig ? $this->csrfProtection->toArray() : $this->csrfProtection;
         }
 
         return $output;

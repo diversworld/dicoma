@@ -6,6 +6,7 @@ require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'ExcludedHttpCodeConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'PublisherConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'MongoConfig.php';
+require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'MongodbConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'ElasticsearchConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'RedisConfig.php';
 require_once __DIR__.\DIRECTORY_SEPARATOR.'HandlerConfig'.\DIRECTORY_SEPARATOR.'PredisConfig.php';
@@ -23,9 +24,11 @@ class HandlerConfig
 {
     private $type;
     private $id;
+    private $enabled;
     private $priority;
     private $level;
     private $bubble;
+    private $interactiveOnly;
     private $appName;
     private $fillExtraContext;
     private $includeStacktraces;
@@ -64,6 +67,7 @@ class HandlerConfig
     private $includeExtra;
     private $iconEmoji;
     private $webhookUrl;
+    private $excludeFields;
     private $team;
     private $notify;
     private $nickname;
@@ -96,6 +100,7 @@ class HandlerConfig
     private $disableNotification;
     private $splitLongMessages;
     private $delayBetweenMessages;
+    private $topic;
     private $factor;
     private $tags;
     private $consoleFormaterOptions;
@@ -104,6 +109,7 @@ class HandlerConfig
     private $nested;
     private $publisher;
     private $mongo;
+    private $mongodb;
     private $elasticsearch;
     private $index;
     private $documentType;
@@ -149,6 +155,19 @@ class HandlerConfig
     }
 
     /**
+     * @default true
+     * @param ParamConfigurator|bool $value
+     * @return $this
+     */
+    public function enabled($value): static
+    {
+        $this->_usedProperties['enabled'] = true;
+        $this->enabled = $value;
+
+        return $this;
+    }
+
+    /**
      * @default 0
      * @param ParamConfigurator|mixed $value
      * @return $this
@@ -183,6 +202,19 @@ class HandlerConfig
     {
         $this->_usedProperties['bubble'] = true;
         $this->bubble = $value;
+
+        return $this;
+    }
+
+    /**
+     * @default false
+     * @param ParamConfigurator|bool $value
+     * @return $this
+     */
+    public function interactiveOnly($value): static
+    {
+        $this->_usedProperties['interactiveOnly'] = true;
+        $this->interactiveOnly = $value;
 
         return $this;
     }
@@ -227,7 +259,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @default {"enabled":null}
      * @return \Symfony\Config\Monolog\HandlerConfig\ProcessPsr3MessagesConfig|$this
@@ -435,8 +467,12 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
+     * Only for "fingers_crossed" handler type
+     * @example 403
+     * @example 404
+     * @example {"400":["^\/foo","^\/bar"]}
      * @return \Symfony\Config\Monolog\HandlerConfig\ExcludedHttpCodeConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\ExcludedHttpCodeConfig : static)
      */
@@ -695,6 +731,19 @@ class HandlerConfig
     {
         $this->_usedProperties['webhookUrl'] = true;
         $this->webhookUrl = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param ParamConfigurator|list<ParamConfigurator|mixed> $value
+     *
+     * @return $this
+     */
+    public function excludeFields(ParamConfigurator|array $value): static
+    {
+        $this->_usedProperties['excludeFields'] = true;
+        $this->excludeFields = $value;
 
         return $this;
     }
@@ -1117,6 +1166,19 @@ class HandlerConfig
     }
 
     /**
+     * @default null
+     * @param ParamConfigurator|int $value
+     * @return $this
+     */
+    public function topic($value): static
+    {
+        $this->_usedProperties['topic'] = true;
+        $this->topic = $value;
+
+        return $this;
+    }
+
+    /**
      * @default 1
      * @param ParamConfigurator|int $value
      * @return $this
@@ -1145,7 +1207,7 @@ class HandlerConfig
     /**
      * @default null
      * @param ParamConfigurator|mixed $value
-     * @deprecated ".console_formater_options" is deprecated, use ".console_formatter_options" instead.
+     * @deprecated Since symfony/monolog-bundle 3.7: "monolog.handlers..console_formater_options" is deprecated, use "monolog.handlers..console_formatter_options" instead.
      *
      * @return $this
      */
@@ -1159,7 +1221,7 @@ class HandlerConfig
 
     /**
      * @default array (
-    )
+     * )
      * @param ParamConfigurator|mixed $value
      *
      * @return $this
@@ -1200,7 +1262,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\PublisherConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\PublisherConfig : static)
@@ -1225,7 +1287,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\MongoConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\MongoConfig : static)
@@ -1250,7 +1312,32 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
+     * @param TValue $value
+     * @return \Symfony\Config\Monolog\HandlerConfig\MongodbConfig|$this
+     * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\MongodbConfig : static)
+     */
+    public function mongodb(string|array $value = []): \Symfony\Config\Monolog\HandlerConfig\MongodbConfig|static
+    {
+        if (!\is_array($value)) {
+            $this->_usedProperties['mongodb'] = true;
+            $this->mongodb = $value;
+
+            return $this;
+        }
+
+        if (!$this->mongodb instanceof \Symfony\Config\Monolog\HandlerConfig\MongodbConfig) {
+            $this->_usedProperties['mongodb'] = true;
+            $this->mongodb = new \Symfony\Config\Monolog\HandlerConfig\MongodbConfig($value);
+        } elseif (0 < \func_num_args()) {
+            throw new InvalidConfigurationException('The node created by "mongodb()" has already been initialized. You cannot pass values the second time you call mongodb().');
+        }
+
+        return $this->mongodb;
+    }
+
+    /**
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\ElasticsearchConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\ElasticsearchConfig : static)
@@ -1314,7 +1401,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\RedisConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\RedisConfig : static)
@@ -1339,7 +1426,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\PredisConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\PredisConfig : static)
@@ -1442,7 +1529,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of string|array
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\EmailPrototypeConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\EmailPrototypeConfig : static)
@@ -1479,22 +1566,9 @@ class HandlerConfig
         return $this;
     }
 
-    /**
-     * @template TValue
-     * @param TValue $value
-     * @return \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig|$this
-     * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig : static)
-     */
-    public function verbosityLevels(array $value = []): \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig|static
+    public function verbosityLevels(array $value = []): \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig
     {
-        if (!\is_array($value)) {
-            $this->_usedProperties['verbosityLevels'] = true;
-            $this->verbosityLevels = $value;
-
-            return $this;
-        }
-
-        if (!$this->verbosityLevels instanceof \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig) {
+        if (null === $this->verbosityLevels) {
             $this->_usedProperties['verbosityLevels'] = true;
             $this->verbosityLevels = new \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig($value);
         } elseif (0 < \func_num_args()) {
@@ -1505,7 +1579,7 @@ class HandlerConfig
     }
 
     /**
-     * @template TValue
+     * @template TValue of mixed
      * @param TValue $value
      * @return \Symfony\Config\Monolog\HandlerConfig\ChannelsConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Monolog\HandlerConfig\ChannelsConfig : static)
@@ -1529,604 +1603,634 @@ class HandlerConfig
         return $this->channels;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('type', $value)) {
+        if (array_key_exists('type', $config)) {
             $this->_usedProperties['type'] = true;
-            $this->type = $value['type'];
-            unset($value['type']);
+            $this->type = $config['type'];
+            unset($config['type']);
         }
 
-        if (array_key_exists('id', $value)) {
+        if (array_key_exists('id', $config)) {
             $this->_usedProperties['id'] = true;
-            $this->id = $value['id'];
-            unset($value['id']);
+            $this->id = $config['id'];
+            unset($config['id']);
         }
 
-        if (array_key_exists('priority', $value)) {
+        if (array_key_exists('enabled', $config)) {
+            $this->_usedProperties['enabled'] = true;
+            $this->enabled = $config['enabled'];
+            unset($config['enabled']);
+        }
+
+        if (array_key_exists('priority', $config)) {
             $this->_usedProperties['priority'] = true;
-            $this->priority = $value['priority'];
-            unset($value['priority']);
+            $this->priority = $config['priority'];
+            unset($config['priority']);
         }
 
-        if (array_key_exists('level', $value)) {
+        if (array_key_exists('level', $config)) {
             $this->_usedProperties['level'] = true;
-            $this->level = $value['level'];
-            unset($value['level']);
+            $this->level = $config['level'];
+            unset($config['level']);
         }
 
-        if (array_key_exists('bubble', $value)) {
+        if (array_key_exists('bubble', $config)) {
             $this->_usedProperties['bubble'] = true;
-            $this->bubble = $value['bubble'];
-            unset($value['bubble']);
+            $this->bubble = $config['bubble'];
+            unset($config['bubble']);
         }
 
-        if (array_key_exists('app_name', $value)) {
+        if (array_key_exists('interactive_only', $config)) {
+            $this->_usedProperties['interactiveOnly'] = true;
+            $this->interactiveOnly = $config['interactive_only'];
+            unset($config['interactive_only']);
+        }
+
+        if (array_key_exists('app_name', $config)) {
             $this->_usedProperties['appName'] = true;
-            $this->appName = $value['app_name'];
-            unset($value['app_name']);
+            $this->appName = $config['app_name'];
+            unset($config['app_name']);
         }
 
-        if (array_key_exists('fill_extra_context', $value)) {
+        if (array_key_exists('fill_extra_context', $config)) {
             $this->_usedProperties['fillExtraContext'] = true;
-            $this->fillExtraContext = $value['fill_extra_context'];
-            unset($value['fill_extra_context']);
+            $this->fillExtraContext = $config['fill_extra_context'];
+            unset($config['fill_extra_context']);
         }
 
-        if (array_key_exists('include_stacktraces', $value)) {
+        if (array_key_exists('include_stacktraces', $config)) {
             $this->_usedProperties['includeStacktraces'] = true;
-            $this->includeStacktraces = $value['include_stacktraces'];
-            unset($value['include_stacktraces']);
+            $this->includeStacktraces = $config['include_stacktraces'];
+            unset($config['include_stacktraces']);
         }
 
-        if (array_key_exists('process_psr_3_messages', $value)) {
+        if (array_key_exists('process_psr_3_messages', $config)) {
             $this->_usedProperties['processPsr3Messages'] = true;
-            $this->processPsr3Messages = \is_array($value['process_psr_3_messages']) ? new \Symfony\Config\Monolog\HandlerConfig\ProcessPsr3MessagesConfig($value['process_psr_3_messages']) : $value['process_psr_3_messages'];
-            unset($value['process_psr_3_messages']);
+            $this->processPsr3Messages = \is_array($config['process_psr_3_messages']) ? new \Symfony\Config\Monolog\HandlerConfig\ProcessPsr3MessagesConfig($config['process_psr_3_messages']) : $config['process_psr_3_messages'];
+            unset($config['process_psr_3_messages']);
         }
 
-        if (array_key_exists('path', $value)) {
+        if (array_key_exists('path', $config)) {
             $this->_usedProperties['path'] = true;
-            $this->path = $value['path'];
-            unset($value['path']);
+            $this->path = $config['path'];
+            unset($config['path']);
         }
 
-        if (array_key_exists('file_permission', $value)) {
+        if (array_key_exists('file_permission', $config)) {
             $this->_usedProperties['filePermission'] = true;
-            $this->filePermission = $value['file_permission'];
-            unset($value['file_permission']);
+            $this->filePermission = $config['file_permission'];
+            unset($config['file_permission']);
         }
 
-        if (array_key_exists('use_locking', $value)) {
+        if (array_key_exists('use_locking', $config)) {
             $this->_usedProperties['useLocking'] = true;
-            $this->useLocking = $value['use_locking'];
-            unset($value['use_locking']);
+            $this->useLocking = $config['use_locking'];
+            unset($config['use_locking']);
         }
 
-        if (array_key_exists('filename_format', $value)) {
+        if (array_key_exists('filename_format', $config)) {
             $this->_usedProperties['filenameFormat'] = true;
-            $this->filenameFormat = $value['filename_format'];
-            unset($value['filename_format']);
+            $this->filenameFormat = $config['filename_format'];
+            unset($config['filename_format']);
         }
 
-        if (array_key_exists('date_format', $value)) {
+        if (array_key_exists('date_format', $config)) {
             $this->_usedProperties['dateFormat'] = true;
-            $this->dateFormat = $value['date_format'];
-            unset($value['date_format']);
+            $this->dateFormat = $config['date_format'];
+            unset($config['date_format']);
         }
 
-        if (array_key_exists('ident', $value)) {
+        if (array_key_exists('ident', $config)) {
             $this->_usedProperties['ident'] = true;
-            $this->ident = $value['ident'];
-            unset($value['ident']);
+            $this->ident = $config['ident'];
+            unset($config['ident']);
         }
 
-        if (array_key_exists('logopts', $value)) {
+        if (array_key_exists('logopts', $config)) {
             $this->_usedProperties['logopts'] = true;
-            $this->logopts = $value['logopts'];
-            unset($value['logopts']);
+            $this->logopts = $config['logopts'];
+            unset($config['logopts']);
         }
 
-        if (array_key_exists('facility', $value)) {
+        if (array_key_exists('facility', $config)) {
             $this->_usedProperties['facility'] = true;
-            $this->facility = $value['facility'];
-            unset($value['facility']);
+            $this->facility = $config['facility'];
+            unset($config['facility']);
         }
 
-        if (array_key_exists('max_files', $value)) {
+        if (array_key_exists('max_files', $config)) {
             $this->_usedProperties['maxFiles'] = true;
-            $this->maxFiles = $value['max_files'];
-            unset($value['max_files']);
+            $this->maxFiles = $config['max_files'];
+            unset($config['max_files']);
         }
 
-        if (array_key_exists('action_level', $value)) {
+        if (array_key_exists('action_level', $config)) {
             $this->_usedProperties['actionLevel'] = true;
-            $this->actionLevel = $value['action_level'];
-            unset($value['action_level']);
+            $this->actionLevel = $config['action_level'];
+            unset($config['action_level']);
         }
 
-        if (array_key_exists('activation_strategy', $value)) {
+        if (array_key_exists('activation_strategy', $config)) {
             $this->_usedProperties['activationStrategy'] = true;
-            $this->activationStrategy = $value['activation_strategy'];
-            unset($value['activation_strategy']);
+            $this->activationStrategy = $config['activation_strategy'];
+            unset($config['activation_strategy']);
         }
 
-        if (array_key_exists('stop_buffering', $value)) {
+        if (array_key_exists('stop_buffering', $config)) {
             $this->_usedProperties['stopBuffering'] = true;
-            $this->stopBuffering = $value['stop_buffering'];
-            unset($value['stop_buffering']);
+            $this->stopBuffering = $config['stop_buffering'];
+            unset($config['stop_buffering']);
         }
 
-        if (array_key_exists('passthru_level', $value)) {
+        if (array_key_exists('passthru_level', $config)) {
             $this->_usedProperties['passthruLevel'] = true;
-            $this->passthruLevel = $value['passthru_level'];
-            unset($value['passthru_level']);
+            $this->passthruLevel = $config['passthru_level'];
+            unset($config['passthru_level']);
         }
 
-        if (array_key_exists('excluded_404s', $value)) {
+        if (array_key_exists('excluded_404s', $config)) {
             $this->_usedProperties['excluded404s'] = true;
-            $this->excluded404s = $value['excluded_404s'];
-            unset($value['excluded_404s']);
+            $this->excluded404s = $config['excluded_404s'];
+            unset($config['excluded_404s']);
         }
 
-        if (array_key_exists('excluded_http_codes', $value)) {
+        if (array_key_exists('excluded_http_codes', $config)) {
             $this->_usedProperties['excludedHttpCodes'] = true;
-            $this->excludedHttpCodes = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Monolog\HandlerConfig\ExcludedHttpCodeConfig($v) : $v, $value['excluded_http_codes']);
-            unset($value['excluded_http_codes']);
+            $this->excludedHttpCodes = array_map(fn ($v) => \is_array($v) ? new \Symfony\Config\Monolog\HandlerConfig\ExcludedHttpCodeConfig($v) : $v, $config['excluded_http_codes']);
+            unset($config['excluded_http_codes']);
         }
 
-        if (array_key_exists('accepted_levels', $value)) {
+        if (array_key_exists('accepted_levels', $config)) {
             $this->_usedProperties['acceptedLevels'] = true;
-            $this->acceptedLevels = $value['accepted_levels'];
-            unset($value['accepted_levels']);
+            $this->acceptedLevels = $config['accepted_levels'];
+            unset($config['accepted_levels']);
         }
 
-        if (array_key_exists('min_level', $value)) {
+        if (array_key_exists('min_level', $config)) {
             $this->_usedProperties['minLevel'] = true;
-            $this->minLevel = $value['min_level'];
-            unset($value['min_level']);
+            $this->minLevel = $config['min_level'];
+            unset($config['min_level']);
         }
 
-        if (array_key_exists('max_level', $value)) {
+        if (array_key_exists('max_level', $config)) {
             $this->_usedProperties['maxLevel'] = true;
-            $this->maxLevel = $value['max_level'];
-            unset($value['max_level']);
+            $this->maxLevel = $config['max_level'];
+            unset($config['max_level']);
         }
 
-        if (array_key_exists('buffer_size', $value)) {
+        if (array_key_exists('buffer_size', $config)) {
             $this->_usedProperties['bufferSize'] = true;
-            $this->bufferSize = $value['buffer_size'];
-            unset($value['buffer_size']);
+            $this->bufferSize = $config['buffer_size'];
+            unset($config['buffer_size']);
         }
 
-        if (array_key_exists('flush_on_overflow', $value)) {
+        if (array_key_exists('flush_on_overflow', $config)) {
             $this->_usedProperties['flushOnOverflow'] = true;
-            $this->flushOnOverflow = $value['flush_on_overflow'];
-            unset($value['flush_on_overflow']);
+            $this->flushOnOverflow = $config['flush_on_overflow'];
+            unset($config['flush_on_overflow']);
         }
 
-        if (array_key_exists('handler', $value)) {
+        if (array_key_exists('handler', $config)) {
             $this->_usedProperties['handler'] = true;
-            $this->handler = $value['handler'];
-            unset($value['handler']);
+            $this->handler = $config['handler'];
+            unset($config['handler']);
         }
 
-        if (array_key_exists('url', $value)) {
+        if (array_key_exists('url', $config)) {
             $this->_usedProperties['url'] = true;
-            $this->url = $value['url'];
-            unset($value['url']);
+            $this->url = $config['url'];
+            unset($config['url']);
         }
 
-        if (array_key_exists('exchange', $value)) {
+        if (array_key_exists('exchange', $config)) {
             $this->_usedProperties['exchange'] = true;
-            $this->exchange = $value['exchange'];
-            unset($value['exchange']);
+            $this->exchange = $config['exchange'];
+            unset($config['exchange']);
         }
 
-        if (array_key_exists('exchange_name', $value)) {
+        if (array_key_exists('exchange_name', $config)) {
             $this->_usedProperties['exchangeName'] = true;
-            $this->exchangeName = $value['exchange_name'];
-            unset($value['exchange_name']);
+            $this->exchangeName = $config['exchange_name'];
+            unset($config['exchange_name']);
         }
 
-        if (array_key_exists('room', $value)) {
+        if (array_key_exists('room', $config)) {
             $this->_usedProperties['room'] = true;
-            $this->room = $value['room'];
-            unset($value['room']);
+            $this->room = $config['room'];
+            unset($config['room']);
         }
 
-        if (array_key_exists('message_format', $value)) {
+        if (array_key_exists('message_format', $config)) {
             $this->_usedProperties['messageFormat'] = true;
-            $this->messageFormat = $value['message_format'];
-            unset($value['message_format']);
+            $this->messageFormat = $config['message_format'];
+            unset($config['message_format']);
         }
 
-        if (array_key_exists('api_version', $value)) {
+        if (array_key_exists('api_version', $config)) {
             $this->_usedProperties['apiVersion'] = true;
-            $this->apiVersion = $value['api_version'];
-            unset($value['api_version']);
+            $this->apiVersion = $config['api_version'];
+            unset($config['api_version']);
         }
 
-        if (array_key_exists('channel', $value)) {
+        if (array_key_exists('channel', $config)) {
             $this->_usedProperties['channel'] = true;
-            $this->channel = $value['channel'];
-            unset($value['channel']);
+            $this->channel = $config['channel'];
+            unset($config['channel']);
         }
 
-        if (array_key_exists('bot_name', $value)) {
+        if (array_key_exists('bot_name', $config)) {
             $this->_usedProperties['botName'] = true;
-            $this->botName = $value['bot_name'];
-            unset($value['bot_name']);
+            $this->botName = $config['bot_name'];
+            unset($config['bot_name']);
         }
 
-        if (array_key_exists('use_attachment', $value)) {
+        if (array_key_exists('use_attachment', $config)) {
             $this->_usedProperties['useAttachment'] = true;
-            $this->useAttachment = $value['use_attachment'];
-            unset($value['use_attachment']);
+            $this->useAttachment = $config['use_attachment'];
+            unset($config['use_attachment']);
         }
 
-        if (array_key_exists('use_short_attachment', $value)) {
+        if (array_key_exists('use_short_attachment', $config)) {
             $this->_usedProperties['useShortAttachment'] = true;
-            $this->useShortAttachment = $value['use_short_attachment'];
-            unset($value['use_short_attachment']);
+            $this->useShortAttachment = $config['use_short_attachment'];
+            unset($config['use_short_attachment']);
         }
 
-        if (array_key_exists('include_extra', $value)) {
+        if (array_key_exists('include_extra', $config)) {
             $this->_usedProperties['includeExtra'] = true;
-            $this->includeExtra = $value['include_extra'];
-            unset($value['include_extra']);
+            $this->includeExtra = $config['include_extra'];
+            unset($config['include_extra']);
         }
 
-        if (array_key_exists('icon_emoji', $value)) {
+        if (array_key_exists('icon_emoji', $config)) {
             $this->_usedProperties['iconEmoji'] = true;
-            $this->iconEmoji = $value['icon_emoji'];
-            unset($value['icon_emoji']);
+            $this->iconEmoji = $config['icon_emoji'];
+            unset($config['icon_emoji']);
         }
 
-        if (array_key_exists('webhook_url', $value)) {
+        if (array_key_exists('webhook_url', $config)) {
             $this->_usedProperties['webhookUrl'] = true;
-            $this->webhookUrl = $value['webhook_url'];
-            unset($value['webhook_url']);
+            $this->webhookUrl = $config['webhook_url'];
+            unset($config['webhook_url']);
         }
 
-        if (array_key_exists('team', $value)) {
+        if (array_key_exists('exclude_fields', $config)) {
+            $this->_usedProperties['excludeFields'] = true;
+            $this->excludeFields = $config['exclude_fields'];
+            unset($config['exclude_fields']);
+        }
+
+        if (array_key_exists('team', $config)) {
             $this->_usedProperties['team'] = true;
-            $this->team = $value['team'];
-            unset($value['team']);
+            $this->team = $config['team'];
+            unset($config['team']);
         }
 
-        if (array_key_exists('notify', $value)) {
+        if (array_key_exists('notify', $config)) {
             $this->_usedProperties['notify'] = true;
-            $this->notify = $value['notify'];
-            unset($value['notify']);
+            $this->notify = $config['notify'];
+            unset($config['notify']);
         }
 
-        if (array_key_exists('nickname', $value)) {
+        if (array_key_exists('nickname', $config)) {
             $this->_usedProperties['nickname'] = true;
-            $this->nickname = $value['nickname'];
-            unset($value['nickname']);
+            $this->nickname = $config['nickname'];
+            unset($config['nickname']);
         }
 
-        if (array_key_exists('token', $value)) {
+        if (array_key_exists('token', $config)) {
             $this->_usedProperties['token'] = true;
-            $this->token = $value['token'];
-            unset($value['token']);
+            $this->token = $config['token'];
+            unset($config['token']);
         }
 
-        if (array_key_exists('region', $value)) {
+        if (array_key_exists('region', $config)) {
             $this->_usedProperties['region'] = true;
-            $this->region = $value['region'];
-            unset($value['region']);
+            $this->region = $config['region'];
+            unset($config['region']);
         }
 
-        if (array_key_exists('source', $value)) {
+        if (array_key_exists('source', $config)) {
             $this->_usedProperties['source'] = true;
-            $this->source = $value['source'];
-            unset($value['source']);
+            $this->source = $config['source'];
+            unset($config['source']);
         }
 
-        if (array_key_exists('use_ssl', $value)) {
+        if (array_key_exists('use_ssl', $config)) {
             $this->_usedProperties['useSsl'] = true;
-            $this->useSsl = $value['use_ssl'];
-            unset($value['use_ssl']);
+            $this->useSsl = $config['use_ssl'];
+            unset($config['use_ssl']);
         }
 
-        if (array_key_exists('user', $value)) {
+        if (array_key_exists('user', $config)) {
             $this->_usedProperties['user'] = true;
-            $this->user = $value['user'];
-            unset($value['user']);
+            $this->user = $config['user'];
+            unset($config['user']);
         }
 
-        if (array_key_exists('title', $value)) {
+        if (array_key_exists('title', $config)) {
             $this->_usedProperties['title'] = true;
-            $this->title = $value['title'];
-            unset($value['title']);
+            $this->title = $config['title'];
+            unset($config['title']);
         }
 
-        if (array_key_exists('host', $value)) {
+        if (array_key_exists('host', $config)) {
             $this->_usedProperties['host'] = true;
-            $this->host = $value['host'];
-            unset($value['host']);
+            $this->host = $config['host'];
+            unset($config['host']);
         }
 
-        if (array_key_exists('port', $value)) {
+        if (array_key_exists('port', $config)) {
             $this->_usedProperties['port'] = true;
-            $this->port = $value['port'];
-            unset($value['port']);
+            $this->port = $config['port'];
+            unset($config['port']);
         }
 
-        if (array_key_exists('config', $value)) {
+        if (array_key_exists('config', $config)) {
             $this->_usedProperties['config'] = true;
-            $this->config = $value['config'];
-            unset($value['config']);
+            $this->config = $config['config'];
+            unset($config['config']);
         }
 
-        if (array_key_exists('members', $value)) {
+        if (array_key_exists('members', $config)) {
             $this->_usedProperties['members'] = true;
-            $this->members = $value['members'];
-            unset($value['members']);
+            $this->members = $config['members'];
+            unset($config['members']);
         }
 
-        if (array_key_exists('connection_string', $value)) {
+        if (array_key_exists('connection_string', $config)) {
             $this->_usedProperties['connectionString'] = true;
-            $this->connectionString = $value['connection_string'];
-            unset($value['connection_string']);
+            $this->connectionString = $config['connection_string'];
+            unset($config['connection_string']);
         }
 
-        if (array_key_exists('timeout', $value)) {
+        if (array_key_exists('timeout', $config)) {
             $this->_usedProperties['timeout'] = true;
-            $this->timeout = $value['timeout'];
-            unset($value['timeout']);
+            $this->timeout = $config['timeout'];
+            unset($config['timeout']);
         }
 
-        if (array_key_exists('time', $value)) {
+        if (array_key_exists('time', $config)) {
             $this->_usedProperties['time'] = true;
-            $this->time = $value['time'];
-            unset($value['time']);
+            $this->time = $config['time'];
+            unset($config['time']);
         }
 
-        if (array_key_exists('deduplication_level', $value)) {
+        if (array_key_exists('deduplication_level', $config)) {
             $this->_usedProperties['deduplicationLevel'] = true;
-            $this->deduplicationLevel = $value['deduplication_level'];
-            unset($value['deduplication_level']);
+            $this->deduplicationLevel = $config['deduplication_level'];
+            unset($config['deduplication_level']);
         }
 
-        if (array_key_exists('store', $value)) {
+        if (array_key_exists('store', $config)) {
             $this->_usedProperties['store'] = true;
-            $this->store = $value['store'];
-            unset($value['store']);
+            $this->store = $config['store'];
+            unset($config['store']);
         }
 
-        if (array_key_exists('connection_timeout', $value)) {
+        if (array_key_exists('connection_timeout', $config)) {
             $this->_usedProperties['connectionTimeout'] = true;
-            $this->connectionTimeout = $value['connection_timeout'];
-            unset($value['connection_timeout']);
+            $this->connectionTimeout = $config['connection_timeout'];
+            unset($config['connection_timeout']);
         }
 
-        if (array_key_exists('persistent', $value)) {
+        if (array_key_exists('persistent', $config)) {
             $this->_usedProperties['persistent'] = true;
-            $this->persistent = $value['persistent'];
-            unset($value['persistent']);
+            $this->persistent = $config['persistent'];
+            unset($config['persistent']);
         }
 
-        if (array_key_exists('dsn', $value)) {
+        if (array_key_exists('dsn', $config)) {
             $this->_usedProperties['dsn'] = true;
-            $this->dsn = $value['dsn'];
-            unset($value['dsn']);
+            $this->dsn = $config['dsn'];
+            unset($config['dsn']);
         }
 
-        if (array_key_exists('hub_id', $value)) {
+        if (array_key_exists('hub_id', $config)) {
             $this->_usedProperties['hubId'] = true;
-            $this->hubId = $value['hub_id'];
-            unset($value['hub_id']);
+            $this->hubId = $config['hub_id'];
+            unset($config['hub_id']);
         }
 
-        if (array_key_exists('client_id', $value)) {
+        if (array_key_exists('client_id', $config)) {
             $this->_usedProperties['clientId'] = true;
-            $this->clientId = $value['client_id'];
-            unset($value['client_id']);
+            $this->clientId = $config['client_id'];
+            unset($config['client_id']);
         }
 
-        if (array_key_exists('auto_log_stacks', $value)) {
+        if (array_key_exists('auto_log_stacks', $config)) {
             $this->_usedProperties['autoLogStacks'] = true;
-            $this->autoLogStacks = $value['auto_log_stacks'];
-            unset($value['auto_log_stacks']);
+            $this->autoLogStacks = $config['auto_log_stacks'];
+            unset($config['auto_log_stacks']);
         }
 
-        if (array_key_exists('release', $value)) {
+        if (array_key_exists('release', $config)) {
             $this->_usedProperties['release'] = true;
-            $this->release = $value['release'];
-            unset($value['release']);
+            $this->release = $config['release'];
+            unset($config['release']);
         }
 
-        if (array_key_exists('environment', $value)) {
+        if (array_key_exists('environment', $config)) {
             $this->_usedProperties['environment'] = true;
-            $this->environment = $value['environment'];
-            unset($value['environment']);
+            $this->environment = $config['environment'];
+            unset($config['environment']);
         }
 
-        if (array_key_exists('message_type', $value)) {
+        if (array_key_exists('message_type', $config)) {
             $this->_usedProperties['messageType'] = true;
-            $this->messageType = $value['message_type'];
-            unset($value['message_type']);
+            $this->messageType = $config['message_type'];
+            unset($config['message_type']);
         }
 
-        if (array_key_exists('parse_mode', $value)) {
+        if (array_key_exists('parse_mode', $config)) {
             $this->_usedProperties['parseMode'] = true;
-            $this->parseMode = $value['parse_mode'];
-            unset($value['parse_mode']);
+            $this->parseMode = $config['parse_mode'];
+            unset($config['parse_mode']);
         }
 
-        if (array_key_exists('disable_webpage_preview', $value)) {
+        if (array_key_exists('disable_webpage_preview', $config)) {
             $this->_usedProperties['disableWebpagePreview'] = true;
-            $this->disableWebpagePreview = $value['disable_webpage_preview'];
-            unset($value['disable_webpage_preview']);
+            $this->disableWebpagePreview = $config['disable_webpage_preview'];
+            unset($config['disable_webpage_preview']);
         }
 
-        if (array_key_exists('disable_notification', $value)) {
+        if (array_key_exists('disable_notification', $config)) {
             $this->_usedProperties['disableNotification'] = true;
-            $this->disableNotification = $value['disable_notification'];
-            unset($value['disable_notification']);
+            $this->disableNotification = $config['disable_notification'];
+            unset($config['disable_notification']);
         }
 
-        if (array_key_exists('split_long_messages', $value)) {
+        if (array_key_exists('split_long_messages', $config)) {
             $this->_usedProperties['splitLongMessages'] = true;
-            $this->splitLongMessages = $value['split_long_messages'];
-            unset($value['split_long_messages']);
+            $this->splitLongMessages = $config['split_long_messages'];
+            unset($config['split_long_messages']);
         }
 
-        if (array_key_exists('delay_between_messages', $value)) {
+        if (array_key_exists('delay_between_messages', $config)) {
             $this->_usedProperties['delayBetweenMessages'] = true;
-            $this->delayBetweenMessages = $value['delay_between_messages'];
-            unset($value['delay_between_messages']);
+            $this->delayBetweenMessages = $config['delay_between_messages'];
+            unset($config['delay_between_messages']);
         }
 
-        if (array_key_exists('factor', $value)) {
+        if (array_key_exists('topic', $config)) {
+            $this->_usedProperties['topic'] = true;
+            $this->topic = $config['topic'];
+            unset($config['topic']);
+        }
+
+        if (array_key_exists('factor', $config)) {
             $this->_usedProperties['factor'] = true;
-            $this->factor = $value['factor'];
-            unset($value['factor']);
+            $this->factor = $config['factor'];
+            unset($config['factor']);
         }
 
-        if (array_key_exists('tags', $value)) {
+        if (array_key_exists('tags', $config)) {
             $this->_usedProperties['tags'] = true;
-            $this->tags = $value['tags'];
-            unset($value['tags']);
+            $this->tags = $config['tags'];
+            unset($config['tags']);
         }
 
-        if (array_key_exists('console_formater_options', $value)) {
+        if (array_key_exists('console_formater_options', $config)) {
             $this->_usedProperties['consoleFormaterOptions'] = true;
-            $this->consoleFormaterOptions = $value['console_formater_options'];
-            unset($value['console_formater_options']);
+            $this->consoleFormaterOptions = $config['console_formater_options'];
+            unset($config['console_formater_options']);
         }
 
-        if (array_key_exists('console_formatter_options', $value)) {
+        if (array_key_exists('console_formatter_options', $config)) {
             $this->_usedProperties['consoleFormatterOptions'] = true;
-            $this->consoleFormatterOptions = $value['console_formatter_options'];
-            unset($value['console_formatter_options']);
+            $this->consoleFormatterOptions = $config['console_formatter_options'];
+            unset($config['console_formatter_options']);
         }
 
-        if (array_key_exists('formatter', $value)) {
+        if (array_key_exists('formatter', $config)) {
             $this->_usedProperties['formatter'] = true;
-            $this->formatter = $value['formatter'];
-            unset($value['formatter']);
+            $this->formatter = $config['formatter'];
+            unset($config['formatter']);
         }
 
-        if (array_key_exists('nested', $value)) {
+        if (array_key_exists('nested', $config)) {
             $this->_usedProperties['nested'] = true;
-            $this->nested = $value['nested'];
-            unset($value['nested']);
+            $this->nested = $config['nested'];
+            unset($config['nested']);
         }
 
-        if (array_key_exists('publisher', $value)) {
+        if (array_key_exists('publisher', $config)) {
             $this->_usedProperties['publisher'] = true;
-            $this->publisher = \is_array($value['publisher']) ? new \Symfony\Config\Monolog\HandlerConfig\PublisherConfig($value['publisher']) : $value['publisher'];
-            unset($value['publisher']);
+            $this->publisher = \is_array($config['publisher']) ? new \Symfony\Config\Monolog\HandlerConfig\PublisherConfig($config['publisher']) : $config['publisher'];
+            unset($config['publisher']);
         }
 
-        if (array_key_exists('mongo', $value)) {
+        if (array_key_exists('mongo', $config)) {
             $this->_usedProperties['mongo'] = true;
-            $this->mongo = \is_array($value['mongo']) ? new \Symfony\Config\Monolog\HandlerConfig\MongoConfig($value['mongo']) : $value['mongo'];
-            unset($value['mongo']);
+            $this->mongo = \is_array($config['mongo']) ? new \Symfony\Config\Monolog\HandlerConfig\MongoConfig($config['mongo']) : $config['mongo'];
+            unset($config['mongo']);
         }
 
-        if (array_key_exists('elasticsearch', $value)) {
+        if (array_key_exists('mongodb', $config)) {
+            $this->_usedProperties['mongodb'] = true;
+            $this->mongodb = \is_array($config['mongodb']) ? new \Symfony\Config\Monolog\HandlerConfig\MongodbConfig($config['mongodb']) : $config['mongodb'];
+            unset($config['mongodb']);
+        }
+
+        if (array_key_exists('elasticsearch', $config)) {
             $this->_usedProperties['elasticsearch'] = true;
-            $this->elasticsearch = \is_array($value['elasticsearch']) ? new \Symfony\Config\Monolog\HandlerConfig\ElasticsearchConfig($value['elasticsearch']) : $value['elasticsearch'];
-            unset($value['elasticsearch']);
+            $this->elasticsearch = \is_array($config['elasticsearch']) ? new \Symfony\Config\Monolog\HandlerConfig\ElasticsearchConfig($config['elasticsearch']) : $config['elasticsearch'];
+            unset($config['elasticsearch']);
         }
 
-        if (array_key_exists('index', $value)) {
+        if (array_key_exists('index', $config)) {
             $this->_usedProperties['index'] = true;
-            $this->index = $value['index'];
-            unset($value['index']);
+            $this->index = $config['index'];
+            unset($config['index']);
         }
 
-        if (array_key_exists('document_type', $value)) {
+        if (array_key_exists('document_type', $config)) {
             $this->_usedProperties['documentType'] = true;
-            $this->documentType = $value['document_type'];
-            unset($value['document_type']);
+            $this->documentType = $config['document_type'];
+            unset($config['document_type']);
         }
 
-        if (array_key_exists('ignore_error', $value)) {
+        if (array_key_exists('ignore_error', $config)) {
             $this->_usedProperties['ignoreError'] = true;
-            $this->ignoreError = $value['ignore_error'];
-            unset($value['ignore_error']);
+            $this->ignoreError = $config['ignore_error'];
+            unset($config['ignore_error']);
         }
 
-        if (array_key_exists('redis', $value)) {
+        if (array_key_exists('redis', $config)) {
             $this->_usedProperties['redis'] = true;
-            $this->redis = \is_array($value['redis']) ? new \Symfony\Config\Monolog\HandlerConfig\RedisConfig($value['redis']) : $value['redis'];
-            unset($value['redis']);
+            $this->redis = \is_array($config['redis']) ? new \Symfony\Config\Monolog\HandlerConfig\RedisConfig($config['redis']) : $config['redis'];
+            unset($config['redis']);
         }
 
-        if (array_key_exists('predis', $value)) {
+        if (array_key_exists('predis', $config)) {
             $this->_usedProperties['predis'] = true;
-            $this->predis = \is_array($value['predis']) ? new \Symfony\Config\Monolog\HandlerConfig\PredisConfig($value['predis']) : $value['predis'];
-            unset($value['predis']);
+            $this->predis = \is_array($config['predis']) ? new \Symfony\Config\Monolog\HandlerConfig\PredisConfig($config['predis']) : $config['predis'];
+            unset($config['predis']);
         }
 
-        if (array_key_exists('from_email', $value)) {
+        if (array_key_exists('from_email', $config)) {
             $this->_usedProperties['fromEmail'] = true;
-            $this->fromEmail = $value['from_email'];
-            unset($value['from_email']);
+            $this->fromEmail = $config['from_email'];
+            unset($config['from_email']);
         }
 
-        if (array_key_exists('to_email', $value)) {
+        if (array_key_exists('to_email', $config)) {
             $this->_usedProperties['toEmail'] = true;
-            $this->toEmail = $value['to_email'];
-            unset($value['to_email']);
+            $this->toEmail = $config['to_email'];
+            unset($config['to_email']);
         }
 
-        if (array_key_exists('subject', $value)) {
+        if (array_key_exists('subject', $config)) {
             $this->_usedProperties['subject'] = true;
-            $this->subject = $value['subject'];
-            unset($value['subject']);
+            $this->subject = $config['subject'];
+            unset($config['subject']);
         }
 
-        if (array_key_exists('content_type', $value)) {
+        if (array_key_exists('content_type', $config)) {
             $this->_usedProperties['contentType'] = true;
-            $this->contentType = $value['content_type'];
-            unset($value['content_type']);
+            $this->contentType = $config['content_type'];
+            unset($config['content_type']);
         }
 
-        if (array_key_exists('headers', $value)) {
+        if (array_key_exists('headers', $config)) {
             $this->_usedProperties['headers'] = true;
-            $this->headers = $value['headers'];
-            unset($value['headers']);
+            $this->headers = $config['headers'];
+            unset($config['headers']);
         }
 
-        if (array_key_exists('mailer', $value)) {
+        if (array_key_exists('mailer', $config)) {
             $this->_usedProperties['mailer'] = true;
-            $this->mailer = $value['mailer'];
-            unset($value['mailer']);
+            $this->mailer = $config['mailer'];
+            unset($config['mailer']);
         }
 
-        if (array_key_exists('email_prototype', $value)) {
+        if (array_key_exists('email_prototype', $config)) {
             $this->_usedProperties['emailPrototype'] = true;
-            $this->emailPrototype = \is_array($value['email_prototype']) ? new \Symfony\Config\Monolog\HandlerConfig\EmailPrototypeConfig($value['email_prototype']) : $value['email_prototype'];
-            unset($value['email_prototype']);
+            $this->emailPrototype = \is_array($config['email_prototype']) ? new \Symfony\Config\Monolog\HandlerConfig\EmailPrototypeConfig($config['email_prototype']) : $config['email_prototype'];
+            unset($config['email_prototype']);
         }
 
-        if (array_key_exists('lazy', $value)) {
+        if (array_key_exists('lazy', $config)) {
             $this->_usedProperties['lazy'] = true;
-            $this->lazy = $value['lazy'];
-            unset($value['lazy']);
+            $this->lazy = $config['lazy'];
+            unset($config['lazy']);
         }
 
-        if (array_key_exists('verbosity_levels', $value)) {
+        if (array_key_exists('verbosity_levels', $config)) {
             $this->_usedProperties['verbosityLevels'] = true;
-            $this->verbosityLevels = \is_array($value['verbosity_levels']) ? new \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig($value['verbosity_levels']) : $value['verbosity_levels'];
-            unset($value['verbosity_levels']);
+            $this->verbosityLevels = new \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig($config['verbosity_levels']);
+            unset($config['verbosity_levels']);
         }
 
-        if (array_key_exists('channels', $value)) {
+        if (array_key_exists('channels', $config)) {
             $this->_usedProperties['channels'] = true;
-            $this->channels = \is_array($value['channels']) ? new \Symfony\Config\Monolog\HandlerConfig\ChannelsConfig($value['channels']) : $value['channels'];
-            unset($value['channels']);
+            $this->channels = \is_array($config['channels']) ? new \Symfony\Config\Monolog\HandlerConfig\ChannelsConfig($config['channels']) : $config['channels'];
+            unset($config['channels']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
@@ -2139,6 +2243,9 @@ class HandlerConfig
         if (isset($this->_usedProperties['id'])) {
             $output['id'] = $this->id;
         }
+        if (isset($this->_usedProperties['enabled'])) {
+            $output['enabled'] = $this->enabled;
+        }
         if (isset($this->_usedProperties['priority'])) {
             $output['priority'] = $this->priority;
         }
@@ -2147,6 +2254,9 @@ class HandlerConfig
         }
         if (isset($this->_usedProperties['bubble'])) {
             $output['bubble'] = $this->bubble;
+        }
+        if (isset($this->_usedProperties['interactiveOnly'])) {
+            $output['interactive_only'] = $this->interactiveOnly;
         }
         if (isset($this->_usedProperties['appName'])) {
             $output['app_name'] = $this->appName;
@@ -2262,6 +2372,9 @@ class HandlerConfig
         if (isset($this->_usedProperties['webhookUrl'])) {
             $output['webhook_url'] = $this->webhookUrl;
         }
+        if (isset($this->_usedProperties['excludeFields'])) {
+            $output['exclude_fields'] = $this->excludeFields;
+        }
         if (isset($this->_usedProperties['team'])) {
             $output['team'] = $this->team;
         }
@@ -2358,6 +2471,9 @@ class HandlerConfig
         if (isset($this->_usedProperties['delayBetweenMessages'])) {
             $output['delay_between_messages'] = $this->delayBetweenMessages;
         }
+        if (isset($this->_usedProperties['topic'])) {
+            $output['topic'] = $this->topic;
+        }
         if (isset($this->_usedProperties['factor'])) {
             $output['factor'] = $this->factor;
         }
@@ -2381,6 +2497,9 @@ class HandlerConfig
         }
         if (isset($this->_usedProperties['mongo'])) {
             $output['mongo'] = $this->mongo instanceof \Symfony\Config\Monolog\HandlerConfig\MongoConfig ? $this->mongo->toArray() : $this->mongo;
+        }
+        if (isset($this->_usedProperties['mongodb'])) {
+            $output['mongodb'] = $this->mongodb instanceof \Symfony\Config\Monolog\HandlerConfig\MongodbConfig ? $this->mongodb->toArray() : $this->mongodb;
         }
         if (isset($this->_usedProperties['elasticsearch'])) {
             $output['elasticsearch'] = $this->elasticsearch instanceof \Symfony\Config\Monolog\HandlerConfig\ElasticsearchConfig ? $this->elasticsearch->toArray() : $this->elasticsearch;
@@ -2425,7 +2544,7 @@ class HandlerConfig
             $output['lazy'] = $this->lazy;
         }
         if (isset($this->_usedProperties['verbosityLevels'])) {
-            $output['verbosity_levels'] = $this->verbosityLevels instanceof \Symfony\Config\Monolog\HandlerConfig\VerbosityLevelsConfig ? $this->verbosityLevels->toArray() : $this->verbosityLevels;
+            $output['verbosity_levels'] = $this->verbosityLevels->toArray();
         }
         if (isset($this->_usedProperties['channels'])) {
             $output['channels'] = $this->channels instanceof \Symfony\Config\Monolog\HandlerConfig\ChannelsConfig ? $this->channels->toArray() : $this->channels;

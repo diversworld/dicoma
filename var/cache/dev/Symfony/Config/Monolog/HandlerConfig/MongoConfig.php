@@ -110,52 +110,52 @@ class MongoConfig
         return $this;
     }
 
-    public function __construct(array $value = [])
+    public function __construct(array $config = [])
     {
-        if (array_key_exists('id', $value)) {
+        if (array_key_exists('id', $config)) {
             $this->_usedProperties['id'] = true;
-            $this->id = $value['id'];
-            unset($value['id']);
+            $this->id = $config['id'];
+            unset($config['id']);
         }
 
-        if (array_key_exists('host', $value)) {
+        if (array_key_exists('host', $config)) {
             $this->_usedProperties['host'] = true;
-            $this->host = $value['host'];
-            unset($value['host']);
+            $this->host = $config['host'];
+            unset($config['host']);
         }
 
-        if (array_key_exists('port', $value)) {
+        if (array_key_exists('port', $config)) {
             $this->_usedProperties['port'] = true;
-            $this->port = $value['port'];
-            unset($value['port']);
+            $this->port = $config['port'];
+            unset($config['port']);
         }
 
-        if (array_key_exists('user', $value)) {
+        if (array_key_exists('user', $config)) {
             $this->_usedProperties['user'] = true;
-            $this->user = $value['user'];
-            unset($value['user']);
+            $this->user = $config['user'];
+            unset($config['user']);
         }
 
-        if (array_key_exists('pass', $value)) {
+        if (array_key_exists('pass', $config)) {
             $this->_usedProperties['pass'] = true;
-            $this->pass = $value['pass'];
-            unset($value['pass']);
+            $this->pass = $config['pass'];
+            unset($config['pass']);
         }
 
-        if (array_key_exists('database', $value)) {
+        if (array_key_exists('database', $config)) {
             $this->_usedProperties['database'] = true;
-            $this->database = $value['database'];
-            unset($value['database']);
+            $this->database = $config['database'];
+            unset($config['database']);
         }
 
-        if (array_key_exists('collection', $value)) {
+        if (array_key_exists('collection', $config)) {
             $this->_usedProperties['collection'] = true;
-            $this->collection = $value['collection'];
-            unset($value['collection']);
+            $this->collection = $config['collection'];
+            unset($config['collection']);
         }
 
-        if ([] !== $value) {
-            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($value)));
+        if ($config) {
+            throw new InvalidConfigurationException(sprintf('The following keys are not supported by "%s": ', __CLASS__).implode(', ', array_keys($config)));
         }
     }
 
