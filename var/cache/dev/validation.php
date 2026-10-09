@@ -14,173 +14,163 @@ return [[
 
 ], [
 
-0 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-            clone (\Symfony\Component\VarExporter\Internal\Registry::$prototypes['Symfony\\Component\\Form\\Extension\\Validator\\Constraints\\Form'] ?? \Symfony\Component\VarExporter\Internal\Registry::p('Symfony\\Component\\Form\\Extension\\Validator\\Constraints\\Form')),
+0 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+        clone (\Symfony\Component\VarExporter\Internal\Registry::$prototypes['Symfony\\Component\\Form\\Extension\\Validator\\Constraints\\Form'] ?? \Symfony\Component\VarExporter\Internal\Registry::p('Symfony\\Component\\Form\\Extension\\Validator\\Constraints\\Form')),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'traversalStrategy' => [
+                2,
+            ],
+            'name' => [
+                'Symfony\\Component\\Form\\Form',
+            ],
+            'defaultGroup' => [
+                'Form',
+            ],
         ],
-        null,
-        [
-            'stdClass' => [
-                'constraints' => [
-                    [
+        'Symfony\\Component\\Validator\\Mapping\\GenericMetadata' => [
+            'constraints' => [
+                [
+                    $o[1],
+                ],
+            ],
+            'constraintsByGroup' => [
+                [
+                    'Default' => [
+                        $o[1],
+                    ],
+                    'Form' => [
                         $o[1],
                     ],
                 ],
-                'constraintsByGroup' => [
-                    [
-                        'Default' => [
-                            $o[1],
-                        ],
-                        'Form' => [
-                            $o[1],
-                        ],
-                    ],
-                ],
-                'traversalStrategy' => [
-                    2,
-                ],
-                'name' => [
-                    'Symfony\\Component\\Form\\Form',
-                ],
-                'defaultGroup' => [
+            ],
+        ],
+        'stdClass' => [
+            'payload' => [
+                1 => null,
+            ],
+            'groups' => [
+                1 => [
+                    'Default',
                     'Form',
                 ],
-                'payload' => [
-                    1 => null,
-                ],
-                'groups' => [
-                    1 => [
-                        'Default',
-                        'Form',
-                    ],
-                ],
             ],
         ],
-        $o[0],
-        []
-    );
-},
-1 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'IteratorAggregate',
-                ],
-                'defaultGroup' => [
-                    'IteratorAggregate',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+1 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'IteratorAggregate',
+            ],
+            'defaultGroup' => [
+                'IteratorAggregate',
             ],
         ],
-        $o[0],
-        []
-    );
-},
-2 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'Symfony\\Component\\Form\\FormInterface',
-                ],
-                'defaultGroup' => [
-                    'FormInterface',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+2 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'Symfony\\Component\\Form\\FormInterface',
+            ],
+            'defaultGroup' => [
+                'FormInterface',
             ],
         ],
-        $o[0],
-        []
-    );
-},
-3 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'Symfony\\Component\\Form\\ClearableErrorsInterface',
-                ],
-                'defaultGroup' => [
-                    'ClearableErrorsInterface',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+3 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'Symfony\\Component\\Form\\ClearableErrorsInterface',
+            ],
+            'defaultGroup' => [
+                'ClearableErrorsInterface',
             ],
         ],
-        $o[0],
-        []
-    );
-},
-4 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'Traversable',
-                ],
-                'defaultGroup' => [
-                    'Traversable',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+4 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'Traversable',
+            ],
+            'defaultGroup' => [
+                'Traversable',
             ],
         ],
-        $o[0],
-        []
-    );
-},
-5 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'Countable',
-                ],
-                'defaultGroup' => [
-                    'Countable',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+5 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'Countable',
+            ],
+            'defaultGroup' => [
+                'Countable',
             ],
         ],
-        $o[0],
-        []
-    );
-},
-6 => static function () {
-    return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
-        $o = [
-            (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
-        ],
-        null,
-        [
-            'stdClass' => [
-                'name' => [
-                    'ArrayAccess',
-                ],
-                'defaultGroup' => [
-                    'ArrayAccess',
-                ],
+    ],
+    $o[0],
+    []
+); } },
+6 => new class() implements \Symfony\Component\Cache\Traits\CachedValueInterface { public function getValue(): mixed { return \Symfony\Component\VarExporter\Internal\Hydrator::hydrate(
+    $o = [
+        (\Symfony\Component\VarExporter\Internal\Registry::$factories['Symfony\\Component\\Validator\\Mapping\\ClassMetadata'] ?? \Symfony\Component\VarExporter\Internal\Registry::f('Symfony\\Component\\Validator\\Mapping\\ClassMetadata'))(),
+    ],
+    null,
+    [
+        'Symfony\\Component\\Validator\\Mapping\\ClassMetadata' => [
+            'name' => [
+                'ArrayAccess',
+            ],
+            'defaultGroup' => [
+                'ArrayAccess',
             ],
         ],
-        $o[0],
-        []
-    );
-},
+    ],
+    $o[0],
+    []
+); } },
 
 ]];
