@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ app.request.locale }}">
 <head>
     <!-- Basic Page Needs
     ================================================== -->
@@ -30,9 +30,14 @@
     <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
     <!-- Place the first <script> tag in your HTML's <head> -->
     <script src="{{ asset('js/tinymce/tinymce.min.js') }}" referrerpolicy="origin"></script>
+    {% set editorLocale = {'de': 'de', 'fr': 'fr_FR', 'es': 'es'}[app.request.locale]|default('en') %}
     <script>
       tinymce.init({
           selector: 'textarea',
+          language: {{ editorLocale|json_encode(15)|raw }},
+          {% if editorLocale != 'en' %}
+          language_url: {{ asset('js/tinymce/langs/' ~ editorLocale ~ '.js')|json_encode(15)|raw }},
+          {% endif %}
           convert_unsafe_embeds : false
       });
     </script>

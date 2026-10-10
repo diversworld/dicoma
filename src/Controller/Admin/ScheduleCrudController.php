@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
+use Symfony\Component\Translation\TranslatableMessage;
 use App\Service\ScheduleParticipantSyncService;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
@@ -334,10 +335,7 @@ class ScheduleCrudController extends AbstractCrudController
 
 			$this->addFlash(
 				'success',
-				sprintf(
-					'Die Anwesenheit für "%s" wurde gespeichert.',
-					$schedule->getTitle()
-				)
+				new TranslatableMessage('attendance.saved', ['%schedule%' => $schedule->getTitle()])
 			);
 
 			return $this->redirectToReferrer(
@@ -386,13 +384,7 @@ class ScheduleCrudController extends AbstractCrudController
             } else {
                 $this->addFlash(
                     'success',
-                    sprintf(
-                        '%d %s für den Kurstermin übernommen.',
-                        $created,
-                        $created === 1
-                            ? 'Teilnehmer wurde'
-                            : 'Teilnehmer wurden'
-                    )
+                    new TranslatableMessage('attendance.participants_imported', ['%count%' => $created])
                 );
             }
         } catch (\LogicException $exception) {

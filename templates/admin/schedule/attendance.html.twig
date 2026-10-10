@@ -1,7 +1,7 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
 {% block content_title %}
-    Anwesenheit erfassen
+    {{ 'Anwesenheit erfassen'|trans }}
 {% endblock %}
 
 {% block main %}
@@ -17,7 +17,7 @@
             {% endif %}
 
             {% if schedule.startTime %}
-                · {{ schedule.startTime|date('H:i') }} Uhr
+                · {{ schedule.startTime|date('H:i') }}
             {% endif %}
 
             {% if schedule.courses %}
@@ -33,9 +33,9 @@
 
             <thead>
                 <tr>
-                    <th>Teilnehmer</th>
-                    <th>Anwesenheit</th>
-                    <th>Bemerkung</th>
+                    <th>{{ 'Teilnehmer'|trans }}</th>
+                    <th>{{ 'Anwesenheit'|trans }}</th>
+                    <th>{{ 'Bemerkung'|trans }}</th>
                 </tr>
             </thead>
 
@@ -55,7 +55,7 @@
 
                             {% if booking.member.memberNumber %}
                                 <div class="text-muted">
-                                    Mitgliedsnummer:
+                                    {{ 'Mitgliedsnummer'|trans }}:
                                     {{ booking.member.memberNumber }}
                                 </div>
                             {% endif %}

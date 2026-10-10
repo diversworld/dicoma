@@ -1,0 +1,96 @@
+/* public/css/admin.css */
+:root,
+.ea-dark-scheme {
+    /* the accent color of buttons, links, switches, etc. Pick one with
+       enough contrast on white, because it is also used for link text */
+    --ea-primary: #003366;
+    --ea-primary-foreground: #ccc;
+    /* the base of the spacing scale; increase it for a more spacious backend,
+       decrease it for a more compact one. All paddings, margins, gaps and the
+       height of buttons and switches are multiples of this value */
+    --ea-spacing: 0.125rem;
+    /* the base of the border radius scale; set it to 0 for square corners */
+    --ea-radius: 0.25rem;
+}
+
+/* EasyAdmin Sprach-Flaggen */
+
+.locale-flag {
+    display: inline-block;
+    width: 20px;
+    height: 14px;
+
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+
+    border-radius: 2px;
+
+    /* Font-Awesome-Verhalten neutralisieren */
+    font-family: initial !important;
+}
+
+.locale-flag::before {
+    content: none !important;
+}
+
+.locale-flag-de {
+    background-image: url('/images/flags/de.svg');
+}
+
+.locale-flag-gb {
+    background-image: url('/images/flags/gb.svg');
+}
+
+.locale-flag-fr {
+    background-image: url('/images/flags/fr.svg');
+}
+
+.locale-flag-es {
+    background-image: url('/images/flags/es.svg');
+}
+
+/* Theme-Werte zentral in admin-theme.css anpassen. */
+/* application.css setzt den allgemeinen body-Hintergrund ohne CSS-Layer.
+ * EasyAdmin muss ihn deshalb ebenfalls ausserhalb seiner Layer ueberschreiben.
+ */
+body[data-ea-dark-scheme-is-enabled] {
+    background: var(--body-bg);
+    color: var(--text-color);
+}
+
+.ea-sidebar {
+    background: var(--dw-admin-sidebar-background);
+}
+.ea-sidebar .ea-sidebar-group-label { color: var(--sidebar-menu-header-color); }
+.ea-sidebar .ea-sidebar-item.active, .ea-sidebar .ea-sidebar-item:hover { border-radius: var(--dw-admin-radius); }
+.ea-sidebar-logo { font-weight: 700; }
+.content-wrapper { padding-bottom: var(--dw-admin-content-padding-bottom); }
+.content-panel, .content-body {
+    background: var(--dw-admin-content-bg);
+    border-radius: var(--dw-admin-radius);
+}
+.card {
+    --bs-card-bg: var(--dw-admin-card-bg);
+    --bs-card-color: var(--dw-admin-text);
+    background: var(--dw-admin-card-bg);
+    color: var(--dw-admin-text);
+}
+.content-panel, .card {
+    border: 1px solid var(--dw-admin-border);
+    border-radius: var(--dw-admin-radius);
+    box-shadow: var(--dw-admin-shadow);
+}
+.content-header {
+    background: var(--dw-admin-header-bg);
+    color: var(--dw-admin-text);
+    align-items: flex-start;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: var(--dw-admin-header-padding);
+}
+
+.content-header-title h1 { font-weight: 700; letter-spacing: -.025em; }
+.datagrid td, .datagrid th { padding-block: var(--dw-admin-table-cell-padding); }
+.audit-changes td { white-space: pre-wrap; }

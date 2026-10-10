@@ -16,12 +16,14 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_ADMIN')]
 class UserCrudController extends AbstractCrudController
 {
     public function __construct(
-        private readonly UserPasswordHasherInterface $passwordHasher
+        private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -159,7 +161,7 @@ class UserCrudController extends AbstractCrudController
         if ($plainPassword === null || trim($plainPassword) === '') {
             if ($passwordRequired) {
                 throw new \LogicException(
-                    'Beim Anlegen eines Benutzers muss ein Passwort angegeben werden.'
+                    $this->translator->trans('Beim Anlegen eines Benutzers muss ein Passwort angegeben werden.')
                 );
             }
 

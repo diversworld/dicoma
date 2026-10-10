@@ -13,6 +13,7 @@
         const original = Array.from(schedule.options).map(option => ({
             value: option.value, text: option.textContent
         }));
+        const placeholder = original.find(option => !option.value)?.text || '';
         let requestNumber = 0;
 
         function selectedValue(select) {
@@ -20,7 +21,7 @@
         }
 
         function rebuild(options, keepValue) {
-            const choices = [{value: '', text: 'Bitte Termin waehlen'}, ...options];
+            const choices = [{value: '', text: placeholder}, ...options];
             const allowed = new Set(options.map(item => String(item.value)));
             const value = allowed.has(String(keepValue)) ? String(keepValue) : '';
 

@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Member{% endblock %}
+{% block title %}{{ 'Mitglied anlegen'|trans }}{% endblock %}
 
 {% block body %}
-    <h1>Create new Member</h1>
+    <h1>{{ 'Mitglied anlegen'|trans }}</h1>
 
     {{ include('member/_form.html.twig') }}
 
-    <a href="{{ path('app_member_index') }}">back to list</a>
+    <a href="{{ path('app_member_index') }}">{{ 'back to list'|trans }}</a>
 {% endblock %}

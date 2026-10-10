@@ -1,20 +1,20 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Student{% endblock %}
+{% block title %}{{ 'Edit Student'|trans }}{% endblock %}
 
 {% block body %}
 <section class="about section">
     <div class="container">
-        <h1>Edit Student</h1>
+        <h1>{{ 'Edit Student'|trans }}</h1>
         <div class="row">
             <div class="col-md-2">
                 <div class="block">
-                    <a class="btn btn-transparent btn-solid-border" href="{{ path('app_student_index') }}">back to list</a>
+                    <a class="btn btn-transparent btn-solid-border" href="{{ path('app_student_index') }}">{{ 'back to list'|trans }}</a>
                 </div>
             </div>
             <div class="col-md-2">
                 <div class="block">
-                    <a class="btn btn-transparent btn-solid-border" href="{{ path('app_student_edit', {'id': student.id}) }}">edit</a>
+                    <a class="btn btn-transparent btn-solid-border" href="{{ path('app_student_edit', {'id': student.id}) }}">{{ 'Edit'|trans }}</a>
                 </div>
             </div>
             <div class="col-md-2">

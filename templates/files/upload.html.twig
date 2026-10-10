@@ -1,9 +1,9 @@
 {% extends 'files/index.html.twig' %}
 {% block body %}
-<h1>Upload a new file</h1>
+<h1>{{ 'Upload a new file'|trans }}</h1>
 
 {{ form_start(form) }}
     {{ form_widget(form) }}
-<button type="submit">Upload the file</button>
+<button type="submit">{{ 'Upload the file'|trans }}</button>
 {{ form_end(form) }}
 {% endblock %}

@@ -530,13 +530,12 @@ class Member
             ) {
                 $context
                     ->buildViolation(
-                        sprintf(
-                            'Die Sportart "%s" gehört nicht '
-                            . 'zum Verein "%s".',
-                            $sport->getName(),
-                            $this->club->getName()
-                        )
+                        'member.sport_club_mismatch'
                     )
+                    ->setParameters([
+                        '%sport%' => $sport->getName(),
+                        '%club%' => $this->club->getName(),
+                    ])
                     ->atPath('sports')
                     ->addViolation();
             }

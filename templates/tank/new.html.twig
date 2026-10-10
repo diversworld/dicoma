@@ -1,13 +1,13 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Tank{% endblock %}
+{% block title %}{{ 'New Tank'|trans }}{% endblock %}
 
 {% block body %}
 <section class="about section">
     <div class="container">
         <div class="row">
             <div class="block">
-                <h1>Neu erstellen</h1>
+                <h1>{{ 'New Tank'|trans }}</h1>
                 <a href="{{ path('app_tank_index') }}" class="btn btn-transparent btn-solid-border">{% trans %}back to list{% endtrans %}</a>
             </div>
         </div>

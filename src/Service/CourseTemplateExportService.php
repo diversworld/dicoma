@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Club;
 use App\Entity\Schedule;
+use Symfony\Component\Translation\TranslatableMessage;
 
 /**
  * Konvertiert geplante Schedule-Datensaetze in Vorlagenwerte.
@@ -13,7 +14,7 @@ final class CourseTemplateExportService
 {
     /**
      * @param iterable<Schedule> $schedules
-     * @return array{entries: list<array{type: \App\Entity\TrainingUnitType, sequence: int, dayOffset: int, startTime: \DateTimeInterface, durationMinutes: int, title: string, date: string}>, skipped: list<string>, baseDate: ?string}
+     * @return array{entries: list<array{type: \App\Entity\TrainingUnitType, sequence: int, dayOffset: int, startTime: \DateTimeInterface, durationMinutes: int, title: string, date: string}>, skipped: list<TranslatableMessage>, baseDate: ?string}
      */
     public function prepare(iterable $schedules, Club $club): array
     {
@@ -31,16 +32,16 @@ final class CourseTemplateExportService
 
             if ($type === null || $type->getId() === null || $sequence === null || $sequence < 1
                 || $date === null || $time === null || $minutes === null || $minutes < 1) {
-                $skipped[] = $title . ': Typ, Nummer, Datum, Uhrzeit oder Dauer fehlt.';
+                $skipped[] = new TranslatableMessage('template.skipped_missing_data', ['%title%' => $title]);
                 continue;
             }
             if ($type->getClub() !== null && $type->getClub()->getId() !== $club->getId()) {
-                $skipped[] = $title . ': Ausbildungseinheit gehoert zu einem anderen Verein.';
+                $skipped[] = new TranslatableMessage('template.skipped_wrong_club', ['%title%' => $title]);
                 continue;
             }
             $key = $type->getId() . ':' . $sequence;
             if (isset($seen[$key])) {
-                $skipped[] = $title . ': Typ und Nummer sind mehrfach vorhanden.';
+                $skipped[] = new TranslatableMessage('template.skipped_duplicate', ['%title%' => $title]);
                 continue;
             }
             $seen[$key] = true;

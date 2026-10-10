@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\ScheduleTemplate;
+use Symfony\Component\Translation\TranslatableMessage;
 use App\Entity\ScheduleTemplateEntry;
 use App\Form\ScheduleTemplateEntryType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +23,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_ADMIN')]
 final class ScheduleTemplateCrudController extends AbstractCrudController
@@ -71,7 +73,8 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
         AdminContext $context,
         Request $request,
         EntityManagerInterface $entityManager,
-        AdminUrlGenerator $adminUrlGenerator
+        AdminUrlGenerator $adminUrlGenerator,
+        TranslatorInterface $translator,
     ): Response {
         $original = $context->getEntity()?->getInstance();
         if (!$original instanceof ScheduleTemplate || $original->getId() === null) {
@@ -120,11 +123,9 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
                 $entityManager->persist($copy);
                 $entityManager->flush();
 
-                $this->addFlash('success', sprintf(
-                    'Planungsvorlage "%s" mit %d Ausbildungsterminen dupliziert.',
-                    $name,
-                    $copy->getEntries()->count()
-                ));
+                $this->addFlash('success', new TranslatableMessage('template.duplicated', [
+                    '%name%' => $name, '%count%' => $copy->getEntries()->count(),
+                ]));
 
                 return $this->redirect($backUrl);
             }
@@ -132,7 +133,7 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
 
         return $this->render('admin/schedule_template/duplicate.html.twig', [
             'original' => $original,
-            'suggestedName' => (string) ($request->request->get('name') ?: ($original->getName() . ' (Kopie)')),
+            'suggestedName' => (string) ($request->request->get('name') ?: $translator->trans('template.copy_name', ['%name%' => $original->getName()])),
             'backUrl' => $backUrl,
         ]);
     }

@@ -265,12 +265,12 @@ class Booking
 
 		$context
 			->buildViolation(
-				sprintf(
-					'%s ist kein aktiver Teilnehmer des Kurses "%s".',
-					$this->member->getFullName(),
-					(string) $course
-				)
+				'booking.inactive_participant'
 			)
+			->setParameters([
+				'%member%' => $this->member->getFullName(),
+				'%course%' => (string) $course,
+			])
 			->atPath('member')
 			->addViolation();
 	}

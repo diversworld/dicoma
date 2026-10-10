@@ -1,21 +1,21 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
-{% block content_title %}Planungsvorlage aus Kurs erstellen: {{ course }}{% endblock %}
+{% block content_title %}{{ 'Planungsvorlage aus Kurs erstellen'|trans }}: {{ course }}{% endblock %}
 {% block main %}
-    <p>Die erste vollstaendig geplante Einheit dient als Ausgangsdatum. Die Vorlage speichert relative Tagesabstaende, Startzeiten und Dauer; keine Buchungen, Personen oder Orte.</p>
-    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <p>{{ 'Die erste vollstaendig geplante Einheit dient als Ausgangsdatum. Die Vorlage speichert relative Tagesabstaende, Startzeiten und Dauer; keine Buchungen, Personen oder Orte.'|trans }}</p>
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error|trans }}</div>{% endif %}
     {% if skipped is not empty %}
         <div class="alert alert-warning" role="alert">
-            <strong>{{ skipped|length }} Termin(e) nicht uebernommen:</strong>
-            <ul class="mb-0">{% for reason in skipped %}<li>{{ reason }}</li>{% endfor %}</ul>
+            <strong>{{ 'Termin(e) nicht uebernommen: %count%'|trans({'%count%': skipped|length}) }}</strong>
+            <ul class="mb-0">{% for reason in skipped %}<li>{{ reason|trans }}</li>{% endfor %}</ul>
         </div>
     {% endif %}
     {% if entries is empty %}
-        <div class="alert alert-info">Keine vollstaendig geplanten Termine mit Ausbildungseinheit und Nummer gefunden.</div>
+        <div class="alert alert-info">{{ 'Keine vollstaendig geplanten Termine mit Ausbildungseinheit und Nummer gefunden.'|trans }}</div>
     {% else %}
-        <p><strong>Basisdatum:</strong> {{ baseDate }} · <strong>{{ entries|length }} Eintraege</strong></p>
+        <p><strong>{{ 'Basisdatum'|trans }}:</strong> {{ baseDate }} · <strong>{{ 'Eintraege: %count%'|trans({'%count%': entries|length}) }}</strong></p>
         <div class="table-responsive">
             <table class="table datagrid">
-                <thead><tr><th>Einheit</th><th>Datum</th><th>Tag +</th><th>Beginn</th><th>Dauer (Min.)</th></tr></thead>
+                <thead><tr><th>{{ 'Einheit'|trans }}</th><th>{{ 'Datum'|trans }}</th><th>{{ 'Tag +'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Dauer (Minuten)'|trans }}</th></tr></thead>
                 <tbody>{% for entry in entries %}
                     <tr>
                         <td>{{ entry.type.name }} {{ entry.sequence }}</td>
@@ -30,14 +30,14 @@
         <form method="post" action="">
             <input type="hidden" name="_token" value="{{ csrf_token('course_template_export_' ~ course.id) }}">
             <div class="mb-3">
-                <label class="form-label" for="export-name">Name der neuen Vorlage</label>
+                <label class="form-label" for="export-name">{{ 'Name der neuen Vorlage'|trans }}</label>
                 <input class="form-control" id="export-name" name="name" maxlength="150" minlength="3" required value="{{ name }}">
             </div>
             <div class="mb-3">
-                <label class="form-label" for="export-description">Beschreibung (optional)</label>
+                <label class="form-label" for="export-description">{{ 'Beschreibung (optional)'|trans }}</label>
                 <textarea class="form-control" id="export-description" name="description" rows="3">{{ description }}</textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Vorlage jetzt speichern</button>
+            <button type="submit" class="btn btn-primary">{{ 'Vorlage jetzt speichern'|trans }}</button>
         </form>
     {% endif %}
 {% endblock %}

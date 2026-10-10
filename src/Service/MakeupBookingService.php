@@ -7,13 +7,15 @@ use App\Entity\Schedule;
 use App\Enum\BookingAttendanceStatus;
 use App\Repository\BookingRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class MakeupBookingService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly BookingRepository $bookingRepository,
-        private readonly BookingNumberGenerator $bookingNumberGenerator
+        private readonly BookingNumberGenerator $bookingNumberGenerator,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -86,11 +88,7 @@ class MakeupBookingService
                 )
         ) {
             throw new \LogicException(
-                sprintf(
-                    '%s ist für den gewählten Nachholtermin '
-                    . 'bereits eingetragen.',
-                    $member->getFullName()
-                )
+                $this->translator->trans('makeup.already_registered', ['%member%' => $member->getFullName()])
             );
         }
 

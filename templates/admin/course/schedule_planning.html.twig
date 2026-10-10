@@ -2,7 +2,7 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
 {% block content_title %}
-    Terminplanung: {{ course }}
+    {{ 'Terminplanung'|trans }}: {{ course }}
 {% endblock %}
 
 {% block main %}
@@ -20,38 +20,38 @@
 
     <section class="card mb-3" id="series-planner">
         <div class="card-body">
-            <h3 class="h5 mb-3">Terminserie planen</h3>
+            <h3 class="h5 mb-3">{{ 'Terminserie planen'|trans }}</h3>
             <div class="row g-2 align-items-end">
-                <div class="col-md-3"><label class="form-label" for="series-type">Ausbildungseinheit</label><select class="form-select" id="series-type"></select></div>
-                <div class="col-md-2"><label class="form-label" for="series-date">Erster Termin</label><input class="form-control" type="date" id="series-date"></div>
-                <div class="col-md-2"><label class="form-label" for="series-time">Beginn</label><input class="form-control" type="time" id="series-time" value="19:00"></div>
-                <div class="col-md-2"><label class="form-label" for="series-hours">Dauer (Std.)</label><input class="form-control" type="number" id="series-hours" min="0.25" max="24" step="0.25" value="2"></div>
-                <div class="col-md-2"><label class="form-label" for="series-gap">Wiederholung</label><select class="form-select" id="series-gap"><option value="1">Täglich</option><option value="7" selected>Wöchentlich</option><option value="14">Alle 2 Wochen</option></select></div>
-                <div class="col-md-1"><label class="form-label" for="series-count">Anzahl</label><input class="form-control" type="number" id="series-count" min="1" max="200" value="5"></div>
-                <div class="col-md-4"><label class="form-label" for="series-location">Ort (optional)</label><input class="form-control" id="series-location" type="text"></div>
-                <div class="col-md-4"><label class="form-label" for="series-instructor">Instruktor (optional)</label><select class="form-select" id="series-instructor"><option value="">Nicht ändern</option></select></div>
-                <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="series-overwrite"><label class="form-check-label" for="series-overwrite">Bereits geplante Termine überschreiben</label></div></div>
+                <div class="col-md-3"><label class="form-label" for="series-type">{{ 'Ausbildungseinheit'|trans }}</label><select class="form-select" id="series-type"></select></div>
+                <div class="col-md-2"><label class="form-label" for="series-date">{{ 'Erster Termin'|trans }}</label><input class="form-control" type="date" id="series-date"></div>
+                <div class="col-md-2"><label class="form-label" for="series-time">{{ 'Beginn'|trans }}</label><input class="form-control" type="time" id="series-time" value="19:00"></div>
+                <div class="col-md-2"><label class="form-label" for="series-hours">{{ 'Dauer (Stunden)'|trans }}</label><input class="form-control" type="number" id="series-hours" min="0.25" max="24" step="0.25" value="2"></div>
+                <div class="col-md-2"><label class="form-label" for="series-gap">{{ 'Wiederholung'|trans }}</label><select class="form-select" id="series-gap"><option value="1">{{ 'Täglich'|trans }}</option><option value="7" selected>{{ 'Wöchentlich'|trans }}</option><option value="14">{{ 'Alle 2 Wochen'|trans }}</option></select></div>
+                <div class="col-md-1"><label class="form-label" for="series-count">{{ 'Anzahl'|trans }}</label><input class="form-control" type="number" id="series-count" min="1" max="200" value="5"></div>
+                <div class="col-md-4"><label class="form-label" for="series-location">{{ 'Ort (optional)'|trans }}</label><input class="form-control" id="series-location" type="text"></div>
+                <div class="col-md-4"><label class="form-label" for="series-instructor">{{ 'Instruktor (optional)'|trans }}</label><select class="form-select" id="series-instructor"><option value="">{{ 'Nicht ändern'|trans }}</option></select></div>
+                <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="series-overwrite"><label class="form-check-label" for="series-overwrite">{{ 'Bereits geplante Termine überschreiben'|trans }}</label></div></div>
             </div>
-            <div class="mt-2"><label class="form-label" for="series-exclusions">Ausnahmetage (optional, je Datum eine Zeile oder durch Komma getrennt)</label><textarea id="series-exclusions" class="form-control" rows="2" placeholder="2026-10-23, 2026-10-30"></textarea><small class="text-muted">Ein Serientermin auf einem Ausnahmetag wird um das Wiederholungsintervall verschoben; die weiteren Termine folgen anschliessend diesem Rhythmus.</small></div>
-            <div class="mt-3"><button type="button" class="btn btn-secondary" id="series-preview-button">Vorschau erstellen</button> <button type="button" class="btn btn-primary" id="series-apply-button" disabled>Vorschau ins Formular übernehmen</button></div>
+            <div class="mt-2"><label class="form-label" for="series-exclusions">{{ 'Ausnahmetage (optional, je Datum eine Zeile oder durch Komma getrennt)'|trans }}</label><textarea id="series-exclusions" class="form-control" rows="2" placeholder="2026-10-23, 2026-10-30"></textarea><small class="text-muted">{{ 'Ein Serientermin auf einem Ausnahmetag wird um das Wiederholungsintervall verschoben; die weiteren Termine folgen anschliessend diesem Rhythmus.'|trans }}</small></div>
+            <div class="mt-3"><button type="button" class="btn btn-secondary" id="series-preview-button">{{ 'Vorschau erstellen'|trans }}</button> <button type="button" class="btn btn-primary" id="series-apply-button" disabled>{{ 'Vorschau ins Formular übernehmen'|trans }}</button></div>
             <div id="series-feedback" class="mt-2" role="status" aria-live="polite"></div>
-            <div class="table-responsive mt-2"><table class="table table-sm" id="series-preview-table" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Dauer</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+            <div class="table-responsive mt-2"><table class="table table-sm" id="series-preview-table" hidden><thead><tr><th>{{ 'Einheit'|trans }}</th><th>{{ 'Datum'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Dauer'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead><tbody></tbody></table></div>
         </div>
     </section>
 
 
     <section class="card mb-3" id="weekend-planner">
         <div class="card-body">
-            <h3 class="h5 mb-2">Freiwasser-Wochenende planen (2 + 2 + 1)</h3>
-            <p class="text-muted small">Standard: Freitag 1+2, Samstag 3+4, Sonntag 5. Tagesabstaende sind frei aenderbar. Bestehende Termine bleiben geschuetzt.</p>
+            <h3 class="h5 mb-2">{{ 'Freiwasser-Wochenende planen (2 + 2 + 1)'|trans }}</h3>
+            <p class="text-muted small">{{ 'Standard: Freitag 1+2, Samstag 3+4, Sonntag 5. Tagesabstaende sind frei aenderbar. Bestehende Termine bleiben geschuetzt.'|trans }}</p>
             <div class="row g-2 align-items-end">
-                <div class="col-md-3"><label class="form-label" for="weekend-date">Startdatum</label><input id="weekend-date" class="form-control" type="date"></div>
-                <div class="col-md-4"><label class="form-label" for="weekend-location">Ort (optional)</label><input id="weekend-location" class="form-control" type="text"></div>
-                <div class="col-md-3"><label class="form-label" for="weekend-instructor">Instruktor (optional)</label><select id="weekend-instructor" class="form-select"><option value="">Nicht aendern</option></select></div>
-                <div class="col-md-2"><div class="form-check"><input id="weekend-overwrite" class="form-check-input" type="checkbox"><label class="form-check-label" for="weekend-overwrite">Bestehende Termine ueberschreiben</label></div></div>
+                <div class="col-md-3"><label class="form-label" for="weekend-date">{{ 'Startdatum'|trans }}</label><input id="weekend-date" class="form-control" type="date"></div>
+                <div class="col-md-4"><label class="form-label" for="weekend-location">{{ 'Ort (optional)'|trans }}</label><input id="weekend-location" class="form-control" type="text"></div>
+                <div class="col-md-3"><label class="form-label" for="weekend-instructor">{{ 'Instruktor (optional)'|trans }}</label><select id="weekend-instructor" class="form-select"><option value="">{{ 'Nicht ändern'|trans }}</option></select></div>
+                <div class="col-md-2"><div class="form-check"><input id="weekend-overwrite" class="form-check-input" type="checkbox"><label class="form-check-label" for="weekend-overwrite">{{ 'Bereits geplante Termine überschreiben'|trans }}</label></div></div>
             </div>
-            <div class="mt-2"><label class="form-label" for="weekend-exclusions">Ausnahmetage (optional)</label><textarea id="weekend-exclusions" class="form-control" rows="2" placeholder="2026-10-17"></textarea><small class="text-muted">Betroffene Freiwassereinheiten werden auf den naechsten freien Kalendertag verschoben. Die Uhrzeiten bleiben unveraendert.</small></div>
-            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Einheit</th><th>Tage nach Start</th><th>Beginn</th><th>Dauer (Std.)</th></tr></thead><tbody>
+            <div class="mt-2"><label class="form-label" for="weekend-exclusions">{{ 'Ausnahmetage (optional)'|trans }}</label><textarea id="weekend-exclusions" class="form-control" rows="2" placeholder="2026-10-17"></textarea><small class="text-muted">{{ 'Betroffene Freiwassereinheiten werden auf den naechsten freien Kalendertag verschoben. Die Uhrzeiten bleiben unveraendert.'|trans }}</small></div>
+            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>{{ 'Einheit'|trans }}</th><th>{{ 'Tage nach Start'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Dauer (Stunden)'|trans }}</th></tr></thead><tbody>
                 {% set weekendUnits = [
                     {number: 1, offset: 0, time: '17:00'},
                     {number: 2, offset: 0, time: '19:00'},
@@ -61,35 +61,35 @@
                 ] %}
                 {% for unit in weekendUnits %}
                 <tr>
-                    <td>Freiwasser {{ unit.number }}</td>
-                    <td><input id="weekend-offset-{{ unit.number }}" type="number" min="0" max="365" step="1" value="{{ unit.offset }}" class="form-control" aria-label="Tage nach Start fuer Freiwasser {{ unit.number }}"></td>
+                    <td>{{ 'Freiwasser'|trans }} {{ unit.number }}</td>
+                    <td><input id="weekend-offset-{{ unit.number }}" type="number" min="0" max="365" step="1" value="{{ unit.offset }}" class="form-control" aria-label="{{ 'Tage nach Start fuer Freiwasser %number%'|trans({'%number%': unit.number}) }}"></td>
                     <td><input id="weekend-time-{{ unit.number }}" type="time" class="form-control" value="{{ unit.time }}"></td>
                     <td><input id="weekend-hours-{{ unit.number }}" type="number" min="0.25" max="24" step="0.25" value="1.5" class="form-control"></td>
                 </tr>
                 {% endfor %}
             </tbody></table></div>
-            <div class="mt-2"><button type="button" id="weekend-preview-button" class="btn btn-secondary">Wochenende anzeigen</button> <button type="button" id="weekend-apply-button" class="btn btn-primary" disabled>Wochenende ins Formular uebernehmen</button></div>
+            <div class="mt-2"><button type="button" id="weekend-preview-button" class="btn btn-secondary">{{ 'Wochenende anzeigen'|trans }}</button> <button type="button" id="weekend-apply-button" class="btn btn-primary" disabled>{{ 'Wochenende ins Formular uebernehmen'|trans }}</button></div>
             <div id="weekend-feedback" class="mt-2" role="status" aria-live="polite"></div>
-            <div class="table-responsive mt-2"><table id="weekend-preview-table" class="table table-sm" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Ende</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+            <div class="table-responsive mt-2"><table id="weekend-preview-table" class="table table-sm" hidden><thead><tr><th>{{ 'Einheit'|trans }}</th><th>{{ 'Datum'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Ende'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead><tbody></tbody></table></div>
         </div>
     </section>
 
     <section class="card mb-3" id="saved-template-planner">
         <div class="card-body">
-            <h3 class="h5 mb-2">Gespeicherte Planungsvorlage anwenden</h3>
-            <p class="text-muted small">Nur Vorlagen des Kursvereins. Die Vorlage befüllt ausschließlich vorhandene Kurstermine; es werden keine neuen Termine angelegt.</p>
+            <h3 class="h5 mb-2">{{ 'Gespeicherte Planungsvorlage anwenden'|trans }}</h3>
+            <p class="text-muted small">{{ 'Nur Vorlagen des Kursvereins. Die Vorlage befüllt ausschließlich vorhandene Kurstermine; es werden keine neuen Termine angelegt.'|trans }}</p>
             <div class="row g-2 align-items-end">
-                <div class="col-md-5"><label class="form-label" for="saved-template-select">Vorlage</label>
-                    <select id="saved-template-select" class="form-select"><option value="">Vorlage auswählen</option>
+                <div class="col-md-5"><label class="form-label" for="saved-template-select">{{ 'Vorlage'|trans }}</label>
+                    <select id="saved-template-select" class="form-select"><option value="">{{ 'Vorlage auswählen'|trans }}</option>
                     {% for plan in templatePlans %}<option value="{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3"><label class="form-label" for="saved-template-date">Startdatum (Tag 0)</label><input type="date" id="saved-template-date" class="form-control"></div>
-                <div class="col-md-4"><div class="form-check"><input type="checkbox" id="saved-template-overwrite" class="form-check-input"><label for="saved-template-overwrite" class="form-check-label">Bereits geplante Termine überschreiben</label></div></div>
+                <div class="col-md-3"><label class="form-label" for="saved-template-date">{{ 'Startdatum (Tag 0)'|trans }}</label><input type="date" id="saved-template-date" class="form-control"></div>
+                <div class="col-md-4"><div class="form-check"><input type="checkbox" id="saved-template-overwrite" class="form-check-input"><label for="saved-template-overwrite" class="form-check-label">{{ 'Bereits geplante Termine überschreiben'|trans }}</label></div></div>
             </div>
-            <div class="mt-3"><button type="button" class="btn btn-secondary" id="saved-template-preview-button">Vorlage prüfen</button> <button type="button" class="btn btn-primary" id="saved-template-apply-button" disabled>Vorschau ins Formular übernehmen</button></div>
+            <div class="mt-3"><button type="button" class="btn btn-secondary" id="saved-template-preview-button">{{ 'Vorlage prüfen'|trans }}</button> <button type="button" class="btn btn-primary" id="saved-template-apply-button" disabled>{{ 'Vorschau ins Formular übernehmen'|trans }}</button></div>
             <div id="saved-template-feedback" class="mt-2" role="status" aria-live="polite"></div>
-            <div class="table-responsive mt-2"><table class="table table-sm" id="saved-template-preview-table" hidden><thead><tr><th>Einheit</th><th>Datum</th><th>Beginn</th><th>Dauer</th><th>Aktion</th></tr></thead><tbody></tbody></table></div>
+            <div class="table-responsive mt-2"><table class="table table-sm" id="saved-template-preview-table" hidden><thead><tr><th>{{ 'Einheit'|trans }}</th><th>{{ 'Datum'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Dauer'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead><tbody></tbody></table></div>
         </div>
     </section>
     <script type="application/json" id="saved-template-data">{{ templatePlans|json_encode(15)|raw }}</script>
@@ -98,13 +98,13 @@
         <table class="table datagrid">
             <thead>
                 <tr>
-                    <th>Einheit</th>
-                    <th>Datum</th>
-                    <th>Beginn</th>
-                    <th>Dauer (Std.)</th>
-                    <th>Ende</th>
-                    <th>Ort</th>
-                    <th>Instruktor</th>
+                    <th>{{ 'Einheit'|trans }}</th>
+                    <th>{{ 'Datum'|trans }}</th>
+                    <th>{{ 'Beginn'|trans }}</th>
+                    <th>{{ 'Dauer (Stunden)'|trans }}</th>
+                    <th>{{ 'Ende'|trans }}</th>
+                    <th>{{ 'Ort'|trans }}</th>
+                    <th>{{ 'Instruktor'|trans }}</th>
                 </tr>
             </thead>
 
@@ -150,7 +150,7 @@
     </div>
 
     <button type="submit" class="btn btn-primary">
-        Terminplanung speichern
+        {{ 'Terminplanung speichern'|trans }}
     </button>
 
     {{ form_end(form) }}
@@ -162,6 +162,38 @@
 
     <script>
     (function () {
+        const i18n = {{ {
+            conflicts: 'planning.conflicts'|trans,
+            tooManyExclusions: 'Zu viele aufeinanderfolgende Ausnahmetage.'|trans,
+            invalidSeries: 'Bitte Datum, Uhrzeit, Dauer, Anzahl und Wiederholung korrekt eingeben.'|trans,
+            invalidExclusions: 'Ausnahmetage bitte im Format JJJJ-MM-TT eingeben.'|trans,
+            noFreeSchedules: 'Keine passenden freien Termine vorhanden. Bereits geplante Termine bleiben geschuetzt.'|trans,
+            overwrite: 'Ueberschreiben'|trans,
+            enter: 'Eintragen'|trans,
+            seriesPreview: 'planning.series_preview'|trans,
+            seriesApplied: 'planning.series_applied'|trans,
+            invalidStart: 'Bitte ein gueltiges Startdatum auswaehlen.'|trans,
+            missingOpenWater: 'Es werden Freiwasser 1 bis Freiwasser 5 als vorhandene Kurstermine benoetigt.'|trans,
+            invalidWeekend: 'Bitte fuer alle fuenf Einheiten gueltige Startzeiten und Dauern eingeben.'|trans,
+            invalidOffset: 'Tagesabstand muss eine ganze Zahl zwischen 0 und 365 sein.'|trans,
+            keepExisting: 'Bestehenden Termin behalten'|trans,
+            weekendPreview: 'planning.weekend_preview'|trans,
+            weekendApplied: 'planning.weekend_applied'|trans,
+            invalidTemplate: 'Bitte eine Vorlage und ein gültiges Startdatum auswählen.'|trans,
+            noMatchingSchedule: 'Kein passender Kurstermin'|trans,
+            duplicateTemplate: 'Doppelte Vorlage'|trans,
+            invalidTemplateData: 'Ungültige Vorlagendaten'|trans,
+            alreadyPlanned: 'Bereits geplant'|trans,
+            apply: 'Übernehmen'|trans,
+            templatePreview: 'planning.template_preview'|trans,
+            templateApplied: 'planning.template_applied'|trans
+        }|json_encode(15)|raw }};
+        function translate(key, parameters = {}) {
+            return Object.entries(parameters).reduce(
+                (text, [name, value]) => text.split('%' + name + '%').join(String(value)),
+                i18n[key]
+            );
+        }
         function initializeSchedulePlanning() {
             const rows = Array.from(
                 document.querySelectorAll('[data-schedule-row]')
@@ -352,11 +384,9 @@
 
                 warning.hidden = false;
 
-                warning.textContent =
-                    'Achtung: ' +
-                    conflicts.length +
-                    ' Terminüberschneidung(en): ' +
-                    conflicts.join(', ');
+                warning.textContent = translate('conflicts', {
+                    count: conflicts.length, conflicts: conflicts.join(', ')
+                });
             }
 
             function updatePlanning() {
@@ -393,7 +423,7 @@
                         if (!excluded.has(date)) return date;
                         date = localDate(date, increment);
                     }
-                    throw new Error('Zu viele aufeinanderfolgende Ausnahmetage.');
+                    throw new Error(i18n.tooManyExclusions);
                 }
             function validDate(iso) { return /^\d{4}-\d{2}-\d{2}$/.test(iso) && localDate(iso, 0) === iso; }
             function setField(input, value) { if (!input) return; input.value = value; input.dispatchEvent(new Event('input', {bubbles:true})); input.dispatchEvent(new Event('change', {bubbles:true})); }
@@ -461,14 +491,14 @@
                         !Number.isFinite(hours) || hours <= 0 || hours > 24 ||
                         !Number.isInteger(count) || count < 1 || count > 200 ||
                         !Number.isInteger(gap) || gap < 1) {
-                        feedback.textContent = 'Bitte Datum, Uhrzeit, Dauer, Anzahl und Wiederholung korrekt eingeben.';
+                        feedback.textContent = i18n.invalidSeries;
                         return;
                     }
                     const overwrite = field('overwrite').checked;
                     const targets = selected.filter(row => overwrite || !isPlanned(row)).slice(0, count);
                         const excluded = excludedDates(field('exclusions').value);
                         if (excluded === null) {
-                            feedback.textContent = 'Ausnahmetage bitte im Format JJJJ-MM-TT eingeben.';
+                            feedback.textContent = i18n.invalidExclusions;
                             return;
                         }
                         try {
@@ -483,18 +513,18 @@
                             return;
                         }
                     if (!proposal.length) {
-                        feedback.textContent = 'Keine passenden freien Termine vorhanden. Bereits geplante Termine bleiben geschuetzt.';
+                        feedback.textContent = i18n.noFreeSchedules;
                         return;
                     }
                     proposal.forEach(item => {
                         const tr = document.createElement('tr');
-                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, String(item.hours).replace('.', ','), isPlanned(item.row) ? 'Ueberschreiben' : 'Eintragen'];
+                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, String(item.hours).replace('.', ','), isPlanned(item.row) ? i18n.overwrite : i18n.enter];
                         values.forEach(value => { const td=document.createElement('td'); td.textContent=value; tr.appendChild(td); });
                         previewBody.appendChild(tr);
                     });
                     previewTable.hidden = false;
                     applyButton.disabled = false;
-                    feedback.textContent = `${proposal.length} von ${count} angeforderten Terminen in der Vorschau. Noch nicht gespeichert.`;
+                    feedback.textContent = translate('seriesPreview', {count: proposal.length, total: count});
                 });
                 applyButton.addEventListener('click', () => {
                     if (!proposal) return;
@@ -513,7 +543,7 @@
                     });
                     updatePlanning();
                     invalidate();
-                    feedback.textContent = `${applied} Termine ins Formular uebernommen. Bitte Konflikte pruefen und unten "Terminplanung speichern" klicken.`;
+                    feedback.textContent = translate('seriesApplied', {count: applied});
                 });
             }
 
@@ -550,18 +580,18 @@
                     clearWeekend();
                     const date = el('date').value;
                     if (!validDate(date)) {
-                        feedback.textContent = 'Bitte ein gueltiges Startdatum auswaehlen.';
+                        feedback.textContent = i18n.invalidStart;
                         return;
                     }
                     const freiwasser = rows.filter(row => /^Freiwasser\s+[1-5]$/.test(rowTitle(row)));
                     const byNumber = new Map(freiwasser.map(row => [Number(rowTitle(row).match(/(\d+)$/)[1]), row]));
                     if ([1,2,3,4,5].some(n => !byNumber.has(n))) {
-                        feedback.textContent = 'Es werden Freiwasser 1 bis Freiwasser 5 als vorhandene Kurstermine benoetigt.';
+                        feedback.textContent = i18n.missingOpenWater;
                         return;
                     }
                     const excluded = excludedDates(el('exclusions').value);
                     if (excluded === null) {
-                        feedback.textContent = 'Ausnahmetage bitte im Format JJJJ-MM-TT eingeben.';
+                        feedback.textContent = i18n.invalidExclusions;
                         return;
                     }
                     const overwrite = el('overwrite').checked;
@@ -571,12 +601,12 @@
                         const time = el('time-' + n).value;
                         const hours = Number(el('hours-' + n).value.replace(',', '.'));
                         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !Number.isFinite(hours) || hours <= 0 || hours > 24) {
-                            feedback.textContent = 'Bitte fuer alle fuenf Einheiten gueltige Startzeiten und Dauern eingeben.';
+                            feedback.textContent = i18n.invalidWeekend;
                             return;
                         }
                         const offset = Number(el('offset-' + n).value);
                         if (!Number.isInteger(offset) || offset < 0 || offset > 365) {
-                            feedback.textContent = 'Tagesabstand muss eine ganze Zahl zwischen 0 und 365 sein.';
+                            feedback.textContent = i18n.invalidOffset;
                             return;
                         }
                         let plannedDate;
@@ -592,13 +622,13 @@
                     proposal.forEach(item => {
                         const tr = document.createElement('tr');
                         const times = getMinutes(item.time, String(item.hours));
-                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, times ? formatTime(times.end) : '—', item.skip ? 'Bestehenden Termin behalten' : (isPlanned(item.row) ? 'Ueberschreiben' : 'Eintragen')];
+                        const values = [rowTitle(item.row), item.date.split('-').reverse().join('.'), item.time, times ? formatTime(times.end) : '—', item.skip ? i18n.keepExisting : (isPlanned(item.row) ? i18n.overwrite : i18n.enter)];
                         values.forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); });
                         previewBody.appendChild(tr);
                     });
                     previewTable.hidden = false;
                     applyButton.disabled = !proposal.some(item => !item.skip);
-                    feedback.textContent = `${proposal.filter(item => !item.skip).length} von 5 Terminen koennen uebernommen werden. Noch nicht gespeichert.`;
+                    feedback.textContent = translate('weekendPreview', {count: proposal.filter(item => !item.skip).length});
                 });
                 applyButton.addEventListener('click', () => {
                     if (!weekendProposal) return;
@@ -617,7 +647,7 @@
                     });
                     updatePlanning();
                     clearWeekend();
-                    feedback.textContent = `${count} Freiwassertermine ins Formular uebernommen. Konflikte pruefen und danach unten speichern.`;
+                    feedback.textContent = translate('weekendApplied', {count});
                 });
             }
 
@@ -655,7 +685,7 @@
                     const plan = plans.find(p => String(p.id) === get('select').value);
                     const date = get('date').value;
                     if (!plan || !validDate(date)) {
-                        feedback.textContent = 'Bitte eine Vorlage und ein gültiges Startdatum auswählen.';
+                        feedback.textContent = i18n.invalidTemplate;
                         return;
                     }
                     const overwrite = get('overwrite').checked;
@@ -669,7 +699,7 @@
                             && /^([01]\d|2[0-3]):[0-5]\d$/.test(entry.time || '')
                             && Number.isInteger(entry.minutes) && entry.minutes > 0 && entry.minutes <= 1440;
                         const skip = !row || duplicate || !valid || (!overwrite && isPlanned(row));
-                        const reason = !row ? 'Kein passender Kurstermin' : duplicate ? 'Doppelte Vorlage' : !valid ? 'Ungültige Vorlagendaten' : skip ? 'Bereits geplant' : 'Übernehmen';
+                        const reason = !row ? i18n.noMatchingSchedule : duplicate ? i18n.duplicateTemplate : !valid ? i18n.invalidTemplateData : skip ? i18n.alreadyPlanned : i18n.apply;
                         return {row, date: valid ? localDate(date, entry.dayOffset) : '', time: entry.time, hours: entry.minutes / 60, skip, reason, key};
                     });
                     proposal.forEach(item => {
@@ -681,7 +711,7 @@
                     table.hidden = false;
                     const available = proposal.filter(item => !item.skip).length;
                     applyButton.disabled = available === 0;
-                    feedback.textContent = `${available} von ${proposal.length} Einträgen können übernommen werden. Noch nicht gespeichert.`;
+                    feedback.textContent = translate('templatePreview', {count: available, total: proposal.length});
                 });
                 applyButton.addEventListener('click', () => {
                     if (!proposal) return;
@@ -696,7 +726,7 @@
                     });
                     updatePlanning();
                     clear();
-                    feedback.textContent = `${count} Termine ins Formular übernommen. Konflikte prüfen und anschließend Terminplanung speichern.`;
+                    feedback.textContent = translate('templateApplied', {count});
                 });
             }
 

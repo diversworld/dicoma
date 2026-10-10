@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\CourseParticipant;
+use Symfony\Component\Translation\TranslatableMessage;
 use App\Enum\CourseParticipantStatus;
 use App\Enum\CourseStatus;
 use App\Service\CourseCompletionService;
@@ -297,13 +298,9 @@ class CourseParticipantCrudController extends AbstractCrudController
         if ($participant->hasPassed()) {
             $this->addFlash(
                 'info',
-                sprintf(
-                    '%s hat diesen Kurs bereits bestanden.',
-                    $participant
-                        ->getMember()
-                        ?->getFullName()
-                        ?? 'Das Mitglied'
-                )
+                new TranslatableMessage('participant.already_passed', [
+                    '%member%' => $participant->getMember()?->getFullName() ?? '',
+                ])
             );
 
             return $this->redirectToReferrer($context);
@@ -321,15 +318,10 @@ class CourseParticipantCrudController extends AbstractCrudController
 
             $this->addFlash(
                 'success',
-                sprintf(
-                    'Der Kurs wurde für %s erfolgreich abgeschlossen. '
-                    . 'Die Qualifikation "%s" wurde übernommen.',
-                    $participant
-                        ->getMember()
-                        ?->getFullName()
-                        ?? '',
-                    $qualificationName
-                )
+                new TranslatableMessage('participant.completed', [
+                    '%member%' => $participant->getMember()?->getFullName() ?? '',
+                    '%qualification%' => $qualificationName,
+                ])
             );
         } catch (\LogicException $exception) {
             $this->addFlash(

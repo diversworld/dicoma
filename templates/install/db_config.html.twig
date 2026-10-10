@@ -1,7 +1,7 @@
 {# templates/db_config.html.twig #}
 {% extends 'base.html.twig' %}
 
-{% block title %}Konfigurieren Sie Ihre Datenbank{% endblock %}
+{% block title %}{{ 'Konfigurieren Sie Ihre Datenbank'|trans }}{% endblock %}
 
 {% block body %}
 <section class="portfolio-work section">
@@ -10,39 +10,39 @@
             <div class="col-md-8">
                 <div class="block">
                     <div class="form-group">
-                        <h1>Konfigurieren Sie Ihre Datenbank</h1>
+                        <h1>{{ 'Konfigurieren Sie Ihre Datenbank'|trans }}</h1>
                     </div>
                 </div>
             </div>
         </div>
         {% if error is defined %}
-            <div class="alert alert-danger" role="alert">{{ error }}</div>
+            <div class="alert alert-danger" role="alert">{{ error|trans }}</div>
         {% endif %}
         <div class="row">
             <div class="col-md-8">
                 <div class="block">
                     <div class="form-group">
                         <form action="{{ path('save_db_config') }}" method="post">
-                            <label for="db_driver">Datenbank-Treiber:</label>
+                            <label for="db_driver">{{ 'Datenbank-Treiber'|trans }}:</label>
                             <select id="db_driver" name="db_driver">
                                 <option value="mysql">MySQL (PDO)</option>
                                 <option value="sqlite">SQLite (PDO)</option>
                                 <option value="postgresql">PostgreSQL (PDO)</option>
                                 <!-- Add more as needed -->
                             </select><br>
-                            <label for="db_version">Datenbank-Version:</label><br>
+                            <label for="db_version">{{ 'Datenbank-Version'|trans }}:</label><br>
                             <input type="text" id="db_version" name="db_version"><br>
-                            <label for="db_host">Datenbank-Host:</label><br>
+                            <label for="db_host">{{ 'Datenbank-Host'|trans }}:</label><br>
                             <input type="text" id="db_host" name="db_host"><br>
-                            <label for="db_port">Datenbank-Port:</label><br>
+                            <label for="db_port">{{ 'Datenbank-Port'|trans }}:</label><br>
                             <input type="text" id="db_port" name="db_port"><br>
-                            <label for="db_name">Datenbank-Name:</label><br>
+                            <label for="db_name">{{ 'Datenbank-Name'|trans }}:</label><br>
                             <input type="text" id="db_name" name="db_name"><br>
-                            <label for="db_user">Datenbank-Benutzername:</label><br>
+                            <label for="db_user">{{ 'Datenbank-Benutzername'|trans }}:</label><br>
                             <input type="text" id="db_user" name="db_user"><br>
-                            <label for="db_pass">Datenbank-Passwort:</label><br>
+                            <label for="db_pass">{{ 'Datenbank-Passwort'|trans }}:</label><br>
                             <input type="password" id="db_pass" name="db_pass"><br>
-                            <input type="submit" value="Konfigurationsdaten speichern">
+                            <input type="submit" value="{{ 'Konfigurationsdaten speichern'|trans }}">
                         </form>
                     </div>
                 </div>

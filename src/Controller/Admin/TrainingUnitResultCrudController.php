@@ -50,6 +50,7 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         $participant = AssociationField::new('courseParticipant', 'Kursteilnehmer')
             ->setRequired(true);
         $schedule = AssociationField::new('schedule', 'Ausbildungstermin')
+            ->setFormTypeOption('placeholder', 'Bitte Termin wählen')
             ->setRequired(true);
 
         if ($isForm) {

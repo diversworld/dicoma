@@ -7,7 +7,7 @@
     <body>
       <trans-unit id="_KqCtC0" resname="Vendor">
         <source>Vendor</source>
-        <target>Lieferant</target>
+        <target>Vendor</target>
       </trans-unit>
     </body>
   </file>

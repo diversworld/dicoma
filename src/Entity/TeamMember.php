@@ -169,11 +169,9 @@ class TeamMember
         if (!$hasSport) {
             $context
                 ->buildViolation(
-                    sprintf(
-                        'Das Mitglied ist der Sportart "%s" noch nicht zugeordnet.',
-                        $sport->getName()
-                    )
+                    'team_member.missing_sport'
                 )
+                ->setParameter('%sport%', $sport->getName())
                 ->atPath('member')
                 ->addViolation();
         }

@@ -1,4 +1,4 @@
-<form class="form-inline" method="post" action="{{ path('app_schedule_delete', {'id': schedule.id}) }}" onsubmit="return confirm('Möchtest Du diesen Kurstermin wirklich löschen?');">
+<form class="form-inline" method="post" action="{{ path('app_schedule_delete', {'id': schedule.id}) }}" onsubmit="return confirm({{ 'Möchtest Du diesen Kurstermin wirklich löschen?'|trans|json_encode|e('html_attr') }});">
     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ schedule.id) }}">
-    <button class="btn btn-transparent btn-solid-border">Löschen</button>
+    <button class="btn btn-transparent btn-solid-border">{{ 'Delete'|trans }}</button>
 </form>

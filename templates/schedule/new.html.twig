@@ -1,14 +1,14 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Kurstermin erfassen{% endblock %}
+{% block title %}{{ 'Kurstermin erstellen'|trans }}{% endblock %}
 
 {% block body %}
 <section class="about section">
     <div class="container">
         <div class="row">
             <div class="block">
-                <h1>Neuer Kurstermin</h1>
-                <p><a href="{{ path('app_schedule_index') }}">Zurück zur Übersicht</a></p>
+                <h1>{{ 'Kurstermin erstellen'|trans }}</h1>
+                <p><a href="{{ path('app_schedule_index') }}">{{ 'back to list'|trans }}</a></p>
             </div>
         </div>
 

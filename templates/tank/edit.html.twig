@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Tank{% endblock %}
+{% block title %}{{ 'Edit Tank'|trans }}{% endblock %}
 
 {% block body %}
 <section class="portfolio-work section">
     <div class="container">
-        <h1>Edit Tank</h1>
+        <h1>{{ 'Edit Tank'|trans }}</h1>
         <div class="col-md-3">
             <div class="block">
                 <a href="{{ path('app_tank_index') }}" class="btn btn-transparent btn-solid-border">{% trans %}back to list{% endtrans %}</a>

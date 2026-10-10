@@ -10,6 +10,7 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -18,6 +19,10 @@ use Symfony\Component\Validator\Constraints\Range;
 
 class InstallController extends AbstractController
 {
+    public function __construct(private readonly TranslatorInterface $translator)
+    {
+    }
+
     #[Route('/install', name: 'app_install', methods: ['GET', 'POST'])]
     public function install(Request $request, Filesystem $filesystem): Response
     {
@@ -84,7 +89,9 @@ class InstallController extends AbstractController
                 // Redirect to a new route where you will create the admin user
                 return $this->redirectToRoute('app_register_install');
             } catch (IOExceptionInterface $exception) {
-                echo "An error occurred while creating your .env.local file at " . $exception->getPath();
+                echo htmlspecialchars($this->translator->trans('install.configuration_write_failed', [
+                    '%path%' => $exception->getPath(),
+                ]), ENT_QUOTES);
                 // or return error message to the user using flash messages or other technique
             }
         }
@@ -168,7 +175,9 @@ class InstallController extends AbstractController
 
         } catch (IOExceptionInterface $exception) {
             // Fehlerbehandlung beim Schreiben der Datei
-            echo "An error occurred while creating your .env.local file at " . $exception->getPath();
+            echo htmlspecialchars($this->translator->trans('install.configuration_write_failed', [
+                '%path%' => $exception->getPath(),
+            ]), ENT_QUOTES);
             // Fehlernachricht an den Benutzer zurückgeben
         }
 

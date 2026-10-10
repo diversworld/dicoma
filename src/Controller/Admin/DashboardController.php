@@ -2,7 +2,6 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Booking;
 use App\Entity\Courses;
 use App\Entity\Member;
 use App\Entity\Schedule;
@@ -23,6 +22,7 @@ use App\Entity\CourseParticipant;
 use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
+use App\Controller\Admin\MemberCrudController;
 use App\Repository\MemberQualificationRepository;
 use App\Controller\Admin\MemberQualificationCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
@@ -31,12 +31,24 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Locale;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
+
+#[AdminDashboard(
+	routePath: '/admin/{_locale}', 
+	routeName: 'admin', 
+	routeOptions: [
+		'requirements' => ['_locale' => 'de|en|fr|es'], 
+		'defaults' => ['_locale' => 'de'],
+		'methods' => ['GET'],],
+	)
+]
 class DashboardController extends AbstractDashboardController
 {
 	public function __construct(
@@ -45,7 +57,6 @@ class DashboardController extends AbstractDashboardController
 	) {
 	}
 	
-   	#[Route('/admin', name: 'admin')]
 	public function index(): Response
 	{
 		$expiredUrl = $this->adminUrlGenerator
@@ -98,56 +109,75 @@ class DashboardController extends AbstractDashboardController
         return Dashboard::new()
             ->setTitle('<h4>DiveClubManager</h4>')
             ->setFaviconPath('images/favicon.ico')
-            ->setLocales(['de', 'en'])
             // to customize the labels of locales, pass a key => value array
             // (e.g. to display flags; although it's not a recommended practice,
             // because many languages/locales are not associated to a single country)
             ->setLocales([
-                'de' => '🇩🇪 Deutsch',
-                'en' => '🇬🇧 English',
+                Locale::new('de', 'DE Deutsch', 'locale-flag locale-flag-de'), // locale without custom options
+                Locale::new('en', 'GB English', 'locale-flag locale-flag-gb'), // custom label and icon
+				Locale::new('fr', 'FR Français', 'locale-flag locale-flag-fr'), // custom label and icon
+                Locale::new('es', 'ES Español', 'locale-flag locale-flag-es') // custom label and icon
             ])
             ;
     }
 
+    public function configureAssets(): Assets
+    {
+        return Assets::new()->addCssFile('css/admin.css');
+    }
+
     public function configureMenuItems(): iterable
     {
-		yield MenuItem::linkToDashboard('Dashboard','fa fa-home');
+		return [
+			MenuItem::linkToDashboard('Dashboard','fa fa-home'),
 
-		yield MenuItem::section('Verein');
-		yield MenuItem::linkToCrud('Vereine','fa fa-building',Club::class);
-		yield MenuItem::linkToCrud('Mitglieder','fa fa-users',Member::class);
-		yield MenuItem::linkToCrud('Sportarten','fa fa-person-swimming',Sport::class);
+			//MenuItem::section('Verein'),
+			MenuItem::subMenu('Verein', 'fa fa-building')->setSubItems([
+				MenuItem::linkTo(ClubCrudController::class,'Vereine','fa fa-building'),
+				MenuItem::linkTo(MemberCrudController::class,'Mitglieder','fa fa-users'),
+				MenuItem::linkTo(SportCrudController::class,'Sportarten','fa fa-person-swimming'),
 
-		yield MenuItem::linkToCrud('Gruppen & Mannschaften','fa fa-people-group',Team::class);
-		yield MenuItem::linkToCrud('Gruppenzuordnungen','fa fa-user-group',TeamMember::class);
-		yield MenuItem::linkToCrud('Sportzuordnungen','fa fa-link',MemberSport::class);
-        
-        yield MenuItem::section('Kursverwaltung');
-        yield MenuItem::linkToCrud('Kurse', 'fa fa-school', Courses::class);
-		yield MenuItem::linkToCrud('Kursteilnehmer','fa fa-user-graduate',CourseParticipant::class);
-        yield MenuItem::linkToCrud('Kurstermine', 'fa fa-calendar-day', Schedule::class);
-		yield MenuItem::linkToCrud('Ausbildungseinheiten','fa fa-list-check',TrainingUnitType::class);
-        yield MenuItem::linkToCrud('Planungsvorlagen', 'fa fa-calendar-week', ScheduleTemplate::class);
-        yield MenuItem::linkToRoute('Kurskalender','fa fa-calendar','admin_course_calendar');
-		yield MenuItem::linkToCrud('Ausbildungsnachweise','fa fa-clipboard-check',TrainingUnitResult::class);
+
+				MenuItem::linkTo(TeamCrudController::class,'Gruppen & Mannschaften','fa fa-people-group'),
+				MenuItem::linkTo(TeamMemberCrudController::class,'Gruppenzuordnungen','fa fa-user-group'),
+				MenuItem::linkTo(MemberSportCrudController::class,'Sportzuordnungen','fa fa-link'),
+        	]),
+			//MenuItem::section('Kursverwaltung'),	
+			MenuItem::subMenu('Kursverwaltung', 'fa fa-school')->setSubItems([
+				MenuItem::linkTo(CoursesCrudController::class, 'Kurse', 'fa fa-school'),
+				MenuItem::linkTo(CourseParticipantCrudController::class,'Kursteilnehmer','fa fa-user-graduate'),
+				MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-day'),
+				MenuItem::linkTo(TrainingUnitTypeCrudController::class,'Ausbildungseinheiten','fa fa-list-check'),
+				MenuItem::linkTo(ScheduleTemplateCrudController::class, 'Planungsvorlagen', 'fa fa-calendar-week'),
+				MenuItem::linkToRoute('Kurskalender','fa fa-calendar','admin_course_calendar'),
+				MenuItem::linkTo(TrainingUnitResultCrudController::class,'Ausbildungsnachweise','fa fa-clipboard-check'),
+			]),
 		
-		yield MenuItem::section('Ausbildung');
-		yield MenuItem::linkToCrud('Qualifikationskatalog','fa fa-certificate',Qualification::class);
-		yield MenuItem::linkToCrud('Mitgliedsqualifikationen','fa fa-id-card',MemberQualification::class);
+		//yield MenuItem::section('Ausbildung');
+ 
+			MenuItem::subMenu('Ausbildung', 'fa fa-graduation-cap')->setSubItems([
+				MenuItem::linkTo(QualificationCrudController::class,'Qualifikationskatalog','fa fa-certificate'),
+				MenuItem::linkTo(MemberQualificationCrudController::class,'Mitgliedsqualifikationen','fa fa-id-card'),
+			]),
 
-        yield MenuItem::section('Equipment');
-        yield MenuItem::linkToCrud('Flaschen', 'fa fa-user', Tank::class);
-        yield MenuItem::linkToCrud('Prüfungen', 'fa fa-user', TankCheck::class);
-        yield MenuItem::linkToCrud('Prüfungsdetails', 'fa fa-user', TankCheckDetail::class);
-        yield MenuItem::linkToCrud('TÜV Preise', 'fa fa-user', TankCheckArticle::class);
+			MenuItem::section('Equipment'),
+			MenuItem::linkTo(TankCrudController::class, 'Flaschen', 'fa fa-user'),
+			MenuItem::linkTo(TankCheckCrudController::class, 'Prüfungen', 'fa fa-user'),
+			MenuItem::linkTo(TankCheckDetailCrudController::class, 'Prüfungsdetails', 'fa fa-user'),
+			MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV Preise', 'fa fa-user'),
 
-        yield MenuItem::section('Partner');
-        yield MenuItem::linkToCrud('Lieferanten', 'fa fa-user', Vendor::class);
+			MenuItem::section('Partner'),
+			MenuItem::linkTo(VendorCrudController::class, 'Lieferanten', 'fa fa-user'),
+		];
 
     }
 
     public function configureUserMenu(UserInterface $user): UserMenu
     {
+        if (!$user instanceof User || null === $user->getId()) {
+            throw new \LogicException('Das Benutzermenü benötigt einen gespeicherten Benutzer.');
+        }
+
         // Usually it's better to call the parent method because that gives you a
         // user menu with some menu items already created ("sign out", "exit impersonation", etc.)
         // if you prefer to create the user menu from scratch, use: return UserMenu::new()->...
@@ -162,12 +192,10 @@ class DashboardController extends AbstractDashboardController
             // you can use any type of menu item, except submenus
             ->addMenuItems([
 //                MenuItem::linkToRoute('My Profile', 'fa fa-id-card', 'app_profile'),
-                MenuItem::linkToCrud('My Profile', 'fa fa-id-card', User::class)
-                    ->setController(UserCrudController::class)
+                MenuItem::linkTo(UserCrudController::class, 'My Profile', 'fa fa-id-card')
                     ->setAction('detail')
-                    ->setQueryParameter('entityId', $user->getId()),
-                MenuItem::linkToCrud('Settings', 'fa fa-user-cog', User::class)
-                    ->setController(UserCrudController::class)
+                    ->setEntityId($user->getId()),
+                MenuItem::linkTo(UserCrudController::class, 'Settings', 'fa fa-user-cog')
                     ->setAction('edit')
                     ->setEntityId($user->getId()),
             ]);

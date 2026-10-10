@@ -8,6 +8,7 @@ use App\Enum\CourseParticipantStatus;
 use App\Repository\MemberQualificationRepository;
 use App\Service\TrainingProgressService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CourseCompletionService
 {
@@ -15,6 +16,7 @@ class CourseCompletionService
         private readonly EntityManagerInterface $entityManager,
         private readonly MemberQualificationRepository $memberQualificationRepository,
         private readonly TrainingProgressService $trainingProgressService,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -67,17 +69,16 @@ class CourseCompletionService
             $missing = [];
             foreach ($progress['requirements'] as $requirement) {
                 if ($requirement['required'] && $requirement['missing'] > 0) {
-                    $missing[] = sprintf(
-                        '%s (%d fehlen)',
-                        $requirement['name'],
-                        $requirement['missing']
-                    );
+                    $missing[] = $this->translator->trans('completion.missing_unit', [
+                        '%unit%' => $requirement['name'],
+                        '%count%' => $requirement['missing'],
+                    ]);
                 }
             }
             throw new \LogicException(
                 $missing === []
                     ? 'Der Kursabschluss ist gesperrt: Es sind keine vollständigen Pflichtanforderungen hinterlegt.'
-                    : 'Pflichtnachweise fehlen: ' . implode(', ', $missing) . '.'
+                    : $this->translator->trans('completion.missing_requirements', ['%requirements%' => implode(', ', $missing)])
             );
         }
 

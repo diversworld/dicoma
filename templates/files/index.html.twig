@@ -1,13 +1,13 @@
 
 
-{% block title %}Hello FileController!{% endblock %}
+{% block title %}{{ 'Choose a file'|trans }}{% endblock %}
 
 {% block body %}
 <!-- Modal Body -->
 <div class="modal-body">
 <form id="file-select-form">
     <div class="form-group">
-        <label for="file">Choose a file:</label>
+        <label for="file">{{ 'Choose a file'|trans }}:</label>
         <select class="form-control" id="file" name="file">
             {% for file in files %}
                 <option value="{{ file }}">{{ file }}</option>

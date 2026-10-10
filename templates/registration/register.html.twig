@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Register{% endblock %}
+{% block title %}{{ 'Register'|trans }}{% endblock %}
 
 {% block body %}
 <section class="about section">
@@ -10,7 +10,7 @@
                 <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
             {% endfor %}
         {% endif %}
-        <h1>Register</h1>
+        <h1>{{ 'Register'|trans }}</h1>
         {% if form_errors(registrationForm) %}
             <div class="alert alert-danger" role="alert">
                 {{ form_errors(registrationForm) }}
@@ -176,7 +176,7 @@
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-outline-info">Register</button>
+        <button type="submit" class="btn btn-outline-info">{{ 'Register'|trans }}</button>
         {{ form_end(registrationForm) }}
     </div>
 </section>

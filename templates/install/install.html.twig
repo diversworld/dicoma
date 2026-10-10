@@ -3,9 +3,9 @@
 {% extends 'base.html.twig' %}
 
 {% block install %}
-    <h1>Create a new User</h1>
+    <h1>{{ 'Create a new User'|trans }}</h1>
     <form method="post" action="{{ path('install') }}">
         {{ form_widget(registrationForm) }}
-        <button class="btn" type="submit">Create</button>
+        <button class="btn" type="submit">{{ 'Create'|trans }}</button>
     </form>
 {% endblock %}

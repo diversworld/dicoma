@@ -1,4 +1,4 @@
-<form class="form-inline" method="post" action="{{ path('app_booking_delete', {'id': booking.id}) }}" onsubmit="return confirm('Möchtest Du diese Buchung wirklich löschen?');">
+<form class="form-inline" method="post" action="{{ path('app_booking_delete', {'id': booking.id}) }}" onsubmit="return confirm({{ 'Möchtest Du diese Buchung wirklich löschen?'|trans|json_encode|e('html_attr') }});">
     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ booking.id) }}">
-    <button class="btn btn-transparent btn-solid-border"><i class="ion-trash-a"></i> Löschen</button>
+    <button class="btn btn-transparent btn-solid-border"><i class="ion-trash-a"></i> {{ 'Delete'|trans }}</button>
 </form>

@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Courses;
+use Symfony\Component\Translation\TranslatableMessage;
 use App\Entity\ScheduleTemplate;
 use App\Entity\ScheduleTemplateEntry;
 use App\Enum\CourseStatus;
@@ -35,13 +36,15 @@ use App\Form\CourseSchedulePlanningType;
 use App\Repository\ScheduleRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_ADMIN')]
 class CoursesCrudController extends AbstractCrudController
 {
 	public function __construct(
 		private readonly CourseScheduleGenerator $scheduleGenerator,
-		private readonly CourseTrainingPlanService $trainingPlanService
+		private readonly CourseTrainingPlanService $trainingPlanService,
+		private readonly TranslatorInterface $translator,
 	) {
 	}
 	
@@ -490,10 +493,7 @@ class CoursesCrudController extends AbstractCrudController
         ) {
             $this->addFlash(
                 'info',
-                sprintf(
-                    'Der Kurs "%s" ist bereits abgeschlossen.',
-                    (string) $course
-                )
+                new TranslatableMessage('course.already_completed', ['%course%' => (string) $course])
             );
 
             return $this->redirectToReferrer(
@@ -526,10 +526,7 @@ class CoursesCrudController extends AbstractCrudController
 
         $this->addFlash(
             'success',
-            sprintf(
-                'Der Kurs "%s" wurde erfolgreich abgeschlossen.',
-                (string) $course
-            )
+            new TranslatableMessage('course.completed', ['%course%' => (string) $course])
         );
 
         return $this->redirectToReferrer(
@@ -580,10 +577,7 @@ class CoursesCrudController extends AbstractCrudController
 
         $this->addFlash(
             'success',
-            sprintf(
-                'Der Kurs "%s" wurde wieder geöffnet.',
-                (string) $course
-            )
+            new TranslatableMessage('course.reopened', ['%course%' => (string) $course])
         );
 
         return $this->redirectToReferrer(
@@ -621,13 +615,7 @@ class CoursesCrudController extends AbstractCrudController
 
 				$this->addFlash(
 					'success',
-					sprintf(
-						'%d %s aus der Zielqualifikation übernommen.',
-						$created,
-						$created === 1
-							? 'Ausbildungseinheit wurde'
-							: 'Ausbildungseinheiten wurden'
-					)
+					new TranslatableMessage('course.training_units_imported', ['%count%' => $created])
 				);
 			}
 		} catch (\LogicException $exception) {
@@ -740,13 +728,7 @@ class CoursesCrudController extends AbstractCrudController
 			} else {
 				$this->addFlash(
 					'success',
-					sprintf(
-						'%d %s erfolgreich erzeugt.',
-						$created,
-						$created === 1
-							? 'Kurstermin wurde'
-							: 'Kurstermine wurden'
-					)
+					new TranslatableMessage('course.sessions_created', ['%count%' => $created])
 				);
 			}
 		} catch (\LogicException $exception) {
@@ -807,19 +789,17 @@ class CoursesCrudController extends AbstractCrudController
                 $first = $conflict['first'];
                 $second = $conflict['second'];
 
-                $message = sprintf(
-                    'Terminkonflikt: "%s" und "%s" überschneiden sich. '
-                    . 'Instruktor: %s.',
-                    $first->getTitle() ?? '',
-                    $second->getTitle() ?? '',
-                    $first->getInstructor()?->getFullName() ?? 'Unbekannt'
-                );
-                $messages[$message] = true;
+                $parameters = [
+                    '%first%' => $first->getTitle() ?? '',
+                    '%second%' => $second->getTitle() ?? '',
+                    '%instructor%' => $first->getInstructor()?->getFullName() ?? '',
+                ];
+                $messages[json_encode($parameters)] = new TranslatableMessage('planning.server_conflict', $parameters);
             }
 
             $entityManager->flush();
 
-            foreach (array_keys($messages) as $message) {
+            foreach ($messages as $message) {
                 $this->addFlash('warning', $message);
             }
 
@@ -889,7 +869,7 @@ class CoursesCrudController extends AbstractCrudController
             ['startDate' => 'ASC', 'startTime' => 'ASC', 'id' => 'ASC']
         );
         $export = $exportService->prepare($schedules, $club);
-        $defaultName = 'Vorlage: ' . (string) $course;
+        $defaultName = $this->translator->trans('template.default_name', ['%course%' => (string) $course]);
         $name = $defaultName;
         $description = '';
         $error = null;
@@ -924,11 +904,9 @@ class CoursesCrudController extends AbstractCrudController
 
                 $entityManager->persist($template);
                 $entityManager->flush();
-                $this->addFlash('success', sprintf(
-                    'Planungsvorlage "%s" mit %d Eintraegen gespeichert.',
-                    $name,
-                    count($export['entries'])
-                ));
+                $this->addFlash('success', new TranslatableMessage('template.saved', [
+                    '%name%' => $name, '%count%' => count($export['entries']),
+                ]));
                 return $this->redirectToReferrer($context);
             }
         }

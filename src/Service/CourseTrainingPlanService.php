@@ -4,9 +4,14 @@ namespace App\Service;
 
 use App\Entity\Courses;
 use App\Entity\CourseTrainingUnit;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CourseTrainingPlanService
 {
+    public function __construct(private readonly TranslatorInterface $translator)
+    {
+    }
+
     /**
      * Übernimmt fehlende Einträge aus der Zielqualifikation
      * in den konkreten Kurs.
@@ -28,11 +33,7 @@ class CourseTrainingPlanService
 
         if ($qualification->getTrainingUnits()->isEmpty()) {
             throw new \LogicException(
-                sprintf(
-                    'Für die Qualifikation "%s" ist noch '
-                    . 'kein Ausbildungsplan definiert.',
-                    (string) $qualification
-                )
+                $this->translator->trans('training_plan.not_defined', ['%qualification%' => (string) $qualification])
             );
         }
 

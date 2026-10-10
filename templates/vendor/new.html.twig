@@ -2,7 +2,7 @@
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Lieferant/partner erstellen{% endblock %}
+{% block title %}{{ 'New Vendor'|trans }}{% endblock %}
 
 {% block body %}
     <section class="about section">
@@ -10,8 +10,8 @@
             <div class="row">
                 <div class="col-md-7">
                     <div class="block">
-                        <h1>Neuen Lieferant/Partner anlegen</h1>
-                        <p><a href="{{ path('app_vendor_index') }}">Zurück zur Übersicht</a></p>
+                        <h1>{{ 'New Vendor'|trans }}</h1>
+                        <p><a href="{{ path('app_vendor_index') }}">{{ 'back to list'|trans }}</a></p>
                     </div>
                 </div>
             </div>

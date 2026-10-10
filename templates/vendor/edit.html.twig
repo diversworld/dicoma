@@ -1,16 +1,16 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Vendor{% endblock %}
+{% block title %}{{ 'Edit Vendor'|trans }}{% endblock %}
 
 {% block body %}
     <section class="about section">
         <div class="container">
-            <h1>Lieferant/Partner bearbeiten</h1>
+            <h1>{{ 'Edit Vendor'|trans }}</h1>
             <div class="row text-bg-dark text-center">
                 <div class="col-md-12">
                     <ul class="list-inline">
                         <li class="list-inline-item">
-                            <a href="{{ path('app_vendor_index') }}" class="btn btn-transparent btn-solid-border">Zurück</a>
+                            <a href="{{ path('app_vendor_index') }}" class="btn btn-transparent btn-solid-border">{{ 'back to list'|trans }}</a>
                         </li>
                         <li class="list-inline-item">
                             {{ include('vendor/_delete_form.html.twig') }}
