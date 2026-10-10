@@ -1,1 +1,0 @@
-/opt/plesk/php/8.4/bin/php -d sys_temp_dir=/var/www/vhosts/h20292.server14.configcenter.info/httpdocs/dicoma/var/tmp -r 'echo "Configured: ".ini_get("sys_temp_dir").PHP_EOL; echo "Temp: ".sys_get_temp_dir().PHP_EOL; $f=tempnam(sys_get_temp_dir(),"dicoma_"); var_dump($f); if ($f !== false) unlink($f);'
