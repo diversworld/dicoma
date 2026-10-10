@@ -4,14 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Schedule;
 use App\Entity\Booking;
-
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\Courses;
 use App\Entity\TrainingUnitType;
-
 
 /**
  * @extends ServiceEntityRepository
@@ -132,7 +130,6 @@ class ScheduleRepository extends ServiceEntityRepository
 			->getResult();
 	}
 	
-
 //    /**
 //     * @return Schedule[] Returns an array of Schedule objects
 //     */

@@ -34,7 +34,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-php-
     - name: Install Dependencies
-      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      run: composer install -q --no-ansi --no-interaction --no-plugins --no-scripts --no-progress --prefer-dist
     - name: Validate Symfony configuration
       env:
         DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/test.db'

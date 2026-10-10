@@ -3,14 +3,12 @@
 namespace App\Entity;
 
 use App\Repository\TankRepository;
-
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TankRepository::class)]
-
 class Tank
 {
     #[ORM\Id]
@@ -57,18 +55,15 @@ class Tank
     )]
     private Collection $checkDetails;
 
-
     public function __construct()
     {
         $this->tankChecks = new ArrayCollection();
         $this->checkDetails = new ArrayCollection();
-
     }
 
     public function __toString(): string
     {
         return $this->inventory ?? '';
-
     }
 
     public function getId(): ?int
@@ -136,7 +131,6 @@ class Tank
         return $this;
     }
 
-
     public function getNotes(): ?string
     {
         return $this->notes;
@@ -173,7 +167,6 @@ class Tank
         return $this;
     }
 
-
     /**
      * @return Collection<int, TankCheck>
      */
@@ -207,14 +200,12 @@ class Tank
     public function getCheckDetails(): Collection
     {
         return $this->checkDetails;
-
     }
 
     public function addCheckDetail(TankCheckDetail $checkDetail): static
     {
         if (!$this->checkDetails->contains($checkDetail)) {
             $this->checkDetails->add($checkDetail);
-
             $checkDetail->setTank($this);
         }
 
@@ -224,7 +215,6 @@ class Tank
     public function removeCheckDetail(TankCheckDetail $checkDetail): static
     {
         if ($this->checkDetails->removeElement($checkDetail)) {
-
             if ($checkDetail->getTank() === $this) {
                 $checkDetail->setTank(null);
             }

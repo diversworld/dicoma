@@ -8,7 +8,6 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TankCheckArticleRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-
 class TankCheckArticle
 {
     #[ORM\Id]
@@ -34,7 +33,6 @@ class TankCheckArticle
     )]
     private ?string $priceBrutto = null;
 
-
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
@@ -42,7 +40,6 @@ class TankCheckArticle
         targetEntity: TankCheck::class,
         inversedBy: 'articles'
     )]
-
     #[ORM\JoinColumn(nullable: false)]
     private ?TankCheck $tankCheck = null;
 
@@ -54,7 +51,6 @@ class TankCheckArticle
 
     #[ORM\Column(nullable: true)]
     private ?int $size = null;
-
 
     public function getId(): ?int
     {
@@ -74,13 +70,11 @@ class TankCheckArticle
     }
 
     public function getPriceNetto(): ?string
-
     {
         return $this->priceNetto;
     }
 
     public function setPriceNetto(string $priceNetto): static
-
     {
         $this->priceNetto = $priceNetto;
 
@@ -88,13 +82,11 @@ class TankCheckArticle
     }
 
     public function getPriceBrutto(): ?string
-
     {
         return $this->priceBrutto;
     }
 
     public function setPriceBrutto(?string $priceBrutto): static
-
     {
         $this->priceBrutto = $priceBrutto;
 
@@ -140,7 +132,6 @@ class TankCheckArticle
     public function setDefault(bool $isDefault): static
     {
         return $this->setIsDefault($isDefault);
-
     }
 
     public function isStandard(): ?bool
@@ -195,6 +186,5 @@ class TankCheckArticle
     public function __toString(): string
     {
         return $this->title ?? 'n/a';
-
     }
 }

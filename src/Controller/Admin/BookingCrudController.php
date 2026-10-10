@@ -6,7 +6,6 @@ use App\Entity\Booking;
 use App\Enum\BookingAttendanceStatus;
 use App\Service\BookingNumberGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
-
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
@@ -24,7 +23,6 @@ class BookingCrudController extends AbstractCrudController
     public function __construct(
         private readonly BookingNumberGenerator $bookingNumberGenerator
     ) {
-
     }
 
     public static function getEntityFqcn(): string

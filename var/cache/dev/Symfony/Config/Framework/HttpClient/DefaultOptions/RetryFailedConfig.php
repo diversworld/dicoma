@@ -121,7 +121,7 @@ class RetryFailedConfig
 
     /**
      * Randomness in percent (between 0 and 1) to apply to the delay.
-     * @default 0.1
+     * @default 0.10000000000000001
      * @param ParamConfigurator|float $value
      * @return $this
      */

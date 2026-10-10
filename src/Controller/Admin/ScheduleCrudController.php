@@ -8,7 +8,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
-
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -37,7 +36,6 @@ class ScheduleCrudController extends AbstractCrudController
         private readonly ScheduleParticipantSyncService $participantSyncService
     ) {
     }
-
 
     public static function getEntityFqcn(): string
     {
@@ -95,7 +93,6 @@ class ScheduleCrudController extends AbstractCrudController
             ->setColumns(6);
 
         yield ImageField::new('image','Bild')
-
             ->setBasePath('/images/kurse/')
             ->setUploadDir('public/images/kurse/')
             ->setUploadedFileNamePattern('[randomness].[extension]')

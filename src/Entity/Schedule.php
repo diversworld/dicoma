@@ -10,7 +10,6 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Enum\BookingAttendanceStatus;
 
 #[ORM\Table(name: 'schedule',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_schedule_course_training_sequence',columns: ['courses_id','training_unit_type_id','training_unit_sequence'])])]
-
 #[ORM\Entity(repositoryClass: ScheduleRepository::class)]
 class Schedule
 {
@@ -32,7 +31,6 @@ class Schedule
 	private ?int $duration = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE, nullable: true)]
-
     private ?\DateTimeInterface $startTime = null;
 
     #[ORM\Column(length: 100, nullable: true)]
@@ -43,7 +41,6 @@ class Schedule
 
 	#[ORM\Column(length: 10,nullable: true)]
 	private ?string $locationPostal = null;
-
 
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $locationCity = null;
@@ -67,7 +64,6 @@ class Schedule
 	#[ORM\Column(nullable: true)]
 	private ?int $trainingUnitSequence = null;
 	
-
     #[ORM\ManyToOne(inversedBy: 'schedules')]
     private ?Member $instructor = null;
 
@@ -79,7 +75,6 @@ class Schedule
     public function __toString()
     {
 		return $this->title ?? '';
-
     }
 
     public function getId(): ?int
@@ -112,7 +107,6 @@ class Schedule
 		return $this;
 	}
 
-
     public function getDuration(): ?int
     {
         return $this->duration;
@@ -124,7 +118,6 @@ class Schedule
 
 		return $this;
 	}
-
 
     public function getStartTime(): ?\DateTimeInterface
     {
@@ -151,7 +144,6 @@ class Schedule
 	}
 
 	public function getLocation(): ?string
-
     {
         return $this->location;
     }
@@ -163,7 +155,6 @@ class Schedule
         return $this;
     }
 	
-
     public function getLocationStreet(): ?string
     {
         return $this->locationStreet;
@@ -175,7 +166,6 @@ class Schedule
 
         return $this;
     }
-
 
     public function getLocationCity(): ?string
     {
@@ -238,7 +228,6 @@ class Schedule
 		return $this;
 	}
 	
-
     /**
      * @return Collection<int, Booking>
      */
@@ -297,7 +286,6 @@ class Schedule
 		return sprintf('%d Std. %02d Min.', $hours, $minutes);
 	}
 	
-
     public function getPrice(): ?string
     {
         return $this->price;
@@ -309,7 +297,6 @@ class Schedule
 
 		return $this;
 	}
-
 
     public function getImage(): ?string
     {
@@ -481,5 +468,4 @@ class Schedule
 			$this->trainingUnitSequence
 		);
 	}
-
 }

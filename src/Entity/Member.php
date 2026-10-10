@@ -3,7 +3,6 @@
 namespace App\Entity;
 
 use App\Enum\MembershipStatus;
-
 use App\Repository\MemberRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -22,7 +21,6 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         )
     ]
 )]
-
 #[ORM\Entity(repositoryClass: MemberRepository::class)]
 class Member
 {
@@ -62,7 +60,6 @@ class Member
     private MembershipStatus $membershipStatus =
         MembershipStatus::ACTIVE;
 
-
     #[ORM\Column(length: 100)]
     private ?string $firstname = null;
 
@@ -98,7 +95,6 @@ class Member
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $postalCode = null;
 
-
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $city = null;
 
@@ -122,7 +118,6 @@ class Member
      * Qualifikationen ersetzt.
      */
     #[ORM\Column(length: 50, nullable: true)]
-
     private ?string $category = null;
 
     #[ORM\Column(nullable: true)]
@@ -191,7 +186,6 @@ class Member
     )]
     private $plainPassword;
 
-
     public function __construct()
     {
         $this->schedules = new ArrayCollection();
@@ -203,7 +197,6 @@ class Member
     public function __toString(): string
     {
         return $this->getFullName();
-
     }
 
     public function getId(): ?int
@@ -274,7 +267,6 @@ class Member
     ): static {
         $this->membershipStatus = $membershipStatus;
 
-
         return $this;
     }
 
@@ -286,7 +278,6 @@ class Member
     public function setFirstname(
         string $firstname
     ): static {
-
         $this->firstname = $firstname;
 
         return $this;
@@ -300,7 +291,6 @@ class Member
     public function setLastname(
         string $lastname
     ): static {
-
         $this->lastname = $lastname;
 
         return $this;
@@ -317,7 +307,6 @@ class Member
         );
     }
 
-
     public function getBirthday(): ?\DateTimeInterface
     {
         return $this->birthday;
@@ -326,7 +315,6 @@ class Member
     public function setBirthday(
         \DateTimeInterface $birthday
     ): static {
-
         $this->birthday = $birthday;
 
         return $this;
@@ -392,7 +380,6 @@ class Member
             ? trim($postalCode)
             : null;
 
-
         return $this;
     }
 
@@ -435,7 +422,6 @@ class Member
     /**
      * @deprecated
      */
-
     public function getCategory(): ?string
     {
         return $this->category;
@@ -447,7 +433,6 @@ class Member
     public function setCategory(
         ?string $category
     ): static {
-
         $this->category = $category;
 
         return $this;
@@ -461,7 +446,6 @@ class Member
     public function setPublished(
         ?bool $published
     ): static {
-
         $this->published = $published;
 
         return $this;
@@ -559,7 +543,6 @@ class Member
         }
     }
 
-
     /**
      * @return Collection<int, Schedule>
      */
@@ -571,7 +554,6 @@ class Member
     public function addSchedule(
         Schedule $schedule
     ): static {
-
         if (!$this->schedules->contains($schedule)) {
             $this->schedules->add($schedule);
             $schedule->setInstructor($this);
@@ -584,7 +566,6 @@ class Member
         Schedule $schedule
     ): static {
         if ($this->schedules->removeElement($schedule)) {
-
             if ($schedule->getInstructor() === $this) {
                 $schedule->setInstructor(null);
             }
@@ -607,7 +588,6 @@ class Member
         if (!$this->bookings->contains($booking)) {
             $this->bookings->add($booking);
             $booking->setMember($this);
-
         }
 
         return $this;
@@ -619,7 +599,6 @@ class Member
         if ($this->bookings->removeElement($booking)) {
             if ($booking->getMember() === $this) {
                 $booking->setMember(null);
-
             }
         }
 
@@ -629,7 +608,6 @@ class Member
     /**
      * @deprecated
      */
-
     public function getStatus(): ?string
     {
         return $this->status;

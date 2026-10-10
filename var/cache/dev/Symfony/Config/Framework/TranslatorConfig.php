@@ -163,7 +163,7 @@ class TranslatorConfig
      * @template TValue of string|array
      * @param TValue $value
      * Global parameters.
-     * @example 3.14
+     * @example 3.1400000000000001
      * @return \Symfony\Config\Framework\Translator\GlobalConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Framework\Translator\GlobalConfig : static)
      */

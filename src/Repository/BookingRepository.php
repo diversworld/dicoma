@@ -9,7 +9,6 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Enum\BookingAttendanceStatus;
 
-
 class BookingRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -72,7 +71,6 @@ class BookingRepository extends ServiceEntityRepository
 
 		return (int) $count > 0;
 	}
-
     public function getLastBookingNumberOfCurrentMonth(string $monthYearPart): ?string
     {
         // Get the last booking of the current month/year
@@ -116,5 +114,4 @@ class BookingRepository extends ServiceEntityRepository
 			->getQuery()
 			->getResult();
 	}
-
 }

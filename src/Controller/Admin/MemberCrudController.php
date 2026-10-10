@@ -6,13 +6,11 @@ use App\Entity\Member;
 use App\Enum\MembershipStatus;
 use App\Form\MemberSportType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
-
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
-
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
@@ -24,7 +22,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Form\MemberQualificationType;
 
 #[IsGranted('ROLE_ADMIN')]
-
 class MemberCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string

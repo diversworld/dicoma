@@ -2,13 +2,11 @@
 
 namespace App\Entity;
 
-
 use App\Repository\TankCheckRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-
 
 #[ORM\Entity(repositoryClass: TankCheckRepository::class)]
 class TankCheck
@@ -48,7 +46,6 @@ class TankCheck
         cascade: ['persist', 'remove'],
         orphanRemoval: true
     )]
-
     private Collection $articles;
 
     public function __construct()
@@ -56,13 +53,11 @@ class TankCheck
         $this->tanks = new ArrayCollection();
         $this->articles = new ArrayCollection();
         $this->checkDate = new \DateTime();
-
     }
 
     public function __toString(): string
     {
         return $this->checkDate?->format('d.m.Y') ?? '';
-
     }
 
     public function getId(): ?int
@@ -76,7 +71,6 @@ class TankCheck
     }
 
     public function setCheckDate(?\DateTimeInterface $checkDate): static
-
     {
         $this->checkDate = $checkDate;
 
@@ -125,14 +119,12 @@ class TankCheck
     public function getTanks(): Collection
     {
         return $this->tanks;
-
     }
 
     public function addTank(Tank $tank): static
     {
         if (!$this->tanks->contains($tank)) {
             $this->tanks->add($tank);
-
         }
 
         return $this;
@@ -141,7 +133,6 @@ class TankCheck
     public function removeTank(Tank $tank): static
     {
         $this->tanks->removeElement($tank);
-
 
         return $this;
     }
@@ -179,7 +170,6 @@ class TankCheck
     public function removeArticle(TankCheckArticle $article): static
     {
         if ($this->articles->removeElement($article)) {
-
             if ($article->getTankCheck() === $this) {
                 $article->setTankCheck(null);
             }

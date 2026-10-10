@@ -54,7 +54,7 @@ class TwigConfig implements \Symfony\Component\Config\Builder\ConfigBuilderInter
      * @template TValue of mixed
      * @param TValue $value
      * @example "@bar"
-     * @example 3.14
+     * @example 3.1400000000000001
      * @return \Symfony\Config\Twig\GlobalConfig|$this
      * @psalm-return (TValue is array ? \Symfony\Config\Twig\GlobalConfig : static)
      * @deprecated since Symfony 7.4

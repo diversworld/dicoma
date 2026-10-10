@@ -135,7 +135,6 @@ class BookingController extends AbstractController
         $buchung->setStatus('gebucht');
         $buchung->setMember($member);  // Setze den Member anstelle von User
 
-
         // Speichern der Buchung
         $entityManager->persist($buchung);
         $entityManager->flush();
@@ -241,5 +240,4 @@ class BookingController extends AbstractController
 
 		return false;
 	}
-
 }

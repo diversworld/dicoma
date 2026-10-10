@@ -17,7 +17,6 @@ use App\Enum\BookingAttendanceStatus;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
-
 class BookingType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -85,7 +84,6 @@ class BookingType extends AbstractType
 				'label' => 'Anwesenheitsnotiz',
 				'required' => false,
 			]);
-
     }
 
     public function configureOptions(OptionsResolver $resolver): void

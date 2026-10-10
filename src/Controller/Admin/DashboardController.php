@@ -3,7 +3,6 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Booking;
-
 use App\Entity\Courses;
 use App\Entity\Member;
 use App\Entity\Schedule;
@@ -26,7 +25,6 @@ use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Repository\MemberQualificationRepository;
 use App\Controller\Admin\MemberQualificationCrudController;
-
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -35,7 +33,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
-
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -96,12 +93,10 @@ class DashboardController extends AbstractDashboardController
 		]);
 	}
 
-
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
             ->setTitle('<h4>DiveClubManager</h4>')
-
             ->setFaviconPath('images/favicon.ico')
             ->setLocales(['de', 'en'])
             // to customize the labels of locales, pass a key => value array
@@ -140,7 +135,6 @@ class DashboardController extends AbstractDashboardController
 		yield MenuItem::linkToCrud('Qualifikationskatalog','fa fa-certificate',Qualification::class);
 		yield MenuItem::linkToCrud('Mitgliedsqualifikationen','fa fa-id-card',MemberQualification::class);
 
-
         yield MenuItem::section('Equipment');
         yield MenuItem::linkToCrud('Flaschen', 'fa fa-user', Tank::class);
         yield MenuItem::linkToCrud('Prüfungen', 'fa fa-user', TankCheck::class);
@@ -149,7 +143,6 @@ class DashboardController extends AbstractDashboardController
 
         yield MenuItem::section('Partner');
         yield MenuItem::linkToCrud('Lieferanten', 'fa fa-user', Vendor::class);
-
 
     }
 
@@ -179,6 +172,5 @@ class DashboardController extends AbstractDashboardController
                     ->setEntityId($user->getId()),
             ]);
     }
-
 
 }

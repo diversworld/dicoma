@@ -21,13 +21,11 @@ security:
         ROLE_SUPER_ADMIN:
             - ROLE_ADMIN
 
-
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
                 property: user
-
 
     firewalls:
         dev:
@@ -45,7 +43,6 @@ security:
             user_checker: App\Security\UserChecker
 
             entry_point: form_login
-
 
             form_login:
                 login_path: app_login
@@ -145,7 +142,6 @@ security:
         # ---------------------------------------------------------
 
         - { path: ^/, roles: ROLE_MEMBER }
-
 
 
 when@test:

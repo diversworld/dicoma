@@ -45,7 +45,6 @@ class CoursesCrudController extends AbstractCrudController
 	) {
 	}
 	
-
     public static function getEntityFqcn(): string
     {
         return Courses::class;
@@ -943,7 +942,6 @@ class CoursesCrudController extends AbstractCrudController
             'description' => $description,
             'error' => $error,
         ]);
-
     }
 
 }

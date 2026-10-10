@@ -13,7 +13,6 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use App\Enum\CourseParticipantStatus;
 
 #[Assert\Callback('validateQualification')]
-
 #[ORM\Entity(repositoryClass: CoursesRepository::class)]
 class Courses
 {
@@ -22,7 +21,6 @@ class Courses
     #[ORM\Column]
     private ?int $id = null;
 	
-
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
@@ -90,7 +88,6 @@ class Courses
 		$this->trainingUnits = new ArrayCollection();
 	}
 	
-
     public function __toString(): string
     {
         return $this->title;
@@ -178,7 +175,6 @@ class Courses
 		return true;
 	}
 	
-
     public function removeSchedule(Schedule $schedule): static
     {
         if ($this->schedule->removeElement($schedule)) {
@@ -457,5 +453,4 @@ class Courses
 
 		return $this;
 	}
-
 }

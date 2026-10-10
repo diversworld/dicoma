@@ -43,7 +43,6 @@ class Vendor
     /**
      * @var Collection<int, TankCheck>
      */
-
     #[ORM\OneToMany(mappedBy: 'vendor', targetEntity: TankCheck::class)]
     private Collection $tankChecks;
 
@@ -55,7 +54,6 @@ class Vendor
     public function __toString(): string
     {
         return $this->name ?? '';
-
     }
 
     public function getId(): ?int
@@ -110,7 +108,6 @@ class Vendor
 
         return $this;
     }
-
 
     public function getPhone(): ?string
     {
@@ -181,7 +178,6 @@ class Vendor
     public function removeTankCheck(TankCheck $tankCheck): static
     {
         if ($this->tankChecks->removeElement($tankCheck)) {
-
             if ($tankCheck->getVendor() === $this) {
                 $tankCheck->setVendor(null);
             }

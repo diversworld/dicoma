@@ -19,7 +19,6 @@ class TankCheckDetail
      * TankCheckDetail. Deshalb bewusst kein inversedBy.
      */
     #[ORM\ManyToOne(targetEntity: TankCheck::class)]
-
     private ?TankCheck $tankCheck = null;
 
     #[ORM\ManyToOne(targetEntity: TankCheckArticle::class)]
@@ -39,7 +38,6 @@ class TankCheckDetail
         nullable: true
     )]
     private ?string $amount = null;
-
 
     public function getId(): ?int
     {
@@ -70,7 +68,6 @@ class TankCheckDetail
         return $this;
     }
 
-
     public function getTank(): ?Tank
     {
         return $this->tank;
@@ -89,7 +86,6 @@ class TankCheckDetail
     }
 
     public function setAmount(?string $amount): static
-
     {
         $this->amount = $amount;
 

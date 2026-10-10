@@ -22,7 +22,6 @@ class Booking
 		$this->makeupBookings = new ArrayCollection();
 	}
 	
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -63,14 +62,12 @@ class Booking
 	#[ORM\OneToMany(mappedBy: 'makeupFor',targetEntity: self::class)]
 	private Collection $makeupBookings;
 
-
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
     public function __toString()
     {
         return $this->bookingnumber ?? '';
-
     }
 
     public function getId(): ?int
@@ -175,7 +172,6 @@ class Booking
 
 		return $this;
 	}
-
 
     public function getNotes(): ?string
     {
@@ -289,5 +285,4 @@ class Booking
 		return $this->attendanceStatus
 			=== BookingAttendanceStatus::MAKEUP_REQUIRED;
 	}
-
 }

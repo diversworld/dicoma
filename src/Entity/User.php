@@ -26,7 +26,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_ADMIN = 'ROLE_ADMIN';
     public const ROLE_SUPER_ADMIN = 'ROLE_SUPER_ADMIN';
 
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -38,13 +37,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var list<string>
      */
-
     #[ORM\Column]
     private array $roles = [];
 
     /**
      * @var string|null Das gehashte Passwort
-
      */
     #[ORM\Column]
     private ?string $password = null;
@@ -66,7 +63,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __toString(): string
     {
         return (string) $this->user;
-
     }
 
     public function getId(): ?int
@@ -85,7 +81,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
-
 
     public function getUserIdentifier(): string
     {
@@ -178,7 +173,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getPassword(): string
     {
         return (string) $this->password;
-
     }
 
     public function setPassword(string $password): static
@@ -207,7 +201,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
-
         $this->plainPassword = null;
     }
 
@@ -218,11 +211,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setMember(?Member $member): static
     {
-
         if ($member === null && $this->member !== null) {
             $this->member->setUser(null);
         }
-
 
         if ($member !== null && $member->getUser() !== $this) {
             $member->setUser($this);
@@ -242,7 +233,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->email = trim($email);
 
-
         return $this;
     }
 
@@ -255,7 +245,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->isVerified;
     }
-
 
     public function setIsVerified(bool $isVerified): static
     {
@@ -292,5 +281,4 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             'Super-Administrator' => self::ROLE_SUPER_ADMIN,
         ];
     }
-
 }
