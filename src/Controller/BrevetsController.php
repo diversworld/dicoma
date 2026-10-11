@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Brevets;
 use App\Form\BrevetsType;
 use App\Repository\BrevetsRepository;
@@ -24,6 +26,7 @@ class BrevetsController extends AbstractController
     }
 
     #[Route('/new', name: 'app_brevets_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         // Überprüfen, ob der Benutzer als Admin authentifiziert ist
@@ -57,6 +60,7 @@ class BrevetsController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_brevets_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Brevets $brevet, EntityManagerInterface $entityManager): Response
     {
         // Überprüfen, ob der Benutzer als Admin authentifiziert ist
@@ -80,6 +84,7 @@ class BrevetsController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_brevets_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Brevets $brevet, EntityManagerInterface $entityManager): Response
     {
         // Überprüfen, ob der Benutzer als Admin authentifiziert ist

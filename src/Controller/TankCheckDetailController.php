@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\TankCheckDetail;
 use App\Form\TankCheckDetailType;
 use App\Repository\TankCheckDetailRepository;
@@ -15,6 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class TankCheckDetailController extends AbstractController
 {
     #[Route('/{id}', name: 'app_tank_check_detail_index', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function index(TankCheckDetailRepository $tankCheckDetailRepository, int $id =0): Response
     {
         $tankCheckDetails = $tankCheckDetailRepository->findAll();
@@ -30,6 +33,7 @@ class TankCheckDetailController extends AbstractController
     }
 
     #[Route('/new', name: 'app_tank_check_detail_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $tankCheckDetail = new TankCheckDetail();
@@ -52,6 +56,7 @@ class TankCheckDetailController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_detail_show', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function show(TankCheckDetail $tankCheckDetail): Response
     {
         return $this->render('tank_check_detail/show.html.twig', [
@@ -60,6 +65,7 @@ class TankCheckDetailController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_tank_check_detail_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, TankCheckDetail $tankCheckDetail, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(TankCheckDetailType::class, $tankCheckDetail);
@@ -78,6 +84,7 @@ class TankCheckDetailController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_detail_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, TankCheckDetail $tankCheckDetail, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$tankCheckDetail->getId(), $request->request->get('_token'))) {

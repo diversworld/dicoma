@@ -11,7 +11,8 @@ class CourseScheduleGenerator
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly ScheduleRepository $scheduleRepository
+        private readonly ScheduleRepository $scheduleRepository,
+        private readonly ScheduleParticipantSyncService $participantSyncService
     ) {
     }
 
@@ -90,6 +91,14 @@ class CourseScheduleGenerator
         }
 
         $this->entityManager->flush();
+
+        // Newly generated schedule placeholders receive bookings as well.
+        // sync() is idempotent and never changes existing attendance data.
+        if ($created > 0) {
+            foreach ($this->scheduleRepository->findBy(['courses' => $course]) as $schedule) {
+                $this->participantSyncService->sync($schedule);
+            }
+        }
 
         return $created;
     }

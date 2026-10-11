@@ -7,6 +7,8 @@ use Symfony\Component\Translation\TranslatableMessage;
 use App\Enum\CourseParticipantStatus;
 use App\Enum\CourseStatus;
 use App\Service\CourseCompletionService;
+use App\Service\ScheduleParticipantSyncService;
+use App\Repository\ScheduleRepository;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -28,7 +30,9 @@ class CourseParticipantCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly CourseCompletionService $courseCompletionService,
-        private readonly UrlGeneratorInterface $router
+        private readonly UrlGeneratorInterface $router,
+        private readonly ScheduleRepository $scheduleRepository,
+        private readonly ScheduleParticipantSyncService $participantSyncService
     ) {
     }
 
@@ -406,6 +410,22 @@ class CourseParticipantCrudController extends AbstractCrudController
             $entityManager,
             $entityInstance
         );
+
+        // Only after the course participant was persisted successfully.
+        // Existing bookings and attendance values remain unchanged.
+        if ($entityInstance instanceof CourseParticipant
+            && $entityInstance->getCourse() !== null
+            && $entityInstance->getMember() !== null
+            && $entityInstance->getStatus() !== CourseParticipantStatus::CANCELLED
+        ) {
+            $created = 0;
+            foreach ($this->scheduleRepository->findBy(['courses' => $entityInstance->getCourse()]) as $schedule) {
+                $created += $this->participantSyncService->sync($schedule);
+            }
+            if ($created > 0) {
+                $this->addFlash('success', sprintf('%d fehlende Terminbuchung(en) automatisch angelegt.', $created));
+            }
+        }
     }
 
     /**

@@ -123,82 +123,97 @@ class DashboardController extends AbstractDashboardController
 
     public function configureAssets(): Assets
     {
-        return Assets::new()->addCssFile('css/admin.css');
-    }
+        return Assets::new()
+		   ->addCssFile('css/admin.css')
+			->addCssFile('css/admin-logout.css');
+	}
 
     public function configureMenuItems(): iterable
     {
-		return [
-			MenuItem::linkToDashboard('Dashboard','fa fa-home'),
+        return [
+            MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
 
-			//MenuItem::section('Verein'),
-			MenuItem::subMenu('Verein', 'fa fa-building')->setSubItems([
-				MenuItem::linkTo(ClubCrudController::class,'Vereine','fa fa-building'),
-				MenuItem::linkTo(MemberCrudController::class,'Mitglieder','fa fa-users'),
-				MenuItem::linkTo(SportCrudController::class,'Sportarten','fa fa-person-swimming'),
+            MenuItem::subMenu('Ausbildung & Kurse', 'fa fa-graduation-cap')->setSubItems([
+                MenuItem::linkTo(CoursesCrudController::class, 'Kurse verwalten', 'fa fa-book-open'),
+                MenuItem::linkTo(CourseParticipantCrudController::class, 'Kursteilnehmer', 'fa fa-users'),
+                MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-days'),
+                MenuItem::linkTo(BookingCrudController::class, 'Terminbuchungen', 'fa fa-ticket')->setPermission('ROLE_ADMIN'),
+                MenuItem::linkTo(TrainingUnitResultCrudController::class, 'Ausbildungsnachweise', 'fa fa-clipboard-check'),
+                MenuItem::linkToRoute('Kurskalender', 'fa fa-calendar', 'admin_course_calendar'),
+                MenuItem::linkTo(ScheduleTemplateCrudController::class, 'Planungsvorlagen', 'fa fa-layer-group'),
+                MenuItem::linkTo(TrainingUnitTypeCrudController::class, 'Ausbildungseinheiten', 'fa fa-list-check'),
+				MenuItem::linkToRoute('Ausbildungsaufgaben', 'fa fa-list-check', 'admin_instructor_tasks'),
+            ]),
 
+            MenuItem::subMenu('Qualifikationen', 'fa fa-award')->setSubItems([
+                MenuItem::linkTo(QualificationCrudController::class, 'Qualifikationskatalog', 'fa fa-certificate'),
+                MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card'),
+            ]),
 
-				MenuItem::linkTo(TeamCrudController::class,'Gruppen & Mannschaften','fa fa-people-group'),
-				MenuItem::linkTo(TeamMemberCrudController::class,'Gruppenzuordnungen','fa fa-user-group'),
-				MenuItem::linkTo(MemberSportCrudController::class,'Sportzuordnungen','fa fa-link'),
-        	]),
-			//MenuItem::section('Kursverwaltung'),	
-			MenuItem::subMenu('Kursverwaltung', 'fa fa-school')->setSubItems([
-				MenuItem::linkTo(CoursesCrudController::class, 'Kurse', 'fa fa-school'),
-				MenuItem::linkTo(CourseParticipantCrudController::class,'Kursteilnehmer','fa fa-user-graduate'),
-				MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-day'),
-				MenuItem::linkTo(TrainingUnitTypeCrudController::class,'Ausbildungseinheiten','fa fa-list-check'),
-				MenuItem::linkTo(ScheduleTemplateCrudController::class, 'Planungsvorlagen', 'fa fa-calendar-week'),
-				MenuItem::linkToRoute('Kurskalender','fa fa-calendar','admin_course_calendar'),
-				MenuItem::linkTo(TrainingUnitResultCrudController::class,'Ausbildungsnachweise','fa fa-clipboard-check'),
+            MenuItem::subMenu('Vereinsverwaltung', 'fa fa-building')->setSubItems([
+                MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building'),
+                MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
+                MenuItem::linkTo(SportCrudController::class, 'Sportarten', 'fa fa-person-swimming'),
+                MenuItem::linkTo(TeamCrudController::class, 'Gruppen & Mannschaften', 'fa fa-people-group'),
+                MenuItem::linkTo(TeamMemberCrudController::class, 'Gruppenzuordnungen', 'fa fa-user-group'),
+                MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
+            ]),
+
+            MenuItem::subMenu('Ausrüstung & Prüfungen', 'fa fa-toolbox')->setSubItems([
+                MenuItem::linkTo(TankCrudController::class, 'Flaschen', 'fa fa-gauge'),
+                MenuItem::linkTo(TankCheckCrudController::class, 'Prüfungen', 'fa fa-clipboard-check'),
+                MenuItem::linkTo(TankCheckDetailCrudController::class, 'Prüfungsdetails', 'fa fa-list'),
+                MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags'),
+            ]),
+
+            MenuItem::subMenu('Partner', 'fa fa-handshake')->setSubItems([
+                MenuItem::linkTo(VendorCrudController::class, 'Lieferanten', 'fa fa-truck'),
+            ]),
+			
+			MenuItem::subMenu('Administration','fa fa-gear')->setSubItems([
+					MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
+						->setPermission('ROLE_ADMIN'),
 			]),
-		
-		//yield MenuItem::section('Ausbildung');
- 
-			MenuItem::subMenu('Ausbildung', 'fa fa-graduation-cap')->setSubItems([
-				MenuItem::linkTo(QualificationCrudController::class,'Qualifikationskatalog','fa fa-certificate'),
-				MenuItem::linkTo(MemberQualificationCrudController::class,'Mitgliedsqualifikationen','fa fa-id-card'),
-			]),
-
-			MenuItem::section('Equipment'),
-			MenuItem::linkTo(TankCrudController::class, 'Flaschen', 'fa fa-user'),
-			MenuItem::linkTo(TankCheckCrudController::class, 'Prüfungen', 'fa fa-user'),
-			MenuItem::linkTo(TankCheckDetailCrudController::class, 'Prüfungsdetails', 'fa fa-user'),
-			MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV Preise', 'fa fa-user'),
-
-			MenuItem::section('Partner'),
-			MenuItem::linkTo(VendorCrudController::class, 'Lieferanten', 'fa fa-user'),
-		];
-
+        ];
     }
 
-    public function configureUserMenu(UserInterface $user): UserMenu
-    {
-        if (!$user instanceof User || null === $user->getId()) {
-            throw new \LogicException('Das Benutzermenü benötigt einen gespeicherten Benutzer.');
-        }
+	public function configureUserMenu(UserInterface $user): UserMenu
+	{
+		if (!$user instanceof User || $user->getId() === null) {
+			throw new \LogicException(
+				'Das Benutzermenü benötigt einen gespeicherten Benutzer.'
+			);
+		}
 
-        // Usually it's better to call the parent method because that gives you a
-        // user menu with some menu items already created ("sign out", "exit impersonation", etc.)
-        // if you prefer to create the user menu from scratch, use: return UserMenu::new()->...
-        return parent::configureUserMenu($user)
-            // use the given $user object to get the username
-            ->setName($user->getUserIdentifier())
-            // use this method if you don't want to display the name of the user
-            ->displayUserName(false)
-            // use this method if you don't want to display the user image
-            ->displayUserAvatar(false)
-            // you can also pass an email address to use gravatar's service
-            // you can use any type of menu item, except submenus
-            ->addMenuItems([
-//                MenuItem::linkToRoute('My Profile', 'fa fa-id-card', 'app_profile'),
-                MenuItem::linkTo(UserCrudController::class, 'My Profile', 'fa fa-id-card')
-                    ->setAction('detail')
-                    ->setEntityId($user->getId()),
-                MenuItem::linkTo(UserCrudController::class, 'Settings', 'fa fa-user-cog')
-                    ->setAction('edit')
-                    ->setEntityId($user->getId()),
-            ]);
-    }
+		return UserMenu::new()
+			->setName($user->getUserIdentifier())
+			->displayUserName(false)
+			->displayUserAvatar(false)
+			->addMenuItems([
+				MenuItem::linkTo(
+					UserCrudController::class,
+					'Mein Profil',
+					'fa fa-id-card'
+				)
+					->setAction(Crud::PAGE_DETAIL)
+					->setEntityId($user->getId()),
 
+				MenuItem::linkTo(
+					UserCrudController::class,
+					'Einstellungen',
+					'fa fa-user-cog'
+				)
+					->setAction(Crud::PAGE_EDIT)
+					->setEntityId($user->getId()),
+			]);
+	}
+
+	public function configureCrud(): Crud
+	{
+		return Crud::new()
+			->overrideTemplate(
+				'layout',
+				'admin/layout.html.twig'
+			);
+	}
 }

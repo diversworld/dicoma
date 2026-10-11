@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+{% block title %}Kursanmeldung – DiCoMa{% endblock %}
+{% block body %}
+<main class="container py-4">
+  <h1>Für einen Kurs anmelden</h1>
+  <p><a class="btn btn-outline-primary" href="{{ path('frontend_course_registrations') }}">Meine Kursanmeldungen ansehen</a></p>
+  <p>Hier findest du die zur Anmeldung geöffneten Kurse deines Vereins.</p>
+  {% for type, messages in app.flashes %}
+    {% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : (type == 'success' ? 'success' : 'warning') }}" role="alert">{{ message }}</div>{% endfor %}
+  {% endfor %}
+  {% if courses is empty %}<p>Aktuell sind keine Kurse zur Anmeldung geöffnet.</p>{% endif %}
+  <div class="row g-3">
+  {% for course in courses %}
+    <div class="col-md-6"><article class="card h-100"><div class="card-body">
+      <h2 class="h5">{{ course.title }}</h2>
+      {% if course.registrationDeadline %}<p>Anmeldeschluss: {{ course.registrationDeadline|date('d.m.Y') }}</p>{% endif %}
+      {% if course.maxParticipants is not null %}<p>Maximale Teilnehmerzahl: {{ course.maxParticipants }}</p>{% endif %}
+      {% if registered[course.id] is defined %}
+        <p><strong>Bereits angemeldet</strong></p>
+      {% elseif not course.registrationOpen %}
+        <p>Derzeit keine Anmeldung möglich.</p>
+      {% else %}
+        <form method="post" action="{{ path('frontend_course_register', {id: course.id}) }}">
+          <input type="hidden" name="_token" value="{{ csrf_token('course_registration_' ~ course.id) }}">
+          <button type="submit" class="btn btn-primary">Verbindlich anmelden</button>
+        </form>
+      {% endif %}
+    </div></article></div>
+  {% endfor %}
+  </div>
+</main>
+{% endblock %}

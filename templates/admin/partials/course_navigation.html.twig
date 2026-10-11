@@ -1,0 +1,72 @@
+{# DiCoMa – Kursnavigation
+    Erwartete Variablen:
+    - course: App\Entity\Courses
+    - activeSection: optionaler Name des aktiven Bereichs
+    Kein EasyAdmin-Kontext erforderlich.
+#}
+
+{% if course is defined
+    and course is not null
+    and course.id is not null
+%}
+
+    {% set courseId = course.id %}
+    {% set currentSection = activeSection|default('Kurszentrale') %}
+
+    {# EasyAdmin-Kursdetailseite #}
+	{% set detailUrl = course_detail_url(courseId) %}
+
+    {# Eigenständige Symfony-Routen #}
+    {% set matrixUrl = path(
+        'admin_course_training_matrix',
+        {'id': courseId}
+    ) %}
+
+    {% set planningUrl = path(
+        'admin_course_plan',
+        {'id': courseId}
+    ) %}
+
+    {# Breadcrumbs #}
+    <nav class="course-breadcrumbs" aria-label="Brotkrumennavigation">
+        <a href="{{ path('admin') }}">
+            Verwaltung
+        </a>
+
+        <span aria-hidden="true">›</span>
+
+        {% if currentSection == 'Kurszentrale' %}
+            <span aria-current="page">
+                {{ course }}
+            </span>
+        {% else %}
+            <a href="{{ detailUrl }}">
+                {{ course }}
+            </a>
+
+            <span aria-hidden="true">›</span>
+
+            <span aria-current="page">
+                {{ currentSection }}
+            </span>
+        {% endif %}
+    </nav>
+
+    {# Schnellnavigation #}
+    <nav class="course-shortcuts" aria-label="Kursnavigation" >
+        <a class="btn" href="{{ detailUrl }}" {% if currentSection == 'Kurszentrale' %} aria-current="page"{% endif %}>
+            Kurszentrale
+        </a>
+
+        <a class="btn" href="{{ matrixUrl }}" {% if currentSection == 'Ausbildungsübersicht' %} aria-current="page" {% endif %}>
+            Ausbildungsübersicht
+        </a>
+
+        {% if course.status.value|default('') != 'completed' %}
+            <a class="btn" href="{{ planningUrl }}" {% if currentSection == 'Terminplanung' %} aria-current="page" {% endif %}>
+                Termine planen
+            </a>
+        {% endif %}
+    </nav>
+
+{% endif %}

@@ -7,11 +7,13 @@ use Doctrine\DBAL\Types\Types;
 use App\Enum\BookingAttendanceStatus;
 use App\Enum\CourseParticipantStatus;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
+#[UniqueEntity(fields: ['schedule', 'member'], errorPath: 'member', message: 'Für dieses Mitglied existiert bereits eine Buchung für diesen Termin.')]
 #[Assert\Callback('validateCourseParticipant')]
 #[ORM\Table(name: 'booking',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_booking_schedule_member',columns: ['schedule_id', 'students_id'])])]
 #[ORM\Entity(repositoryClass: BookingRepository::class)]

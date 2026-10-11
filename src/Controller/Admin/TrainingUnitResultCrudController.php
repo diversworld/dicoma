@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\CourseParticipant;
+use App\Entity\Schedule;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Entity\TrainingUnitResult;
 use App\Enum\TrainingUnitResultStatus;
 use App\Repository\ScheduleRepository;
@@ -25,6 +29,32 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_ADMIN')]
 final class TrainingUnitResultCrudController extends AbstractCrudController
 {
+    public function __construct(
+        private readonly RequestStack $requestStack,
+        private readonly EntityManagerInterface $entityManager
+    ) {
+    }
+
+    public function createEntity(string $entityFqcn): TrainingUnitResult
+    {
+        $result = new TrainingUnitResult();
+        $request = $this->requestStack->getCurrentRequest();
+        $participantId = $request?->query->get('courseParticipant');
+        $scheduleId = $request?->query->get('schedule');
+        if (!ctype_digit((string) $participantId) || !ctype_digit((string) $scheduleId)) {
+            return $result;
+        }
+        $participant = $this->entityManager->find(CourseParticipant::class, (int) $participantId);
+        $schedule = $this->entityManager->find(Schedule::class, (int) $scheduleId);
+        if ($participant instanceof CourseParticipant && $schedule instanceof Schedule
+            && $participant->getCourse()?->getId() === $schedule->getCourses()?->getId()
+            && $participant->getCourse() !== null) {
+            $result->setCourseParticipant($participant);
+            $result->setSchedule($schedule);
+        }
+        return $result;
+    }
+
     public static function getEntityFqcn(): string
     {
         return TrainingUnitResult::class;
@@ -93,7 +123,8 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
     public function schedulesForParticipant(
         Request $request,
         ScheduleRepository $scheduleRepository,
-        \Doctrine\ORM\EntityManagerInterface $entityManager
+        \Doctrine\ORM\EntityManagerInterface $entityManager,
+        AdminUrlGenerator $adminUrls
     ): JsonResponse {
         $id = filter_var($request->query->get('participant'), FILTER_VALIDATE_INT, [
             'options' => ['min_range' => 1],
@@ -112,14 +143,53 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
             ['startDate' => 'ASC', 'id' => 'ASC']
         );
 
-        $options = [];
-        foreach ($schedules as $schedule) {
-            $options[] = [
-                'value' => (string) $schedule->getId(),
-                'text' => sprintf('%s%s', (string) $schedule, $schedule->getStartDate() ? ' (' . $schedule->getStartDate()->format('d.m.Y') . ')' : ''),
-            ];
+        $existing = $entityManager->getRepository(TrainingUnitResult::class)
+            ->findBy(['courseParticipant' => $participant]);
+        $bySchedule = [];
+        foreach ($existing as $result) {
+            if ($result->getSchedule()?->getId() !== null) {
+                $bySchedule[$result->getSchedule()->getId()] = $result;
+            }
         }
 
-        return $this->json(['options' => $options]);
+        $options = [];
+        $toEdit = [];
+        // Bei der Bearbeitung muss der aktuelle Wert weiter auswählbar sein.
+        $editId = filter_var($request->query->get('edit'), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]) ?: null;
+        $current = $editId ? $entityManager->find(TrainingUnitResult::class, $editId) : null;
+        $currentId = $current instanceof TrainingUnitResult
+            && $current->getCourseParticipant()?->getId() === $participant->getId()
+            ? $current->getSchedule()?->getId() : null;
+
+        foreach ($schedules as $schedule) {
+            $id = $schedule->getId();
+            if ($id === null) {
+                continue;
+            }
+            $label = sprintf('%s%s', (string) $schedule,
+                $schedule->getStartDate() ? ' (' . $schedule->getStartDate()->format('d.m.Y') . ')' : '');
+            $result = $bySchedule[$id] ?? null;
+            if ($result === null || $id === $currentId) {
+                $options[] = ['value' => (string) $id, 'text' => $label];
+                continue;
+            }
+            // Bereits erfasste Nachweise niemals erneut anlegen.
+            // Offene und fehlgeschlagene Ergebnisse können bearbeitet werden.
+            if ($result->getStatus() !== TrainingUnitResultStatus::PASSED) {
+                $toEdit[] = [
+                    'text' => $label,
+                    'status' => $result->getStatus()->label(),
+                    'url' => (clone $adminUrls)->unsetAll()
+                        ->setController(self::class)
+                        ->setAction(Crud::PAGE_EDIT)
+                        ->setEntityId($result->getId())
+                        ->generateUrl(),
+                ];
+            }
+        }
+
+        return $this->json(['options' => $options, 'existing' => $toEdit]);
     }
 }

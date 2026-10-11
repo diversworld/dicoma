@@ -38,6 +38,18 @@ class ScheduleCrudController extends AbstractCrudController
     ) {
     }
 
+    public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        parent::persistEntity($entityManager, $entityInstance);
+
+        if ($entityInstance instanceof Schedule && $entityInstance->getCourses() !== null) {
+            $created = $this->participantSyncService->sync($entityInstance);
+            if ($created > 0) {
+                $this->addFlash('success', sprintf('%d Terminbuchung(en) automatisch angelegt.', $created));
+            }
+        }
+    }
+
     public static function getEntityFqcn(): string
     {
         return Schedule::class;

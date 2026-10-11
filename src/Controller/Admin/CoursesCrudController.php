@@ -3,18 +3,22 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Courses;
-use Symfony\Component\Translation\TranslatableMessage;
+use App\Controller\Admin\BookingCrudController;
+use App\Enum\BookingAttendanceStatus;
 use App\Entity\ScheduleTemplate;
 use App\Entity\ScheduleTemplateEntry;
 use App\Enum\CourseStatus;
 use App\Form\CourseParticipantType;
 use App\Form\CourseTrainingUnitType;
+use App\Form\CourseSchedulePlanningType;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
@@ -25,18 +29,20 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
-use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\TrainingProgressService;
 use App\Service\CourseScheduleGenerator;
 use App\Service\CourseTemplateExportService;
 use App\Service\CourseTrainingPlanService;
 use App\Service\ScheduleConflictService;
 use App\Repository\ScheduleTemplateRepository;
-use App\Form\CourseSchedulePlanningType;
 use App\Repository\ScheduleRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_ADMIN')]
 class CoursesCrudController extends AbstractCrudController
@@ -45,6 +51,8 @@ class CoursesCrudController extends AbstractCrudController
 		private readonly CourseScheduleGenerator $scheduleGenerator,
 		private readonly CourseTrainingPlanService $trainingPlanService,
 		private readonly TranslatorInterface $translator,
+        private readonly TrainingProgressService $trainingProgress,
+        private readonly AdminUrlGenerator $adminUrlGenerator,
 	) {
 	}
 	
@@ -56,6 +64,7 @@ class CoursesCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->overrideTemplate('crud/detail', 'admin/course/detail.html.twig')
             ->setEntityLabelInSingular('Kurs')
             ->setEntityLabelInPlural('Kurse')
             ->setPageTitle(
@@ -83,6 +92,109 @@ class CoursesCrudController extends AbstractCrudController
                 'club.name',
                 'qualification.name',
             ]);
+    }
+
+    /**
+     * Die Kurszentrale wird nur auf der Detailseite mit Kennzahlen versorgt.
+     * Bestehende CRUD-Aktionen und deren Berechtigungen bleiben unveraendert.
+     */
+    public function configureResponseParameters(KeyValueStore $responseParameters): KeyValueStore
+    {
+        if ($responseParameters->get('pageName') !== Crud::PAGE_DETAIL) {
+            return $responseParameters;
+        }
+
+        $entityDto = $responseParameters->get('entity');
+        $course = $entityDto?->getInstance();
+        if (!$course instanceof Courses) {
+            return $responseParameters;
+        }
+
+        $participantCount = 0;
+        $totalPercent = 0;
+        $readyCount = 0;
+        $missingCount = 0;
+        foreach ($course->getParticipants() as $participant) {
+            ++$participantCount;
+            $progress = $this->trainingProgress->calculate($participant);
+            $totalPercent += $progress['percent'];
+            if ($progress['complete']) {
+                ++$readyCount;
+            } else {
+                ++$missingCount;
+            }
+        }
+
+        // Read-only booking counters, scoped to this course's schedules.
+        $bookingCount = 0;
+        $attendanceOpenCount = 0;
+        foreach ($course->getSchedule() as $courseSchedule) {
+            foreach ($courseSchedule->getBookings() as $booking) {
+                ++$bookingCount;
+                if ($booking->getAttendanceStatus() === BookingAttendanceStatus::PLANNED) {
+                    ++$attendanceOpenCount;
+                }
+            }
+        }
+        $bookingListUrl = (clone $this->adminUrlGenerator)
+            ->unsetAll()
+            ->setController(BookingCrudController::class)
+            ->setAction(Crud::PAGE_INDEX)
+            ->set('filters', [
+                'course' => ['comparison' => '=', 'value' => (string) $course->getId()],
+            ])
+            ->generateUrl();
+
+        $today = new \DateTimeImmutable('today');
+        $upcoming = [];
+        $undatedCount = 0;
+        foreach ($course->getSchedule() as $schedule) {
+            $date = $schedule->getStartDate();
+            if ($date === null) {
+                ++$undatedCount;
+                continue;
+            }
+            if ($date->format('Y-m-d') < $today->format('Y-m-d')) {
+                continue;
+            }
+            $upcoming[] = [
+                'id' => $schedule->getId(),
+                'title' => (string) $schedule,
+                'date' => $date->format('d.m.Y'),
+                'time' => $schedule->getStartTime()?->format('H:i'),
+                'sort' => $date->format('Y-m-d') . ' ' . ($schedule->getStartTime()?->format('H:i') ?? '00:00'),
+            ];
+        }
+        usort($upcoming, static fn (array $a, array $b): int => strcmp($a['sort'], $b['sort']));
+
+        // Read-only checklist: never changes course status or awards qualifications.
+        $hasRequirements = !$course->getTrainingUnits()->isEmpty();
+        $allParticipantStatusesFinal = $course->canBeCompleted();
+        $allRequiredEvidenceComplete = $hasRequirements && $participantCount > 0 && $missingCount === 0;
+        $responseParameters->set('courseCompletionChecklist', [
+            'requirementsConfigured' => $hasRequirements,
+            'participantsPresent' => $participantCount > 0,
+            'participantStatusesFinal' => $allParticipantStatusesFinal,
+            'requiredEvidenceComplete' => $allRequiredEvidenceComplete,
+            'readyForReview' => $hasRequirements && $participantCount > 0
+                && $allParticipantStatusesFinal && $allRequiredEvidenceComplete,
+            'missingParticipants' => $missingCount,
+            'undatedAppointments' => $undatedCount,
+        ]);
+
+        $responseParameters->set('courseDashboard', [
+            'participantCount' => $participantCount,
+            'bookingCount' => $bookingCount,
+            'attendanceOpenCount' => $attendanceOpenCount,
+            'bookingListUrl' => $bookingListUrl,
+            'averageProgress' => $participantCount > 0 ? (int) round($totalPercent / $participantCount) : 0,
+            'readyCount' => $readyCount,
+            'missingCount' => $missingCount,
+            'undatedCount' => $undatedCount,
+            'upcoming' => array_slice($upcoming, 0, 5),
+        ]);
+
+        return $responseParameters;
     }
 
     public function configureFields(string $pageName): iterable
@@ -364,9 +476,16 @@ class CoursesCrudController extends AbstractCrudController
             ->linkToCrudAction('createTemplateFromCourse')
             ->displayIf(static fn (Courses $course): bool => $course->getClub() !== null);
 
-        $planSchedules = Action::new('planSchedules', 'Termine planen', 'fa fa-calendar-days')
-            ->linkToCrudAction('planSchedules')
-            ->displayIf(static fn (Courses $course): bool => $course->getStatus() !== CourseStatus::COMPLETED);
+        $trainingMatrix = Action::new('trainingMatrix', 'Ausbildungsübersicht', 'fa fa-table')
+            ->linkToRoute('admin_course_training_matrix',
+                static fn (Courses $course): array => ['id' => $course->getId()]
+            );
+
+		$planSchedules = Action::new('planSchedules','Termine planen','fa fa-calendar-days')
+			->linkToRoute('admin_course_plan',
+				static fn (Courses $course): array => ['id' => $course->getId(),]
+			)
+			->displayIf(static fn (Courses $course): bool => $course->getStatus() !== CourseStatus::COMPLETED);
 
         /*
          * Abgeschlossenen Kurs wieder für Korrekturen öffnen.
@@ -402,6 +521,21 @@ class CoursesCrudController extends AbstractCrudController
          * Abgeschlossene Kurse dürfen nicht über die normale
          * Bearbeiten-Aktion geöffnet werden.
          */
+        // Die Detailseite als zentrale Arbeitsoberflaeche erreichbar machen.
+        $actions->add(Crud::PAGE_INDEX, Action::DETAIL);
+
+        // Auf der Detailseite die haeufigsten Aktionen deutlich hervorheben.
+        // Die fachlichen displayIf()-Bedingungen bleiben unveraendert.
+        $trainingMatrix->addCssClass('btn btn-primary');
+        $planSchedules->addCssClass('btn btn-secondary');
+        $generateSchedules->addCssClass('btn btn-secondary');
+        $importTrainingPlan->addCssClass('btn btn-secondary');
+        $exportTemplate->addCssClass('btn btn-secondary');
+        $completeCourse->addCssClass('btn btn-warning');
+        $reopenCourse->addCssClass('btn btn-secondary');
+
+        $actions->add(Crud::PAGE_INDEX, $trainingMatrix);
+        $actions->add(Crud::PAGE_DETAIL, $trainingMatrix);
         $actions->add(Crud::PAGE_INDEX, $exportTemplate);
         $actions->add(Crud::PAGE_DETAIL, $exportTemplate);
         $actions->add(Crud::PAGE_INDEX, $planSchedules);
@@ -472,17 +606,58 @@ class CoursesCrudController extends AbstractCrudController
      */
     public function completeCourse(
         AdminContext $context,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        Request $request
     ): RedirectResponse {
-        $course = $context
-            ->getEntity()
-            ->getInstance();
+       
+	/*
+	 * Kurs sicher ermitteln.
+	 *
+	 * Bei einem vollständigen EasyAdmin-CRUD-Kontext
+	 * verwenden wir die Entity aus dem Kontext.
+	 *
+	 * Andernfalls lesen wir die Kurs-ID aus der URL.
+	 */
+	$course = null;
 
-        if (!$course instanceof Courses) {
-            throw new \LogicException(
-                'Ungültiger Kurs.'
-            );
-        }
+	if ($context->getCrud() !== null) {
+		$entityDto = $context->getEntity();
+
+		if ($entityDto !== null) {
+			$instance = $entityDto->getInstance();
+
+			if ($instance instanceof Courses) {
+				$course = $instance;
+			}
+		}
+	}
+
+	/*
+	 * Fallback für direkte Aufrufe der Terminplanung.
+	 */
+	if (!$course instanceof Courses) {
+		$courseId = $request->query->get('entityId');
+
+		if (
+			!is_scalar($courseId)
+			|| !ctype_digit((string) $courseId)
+			|| (int) $courseId < 1
+		) {
+			throw $this->createNotFoundException(
+				'Keine gültige Kurs-ID übergeben.'
+			);
+		}
+
+		$course = $entityManager
+			->getRepository(Courses::class)
+			->find((int) $courseId);
+	}
+
+	if (!$course instanceof Courses) {
+		throw $this->createNotFoundException(
+			'Der angeforderte Kurs wurde nicht gefunden.'
+		);
+	}		
 
         /*
          * Mehrfachen Abschluss verhindern.
@@ -702,18 +877,88 @@ class CoursesCrudController extends AbstractCrudController
     }
 
 	public function generateSchedules(
-		AdminContext $context
+		AdminContext $context,
+		Request $request,
+		EntityManagerInterface $entityManager
 	): RedirectResponse {
-		$course = $context
-			->getEntity()
-			->getInstance();
+
+		/*
+		 * Kurs ermitteln.
+		 *
+		 * Zunächst versuchen wir den EasyAdmin-Kontext.
+		 * Falls dieser nicht vollständig vorhanden ist,
+		 * laden wir den Kurs über die entityId.
+		 */
+		$course = null;
+
+		if ($context->getCrud() !== null) {
+			$entityDto = $context->getEntity();
+
+			if ($entityDto !== null) {
+				$instance = $entityDto->getInstance();
+
+				if ($instance instanceof Courses) {
+					$course = $instance;
+				}
+			}
+		}
+
+		/*
+		 * Fallback für direkte EasyAdmin-Aktionsaufrufe.
+		 */
+		if (!$course instanceof Courses) {
+			$courseId = $request->query->get('entityId');
+
+			if (
+				!is_scalar($courseId)
+				|| !ctype_digit((string) $courseId)
+				|| (int) $courseId < 1
+			) {
+				throw $this->createNotFoundException(
+					'Keine gültige Kurs-ID übergeben.'
+				);
+			}
+
+			$course = $entityManager
+				->getRepository(Courses::class)
+				->find((int) $courseId);
+		}
 
 		if (!$course instanceof Courses) {
-			throw new \LogicException(
-				'Ungültiger Kurs.'
+			throw $this->createNotFoundException(
+				'Der angeforderte Kurs wurde nicht gefunden.'
 			);
 		}
 
+		/*
+		 * Abgeschlossene Kurse dürfen nicht verändert werden.
+		 */
+		if ($course->getStatus() === CourseStatus::COMPLETED) {
+			$this->addFlash(
+				'warning',
+				'Für abgeschlossene Kurse können keine neuen '
+				. 'Ausbildungstermine erzeugt werden.'
+			);
+
+			return $this->redirectToReferrer($context);
+		}
+
+		/*
+		 * Prüfen, ob ein Ausbildungsplan vorhanden ist.
+		 */
+		if ($course->getTrainingUnits()->isEmpty()) {
+			$this->addFlash(
+				'warning',
+				'Für diesen Kurs sind noch keine '
+				. 'Ausbildungseinheiten hinterlegt.'
+			);
+
+			return $this->redirectToReferrer($context);
+		}
+
+		/*
+		 * Kurstermine erzeugen.
+		 */
 		try {
 			$created = $this
 				->scheduleGenerator
@@ -728,9 +973,13 @@ class CoursesCrudController extends AbstractCrudController
 			} else {
 				$this->addFlash(
 					'success',
-					new TranslatableMessage('course.sessions_created', ['%count%' => $created])
+					sprintf(
+						'%d Kurstermin(e) wurden erfolgreich erzeugt.',
+						$created
+					)
 				);
 			}
+
 		} catch (\LogicException $exception) {
 			$this->addFlash(
 				'danger',
@@ -738,24 +987,48 @@ class CoursesCrudController extends AbstractCrudController
 			);
 		}
 
-		return $this->redirect(
-			$context->getReferrer()
-			?: $this->generateUrl('admin')
-		);
+		/*
+		 * Zur vorherigen Seite zurückkehren.
+		 */
+		return $this->redirectToReferrer($context);
 	}
-    public function planSchedules(
-        AdminContext $context,
-        Request $request,
-        ScheduleRepository $scheduleRepository,
-        EntityManagerInterface $entityManager,
-        ScheduleConflictService $conflictService,
-        ScheduleTemplateRepository $templateRepository
-    ): Response {
-        $course = $context->getEntity()->getInstance();
+	
+	#[Route(
+		'/admin/course/{id}/plan',
+		name: 'admin_course_plan',
+		requirements: ['id' => '\d+'],
+		methods: ['GET', 'POST']
+	)]
+	public function planSchedules(
+		Request $request,
+		ScheduleRepository $scheduleRepository,
+		EntityManagerInterface $entityManager,
+		ScheduleConflictService $conflictService,
+		ScheduleTemplateRepository $templateRepository
+	): Response {
 
-        if (!$course instanceof Courses) {
-            throw new \LogicException('Ungültiger Kurs.');
-        }
+		/* Kurs-ID aus der eigenstaendigen GET/POST-Route ermitteln. */
+		$courseId = $request->attributes->get('id');
+
+		if (
+			!is_scalar($courseId)
+			|| !ctype_digit((string) $courseId)
+			|| (int) $courseId < 1
+		) {
+			throw $this->createNotFoundException(
+				'Keine gültige Kurs-ID übergeben.'
+			);
+		}
+
+		$course = $entityManager
+			->getRepository(Courses::class)
+			->find((int) $courseId);
+
+		if (!$course instanceof Courses) {
+			throw $this->createNotFoundException(
+				'Der angeforderte Kurs wurde nicht gefunden.'
+			);
+		}
 
         if ($course->getStatus() === CourseStatus::COMPLETED) {
             throw $this->createAccessDeniedException(
@@ -770,13 +1043,21 @@ class CoursesCrudController extends AbstractCrudController
 
         if ($schedules === []) {
             $this->addFlash('warning', 'Bitte zuerst Kurstermine erzeugen.');
-            return $this->redirectToReferrer($context);
+            return $this->redirectToRoute('admin');
         }
 
-        $form = $this->createForm(
-            CourseSchedulePlanningType::class,
-            ['schedules' => $schedules]
-        );
+		$form = $this->createForm(
+			CourseSchedulePlanningType::class,
+			['schedules' => $schedules],
+			[
+				'action' => $this->generateUrl(
+					'admin_course_plan',
+					['id' => $course->getId()]
+				),
+				'method' => 'POST',
+			]
+		);
+		
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

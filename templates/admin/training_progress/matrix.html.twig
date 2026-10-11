@@ -1,0 +1,49 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Ausbildungsübersicht – {{ course }}{% endblock %}
+{% block body %}
+{% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Ausbildungsübersicht'} only %}
+
+<p><a href="{{ path('admin') }}">← Zur Verwaltung</a></p>
+<h1>Ausbildungsübersicht: {{ course }}</h1>
+<p class="muted">Bestandene Pflichtnachweise pro Kursteilnehmer. Optionale Einheiten sind separat gekennzeichnet.</p>
+<section class="panel">
+<div class="heading"><h2>Sammelbewertung nach Ausbildungstermin</h2><span class="muted small">Gruppen zum Anzeigen anklicken</span></div>
+<p class="small muted">Termine und Datumsangaben werden direkt aus den gespeicherten Kursterminen gelesen.</p>
+{% if scheduleGroups is empty %}
+<p>Für diesen Kurs sind noch keine Ausbildungstermine vorhanden.</p>
+{% else %}
+{% for groupName, entries in scheduleGroups %}
+<details class="group" {% if loop.first %}open{% endif %}>
+<summary>{{ groupName }} ({{ entries|length }} Termine)</summary>
+<div class="table-wrap"><table>
+<thead><tr><th>Ausbildungstermin</th><th>Datum</th><th>Beginn</th><th>Aktion</th></tr></thead>
+<tbody>
+{% for entry in entries %}
+<tr>
+<td>{{ entry.schedule.title }}</td>
+<td>{% if entry.date %}{{ entry.date|date('d.m.Y') }}{% else %}<span class="tag">Datum fehlt</span>{% endif %}</td>
+<td>{% if entry.time %}{{ entry.time|date('H:i') }} Uhr{% elseif entry.date %}<span class="tag">Uhrzeit fehlt</span>{% else %}—{% endif %}</td>
+<td><a class="btn" href="{{ entry.url }}">Alle Teilnehmer bewerten</a></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+</details>
+{% endfor %}
+{% endif %}
+</section>
+<section class="panel">
+<h2>Ausbildungsfortschritt der Teilnehmer</h2>
+{% if requirements is empty %}<p>Für diesen Kurs sind noch keine Ausbildungsanforderungen hinterlegt.</p>{% endif %}
+<div class="table-wrap"><table class="matrix">
+<thead><tr><th>Teilnehmer</th>{% for req in requirements %}<th>{{ req.name }}{% if not req.required %}<span class="muted"> (optional)</span>{% endif %}<div class="small muted">Soll: {{ req.target }}</div></th>{% endfor %}<th>Fortschritt</th><th>Aktionen</th></tr></thead>
+<tbody>
+{% for row in rows %}
+<tr><td>{{ row.participant.member.fullName|default('Teilnehmer') }}<div class="small muted">{{ row.participant.statusLabel }}</div></td>
+{% for cell in row.cells %}<td><span class="{{ cell.missing == 0 ? 'ok' : 'warn' }}">{{ cell.credited }}/{{ cell.target }}</span>{% if cell.newUrl %}<div class="small"><a href="{{ cell.newUrl }}">Nachweis erfassen</a></div>{% endif %}</td>{% endfor %}
+<td><strong>{{ row.progress.percent }} %</strong><div class="bar"><div class="fill" style="width:{{ row.progress.percent }}%"></div></div><div class="small {{ row.progress.complete ? 'ok' : 'warn' }}">{{ row.progress.complete ? 'Pflichtnachweise vollständig' : 'Noch nicht vollständig' }}</div></td>
+<td><a href="{{ row.detailUrl }}">Details</a></td></tr>
+{% else %}<tr><td colspan="{{ requirements|length + 3 }}">Keine Kursteilnehmer vorhanden.</td></tr>{% endfor %}
+</tbody></table></div>
+</section>
+<p class="muted small">Die Übersicht verändert keine Kurs- oder Qualifikationsdaten. Die Abschlussprüfung erfolgt weiterhin im CourseCompletionService.</p>
+{% endblock %}

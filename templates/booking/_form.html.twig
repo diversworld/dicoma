@@ -49,18 +49,18 @@
         <div class="col-md-6 form-group">
             <label for="studentSelect" class="form_label">{{ 'Student'|trans }}</label>
             {% if is_granted('ROLE_ADMIN') %}
-                <select name="{{ field_name(form.students) }}" class="form-select form-control">
+                <select name="{{ field_name(form.member) }}" class="form-select form-control">
                     <option value="">{{ 'Schüler auswählen'|trans }}</option>
                     {% for label, value in field_choices(form.students) %}
                         {% if booking.students is not null %}
-                            <option value="{{ value }}" {% if value == booking.students.id %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if value == booking.member.id %}selected{% endif %}>{{ label }}</option>
                         {% else %}
                             <option value="{{ value }}">{{ label }}</option>
                         {% endif %}
                     {% endfor %}
                 </select>
             {% else %}
-                <input class="form-control" type="text" value="{{ booking.students.firstname }} {{ booking.students.lastname }}" aria-label="{{ 'Student'|trans }}" readonly>
+                <input class="form-control" type="text" value="{{ booking.member.fullName }}" aria-label="{{ 'Member'|trans }}" readonly>
             {% endif %}    
         </div>
     </div>

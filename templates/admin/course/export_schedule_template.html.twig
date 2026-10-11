@@ -1,6 +1,9 @@
-{% extends '@EasyAdmin/page/content.html.twig' %}
-{% block content_title %}{{ 'Planungsvorlage aus Kurs erstellen'|trans }}: {{ course }}{% endblock %}
-{% block main %}
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Planungsvorlage aus Kurs erstellen'|trans }}: {{ course }}{% endblock %}
+{% block body %}
+<main class="container py-4">
+<h1 class="h3 mb-4">{{ 'Planungsvorlage aus Kurs erstellen'|trans }}: {{ course }}</h1>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'error' ? 'danger' : type }}" role="alert">{{ message }}</div>{% endfor %}{% endfor %}
     <p>{{ 'Die erste vollstaendig geplante Einheit dient als Ausgangsdatum. Die Vorlage speichert relative Tagesabstaende, Startzeiten und Dauer; keine Buchungen, Personen oder Orte.'|trans }}</p>
     {% if error %}<div class="alert alert-danger" role="alert">{{ error|trans }}</div>{% endif %}
     {% if skipped is not empty %}
@@ -40,4 +43,5 @@
             <button type="submit" class="btn btn-primary">{{ 'Vorlage jetzt speichern'|trans }}</button>
         </form>
     {% endif %}
+</main>
 {% endblock %}

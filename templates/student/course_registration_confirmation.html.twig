@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+{% block title %}Kursanmeldung bestaetigt – DiCoMa{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>Kursanmeldung gespeichert</h1>
+    <div class="alert alert-success" role="status">Deine Anmeldung wurde erfolgreich erfasst.</div>
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h5">{{ registration.course.title }}</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Anmeldedatum</dt><dd class="col-sm-8">{{ registration.registeredAt|date('d.m.Y H:i') }}</dd>
+            <dt class="col-sm-4">Bearbeitungsstand</dt><dd class="col-sm-8">{{ registration.status.label() }}</dd>
+        </dl>
+    </div></div>
+    <p><a class="btn btn-primary" href="{{ path('frontend_course_registrations') }}">Meine Anmeldungen</a>
+    <a class="btn btn-outline-secondary" href="{{ path('frontend_course_registration_index') }}">Weitere Kurse ansehen</a></p>
+</main>
+{% endblock %}

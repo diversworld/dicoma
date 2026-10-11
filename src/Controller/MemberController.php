@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Member;
 use App\Form\MemberType;
 use App\Repository\MemberRepository;
@@ -15,6 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class MemberController extends AbstractController
 {
     #[Route('/', name: 'app_member_index', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function index(MemberRepository $memberRepository): Response
     {
         return $this->render('member/index.html.twig', [
@@ -23,6 +26,7 @@ class MemberController extends AbstractController
     }
 
     #[Route('/new', name: 'app_member_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $member = new Member();
@@ -43,6 +47,7 @@ class MemberController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_member_show', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function show(Member $member): Response
     {
         return $this->render('member/show.html.twig', [
@@ -51,6 +56,7 @@ class MemberController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_member_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Member $member, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(MemberType::class, $member);
@@ -69,6 +75,7 @@ class MemberController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_member_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Member $member, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$member->getId(), $request->request->get('_token'))) {

@@ -1,0 +1,11 @@
+/* DiCoMa: logout action belongs to the EasyAdmin account dropdown. */
+.dicoma-admin-logout-form { margin: 0; width: 100%; }
+.dicoma-admin-logout {
+    display: flex; align-items: center; gap: .65rem; width: 100%;
+    padding: .55rem 1rem; border: 0; background: transparent;
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.dicoma-admin-logout:hover, .dicoma-admin-logout:focus-visible {
+    background: var(--dropdown-link-hover-bg, rgba(127,127,127,.12));
+}
+.dicoma-admin-logout i { width: 1.1rem; text-align: center; }

@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\TankCheck;
 use App\Entity\TankCheckArticle;
 use App\Form\TankCheckArticleType;
@@ -16,6 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class TankCheckArticleController extends AbstractController
 {
     #[Route('/', name: 'app_tank_check_article_index', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function index(TankCheckArticleRepository $tankCheckArticleRepository, EntityManagerInterface $entityManager): Response
     {
         // Hier wird ein Beispielwert für tank_check_id gesetzt.
@@ -30,6 +33,7 @@ class TankCheckArticleController extends AbstractController
     }
 
     #[Route('/new/{tank_check_id}', name: 'app_tank_check_article_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager, int $tank_check_id): Response
     {
         $tankCheckArticle = new TankCheckArticle();
@@ -58,6 +62,7 @@ class TankCheckArticleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_article_show', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function show(TankCheckArticle $tankCheckArticle): Response
     {
         return $this->render('tank_check_article/show.html.twig', [
@@ -66,6 +71,7 @@ class TankCheckArticleController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_tank_check_article_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, TankCheckArticle $tankCheckArticle, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(TankCheckArticleType::class, $tankCheckArticle);
@@ -91,6 +97,7 @@ class TankCheckArticleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_article_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, TankCheckArticle $tankCheckArticle, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$tankCheckArticle->getId(), $request->request->get('_token'))) {

@@ -1,11 +1,28 @@
 
-{% extends '@EasyAdmin/page/content.html.twig' %}
+{% extends 'admin/standalone_base.html.twig' %}
 
-{% block content_title %}
+{% block title %}
     {{ 'Terminplanung'|trans }}: {{ course }}
 {% endblock %}
 
-{% block main %}
+{% block stylesheets %}
+{{ parent() }}
+<style>
+.schedule-page .row{display:flex;flex-wrap:wrap;gap:.65rem}.schedule-page .row>[class*="col-"]{flex:1 1 175px;min-width:0}
+.schedule-page .card{background:#fff;border:1px solid #dce2ea;border-radius:10px;margin-bottom:1rem}.schedule-page .card-body{padding:1rem}
+.schedule-page .form-control,.schedule-page .form-select{display:block;width:100%;padding:.48rem;border:1px solid #bac6d5;border-radius:6px;background:#fff;color:#152238}
+.schedule-page .form-label{display:block;margin-bottom:.3rem;font-weight:600}.schedule-page .table-responsive{overflow-x:auto}
+.schedule-page .btn-primary{background:#1556ae;color:white}.schedule-page .btn-secondary{background:#eef2f8}
+.schedule-page .alert{padding:.75rem 1rem;border-radius:7px;margin-bottom:1rem}.schedule-page .alert-danger{background:#fff0f0;border:1px solid #e5a8a8}
+.schedule-page .table-danger{background:#fff0f0}.schedule-page .mb-3{margin-bottom:1rem}.schedule-page .mb-4{margin-bottom:1.5rem}
+.schedule-page .g-2{gap:.5rem}.schedule-page button{cursor:pointer}
+</style>
+{% endblock %}
+{% block body %}
+<div class="schedule-page container-fluid py-3">
+{% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Terminplanung'} only %}
+
+<h1 class="h3 mb-4">{{ 'Terminplanung'|trans }}: {{ course }}</h1>
 
     {{ form_start(form) }}
     {{ form_errors(form) }}
@@ -155,9 +172,10 @@
 
     {{ form_end(form) }}
 
+</div>
 {% endblock %}
 
-{% block body_javascript %}
+{% block javascripts %}
     {{ parent() }}
 
     <script>

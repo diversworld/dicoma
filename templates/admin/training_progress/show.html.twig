@@ -1,14 +1,12 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ausbildungsfortschritt</title>
-<style>
-body{font-family:system-ui,sans-serif;background:#f5f7fb;color:#152238;margin:0;padding:2rem}main{max-width:980px;margin:auto}.card{background:white;border:1px solid #dce2ea;border-radius:12px;padding:1.25rem;margin:1rem 0}table{border-collapse:collapse;width:100%}th,td{padding:.75rem;text-align:left;border-bottom:1px solid #e3e8f0}th{background:#eef2f8}.bar{height:12px;background:#e6eaf0;border-radius:9px;overflow:hidden}.fill{height:100%;background:#238557}.muted{color:#56657a}.ok{color:#167446}.warn{color:#a45309}a{color:#1452ae}
-</style>
-</head>
-<body><main>
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Ausbildungsfortschritt – {{ participant.member.fullName|default('Kursteilnehmer') }}{% endblock %}
+{% block stylesheets %}{{ parent() }}<style>
+.card{background:white;border:1px solid #dce2ea;border-radius:12px;padding:1.25rem;margin:1rem 0}table{border-collapse:collapse;width:100%}th,td{padding:.75rem;text-align:left;border-bottom:1px solid #e3e8f0}th{background:#eef2f8}.bar{height:12px;background:#e6eaf0;border-radius:9px;overflow:hidden}.fill{height:100%;background:#238557}.muted{color:#56657a}.ok{color:#167446}.warn{color:#a45309}a{color:#1452ae}
+</style>{% endblock %}
+{% block body %}
+{% include 'admin/partials/course_navigation.html.twig' with {'course': participant.course, 'activeSection': 'Ausbildungsfortschritt'} only %}
+
+
 <p><a href="javascript:history.back()">← Zurück</a></p>
 <h1>Ausbildungsfortschritt</h1>
 <div class="card">
@@ -33,4 +31,5 @@ body{font-family:system-ui,sans-serif;background:#f5f7fb;color:#152238;margin:0;
 {% endfor %}
 </div>
 <p class="muted">Diese Ansicht ist eine Fortschrittsauskunft. Sie vergibt keine Qualifikation und verändert keinen Kursstatus.</p>
-</main></body></html>
+
+{% endblock %}

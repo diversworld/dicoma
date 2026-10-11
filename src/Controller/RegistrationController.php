@@ -6,6 +6,7 @@ use App\Entity\Member;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Security\EmailVerifier;
+use App\Security\InstallationGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -89,8 +90,9 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register/install/{adminUser}', name: 'app_register_install', methods: ['GET', 'POST'])]
-    public function install(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailer, ?bool $adminUser = null): Response
+    public function install(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailer, InstallationGuard $installationGuard, ?bool $adminUser = null): Response
     {
+        $installationGuard->denyUnlessExplicitlyEnabled();
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);

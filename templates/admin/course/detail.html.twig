@@ -1,0 +1,151 @@
+{% extends '@EasyAdmin/crud/detail.html.twig' %}
+
+{% block main %}
+    {% set course = entity.instance %}
+    {% set completed = course.status.value == 'completed' %}
+    {% set courseId = course.id %}
+    {% set courseController = 'App\\Controller\\Admin\\CoursesCrudController' %}
+    {% set editUrl = ea_url().unsetAll().setController(courseController).setAction('edit').setEntityId(courseId) %}
+    {% set planUrl = ea_url().unsetAll().setController(courseController).setAction('planSchedules').setEntityId(courseId) %}
+    {% set generateUrl = ea_url().unsetAll().setController(courseController).setAction('generateSchedules').setEntityId(courseId) %}
+    {% set importUrl = ea_url().unsetAll().setController(courseController).setAction('importTrainingPlan').setEntityId(courseId) %}
+    {% set templateUrl = ea_url().unsetAll().setController(courseController).setAction('createTemplateFromCourse').setEntityId(courseId) %}
+    {% set completeUrl = ea_url().unsetAll().setController(courseController).setAction('completeCourse').setEntityId(courseId) %}
+    {% set reopenUrl = ea_url().unsetAll().setController(courseController).setAction('reopenCourse').setEntityId(courseId) %}
+
+    <section class="mb-4" aria-label="Kurszentrale">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h2 class="h4 mb-1">{{ course.title }}</h2>
+                <div class="text-muted">{{ course.club ? course.club : 'Kein Verein' }} · {{ course.status.value|default('')|upper }}</div>
+            </div>
+            <a class="btn btn-outline-secondary" href="{{ ea_url().unsetAll().setController(courseController).setAction('index') }}">Zur Kursliste</a>
+        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">Kursteilnehmer</div><div class="fs-3 fw-bold">{{ course.participantCount }}</div></div></div></div>
+            <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">Kurstermine</div><div class="fs-3 fw-bold">{{ course.schedule|length }}</div></div></div></div>
+            <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">Ausbildungsanforderungen</div><div class="fs-3 fw-bold">{{ course.trainingUnits|length }}</div></div></div></div>
+        </div>
+        {% if courseDashboard is defined %}
+            <div class="row g-3 mb-4" aria-label="Terminbuchungen">
+                <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Terminbuchungen</div>
+                    <div class="fs-3 fw-bold">{{ courseDashboard.bookingCount }}</div>
+                </div></div></div>
+                <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Anwesenheit noch geplant</div>
+                    <div class="fs-3 fw-bold">{{ courseDashboard.attendanceOpenCount }}</div>
+                </div></div></div>
+                <div class="col-md-4"><div class="card h-100"><div class="card-body d-flex align-items-center">
+                    <a class="btn btn-outline-primary w-100" href="{{ courseDashboard.bookingListUrl }}">
+                        <i class="fa fa-ticket me-2"></i>Terminbuchungen verwalten
+                    </a>
+                </div></div></div>
+            </div>
+        {% endif %}
+        {% if courseDashboard is defined %}
+            <div class="row g-3 mb-4" aria-label="Ausbildungsstand">
+                <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Durchschnittlicher Ausbildungsfortschritt</div>
+                    <div class="fs-3 fw-bold">{{ courseDashboard.averageProgress }} %</div>
+                    <div class="progress" role="progressbar" aria-label="Durchschnittlicher Ausbildungsfortschritt" aria-valuenow="{{ courseDashboard.averageProgress }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: {{ courseDashboard.averageProgress }}%"></div>
+                    </div>
+                </div></div></div>
+                <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Pflichtnachweise vollständig</div>
+                    <div class="fs-3 fw-bold">{{ courseDashboard.readyCount }} / {{ courseDashboard.participantCount }}</div>
+                    <div class="small text-muted">Vollständige Nachweise bedeuten nicht automatisch einen bestandenen Kurs.</div>
+                </div></div></div>
+                <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Teilnehmer mit offenen Pflichtnachweisen</div>
+                    <div class="fs-3 fw-bold">{{ courseDashboard.missingCount }}</div>
+                    <a href="{{ path('admin_course_training_matrix', {id: courseId}) }}">Ausbildungsübersicht öffnen</a>
+                </div></div></div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Nächste Kurstermine</strong>
+                    {% if courseDashboard.undatedCount > 0 %}<span class="badge text-bg-warning">{{ courseDashboard.undatedCount }} ohne Datum</span>{% endif %}
+                </div>
+                <div class="card-body">
+                    {% if courseDashboard.upcoming is empty %}
+                        <p class="text-muted mb-0">Keine zukünftigen Termine mit Datum vorhanden.</p>
+                    {% else %}
+                        <div class="table-responsive"><table class="table table-sm mb-0">
+                            <thead><tr><th>Datum</th><th>Beginn</th><th>Ausbildungstermin</th></tr></thead>
+                            <tbody>
+                            {% for appointment in courseDashboard.upcoming %}
+                                <tr>
+                                    <td>{{ appointment.date }}</td>
+                                    <td>{{ appointment.time ? appointment.time ~ ' Uhr' : 'Uhrzeit fehlt' }}</td>
+                                    <td>{{ appointment.title }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table></div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        {% if courseCompletionChecklist is defined %}
+            {% set checklist = courseCompletionChecklist %}
+            <div class="card mb-4" aria-label="Kursabschluss-Checkliste">
+                <div class="card-header"><strong>Kursabschluss-Checkliste</strong></div>
+                <div class="card-body">
+                    <p class="text-muted small">Vorprüfung zur Orientierung. Die verbindliche Abschlussprüfung erfolgt weiterhin beim Kursabschluss.</p>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>Ausbildungsanforderungen hinterlegt</span>
+                            <span class="{{ checklist.requirementsConfigured ? 'text-success' : 'text-warning' }}">{{ checklist.requirementsConfigured ? 'Erfüllt' : 'Fehlt' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>Mindestens ein Kursteilnehmer vorhanden</span>
+                            <span class="{{ checklist.participantsPresent ? 'text-success' : 'text-warning' }}">{{ checklist.participantsPresent ? 'Erfüllt' : 'Fehlt' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>Alle Teilnehmer haben einen abschließenden Kursstatus</span>
+                            <span class="{{ checklist.participantStatusesFinal ? 'text-success' : 'text-warning' }}">{{ checklist.participantStatusesFinal ? 'Erfüllt' : 'Offen' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>Pflichtnachweise vollständig</span>
+                            <span class="{{ checklist.requiredEvidenceComplete ? 'text-success' : 'text-warning' }}">{{ checklist.requiredEvidenceComplete ? 'Erfüllt' : checklist.missingParticipants ~ ' Teilnehmer mit offenen Nachweisen' }}</span>
+                        </li>
+                    </ul>
+                    {% if completed %}
+                        <div class="alert alert-secondary mb-0">Dieser Kurs ist bereits abgeschlossen.</div>
+                    {% elseif checklist.readyForReview %}
+                        <div class="alert alert-success mb-0">Die angezeigten Voraussetzungen sind erfüllt. Der Kursabschluss kann fachlich geprüft werden.</div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">Der Kurs ist nach dieser Vorprüfung noch nicht abschlussbereit. Bitte offene Punkte bearbeiten.</div>
+                    {% endif %}
+                    <a class="btn btn-outline-primary mt-3" href="{{ path('admin_course_training_matrix', {id: courseId}) }}">Pflichtnachweise prüfen</a>
+                </div>
+            </div>
+        {% endif %}
+        <h3 class="h5 mb-3">Schnellaktionen</h3>
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-4"><a class="btn btn-primary w-100 text-start" href="{{ path('admin_course_training_matrix', {id: courseId}) }}"><i class="fa fa-table me-2"></i>Ausbildungsübersicht &amp; Bewertungen</a></div>
+            {% if not completed %}
+                <div class="col-md-6 col-xl-4"><a class="btn btn-outline-primary w-100 text-start" href="{{ planUrl }}"><i class="fa fa-calendar-days me-2"></i>Termine planen</a></div>
+                <div class="col-md-6 col-xl-4"><a class="btn btn-outline-primary w-100 text-start" href="{{ editUrl }}"><i class="fa fa-users me-2"></i>Teilnehmer &amp; Kurs bearbeiten</a></div>
+                {% if course.trainingUnits|length > 0 %}
+                    <div class="col-md-6 col-xl-4"><a class="btn btn-outline-secondary w-100 text-start" href="{{ generateUrl }}"><i class="fa fa-calendar-plus me-2"></i>Kurstermine erzeugen</a></div>
+                {% endif %}
+                {% if course.qualification %}
+                    <div class="col-md-6 col-xl-4"><a class="btn btn-outline-secondary w-100 text-start" href="{{ importUrl }}"><i class="fa fa-list-check me-2"></i>Ausbildungsplan übernehmen</a></div>
+                {% endif %}
+                <div class="col-md-6 col-xl-4"><a class="btn btn-outline-warning w-100 text-start" href="{{ completeUrl }}" onclick="return confirm('Kurs wirklich abschließen?')"><i class="fa fa-flag-checkered me-2"></i>Kurs abschließen</a></div>
+            {% else %}
+                <div class="col-md-6 col-xl-4"><a class="btn btn-outline-secondary w-100 text-start" href="{{ reopenUrl }}" onclick="return confirm('Kurs zur Korrektur wieder öffnen?')"><i class="fa fa-lock-open me-2"></i>Kurs wieder öffnen</a></div>
+            {% endif %}
+            {% if course.club %}
+                <div class="col-md-6 col-xl-4"><a class="btn btn-outline-secondary w-100 text-start" href="{{ templateUrl }}"><i class="fa fa-copy me-2"></i>Planungsvorlage erstellen</a></div>
+            {% endif %}
+        </div>
+        <p class="text-muted small mt-3">Ausbildungsnachweise und Sammelbewertungen findest du in der Ausbildungsübersicht. Änderungen unterliegen weiterhin den bestehenden Prüfungen und Berechtigungen.</p>
+    </section>
+    <hr class="my-4">
+    <h3 class="h5">Weitere Kursinformationen</h3>
+    {{ parent() }}
+{% endblock %}

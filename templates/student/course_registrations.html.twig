@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+{% block title %}Meine Kursanmeldungen – DiCoMa{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>Meine Kursanmeldungen</h1>
+    <p>Hier siehst du den aktuellen Stand deiner Kursanmeldungen.</p>
+    {% if registrations is empty %}
+        <p>Du hast dich bisher für keinen Kurs angemeldet.</p>
+    {% else %}
+        <div class="table-responsive"><table class="table table-striped">
+            <thead><tr><th>Kurs</th><th>Angemeldet am</th><th>Status</th><th>Details</th></tr></thead>
+            <tbody>
+            {% for registration in registrations %}
+                <tr>
+                    <td>{{ registration.course.title }}</td>
+                    <td>{{ registration.registeredAt|date('d.m.Y H:i') }}</td>
+                    <td>{{ registration.status.label() }}</td>
+                    <td><a href="{{ path('frontend_course_registration_confirmation', {id: registration.id}) }}">Ansehen</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    {% endif %}
+    <p><a class="btn btn-primary" href="{{ path('frontend_course_registration_index') }}">Weitere Kurse entdecken</a></p>
+</main>
+{% endblock %}

@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Member;
 use App\Form\MemberType;
 use App\Form\UserType;
@@ -16,6 +18,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class StudentController extends AbstractController
 {
     #[Route('/', name: 'app_student_index', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function index(MemberRepository $studentRepository): Response
     {
         return $this->render('student/index.html.twig', [
@@ -24,6 +27,7 @@ class StudentController extends AbstractController
     }
 
     #[Route('/new', name: 'app_student_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $student = new Member();
@@ -49,6 +53,7 @@ class StudentController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_student_show', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function show(Member $student): Response
     {
         return $this->render('student/show.html.twig', [
@@ -57,6 +62,7 @@ class StudentController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_student_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Member $student, EntityManagerInterface $entityManager): Response
     {
 
@@ -79,6 +85,7 @@ class StudentController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_student_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Member $student, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$student->getId(), $request->request->get('_token'))) {

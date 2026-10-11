@@ -3,6 +3,12 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Booking;
+use App\Entity\Courses;
+use App\Controller\Admin;
+use App\Filter\BookingCourseFilter;
+use App\Repository\CoursesRepository;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use App\Enum\BookingAttendanceStatus;
 use App\Service\BookingNumberGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -16,12 +22,14 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
 
 #[IsGranted('ROLE_ADMIN')]
 class BookingCrudController extends AbstractCrudController
 {
     public function __construct(
-        private readonly BookingNumberGenerator $bookingNumberGenerator
+        private readonly BookingNumberGenerator $bookingNumberGenerator,
+        private readonly CoursesRepository $coursesRepository
     ) {
     }
 
@@ -53,6 +61,7 @@ class BookingCrudController extends AbstractCrudController
             )
             ->setDefaultSort([
                 'bookingdate' => 'DESC',
+                'id' => 'DESC',
             ])
             ->setSearchFields([
                 'bookingnumber',
@@ -61,6 +70,31 @@ class BookingCrudController extends AbstractCrudController
                 'member.memberNumber',
                 'status',
             ]);
+    }
+
+    public function configureFilters(Filters $filters): Filters
+    {
+        $courseChoices = [];
+        foreach ($this->coursesRepository->findBy([], ['id' => 'DESC']) as $course) {
+            $courseChoices[(string) $course] = (string) $course->getId();
+        }
+
+        return $filters
+            ->add(BookingCourseFilter::new()->setFormTypeOption('choices', $courseChoices))
+            ->add(EntityFilter::new('schedule', 'Kurstermin'))
+            ->add(EntityFilter::new('member', 'Mitglied'))
+            ->add(ChoiceFilter::new('status', 'Buchungsstatus')->setChoices([
+                'Gebucht' => 'gebucht',
+                'Bestätigt' => 'bestätigt',
+                'Bezahlt' => 'bezahlt',
+                'Storniert' => 'storniert',
+            ]))
+            ->add(ChoiceFilter::new('attendanceStatus', 'Anwesenheit')->setChoices(
+                array_combine(
+                    array_map(static fn (BookingAttendanceStatus $s) => $s->label(), BookingAttendanceStatus::cases()),
+                    array_map(static fn (BookingAttendanceStatus $s) => $s->value, BookingAttendanceStatus::cases())
+                )
+            ));
     }
 
     public function configureFields(string $pageName): iterable
@@ -103,17 +137,20 @@ class BookingCrudController extends AbstractCrudController
             ->setColumns(2)
             ->setFormat('dd.MM.yyyy');
 
-        yield ChoiceField::new(
-            'status',
-            'Buchungsstatus'
-        )
-            ->setChoices([
-                'Gebucht' => 'gebucht',
-                'Bestätigt' => 'bestätigt',
-                'Bezahlt' => 'bezahlt',
-                'Storniert' => 'storniert',
-            ])
-            ->setColumns(2);
+        if ($pageName === Crud::PAGE_INDEX || $pageName === Crud::PAGE_DETAIL) {
+            yield TextField::new('status', 'Buchungsstatus')
+                ->formatValue(static fn ($value): string => self::statusBadge((string) ($value ?? '')))
+                ->renderAsHtml();
+        } else {
+            yield ChoiceField::new('status', 'Buchungsstatus')
+                ->setChoices([
+                    'Gebucht' => 'gebucht',
+                    'Bestätigt' => 'bestätigt',
+                    'Bezahlt' => 'bezahlt',
+                    'Storniert' => 'storniert',
+                ])
+                ->setColumns(2);
+        }
 
         /*
          * Kurstermin
@@ -150,11 +187,15 @@ class BookingCrudController extends AbstractCrudController
         yield FormField::addFieldset('Anwesenheit')
             ->collapsible();
 
-        if ($pageName === Crud::PAGE_INDEX) {
-            yield TextField::new(
-                'attendanceStatusLabel',
-                'Anwesenheit'
-            );
+        if ($pageName === Crud::PAGE_INDEX || $pageName === Crud::PAGE_DETAIL) {
+            yield TextField::new('attendanceStatusLabel', 'Anwesenheit')
+                ->formatValue(static function ($value, Booking $booking): string {
+                    return self::attendanceBadge(
+                        $booking->getAttendanceStatus()->value,
+                        (string) ($value ?? '')
+                    );
+                })
+                ->renderAsHtml();
         } else {
             yield ChoiceField::new(
                 'attendanceStatus',
@@ -178,5 +219,40 @@ class BookingCrudController extends AbstractCrudController
         )
             ->hideOnIndex()
             ->setColumns(6);
+    }
+
+    private static function statusBadge(string $value): string
+    {
+        $labels = [
+            'gebucht' => ['Gebucht', 'primary'],
+            'bestätigt' => ['Bestätigt', 'success'],
+            'bezahlt' => ['Bezahlt', 'success'],
+            'storniert' => ['Storniert', 'secondary'],
+        ];
+        [$label, $color] = $labels[$value] ?? [$value !== '' ? $value : 'Nicht gesetzt', 'secondary'];
+
+        return self::badge($label, $color);
+    }
+
+    private static function attendanceBadge(string $value, string $label): string
+    {
+        $colors = [
+            'planned' => 'secondary',
+            'present' => 'success',
+            'excused' => 'info',
+            'absent' => 'danger',
+            'makeup_required' => 'warning',
+        ];
+
+        return self::badge($label !== '' ? $label : $value, $colors[$value] ?? 'secondary');
+    }
+
+    private static function badge(string $label, string $color): string
+    {
+        return sprintf(
+            '<span class="badge bg-%s">%s</span>',
+            $color,
+            htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        );
     }
 }

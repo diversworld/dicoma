@@ -50,9 +50,12 @@
                                                                         <a href="{{ path('app_schedule_edit', {'id': schedule.id}) }}"><i class="ion-edit"></i></a>
                                                                     </li>
                                                                 {% endif %}
-                                                                {% if is_granted('ROLE_USER') %}
+                                                                {% if is_granted('ROLE_MEMBER') %}
                                                                     <li class="list-inline-item">
-                                                                        <a href="{{ path('app_booking_book', {id: schedule.id, user: app.user.username}) }}"><i class="ion-card"></i> </a>
+                                                                        <form method="post" action="{{ path('app_booking_book', {'id': schedule.id}) }}" class="d-inline">
+                                                                            <input type="hidden" name="_token" value="{{ csrf_token('book_schedule_' ~ schedule.id) }}">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Termin buchen">Termin buchen</button>
+                                                                        </form>
                                                                     </li>
                                                                 {% endif %}
                                                             </ul>

@@ -1,8 +1,11 @@
-{% extends '@EasyAdmin/page/content.html.twig' %}
+{% extends 'base.html.twig' %}
 
-{% block content_title %}{{ 'Planungsvorlage duplizieren'|trans }}{% endblock %}
+{% block title %}{{ 'Planungsvorlage duplizieren'|trans }}{% endblock %}
 
-{% block main %}
+{% block body %}
+<main class="container py-4">
+<h1 class="h3 mb-4">{{ 'Planungsvorlage duplizieren'|trans }}</h1>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'error' ? 'danger' : type }}" role="alert">{{ message }}</div>{% endfor %}{% endfor %}
     <p>{{ 'Die Vorlage %name% wird einschließlich ihrer Ausbildungstermine kopiert.'|trans({'%name%': original.name}) }}</p>
     <p><strong>{{ 'Verein'|trans }}:</strong> {{ original.club }}<br>
        <strong>{{ 'Ausbildungstermine'|trans }}:</strong> {{ original.entries|length }}</p>
@@ -18,4 +21,5 @@
         <button type="submit" class="btn btn-primary">{{ 'Vorlage duplizieren'|trans }}</button>
         <a href="{{ backUrl }}" class="btn btn-secondary">{{ 'Abbrechen'|trans }}</a>
     </form>
+</main>
 {% endblock %}

@@ -1,0 +1,22 @@
+{% extends '@EasyAdmin/layout.html.twig' %}
+
+{% block header_custom_menu %}
+    {{ parent() }}
+
+    {% if app.user %}
+        <form method="post"
+              action="{{ path('app_logout') }}"
+              class="d-inline-flex align-items-center ms-2">
+
+            <input type="hidden"
+                   name="_csrf_token"
+                   value="{{ csrf_token('logout') }}">
+
+            <button type="submit"
+                    class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-right-from-bracket"></i>
+                Abmelden
+            </button>
+        </form>
+    {% endif %}
+{% endblock %}

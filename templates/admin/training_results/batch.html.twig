@@ -1,0 +1,50 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Sammelbewertung – {{ schedule.title }}{% endblock %}
+{% block stylesheets %}{{ parent() }}<style>.panel{background:white;border:1px solid #dbe2ec;border-radius:12px;padding:1.5rem}table{border-collapse:collapse;width:100%}td,th{padding:.75rem;border-bottom:1px solid #e2e8f0;text-align:left}select,button{font:inherit;padding:.45rem;border-radius:6px;border:1px solid #b9c4d2}button{background:#1558a6;color:white;cursor:pointer;padding:.65rem 1rem}.muted{color:#64748b}.notice{padding:.75rem;border-radius:6px;background:#e8f3ed;margin:1rem 0}.error{background:#fff1f1}.locked{color:#167446;font-weight:600}@media(max-width:650px){.panel{padding:.75rem}}</style>{% endblock %}
+{% block body %}
+{% if isAdminAssessment %}{% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Sammelbewertung'} only %}{% endif %}
+
+
+{% if isAdminAssessment %}<p><a href="{{ path('admin_course_training_matrix', {id: course.id}) }}">← Zurück zur Ausbildungsmatrix</a></p>{% else %}<p><a href="/my-training/tasks">← Zu meinen Ausbildungsaufgaben</a></p>{% endif %}
+<h1>Sammelbewertung: {{ schedule.title }}</h1>
+<p class="muted">Kurs: {{ course }} · Bereits bestandene Nachweise sind hier gesperrt. Leere Auswahl bedeutet: unverändert lassen. Bestanden erfordert bestätigte Anwesenheit und eine vorhandene Terminbuchung.</p>
+
+{% for error in errors %}<div class="notice error" role="alert">{{ error }}</div>{% endfor %}
+
+{% if missingBookings > 0 %}
+<div class="notice" role="status">
+<strong>{{ missingBookings }} Kursteilnehmer ohne Terminbuchung.</strong>
+<p>Vor der Bewertung koennen fehlende Buchungen angelegt werden. Vorhandene Anwesenheiten und Bewertungen werden nicht veraendert.</p>
+<form method="post">
+<input type="hidden" name="operation" value="sync_bookings">
+<input type="hidden" name="_token" value="{{ csrf_token('training_batch_sync_' ~ schedule.id) }}">
+<button type="submit">Fehlende Terminbuchungen uebernehmen</button>
+</form>
+</div>
+{% endif %}
+<div class="panel"><form method="post">
+<input type="hidden" name="_token" value="{{ csrf_token('training_batch_' ~ schedule.id) }}">
+<table><thead><tr><th>Kursteilnehmer</th><th>Anwesenheit</th><th>Bewertung</th><th>Nachweis</th></tr></thead><tbody>
+{% for participant in attendees %}
+{% set old = existing[participant.id] ?? null %}
+{% set booking = bookings[participant.id] ?? null %}
+<tr>
+<td>{{ participant.member.fullName|default('Teilnehmer') }}</td>
+<td>{% if booking %}<select name="attendance[{{ participant.id }}]" aria-label="Anwesenheit {{ participant.id }}">
+<option value="">— unverändert ({{ booking.attendanceStatus.label() }}) —</option>
+{% for item in attendanceChoices %}<option value="{{ item.value }}">{{ item.label() }}</option>{% endfor %}
+</select>{% else %}<span class="muted">Keine Terminbuchung</span>{% endif %}</td>
+<td>{% if old and old.status.value == 'passed' %}<span class="locked">Bestanden (gesperrt)</span>
+{% else %}<select name="status[{{ participant.id }}]" aria-label="Bewertung {{ participant.id }}">
+<option value="">— unverändert —</option>
+{% for item in choices %}<option value="{{ item.value }}">{{ item.label() }}</option>{% endfor %}
+</select>{% endif %}</td>
+<td>{{ old ? old.statusLabel : 'Noch kein Nachweis' }}</td>
+</tr>
+{% else %}<tr><td colspan="4">Keine Kursteilnehmer vorhanden.</td></tr>{% endfor %}
+</tbody></table>
+<p><button type="submit">Bewertungen speichern</button></p>
+</form></div>
+<p class="muted">Die Kursabschluss- und Qualifikationsvergabe wird hier nicht ausgelöst. Die bestehende Einzelbearbeitung bleibt verfügbar.</p>
+
+{% endblock %}

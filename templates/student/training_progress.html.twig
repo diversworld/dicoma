@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+{% block title %}Meine Ausbildung – DiCoMa</div>
+{% endblock %}
+{% block body %}
+<div class="container" style="padding-top:2rem;padding-bottom:3rem">
+<h1>Meine Ausbildung</h1>
+<p><a class="btn btn-primary" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit ansehen</a></p>
+<p class="muted">Hier siehst du ausschließlich deine eigenen Kurse und Ausbildungsfortschritte.</p>
+{% if courses is empty %}
+<section class="panel"><p>Du bist aktuell keinem Kurs zugeordnet.</p></section>
+{% endif %}
+{% for item in courses %}
+<section class="panel">
+  <h2>{{ item.name }}</h2>
+  <p><strong>Kursstatus:</strong> {{ item.status }}</p>
+  <p><strong>Pflichtfortschritt:</strong> {{ item.progress.passed }} / {{ item.progress.target }}
+  {% if item.progress.target > 0 %}({{ item.progress.percent }} %){% else %}(keine Pflichtanforderungen hinterlegt){% endif %}</p>
+  {% if item.progress.target > 0 %}
+  <div class="bar" role="progressbar" aria-valuenow="{{ item.progress.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Pflichtfortschritt"><div class="fill" style="width:{{ item.progress.percent }}%"></div></div>
+  {% endif %}
+  <h3>Ausbildungseinheiten</h3>
+  <div class="table-wrap"><table><thead><tr><th>Einheit</th><th>Bestanden</th><th>Erforderlich</th><th>Fehlend</th></tr></thead><tbody>
+  {% for req in item.progress.requirements %}
+  <tr><td>{{ req.name }}{% if not req.required %} (optional){% endif %}</td><td>{{ req.credited }}</td><td>{{ req.target }}</td><td>{{ req.missing }}</td></tr>
+  {% else %}<tr><td colspan="4">Noch kein Ausbildungsplan hinterlegt.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <h3>Kurstermine</h3>
+  <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Termin</th><th>Ort</th></tr></thead><tbody>
+  {% for session in item.sessions %}
+  <tr><td>{{ session.date }}</td><td>{{ session.time|default('—') }}</td><td>{{ session.title }}</td><td>{{ session.location|default('—') }}</td></tr>
+  {% else %}<tr><td colspan="4">Noch keine datierten Termine vorhanden.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endfor %}
+</div>
+{% endblock %}

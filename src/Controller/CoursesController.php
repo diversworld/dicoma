@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/courses')]
 class CoursesController extends AbstractController
@@ -34,6 +35,7 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/new', name: 'app_courses_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $course = new Courses();
@@ -64,6 +66,7 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/upload', name: 'upload', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function upload(Request $request): JsonResponse
     {
         $this->logger->info('Files in the request:', $request->files->all());
@@ -115,6 +118,7 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_courses_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Courses $course, EntityManagerInterface $entityManager): Response
     {
         $files = $this->getFiles();
@@ -155,6 +159,7 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_courses_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Courses $course, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$course->getId(), $request->request->get('_token'))) {
@@ -166,6 +171,7 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/image/delete', name: 'delete_image', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete_image(Request $request): JsonResponse
     {
         $filename = $request->request->get('filename');

@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Member;
 use App\Form\MemberType;
 use App\Repository\MemberRepository;
@@ -24,6 +26,7 @@ class InstructorController extends AbstractController
     }
 
     #[Route('/new', name: 'app_instructor_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
     {
         $instructor = new Member();
@@ -56,6 +59,7 @@ class InstructorController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_instructor_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Member $instructor, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordEncoder): Response
     {
         $form = $this->createForm(MemberType::class, $instructor);
@@ -76,6 +80,7 @@ class InstructorController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_instructor_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Member $instructor, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$instructor->getId(), $request->request->get('_token'))) {

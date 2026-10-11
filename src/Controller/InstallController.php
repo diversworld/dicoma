@@ -3,6 +3,7 @@
 
 namespace App\Controller;
 
+use App\Security\InstallationGuard;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -24,8 +25,9 @@ class InstallController extends AbstractController
     }
 
     #[Route('/install', name: 'app_install', methods: ['GET', 'POST'])]
-    public function install(Request $request, Filesystem $filesystem): Response
+    public function install(Request $request, Filesystem $filesystem, InstallationGuard $installationGuard): Response
     {
+        $installationGuard->denyUnlessExplicitlyEnabled();
         $defaultData = [
             'db_driver' => 'mysql',
             'db_host' => 'localhost',
@@ -103,8 +105,9 @@ class InstallController extends AbstractController
     }
 
     #[Route('/save_db_config', name: 'save_db_config', methods: ['GET', 'POST'])]
-    public function saveDbConfig(Request $request): Response
+    public function saveDbConfig(Request $request, InstallationGuard $installationGuard): Response
     {
+        $installationGuard->denyUnlessExplicitlyEnabled();
         $dbDriver = $request->request->get('db_driver');
         $dbUser = $request->request->get('db_user');
         $dbPass = $request->request->get('db_pass');

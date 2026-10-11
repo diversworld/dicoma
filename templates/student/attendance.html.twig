@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+{% block title %}Meine Anwesenheit – DiCoMa{% endblock %}
+{% block body %}
+<section class="container" style="padding-top:2rem;padding-bottom:3rem">
+    <h1>Meine Anwesenheit</h1>
+    <p>Hier siehst du ausschließlich deine eigenen Terminbuchungen und Anwesenheitsstände.</p>
+    <p><a class="btn btn-default" href="{{ path('app_my_training_progress') }}">← Meine Ausbildung</a></p>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead><tr><th>Kurs</th><th>Termin</th><th>Datum</th><th>Beginn</th><th>Ort</th><th>Anwesenheit</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.course }}</td>
+                    <td>{{ row.title }}</td>
+                    <td>{{ row.date|default('Noch nicht geplant') }}</td>
+                    <td>{{ row.time ? row.time ~ ' Uhr' : '—' }}</td>
+                    <td>{{ row.location|default('—') }}</td>
+                    <td><strong>{{ row.attendance }}</strong></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">Für deine Kurse sind noch keine Terminbuchungen vorhanden.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted">Die Anwesenheit wird vom zuständigen Ausbilder erfasst. Diese Ansicht ist schreibgeschützt.</p>
+</section>
+{% endblock %}

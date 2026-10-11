@@ -15,6 +15,29 @@
         }));
         const placeholder = original.find(option => !option.value)?.text || '';
         let requestNumber = 0;
+        const editMatch = new URLSearchParams(window.location.search).get('entityId');
+        const editId = editMatch && /^\d+$/.test(editMatch) ? editMatch : '';
+        const existingBox = document.createElement('div');
+        existingBox.className = 'mt-2';
+        existingBox.setAttribute('aria-live', 'polite');
+        schedule.closest('.form-group, .field-association, .form-widget')?.appendChild(existingBox)
+            || schedule.parentElement?.appendChild(existingBox);
+
+        function showExisting(items) {
+            existingBox.replaceChildren();
+            if (!items.length) return;
+            const title = document.createElement('div');
+            title.className = 'small fw-semibold mb-1';
+            title.textContent = 'Bereits erfasste, noch nicht bestandene Nachweise bearbeiten:';
+            existingBox.appendChild(title);
+            items.forEach(item => {
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.className = 'd-block small';
+                link.textContent = item.text + ' – ' + item.status + ' (bearbeiten)';
+                existingBox.appendChild(link);
+            });
+        }
 
         function selectedValue(select) {
             return select.tomselect ? select.tomselect.getValue() : select.value;
@@ -49,22 +72,25 @@
             const currentValue = preserve ? selectedValue(schedule) : '';
             if (!participantId) {
                 rebuild([], '');
+                showExisting([]);
                 return;
             }
             schedule.disabled = true;
             try {
-                const response = await fetch(endpoint + '?participant=' + encodeURIComponent(participantId), {
+                const response = await fetch(endpoint + '?participant=' + encodeURIComponent(participantId) + (editId ? '&edit=' + encodeURIComponent(editId) : ''), {
                     headers: {'Accept': 'application/json'}, credentials: 'same-origin'
                 });
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const data = await response.json();
                 if (ticket !== requestNumber) return;
                 rebuild(Array.isArray(data.options) ? data.options : [], currentValue);
+                showExisting(Array.isArray(data.existing) ? data.existing : []);
             } catch (error) {
                 if (ticket !== requestNumber) return;
                 console.error('Ausbildungstermine konnten nicht geladen werden:', error);
                 // Keine ungefilterte Liste freigeben, wenn die Abfrage fehlschlaegt.
                 rebuild([], '');
+                showExisting([]);
             }
         }
 

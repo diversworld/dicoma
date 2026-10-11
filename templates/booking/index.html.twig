@@ -26,7 +26,14 @@
                     <td>{{ booking.bookingdate ? booking.bookingdate|date('d.m.Y') : '' }}</td>
                     <td>{{ booking.schedule.title }}</td>
                     <td>{{ booking.status }}</td>
-                    <td>{{ booking.students.firstname }} {{ booking.students.lastname }}</td>
+                    <td>
+						{% if booking.member %}
+							{{ booking.member.firstname }}
+							{{ booking.member.lastname }}
+						{% else %}
+							<span class="text-muted">Kein Mitglied zugeordnet</span>
+						{% endif %}
+					</td>
                     <td>
                         <button type="button" class="btn">
                             <a href="{{ path('app_booking_show', {'id': booking.id}) }}"><i class="ion-eye"></i> </a>

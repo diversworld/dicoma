@@ -28,7 +28,7 @@
                 </tr>
                 <tr>
                     <th>Schüler</th>   
-                    <td>{{ booking.students.firstname }} {{ booking.students.lastname }}</td>
+                    <td>{{ booking.member ? booking.member.fullName : 'Kein Mitglied zugeordnet' }}</td>
                 </tr>
             </tbody>
         </table>

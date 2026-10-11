@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Schedule;
 use App\Form\ScheduleType;
 use App\Repository\ScheduleRepository;
@@ -53,6 +55,7 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/new', name: 'app_schedule_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $schedule = new Schedule();
@@ -90,6 +93,7 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_schedule_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Schedule $schedule, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(ScheduleType::class, $schedule);
@@ -108,6 +112,7 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_schedule_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Schedule $schedule, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$schedule->getId(), $request->request->get('_token'))) {

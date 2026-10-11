@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use App\Entity\Tank;
 use App\Entity\TankCheck;
 use App\Form\TankCheckType;
@@ -53,6 +55,7 @@ class TankCheckController extends AbstractController
     }
 
     #[Route('/new', name: 'app_tank_check_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager, TankCheckRepository $tankCheckRepository): Response
     {
         $tank = new Tank();
@@ -87,6 +90,7 @@ class TankCheckController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_tank_check_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Tank $tank, EntityManagerInterface $entityManager, TankCheckRepository $tankCheckRepository): Response
     {
         $availableChecks = $tankCheckRepository->findAll(); // Fetch available checks
@@ -109,6 +113,7 @@ class TankCheckController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_tank_check_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, TankCheck $tankCheck, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$tankCheck->getId(), $request->request->get('_token'))) {
