@@ -7,7 +7,15 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ScheduleTemplateEntryRepository::class)]
-#[ORM\Table(name: 'schedule_template_entry', uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_schedule_template_unit', columns: ['template_id', 'training_unit_type_id', 'sequence'])])]
+#[ORM\Table(name: 'schedule_template_entry')]
+#[ORM\UniqueConstraint(
+    name: 'uniq_schedule_template_unit',
+    columns: [
+        'template_id',
+        'training_unit_type_id',
+        'sequence'
+    ]
+)]
 class ScheduleTemplateEntry
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]

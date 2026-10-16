@@ -9,11 +9,20 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
-#[UniqueEntity(fields: ['courseParticipant', 'schedule'],message: 'Für diesen Teilnehmer und Termin existiert bereits ein Ausbildungsnachweis.',errorPath: 'schedule')]
 #[ORM\Entity(repositoryClass: TrainingUnitResultRepository::class)]
-#[ORM\Table(name: 'training_unit_result', uniqueConstraints: [
-    new ORM\UniqueConstraint(name: 'uniq_training_unit_result_participant_schedule', columns: ['course_participant_id', 'schedule_id'])
-])]
+#[ORM\Table(name: 'training_unit_result')]
+#[ORM\UniqueConstraint(
+    name: 'uniq_training_unit_result_participant_schedule',
+    columns: [
+        'course_participant_id',
+        'schedule_id'
+    ]
+)]
+#[UniqueEntity(
+    fields: ['courseParticipant', 'schedule'],
+    message: 'Für diesen Teilnehmer und Termin existiert bereits ein Ausbildungsnachweis.',
+    errorPath: 'schedule'
+)]
 #[Assert\Callback('validateAssignment')]
 class TrainingUnitResult
 {

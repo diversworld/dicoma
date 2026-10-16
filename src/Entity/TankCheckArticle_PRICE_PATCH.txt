@@ -1,0 +1,16 @@
+In src/Entity/TankCheckArticle.php:
+1. Change the priceNetto ORM column to nullable: true (keep type decimal, precision 10, scale 2).
+2. Change setPriceNetto(string $priceNetto) to setPriceNetto(?string $priceNetto).
+3. Add to the class:
+#[ORM\Column(length: 5, options: ['default' => 'net'])]
+private string $priceInputBasis = 'net';
+public function getPriceInputBasis(): string { return $this->priceInputBasis; }
+public function setPriceInputBasis(string $basis): static
+{
+    if (!in_array($basis, ['net', 'gross'], true)) throw new \InvalidArgumentException('Ungültige Preisbasis.');
+    $this->priceInputBasis = $basis;
+    return $this;
+}
+4. REMOVE old calculatePriceBrutto() method with ORM\PrePersist/ORM\PreUpdate.
+5. In existing EasyAdmin CRUD remove old price calculation event subscriber and use the example file Admin_TankCheckArticleCrudController_PRICE_EXAMPLE.php.txt.
+6. Keep selectionMode, volumeRule, size, all other existing properties.

@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+{% block title %}Flasche {{ tank.inventory }} – Gerätewart | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container">
+  <p><a href="{{ path('equipment_manager_tanks') }}">← Zur Flaschenübersicht</a></p>
+  <h1>Flasche {{ tank.inventory }}</h1>
+  <p class="text-muted">{{ clubName }} · Seriennummer: {{ tank.serialnumber }}</p>
+  {% for type, messages in app.flashes %}{% for message in messages %}
+    <div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message }}</div>
+  {% endfor %}{% endfor %}
+  <div class="table-responsive"><table class="table table-bordered"><tbody>
+    <tr><th scope="row">Technischer Zustand</th><td>{{ tank.conditionStatus }}</td></tr>
+    <tr><th scope="row">Verleih</th><td>{{ tank.lendable ? 'Freigegeben' : 'Gesperrt' }}</td></tr>
+    <tr>
+		<th scope="row">Nächste Prüfung
+			<p>
+			  <a class="btn btn-outline-primary"
+				 href="{{ path('equipment_manager_tank_inspection', {id: tank.id}) }}">
+				Prüfung dokumentieren
+			  </a>
+			</p
+		</th><td>{{ tank.nextCheckDate ? tank.nextCheckDate|date('d.m.Y') : 'Nicht hinterlegt' }}</td>
+	</tr>
+    <tr>
+		<th scope="row">Letzte Prüfung
+			<p>
+				<a class="btn btn-outline-primary"
+					href="{{ path('equipment_manager_tank_inspection', {id: tank.id}) }}">
+					Prüfung dokumentieren
+				</a>
+			</p>
+		</th>
+		<td>{{ tank.lastCheckDate ? tank.lastCheckDate|date('d.m.Y') : 'Nicht hinterlegt' }}</td>
+	</tr>
+    <tr><th scope="row">Größe</th><td>{{ tank.size is not null ? tank.size : '–' }}</td></tr>
+    <tr><th scope="row">Notizen</th><td>{{ tank.notes ?: '–' }}</td></tr>
+  </tbody></table></div>
+  <p><a class="btn btn-primary" href="{{ path('equipment_manager_maintenance', {id: tank.id}) }}">Wartungsaufträge verwalten</a></p>
+  <h2>Technischen Zustand sperren</h2>
+  <p>Eine technische Sperrung verhindert die weitere Ausgabe dieser Flasche. Ein Wartungsauftrag wird dadurch nicht automatisch eröffnet.</p>
+  <form method="post" action="{{ path('equipment_manager_tank_block', {id: tank.id}) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('equipment_block_' ~ tank.id) }}">
+    <div class="form-group">
+      <label for="block_operation">Sperrstatus</label>
+      <select id="block_operation" name="operation" class="form-control" required>
+        <option value="maintenance">Wartung erforderlich</option>
+        <option value="damaged">Beschädigt</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="block_reason">Begründung (10–2000 Zeichen)</label>
+      <textarea id="block_reason" name="reason" class="form-control" rows="3" minlength="10" maxlength="2000" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-warning">Flasche technisch sperren</button>
+  </form>
+  <h2>Kontrollierte Wiederfreigabe</h2>
+  {% set hasOpenOrders = orders|filter(o => o.status == 'open')|length > 0 %}
+  {% if tank.conditionStatus == 'ready' and tank.lendable %}
+    <p class="alert alert-info">Diese Flasche ist bereits freigegeben.</p>
+  {% elseif hasOpenOrders %}
+    <p class="alert alert-warning">Eine Freigabe ist bei offenem Wartungsauftrag nicht möglich.</p>
+  {% else %}
+    <p>Die Freigabe wird serverseitig auf offene Wartungsaufträge, aktive Ausleihen und eine gültige Flaschenprüfung geprüft.</p>
+    <form method="post" action="{{ path('equipment_manager_tank_release', {id: tank.id}) }}">
+      <input type="hidden" name="_token" value="{{ csrf_token('equipment_release_' ~ tank.id) }}">
+      <div class="form-group">
+        <label for="release_reason">Begründung für die Freigabe (10–2000 Zeichen)</label>
+        <textarea id="release_reason" name="reason" class="form-control" rows="3" minlength="10" maxlength="2000" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Flasche kontrolliert freigeben</button>
+    </form>
+  {% endif %}
+  <h2>Wartungsaufträge (letzte 20)</h2>
+  <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Nr.</th><th>Eröffnet</th><th>Status</th><th>Beschreibung</th><th>Abschluss</th></tr></thead><tbody>
+  {% for order in orders %}<tr><td>{{ order.id }}</td><td>{{ order.createdAt|date('d.m.Y H:i') }}</td><td>{{ order.status }}</td><td>{{ order.description }}</td><td>{{ order.closedAt ? order.closedAt|date('d.m.Y H:i') : '–' }}</td></tr>
+  {% else %}<tr><td colspan="5">Keine Wartungsaufträge.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <h2>Technische Statushistorie (letzte 100)</h2>
+  <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Zeitpunkt</th><th>Ereignis</th><th>Zustand</th><th>Verleih</th><th>Bemerkung</th></tr></thead><tbody>
+  {% for entry in history %}<tr><td>{{ entry.occurredAt|date('d.m.Y H:i') }}</td><td>{{ entry.eventType }}</td><td>{{ entry.conditionStatus }}</td><td>{{ entry.lendable ? 'Freigegeben' : 'Gesperrt' }}</td><td>{{ entry.notes ?: '–' }}</td></tr>
+  {% else %}<tr><td colspan="5">Keine Statuseinträge vorhanden.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="text-muted">Jede erfolgreiche Wiederfreigabe wird in der technischen Statushistorie dokumentiert.</p>
+</div></section>
+{% endblock %}

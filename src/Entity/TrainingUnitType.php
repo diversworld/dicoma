@@ -6,7 +6,11 @@ use App\Repository\TrainingUnitTypeRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TrainingUnitTypeRepository::class)]
-#[ORM\Table(name: 'training_unit_type',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_training_unit_type_club_code',columns: ['club_id', 'code'])])]
+#[ORM\Table(name: 'training_unit_type')]
+#[ORM\UniqueConstraint(
+    name: 'uniq_training_unit_type_club_code',
+    columns: ['club_id', 'code']
+)]
 class TrainingUnitType
 {
     #[ORM\Id]

@@ -1,0 +1,50 @@
+{% extends '@EasyAdmin/crud/detail.html.twig' %}
+
+{% block main %}
+    {% set team = entity.instance %}
+    <div class="container-fluid px-0" style="max-width: 1400px">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <h2 class="h4 mb-1">{{ team.name }}</h2>
+                <p class="text-muted mb-0">Sportart: {{ team.sport.name|default('—') }} · Verein: {{ team.sport.club|default('—') }}</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-secondary" href="{{ teamCenterLinks.edit }}">Gruppe bearbeiten</a>
+                <a class="btn btn-primary" href="{{ teamCenterLinks.membersNew }}">Mitglied hinzufügen</a>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-sm-4"><div class="content-panel p-3"><strong>{{ teamCenterMembers|length }}</strong><div>Zuordnungen</div></div></div>
+            <div class="col-sm-4"><div class="content-panel p-3"><strong>{{ team.active ? 'Aktiv' : 'Inaktiv' }}</strong><div>Gruppenstatus</div></div></div>
+            <div class="col-sm-4"><div class="content-panel p-3"><strong>{{ team.type.value|default('—') }}</strong><div>Gruppentyp</div></div></div>
+        </div>
+        <div class="content-panel p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h3 class="h5 mb-0">Mitglieder und Zuordnungen</h3>
+                <a class="btn btn-secondary btn-sm" href="{{ teamCenterLinks.membersIndex }}">Alle Zuordnungen verwalten</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Mitglied</th><th>Funktion</th><th>Seit</th><th>Bis</th><th>Aktionen</th></tr></thead>
+                    <tbody>
+                    {% for item in teamCenterMembers %}
+                        <tr>
+                            <td>
+                                {% if item.member and teamCenterMemberUrls[item.member.id] is defined %}
+                                    <a href="{{ teamCenterMemberUrls[item.member.id] }}">{{ item.member.fullName }}</a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>{{ item.role.value|default('—') }}</td>
+                            <td>{{ item.joinedAt ? item.joinedAt|date('d.m.Y') : '—' }}</td>
+                            <td>{{ item.leftAt ? item.leftAt|date('d.m.Y') : '—' }}</td>
+                            <td>{% if teamCenterEditUrls[item.id] is defined %}<a class="btn btn-secondary btn-sm" href="{{ teamCenterEditUrls[item.id] }}">Bearbeiten</a>{% endif %}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">Dieser Gruppe sind noch keine Mitglieder zugeordnet.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

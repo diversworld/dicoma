@@ -5,12 +5,14 @@ namespace App\Controller\Admin;
 use App\Entity\TankCheckArticle;
 use App\Entity\TankCheckDetail;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use EasyCorp\Bundle\EasyAdminBundle\Event\BeforeEntityPersistedEvent;
 use EasyCorp\Bundle\EasyAdminBundle\Event\BeforeEntityUpdatedEvent;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
+#[IsGranted('ROLE_ADMIN')]
 class TankCheckDetailCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string

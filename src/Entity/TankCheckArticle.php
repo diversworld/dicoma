@@ -25,6 +25,33 @@ class TankCheckArticle
     )]
     private ?string $priceNetto = null;
 
+	#[ORM\Column(length: 16, options: ['default' => 'optional'])]
+	private string $selectionMode = 'optional';
+
+	#[ORM\Column(length: 12, options: ['default' => 'any'])]
+	private string $volumeRule = 'any';
+
+	private string $priceInputBasis = 'net';
+	
+	public function getSelectionMode(): string { return $this->selectionMode; }
+	public function setSelectionMode(string $mode): static
+	{
+		if (!in_array($mode, ['required', 'default', 'optional'], true)) {
+			throw new \InvalidArgumentException('Ungültiger Auswahlmodus.');
+		}
+		$this->selectionMode = $mode;
+		return $this;
+	}
+	public function getVolumeRule(): string { return $this->volumeRule; }
+	public function setVolumeRule(string $rule): static
+	{
+		if (!in_array($rule, ['any', 'exact', 'up_to', 'from'], true)) {
+			throw new \InvalidArgumentException('Ungültige Größenregel.');
+		}
+		$this->volumeRule = $rule;
+		return $this;
+	}
+
     #[ORM\Column(
         type: Types::DECIMAL,
         precision: 10,
@@ -36,12 +63,9 @@ class TankCheckArticle
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
-    #[ORM\ManyToOne(
-        targetEntity: TankCheck::class,
-        inversedBy: 'articles'
-    )]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?TankCheck $tankCheck = null;
+	#[ORM\ManyToOne(targetEntity: TankCheck::class, inversedBy: 'articles')]
+	#[ORM\JoinColumn(name: 'tank_check_id', nullable: false)]
+	private ?TankCheck $tankCheck = null;
 
     #[ORM\Column(type: Types::BOOLEAN)]
     private bool $isDefault = false;
@@ -105,17 +129,17 @@ class TankCheckArticle
         return $this;
     }
 
-    public function getTankCheck(): ?TankCheck
-    {
-        return $this->tankCheck;
-    }
+	public function getTankCheck(): ?TankCheck
+	{
+		return $this->tankCheck;
+	}
 
-    public function setTankCheck(?TankCheck $tankCheck): static
-    {
-        $this->tankCheck = $tankCheck;
+	public function setTankCheck(?TankCheck $tankCheck): static
+	{
+		$this->tankCheck = $tankCheck;
 
-        return $this;
-    }
+		return $this;
+	}
 
     public function isDefault(): bool
     {
@@ -183,6 +207,26 @@ class TankCheckArticle
         );
     }
 
+	public function getPriceInputBasis(): string
+	{
+		return $this->priceInputBasis;
+	}
+
+	public function setPriceInputBasis(?string $basis): static
+	{
+		$basis = $basis ?? 'net';
+
+		if (!in_array($basis, ['net', 'gross'], true)) {
+			throw new \InvalidArgumentException(
+				'Ungültige Preisbasis. Erlaubt sind net und gross.'
+			);
+		}
+
+		$this->priceInputBasis = $basis;
+
+		return $this;
+	}
+	
     public function __toString(): string
     {
         return $this->title ?? 'n/a';

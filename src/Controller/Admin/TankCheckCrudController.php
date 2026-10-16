@@ -6,7 +6,9 @@ use App\Entity\TankCheck;
 use App\Form\TankCheckArticleType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ArrayField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -15,6 +17,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
+#[IsGranted('ROLE_ADMIN')]
 class TankCheckCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string
@@ -27,6 +30,7 @@ class TankCheckCrudController extends AbstractCrudController
         return [
             FormField::addFieldset('Termininformationen')
                 ->collapsible(),
+            BooleanField::new('isPublished', 'Für Mitglieder veröffentlicht'),
             IdField::new('id')
                 ->hideOnForm()
                 ->setColumns(3),
@@ -49,9 +53,10 @@ class TankCheckCrudController extends AbstractCrudController
             FormField::addFieldset('Flascheninformationen')
                 ->collapsible(),
             FormField::addRow(breakpointName: 'md' ),
-            AssociationField::new('tank', 'Flaschen')
+            AssociationField::new('tanks', 'Flaschen')
                 ->setColumns(8),
-
+			DateField::new('registrationDeadline', 'Anmeldeschluss')
+				->setRequired(false),
             // TankCheckArticle fields as a collection
             CollectionField::new('articles')
                 //->setEntryType(TankCheckArticleType::class)

@@ -1,0 +1,94 @@
+{% extends '@EasyAdmin/layout.html.twig' %}
+{% block content_title %}Neue Ausrüstungsreservierung{% endblock %}
+{% block main %}
+<div class="container-fluid" style="max-width:1500px">
+  <p class="text-muted">Mitglied und Zeitraum festlegen, anschließend konkrete Einzelgegenstände in den passenden Inventarlisten auswählen.</p>
+  {% for message in errors %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
+  <form method="post" id="equipment-basket-form">
+    <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_basket') }}">
+    <div class="card mb-4"><div class="card-body">
+      <h2 class="h5 mb-3">Reservierung</h2>
+      <div class="row g-3">
+        <div class="col-md-4"><label for="member" class="form-label">Mitglied *</label><select id="member" name="member_id" class="form-select" required><option value="">Bitte auswählen</option>{% for member in members %}<option value="{{ member.id }}" data-club="{{ member.club.id|default('') }}" {% if submitted.member_id|default('') == member.id ~ '' %}selected{% endif %}>{{ member }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label for="starts" class="form-label">Beginn *</label><input id="starts" type="datetime-local" name="starts_at" class="form-control" value="{{ submitted.starts_at|default('') }}" required></div>
+        <div class="col-md-4"><label for="ends" class="form-label">Ende *</label><input id="ends" type="datetime-local" name="ends_at" class="form-control" value="{{ submitted.ends_at|default('') }}" required></div>
+      </div>
+    </div></div>
+    <div class="card mb-4"><div class="card-body">
+      <h2 class="h5 mb-3">Verfügbare Ausrüstungsgegenstände</h2>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4"><label class="form-label" for="assetType">Kategorie auswählen</label><select id="assetType" class="form-select"><option value="equipment">Allgemeine Ausrüstung</option><option value="regulator">Atemregler</option><option value="tank">Tauchflaschen</option></select></div>
+        <div class="col-md-4" id="categoryWrap"><label class="form-label" for="categoryFilter">Ausrüstungsart</label><select id="categoryFilter" class="form-select"><option value="">Alle Arten</option>{% for category in categories %}<option value="{{ category.id }}" data-club="{{ category.club.id|default('') }}">{{ category.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label" for="assetSearch">Suchen</label><input id="assetSearch" type="search" class="form-control" placeholder="Inventarnummer, Hersteller, Modell ..."></div>
+      </div>
+      <p class="text-muted small">Die verbindliche Verfügbarkeit im gewählten Zeitraum wird beim Speichern erneut geprüft. Jeder Datensatz entspricht genau einem Gegenstand.</p>
+      <section class="asset-section" data-section="equipment"><h3 class="h5">Allgemeine Ausrüstung</h3>
+        {% set previousCategory = null %}{% set previousSubType = null %}
+        <div class="table-responsive"><table class="table table-striped table-hover align-middle"><thead><tr><th>Inventarnummer</th><th>Typ</th><th>Unterart</th><th>Hersteller</th><th>Modell</th><th>Farbe</th><th>Größe</th><th>Leihgebühr</th><th>Reservieren</th></tr></thead><tbody>
+        {% for item in items %}
+          {% set key = 'equipment:' ~ item.id %}
+          <tr class="asset-row" data-type="equipment" data-category="{{ item.category.id|default('') }}" data-club="{{ item.club.id|default('') }}" data-search="{{ (item.inventoryNumber ~ ' ' ~ item.name ~ ' ' ~ item.manufacturer ~ ' ' ~ item.model ~ ' ' ~ item.size ~ ' ' ~ item.subType)|lower|e('html_attr') }}">
+            <td>{{ item.inventoryNumber }}</td><td>{{ item.category.name|default('–') }}</td><td>{{ item.subType.name|default('–') }}</td><td>{{ item.manufacturer.name|default('–') }}</td><td>{{ item.displayModel|default(item.model|default('–')) }}</td><td>{{ item.color|default('–') }}</td><td>{{ item.size.name|default('–') }}</td><td>{{ item.rentalFee|number_format(2, ',', '.') }} €</td>
+            <td><label class="d-inline-flex gap-2 align-items-center"><input class="form-check-input asset-select" type="checkbox" name="asset_ids[]" value="{{ key }}" {% if key in submitted.asset_ids|default([]) %}checked{% endif %}><span class="visually-hidden">{{ item.inventoryNumber }} reservieren</span></label></td>
+          </tr>
+        {% endfor %}
+        </tbody></table></div>
+      </section>
+      <section class="asset-section" data-section="regulator" hidden><h3 class="h5">Atemregler</h3>
+        <div class="table-responsive"><table class="table table-striped table-hover align-middle"><thead><tr><th>Inventarnummer</th><th>Hersteller</th><th>SN 1. Stufe</th><th>Modell 1. Stufe</th><th>2. Stufe primär</th><th>2. Stufe sekundär</th><th>Leihgebühr</th><th>Reservieren</th></tr></thead><tbody>
+        {% for item in regulators %}{% set key = 'regulator:' ~ item.id %}
+          <tr class="asset-row" data-type="regulator" data-club="{{ item.club.id|default('') }}" data-search="{{ (item.inventoryNumber ~ ' ' ~ item.manufacturer ~ ' ' ~ item.firstStageSerial ~ ' ' ~ item.firstStageModel ~ ' ' ~ item.primarySecondStageModel ~ ' ' ~ item.secondarySecondStageModel)|lower|e('html_attr') }}"><td>{{ item.inventoryNumber }}</td><td>{{ item.manufacturer.name|default('–') }}</td><td>{{ item.firstStageSerial|default('–') }}</td><td>{{ item.firstStageModel.name|default('–') }}</td><td>{{ item.primarySecondStageModel.name|default('–') }}</td><td>{{ item.secondarySecondStageModel.name|default('–') }}</td><td>{{ item.rentalFee|number_format(2, ',', '.') }} €</td><td><input class="form-check-input asset-select" type="checkbox" name="asset_ids[]" value="{{ key }}" aria-label="{{ item.inventoryNumber }} reservieren" {% if key in submitted.asset_ids|default([]) %}checked{% endif %}></td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      </section>
+      <section class="asset-section" data-section="tank" hidden><h3 class="h5">Tauchflaschen</h3>
+        <div class="table-responsive"><table class="table table-striped table-hover align-middle"><thead><tr><th>Inventarnummer</th><th>Seriennummer</th><th>Größe</th><th>Nächste Prüfung</th><th>O₂-rein</th><th>Reservieren</th></tr></thead><tbody>
+        {% for item in tanks %}{% set key = 'tank:' ~ item.id %}
+          <tr class="asset-row" data-type="tank" data-club="{{ item.club.id|default('') }}" data-search="{{ (item.inventory ~ ' ' ~ item.serialnumber ~ ' ' ~ item.size)|lower|e('html_attr') }}"><td>{{ item.inventory }}</td><td>{{ item.serialnumber|default('–') }}</td><td>{{ item.size is not null ? item.size ~ ' L' : '–' }}</td><td>{{ item.nextCheckDate ? item.nextCheckDate|date('d.m.Y') : '–' }}</td><td>{{ item.oxigenClean ? 'Ja' : 'Nein' }}</td><td><input class="form-check-input asset-select" type="checkbox" name="asset_ids[]" value="{{ key }}" aria-label="{{ item.inventory }} reservieren" {% if key in submitted.asset_ids|default([]) %}checked{% endif %}></td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      </section>
+      <p id="noResults" class="text-muted" hidden>Keine passenden Gegenstände vorhanden.</p>
+      <div class="mt-3"><strong id="basketSummary" aria-live="polite">0 Gegenstände ausgewählt</strong><div id="selectedSummary" class="small text-muted"></div></div>
+    </div></div>
+    <div class="card mb-3"><div class="card-body"><label for="notes" class="form-label">Bemerkungen</label><textarea id="notes" name="notes" class="form-control" rows="3">{{ submitted.notes|default('') }}</textarea></div></div>
+    <button type="submit" class="btn btn-primary">Ausgewählte reservieren</button>
+  </form>
+</div>
+<script>
+(() => {
+  const member = document.getElementById('member'), type = document.getElementById('assetType');
+  const category = document.getElementById('categoryFilter'), search = document.getElementById('assetSearch');
+  const sections = [...document.querySelectorAll('.asset-section')];
+  const rows = [...document.querySelectorAll('.asset-row')];
+  const summary = document.getElementById('basketSummary'), selectedSummary = document.getElementById('selectedSummary');
+  function update() {
+    const club = member.selectedOptions[0]?.dataset.club || '';
+    document.getElementById('categoryWrap').hidden = type.value !== 'equipment';
+    for (const option of category.options) if (option.value) option.hidden = option.dataset.club !== club;
+    if (category.selectedOptions[0]?.hidden) category.value = '';
+    const needle = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    for (const row of rows) {
+      const allowed = !!club && row.dataset.club === club;
+      const show = allowed && row.dataset.type === type.value &&
+        (type.value !== 'equipment' || !category.value || row.dataset.category === category.value) &&
+        (!needle || row.dataset.search.includes(needle));
+      row.hidden = !show;
+      if (show) visible++;
+      const checkbox = row.querySelector('.asset-select');
+      checkbox.disabled = !allowed;
+      if (!allowed) checkbox.checked = false;
+    }
+    sections.forEach(section => section.hidden = section.dataset.section !== type.value);
+    document.getElementById('noResults').hidden = visible > 0;
+    const chosen = rows.filter(row => row.querySelector('.asset-select').checked);
+    summary.textContent = `${chosen.length} Gegenstand${chosen.length === 1 ? '' : 'e'} ausgewählt`;
+    selectedSummary.textContent = chosen.map(row => row.cells[0].textContent.trim()).join(', ');
+  }
+  [member,type,category,search].forEach(el => el.addEventListener(el === search ? 'input' : 'change', update));
+  rows.forEach(row => row.querySelector('.asset-select').addEventListener('change', update));
+  update();
+})();
+</script>
+{% endblock %}

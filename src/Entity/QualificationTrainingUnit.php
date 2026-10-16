@@ -7,7 +7,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: QualificationTrainingUnitRepository::class)]
-#[ORM\Table(name: 'qualification_training_unit',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_qualification_training_unit',columns: ['qualification_id','training_unit_type_id',]),])]
+#[ORM\Table(name: 'qualification_training_unit')]
+#[ORM\UniqueConstraint(name: 'uniq_qualification_training_unit',columns: ['qualification_id', 'training_unit_type_id'])]
 class QualificationTrainingUnit
 {
     #[ORM\Id]

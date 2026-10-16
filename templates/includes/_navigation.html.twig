@@ -29,6 +29,7 @@
                         <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Mein Bereich</a>
                         <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
                             <li><a class="dropdown-item" href="{{ path('app_profile') }}">Meine Daten</a></li>
+							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a></li>
                             <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kurse buchen</a></li>
@@ -43,6 +44,9 @@
                             <li><a class="dropdown-item" href="{{ path('instructor_my_tasks') }}">Meine Ausbildungsaufgaben</a></li>
                         </ul>
                     </li>
+                {% endif %}
+                {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_tanks') }}">Gerätewart</a></li>
                 {% endif %}
                 {% if is_granted('ROLE_ADMIN') %}
                     <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>

@@ -1,0 +1,30 @@
+{% set reservation = field.value %}
+{% if reservation is not null and reservation.id is not null %}
+    <div class="d-flex flex-wrap gap-3">
+        {% if reservation.status == 'reserved' %}
+            <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'issue'}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_issue_' ~ reservation.id) }}">
+                <button type="submit" class="btn btn-primary">Ausrüstung ausgeben</button>
+            </form>
+            <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'cancel'}) }}" onsubmit="return confirm('Reservierung wirklich stornieren?');">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_cancel_' ~ reservation.id) }}">
+                <button type="submit" class="btn btn-outline-danger">Reservierung stornieren</button>
+            </form>
+        {% elseif reservation.status == 'issued' %}
+            <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'return'}) }}" class="d-flex flex-column gap-2">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_return_' ~ reservation.id) }}">
+                <label for="loan-condition-{{ reservation.id }}">Zustand bei Rückgabe</label>
+                <select id="loan-condition-{{ reservation.id }}" name="condition" required class="form-select">
+                    <option value="ready">Einsatzbereit</option>
+                    <option value="maintenance">Wartung erforderlich</option>
+                    <option value="damaged">Beschädigt</option>
+                </select>
+                <label for="loan-notes-{{ reservation.id }}">Rückgabenotiz</label>
+                <textarea id="loan-notes-{{ reservation.id }}" name="notes" class="form-control" rows="2"></textarea>
+                <button type="submit" class="btn btn-primary">Rücknahme bestätigen</button>
+            </form>
+        {% else %}
+            <span class="text-muted">Keine weiteren Aktionen für diesen Vorgang.</span>
+        {% endif %}
+    </div>
+{% endif %}

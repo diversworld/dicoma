@@ -328,29 +328,6 @@ class Courses
 		return $this;
 	}
 	
-	public function configureActions(Actions $actions): Actions
-	{
-		$resetUrl = $this->adminUrlGenerator
-			->setController(self::class)
-			->setAction(Crud::PAGE_INDEX)
-			->unsetAll()
-			->generateUrl();
-
-		$reset = Action::new(
-			'resetValidityFilter',
-			'Filter zurücksetzen',
-			'fa fa-filter-circle-xmark'
-		)
-			->linkToUrl($resetUrl)
-			->addCssClass('btn btn-secondary');
-
-		return $actions
-			->add(
-				Crud::PAGE_INDEX,
-				$reset
-			);
-	}
-
 	public function validateQualification(
 		ExecutionContextInterface $context
 	): void {

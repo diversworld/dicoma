@@ -1,0 +1,19 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Teilnehmerabschluss bestätigen{% endblock %}
+{% block body %}
+<main class="panel">
+    <h1>Teilnehmerabschluss bestätigen</h1>
+    <p>Kurs: {{ course }}</p>
+    <p>Teilnehmer: {{ participant.member ? participant.member.fullName : 'Ohne Mitglied' }}</p>
+    <p>Diese Aktion prüft Pflichtnachweise und kann eine Qualifikation vergeben.</p>
+    {% if allowed %}
+        <form method="post" action="{{ path('admin_participant_pass_confirm', {id: participant.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token(tokenId) }}">
+            <button class="btn" type="submit">Verbindlich als bestanden abschließen</button>
+        </form>
+    {% else %}
+        <p>Der Abschluss ist für diesen Teilnehmer nicht möglich.</p>
+    {% endif %}
+    <p><a href="{{ backUrl }}">Abbrechen und zurück</a></p>
+</main>
+{% endblock %}

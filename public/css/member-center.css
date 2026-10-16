@@ -1,0 +1,286 @@
+/*
+ * DiCoMa – Mitgliederzentrale
+ * Light- und Dark-Mode-Unterstützung
+ */
+
+/* Standard: Light Mode */
+.member-center {
+    --mc-bg: #ffffff;
+    --mc-card: #f8fafc;
+    --mc-text: #17253b;
+    --mc-muted: #64748b;
+    --mc-border: #dce3ec;
+    --mc-head: #eaf0f7;
+    --mc-link: #1556ae;
+    --mc-primary: #175cd3;
+    --mc-primary-hover: #1249aa;
+
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.25rem;
+
+    background: var(--mc-bg);
+    color: var(--mc-text);
+}
+
+/*
+ * Dark Mode:
+ * EasyAdmin verwendet je nach Version
+ * data-bs-theme oder data-theme.
+ */
+[data-bs-theme="dark"] .member-center,
+[data-theme="dark"] .member-center,
+body.ea-dark-scheme .member-center {
+    --mc-bg: #151719;
+    --mc-card: #202328;
+    --mc-text: #f1f5f9;
+    --mc-muted: #a8b3c2;
+    --mc-border: #39414b;
+    --mc-head: #292f37;
+    --mc-link: #8bbcff;
+    --mc-primary: #3568e8;
+    --mc-primary-hover: #2455ca;
+}
+
+/* Texte */
+.member-center,
+.member-center p,
+.member-center span,
+.member-center div,
+.member-center dt,
+.member-center dd,
+.member-center strong,
+.member-center label,
+.member-center small,
+.member-center h1,
+.member-center h2,
+.member-center h3,
+.member-center h4,
+.member-center h5,
+.member-center h6 {
+    color: var(--mc-text);
+}
+
+.member-center .text-muted,
+.member-center .text-secondary {
+    color: var(--mc-muted) !important;
+}
+
+/* Karten */
+.member-center .card {
+    background: var(--mc-card) !important;
+    border: 1px solid var(--mc-border) !important;
+    border-radius: 10px;
+    color: var(--mc-text);
+}
+
+.member-center .card-body {
+    background: transparent !important;
+    color: var(--mc-text);
+}
+
+/* Kennzahlen */
+.member-center .fs-4 {
+    color: var(--mc-text) !important;
+    font-weight: 700;
+}
+
+/* Tabellen */
+.member-center .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--mc-text);
+    --bs-table-border-color: var(--mc-border);
+
+    background: transparent;
+    color: var(--mc-text) !important;
+    width: 100%;
+}
+
+.member-center .table tbody,
+.member-center .table tbody tr,
+.member-center .table tbody td {
+    background: transparent !important;
+    color: var(--mc-text) !important;
+    border-color: var(--mc-border);
+}
+
+.member-center .table thead,
+.member-center .table thead tr,
+.member-center .table thead th {
+    background: var(--mc-head) !important;
+    color: var(--mc-text) !important;
+    border-color: var(--mc-border);
+}
+
+/* Links */
+.member-center a:not(.btn) {
+    color: var(--mc-link) !important;
+}
+
+.member-center a:not(.btn):hover {
+    text-decoration: underline;
+}
+
+/* Primäre Schaltflächen */
+.member-center a.btn.btn-primary,
+.member-center a.btn.btn-primary:link,
+.member-center a.btn.btn-primary:visited {
+    background: var(--mc-primary) !important;
+    border: 1px solid var(--mc-primary) !important;
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+.member-center a.btn.btn-primary:hover,
+.member-center a.btn.btn-primary:focus {
+    background: var(--mc-primary-hover) !important;
+    border-color: var(--mc-primary-hover) !important;
+    color: #ffffff !important;
+}
+
+/* Sekundäre Schaltflächen */
+.member-center a.btn.btn-outline-primary,
+.member-center a.btn.btn-outline-secondary {
+    background: transparent !important;
+    border: 1px solid var(--mc-link) !important;
+    color: var(--mc-link) !important;
+    text-decoration: none;
+}
+
+.member-center a.btn.btn-outline-primary:hover,
+.member-center a.btn.btn-outline-secondary:hover {
+    background: var(--mc-link) !important;
+    color: var(--mc-bg) !important;
+}
+
+/* Schaltflächengrößen */
+.member-center .btn-sm {
+    min-height: 32px;
+    padding: 0.4rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    border-radius: 6px;
+}
+
+/* Tastaturfokus */
+.member-center a.btn:focus-visible {
+    outline: 2px solid var(--mc-link);
+    outline-offset: 3px;
+}
+
+/* Tabellen responsiv */
+.member-center .table-responsive {
+    overflow-x: auto;
+}
+/* Sekundäre Schaltflächen */
+.member-center .btn-outline-primary {
+    color: #1556ae !important;
+    border-color: #1556ae !important;
+}
+
+.member-center .btn-outline-primary:hover {
+    color: #ffffff !important;
+    background-color: #1556ae !important;
+}
+
+/* Abstände zwischen Verwaltungsaktionen */
+.member-center .card-header .d-flex,
+.member-center .card-body .d-flex {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+
+/* ==========================================
+   DiCoMa – Mitgliederzentrale
+   Korrektur der Aktionsschaltflächen
+   ========================================== */
+
+/* Primäre Aktionen */
+.member-center a.btn.btn-primary,
+.member-center a.btn.btn-primary:link,
+.member-center a.btn.btn-primary:visited {
+    background-color: #175cd3 !important;
+    border: 1px solid #175cd3 !important;
+    color: #ffffff !important;
+    padding: 0.4rem 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.member-center a.btn.btn-primary:hover,
+.member-center a.btn.btn-primary:focus {
+    background-color: #1249aa !important;
+    border-color: #1249aa !important;
+    color: #ffffff !important;
+}
+
+/* Umrandete Aktionen */
+.member-center a.btn.btn-outline-primary,
+.member-center a.btn.btn-outline-secondary {
+    background-color: transparent !important;
+    /*border: 1px solid #1556ae !important;*/
+    /*color: #1556ae !important;*/
+    padding: 0.4rem 0.75rem;
+    text-decoration: none;
+}
+
+.member-center a.btn.btn-outline-primary:hover,
+.member-center a.btn.btn-outline-secondary:hover {
+    background-color: #1556ae !important;
+    color: #ffffff !important;
+}
+
+/* Einheitliche Abstände und Größen */
+.member-center .btn-sm {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    border-radius: 6px;
+}
+
+/* Sichtbarer Tastaturfokus */
+.member-center a.btn:focus-visible {
+    outline: 2px solid #175cd3;
+    outline-offset: 3px;
+}
+
+
+/*
+ * DiCoMa – Dark-Mode-Feinschliff
+ */
+
+/* Umrandete Schaltflächen */
+[data-bs-theme="dark"] .member-center a.btn.btn-outline-primary,
+[data-bs-theme="dark"] .member-center a.btn.btn-outline-secondary,
+[data-theme="dark"] .member-center a.btn.btn-outline-primary,
+[data-theme="dark"] .member-center a.btn.btn-outline-secondary,
+body.ea-dark-scheme .member-center a.btn.btn-outline-primary,
+body.ea-dark-scheme .member-center a.btn.btn-outline-secondary {
+    color: #b9d6ff !important;
+    border-color: #719bdb !important;
+    background-color: transparent !important;
+}
+
+/* Hover */
+[data-bs-theme="dark"] .member-center a.btn.btn-outline-primary:hover,
+[data-bs-theme="dark"] .member-center a.btn.btn-outline-secondary:hover,
+[data-theme="dark"] .member-center a.btn.btn-outline-primary:hover,
+[data-theme="dark"] .member-center a.btn.btn-outline-secondary:hover,
+body.ea-dark-scheme .member-center a.btn.btn-outline-primary:hover,
+body.ea-dark-scheme .member-center a.btn.btn-outline-secondary:hover {
+    color: #ffffff !important;
+    background-color: #2455ca !important;
+    border-color: #2455ca !important;
+}
+
+/* Icons innerhalb der Schaltflächen */
+.member-center a.btn i {
+    color: inherit !important;
+}

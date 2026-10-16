@@ -39,11 +39,39 @@
 <tbody>
 {% for row in rows %}
 <tr><td>{{ row.participant.member.fullName|default('Teilnehmer') }}<div class="small muted">{{ row.participant.statusLabel }}</div></td>
-{% for cell in row.cells %}<td><span class="{{ cell.missing == 0 ? 'ok' : 'warn' }}">{{ cell.credited }}/{{ cell.target }}</span>{% if cell.newUrl %}<div class="small"><a href="{{ cell.newUrl }}">Nachweis erfassen</a></div>{% endif %}</td>{% endfor %}
-<td><strong>{{ row.progress.percent }} %</strong><div class="bar"><div class="fill" style="width:{{ row.progress.percent }}%"></div></div><div class="small {{ row.progress.complete ? 'ok' : 'warn' }}">{{ row.progress.complete ? 'Pflichtnachweise vollständig' : 'Noch nicht vollständig' }}</div></td>
+{% for cell in row.cells %}<td><span class="{{ cell.missing == 0 ? 'ok' : 'warn' }}">{{ cell.credited }}/{{ cell.target }}</span>{% if cell.passed is defined and cell.passed > cell.credited %}<div class="small muted">{{ cell.passed }} tatsächlich bestanden</div>{% endif %}{% if cell.newUrl %}<div class="small"><a href="{{ cell.newUrl }}">Nachweis erfassen</a></div>{% endif %}</td>{% endfor %}
+<td><strong>Pflicht: {{ row.progress.percent }} %</strong>{% if row.progress.optionalTarget > 0 %}<div class="small muted">Optional: {{ row.progress.optionalCredited }}/{{ row.progress.optionalTarget }} ({{ row.progress.optionalPercent }} %)</div>{% endif %}<div class="bar"><div class="fill" style="width:{{ row.progress.percent }}%"></div></div><div class="small {{ row.progress.complete ? 'ok' : 'warn' }}">{{ row.progress.complete ? 'Pflichtnachweise vollständig' : 'Noch nicht vollständig' }}</div></td>
 <td><a href="{{ row.detailUrl }}">Details</a></td></tr>
 {% else %}<tr><td colspan="{{ requirements|length + 3 }}">Keine Kursteilnehmer vorhanden.</td></tr>{% endfor %}
 </tbody></table></div>
+</section>
+<section class="panel">
+<h2>Offene Pflichtnachweise</h2>
+<p class="muted small">Nur fehlende Pflichtanforderungen. Die Links öffnen die Sammelbewertung eines passenden Kurstermins; ein Nachweis wird dadurch nicht automatisch erstellt.</p>
+{% set hasMissing = false %}
+{% for row in rows %}
+    {% if row.missingRequired is not empty %}
+        {% set hasMissing = true %}
+        <details class="group" {% if loop.first %}open{% endif %}>
+            <summary>{{ row.participant.member.fullName|default('Teilnehmer') }} – {{ row.missingRequired|length }} offene Pflichtart(en)</summary>
+            <div class="table-wrap"><table>
+                <thead><tr><th>Ausbildungseinheit</th><th>Fehlend</th><th>Passende Kurstermine</th></tr></thead>
+                <tbody>
+                {% for missing in row.missingRequired %}
+                    <tr><td>{{ missing.name }}</td><td><span class="warn">{{ missing.missing }}</span></td><td>
+                        {% for schedule in missing.schedules %}
+                            <a class="btn" href="{{ schedule.url }}">{{ schedule.title }}{% if schedule.date %} · {{ schedule.date }}{% endif %} – Bewerten</a>
+                        {% else %}
+                            <span class="muted">Kein Kurstermin vorhanden – bitte zuerst einen Termin planen.</span>
+                        {% endfor %}
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table></div>
+        </details>
+    {% endif %}
+{% endfor %}
+{% if not hasMissing %}<p class="ok">Keine offenen Pflichtnachweise bei den angezeigten Teilnehmern.</p>{% endif %}
 </section>
 <p class="muted small">Die Übersicht verändert keine Kurs- oder Qualifikationsdaten. Die Abschlussprüfung erfolgt weiterhin im CourseCompletionService.</p>
 {% endblock %}

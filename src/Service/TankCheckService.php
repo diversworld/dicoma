@@ -1,5 +1,7 @@
 <?php
-// src/Service/TankCheckService.php
+
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Entity\Tank;
@@ -7,34 +9,39 @@ use App\Entity\TankCheck;
 use App\Entity\TankCheckDetail;
 use Doctrine\ORM\EntityManagerInterface;
 
-class TankCheckService
+final class TankCheckService
 {
-    private $entityManager;
-
-    public function __construct(EntityManagerInterface $entityManager)
-    {
-        $this->entityManager = $entityManager;
-    }
+    public function __construct(private readonly EntityManagerInterface $entityManager) {}
 
     public function bookTankInspection(Tank $tank, TankCheck $tankCheck): void
     {
-        // Erstellen des TankCheckDetail Objektes
-        $tankCheckDetail = new TankCheckDetail();
-        $tankCheckDetail->setTank($tank);
-        $tankCheckDetail->setTankCheck($tankCheck);
-
-        // Berechnen und setzen des Betrags (Gesamtpreis)
-        $totalPrice = 0;
-
-        foreach ($tankCheck->getArticles() as $article) {
-            $tankCheckDetail->setArticle($article);
-            $totalPrice += $article->getPriceNetto();
+        if ($tank->getId() === null || $tankCheck->getId() === null) {
+            throw new \DomainException('Flasche und Prüfung müssen bereits gespeichert sein.');
         }
 
-        $tankCheckDetail->setAmount($totalPrice);
+        $articles = $tankCheck->getArticles();
+        if ($articles->isEmpty()) {
+            throw new \DomainException('Die Prüfung enthält keine Preispositionen.');
+        }
 
-        // Speichern des TankCheckDetail Objekts
-        $this->entityManager->persist($tankCheckDetail);
-        $this->entityManager->flush();
+        $this->entityManager->wrapInTransaction(function () use ($tank, $tankCheck, $articles): void {
+            foreach ($articles as $article) {
+                if ($article->getTankCheck() !== $tankCheck) {
+                    throw new \DomainException('Preisposition gehört zu einer anderen Prüfung.');
+                }
+                $price = $article->getPriceNetto();
+                if ($price === null || !preg_match('/^\d{1,8}(?:\.\d{1,2})?$/D', $price)) {
+                    throw new \DomainException('Ungültiger Netto-Preis der Prüfposition.');
+                }
+
+                $detail = (new TankCheckDetail())
+                    ->setTank($tank)
+                    ->setTankCheck($tankCheck)
+                    ->setArticle($article)
+                    ->setAmount($price);
+                $this->entityManager->persist($detail);
+            }
+            $this->entityManager->flush();
+        });
     }
 }

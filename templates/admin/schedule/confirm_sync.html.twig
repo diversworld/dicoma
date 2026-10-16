@@ -1,0 +1,52 @@
+{% extends 'admin/standalone_base.html.twig' %}
+
+{% block title %}Teilnehmer übernehmen – {{ schedule.title }}{% endblock %}
+
+{% block body %}
+<main class="container py-4">
+    <h1>Teilnehmer übernehmen</h1>
+    <p class="muted"><strong>{{ schedule.title }}</strong> · {{ course }}</p>
+
+    <section class="panel">
+        <h2>Prüfung vor der Übernahme</h2>
+        <div class="table-wrap">
+            <table>
+                <tbody>
+                    <tr><th>Kursteilnehmer insgesamt</th><td>{{ preview.total }}</td></tr>
+                    <tr><th>Für diesen Termin berechtigt</th><td>{{ preview.eligible }}</td></tr>
+                    <tr><th>Bereits gebucht</th><td>{{ preview.existing }}</td></tr>
+                    <tr><th>Fehlende Buchungen</th><td><strong>{{ preview.missing }}</strong></td></tr>
+                    <tr><th>Ausgeschlossen (storniert/ohne Mitglied)</th><td>{{ preview.excluded }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="small muted">Bestehende Buchungen, Anwesenheiten und Bewertungen bleiben unverändert. Neue Buchungen erhalten den Anwesenheitsstatus „Geplant“.</p>
+    </section>
+
+    {% if missingParticipants is not empty %}
+        <section class="panel">
+            <details>
+                <summary>Fehlende Teilnehmer anzeigen ({{ missingParticipants|length }})</summary>
+                <ul>
+                    {% for participantName in missingParticipants %}
+                        <li>{{ participantName }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+        </section>
+    {% endif %}
+
+    <section class="panel">
+        {% if preview.missing > 0 %}
+            <form method="post" action="{{ path('admin_schedule_sync_participants', {id: schedule.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('sync_schedule_' ~ schedule.id) }}">
+                <button type="submit" class="btn btn-primary">{{ preview.missing }} fehlende Buchung(en) anlegen</button>
+                <a class="btn" href="{{ path('admin_schedule_attendance', {id: schedule.id}) }}">Abbrechen</a>
+            </form>
+        {% else %}
+            <p class="ok">Alle berechtigten Teilnehmer besitzen bereits eine Terminbuchung.</p>
+            <a class="btn" href="{{ path('admin_schedule_attendance', {id: schedule.id}) }}">Zur Anwesenheitserfassung</a>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

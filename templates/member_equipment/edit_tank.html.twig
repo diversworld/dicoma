@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+{% block title %}Flasche bearbeiten | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container">
+<h1>Private Flasche bearbeiten</h1>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">{{ message }}</div>{% endfor %}{% endfor %}
+<form method="post" action="{{ path('member_equipment_tank_update', {id: tank.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('member_tank_edit_' ~ tank.id) }}">
+<div class="form-group"><label for="tank_label">Bezeichnung</label><input class="form-control" id="tank_label" name="label" maxlength="100" minlength="2" required value="{{ tank.label }}"></div>
+<div class="form-group"><label for="tank_serial">Seriennummer</label><input class="form-control" id="tank_serial" name="serial" maxlength="120" minlength="2" required value="{{ tank.serialNumber }}"></div>
+<div class="form-group"><label for="tank_manufacturer">Hersteller (optional)</label><input class="form-control" id="tank_manufacturer" name="manufacturer" maxlength="120" value="{{ tank.manufacturer ?: '' }}"></div>
+<div class="form-group"><label for="tank_volume">Flaschengröße</label><select class="form-control" id="tank_volume" name="volume" required>
+<option value="">Bitte Größe auswählen</option>
+{% for liters in [3, 5, 7, 8, 10, 12, 15, 18, 20] %}<option value="{{ liters }}" {% if tank.volume == (liters ~ '') %}selected{% endif %}>{{ liters }} Liter</option>{% endfor %}
+<option value="40 cuft" {% if tank.volume == '40 cuft' %}selected{% endif %}>40 cuft</option>
+<option value="80 cuft" {% if tank.volume == '80 cuft' %}selected{% endif %}>80 cuft</option>
+</select></div>
+<div class="form-group"><label for="water_capacity_liters">Eingeprägter Wasserinhalt (Liter)</label><input class="form-control" id="water_capacity_liters" name="water_capacity_liters" type="text" inputmode="decimal" required placeholder="z. B. 11,10" value="{{ tank.waterCapacityLiters is not null ? tank.waterCapacityLiters|replace({'.': ','}) : '' }}"><small>Bitte den auf der Flasche eingeprägten Wasserinhalt ablesen. Keine pauschale Umrechnung aus cuft.</small></div>
+<button type="submit" class="btn btn-primary">Änderungen speichern</button>
+<a class="btn btn-outline-secondary" href="{{ path('member_equipment_index') }}">Abbrechen</a>
+</form>
+</div></section>
+{% endblock %}

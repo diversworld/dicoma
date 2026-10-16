@@ -1,0 +1,45 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Flasche {{ tank.inventory }} – Wartungsaufträge{% endblock %}
+{% block main %}
+  <p><a class="btn btn-secondary" href="{{ statusUrl }}">Zustand / Historie</a></p>
+  <p><strong>Technischer Zustand:</strong> {{ tank.conditionStatus }} · <strong>Verleihfreigabe:</strong> {{ tank.lendable ? 'Ja' : 'Nein' }}</p>
+  {% set openOrders = orders|filter(order => order.status == 'open') %}
+  {% if openOrders|length == 0 %}
+    <h2 class="h5 mt-4">Wartungsauftrag eröffnen</h2>
+    <form method="post" action="{{ maintenanceUrl }}">
+      <input type="hidden" name="_token" value="{{ csrf_token('tank_maintenance_' ~ tank.id) }}">
+      <input type="hidden" name="operation" value="open">
+      <div class="mb-3"><label class="form-label" for="description">Beschreibung (mindestens 10 Zeichen)</label>
+        <textarea class="form-control" id="description" name="description" minlength="10" maxlength="2000" required></textarea></div>
+      <button class="btn btn-warning" type="submit">Auftrag eröffnen und Flasche sperren</button>
+    </form>
+  {% else %}
+    <div class="alert alert-warning">Es besteht ein offener Wartungsauftrag. Eine erneute Eröffnung ist nicht möglich.</div>
+  {% endif %}
+  <h2 class="h5 mt-4">Wartungshistorie (letzte 100 Aufträge)</h2>
+  <div class="table-responsive"><table class="table table-striped">
+    <thead><tr><th>Nr.</th><th>Eröffnet</th><th>Status</th><th>Beschreibung</th><th>Abgeschlossen</th><th>Ergebnis / Bearbeiter</th><th>Aktion</th></tr></thead>
+    <tbody>
+    {% for order in orders %}
+      <tr>
+        <td>{{ order.id }}</td><td>{{ order.createdAt|date('d.m.Y H:i') }}</td>
+        <td>{{ order.status == 'open' ? 'Offen' : 'Abgeschlossen' }}</td>
+        <td>{{ order.description }}</td>
+        <td>{{ order.closedAt ? order.closedAt|date('d.m.Y H:i') : '—' }}</td>
+        <td>{{ order.resolution ?: '—' }}{% if order.closedBy %} ({{ order.closedBy }}){% endif %}</td>
+        <td>{% if order.status == 'open' %}
+          <form method="post" action="{{ maintenanceUrl }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('tank_maintenance_' ~ tank.id) }}">
+            <input type="hidden" name="operation" value="close">
+            <input type="hidden" name="order_id" value="{{ order.id }}">
+            <label class="form-label" for="resolution_{{ order.id }}">Abschlussbericht</label>
+            <textarea class="form-control mb-2" id="resolution_{{ order.id }}" name="resolution" minlength="10" maxlength="2000" required></textarea>
+            <button class="btn btn-primary" type="submit">Abschließen</button>
+          </form>
+        {% else %}—{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="7">Noch keine Wartungsaufträge vorhanden.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <p class="text-muted">Ein abgeschlossener Auftrag gibt die Flasche nicht automatisch für den Verleih frei. Die Freigabe erfolgt über Zustand / Historie.</p>
+{% endblock %}

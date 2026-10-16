@@ -1,0 +1,39 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}{{ mode == 'complete' ? 'Kurs abschließen' : 'Kurs wieder öffnen' }} – {{ course }}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>{{ mode == 'complete' ? 'Kurs abschließen' : 'Kurs wieder öffnen' }}</h1>
+    <p>Kurs: <strong>{{ course }}</strong></p>
+    {% if mode == 'complete' %}
+        <section class="panel">
+            <h2>Abschluss-Checkliste</h2>
+            <ul>
+                <li>Ausbildungsanforderungen: {{ hasRequirements ? 'Hinterlegt' : 'Nicht hinterlegt' }}</li>
+                <li>Kursteilnehmer: {{ participantCount }}</li>
+                <li>Abschließender Teilnehmerstatus: {{ statusesFinal ? 'Alle vorhanden' : 'Noch offen' }}</li>
+                <li>Teilnehmer mit offenen Pflichtnachweisen: {{ missingEvidence }}</li>
+            </ul>
+            <p class="muted small">Die Pflichtnachweise sind eine zusätzliche Orientierung. Die bestehende verbindliche Abschlussregel prüft die abschließenden Teilnehmerstatus. Fehlende Pflichtnachweise werden hier nicht automatisch als zusätzliche Sperre gewertet.</p>
+        </section>
+        {% if not canSubmit %}<p class="warn">Der Kurs kann derzeit nicht abgeschlossen werden.</p>{% endif %}
+        <p><a class="btn" href="{{ path('admin_course_completion_wizard', {id: course.id}) }}">Teilnehmer-Abschlussstatus bearbeiten</a></p>
+    {% else %}
+        <section class="panel">
+            <p>Der Kurs wird in den Status „In Durchführung“ zurückgesetzt. Vorhandene Bewertungen und Nachweise bleiben erhalten.</p>
+            {% if not canSubmit %}<p class="warn">Dieser Kurs ist nicht abgeschlossen.</p>{% endif %}
+        </section>
+    {% endif %}
+    {% if canSubmit %}
+        <form action="{{ submitUrl }}" method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token(tokenId) }}">
+            {% if mode == 'reopen' %}
+                <label for="reopen-reason">Begründung für die Wiederöffnung (Pflichtfeld)</label>
+                <textarea id="reopen-reason" name="reason" minlength="3" maxlength="1000" required rows="3" style="display:block;width:100%;max-width:700px;margin:.5rem 0 1rem"></textarea>
+                <p class="muted small">Die Begründung wird in der Änderungshistorie gespeichert.</p>
+            {% endif %}
+            <button class="btn" type="submit">{{ mode == 'complete' ? 'Kurs jetzt abschließen' : 'Kurs jetzt wieder öffnen' }}</button>
+        </form>
+    {% endif %}
+    <p><a class="btn" href="{{ path('admin_course_history', {id: course.id}) }}">Änderungshistorie</a> <a class="btn" href="{{ backUrl }}">Abbrechen / Zur Kurszentrale</a></p>
+</main>
+{% endblock %}

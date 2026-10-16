@@ -1,0 +1,21 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Ausrüstung und Flaschenprüfungen{% endblock %}
+{% block main %}
+    <p class="text-muted">Prüffristen aus dem vorhandenen Flaschenbestand. Fehlende Prüftermine gelten nicht als Freigabe.</p>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a class="btn btn-primary" href="{{ tankUrl }}">Flaschen verwalten</a>
+        <a class="btn btn-secondary" href="{{ checkUrl }}">Prüftermine verwalten</a>
+    </div>
+    <div class="row g-3 mb-4">
+        {% for title, number in {'Flaschen': overview.counts.total, 'Überfällig': overview.counts.overdue, 'Fällig in 30 Tagen': overview.counts.dueSoon, 'Prüfdatum fehlt': overview.counts.unknown, 'Später fällig': overview.counts.valid} %}
+            <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><strong class="fs-3">{{ number }}</strong><div>{{ title }}</div></div></div></div>
+        {% endfor %}
+    </div>
+    <h2 class="h4">Prüfungen mit Handlungsbedarf</h2>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Inventar</th><th>Seriennummer</th><th>Nächste Prüfung</th><th>Status</th></tr></thead><tbody>
+    {% for item in overview.attention %}
+        <tr><td>{{ item.inventory|default('—') }}</td><td>{{ item.serial|default('—') }}</td><td>{{ item.date ? item.date|date('d.m.Y') : 'Nicht hinterlegt' }}</td><td>{{ item.status }}</td></tr>
+    {% else %}<tr><td colspan="4">Keine kurzfristig fälligen oder ungeklärten Prüfungen.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <p class="text-muted small">Die Anzeige ist eine Verwaltungshilfe, keine rechtliche oder technische Freigabe zur Verwendung einer Druckgasflasche. Prüffristen sind anhand der geltenden Anforderungen zu beurteilen.</p>
+{% endblock %}

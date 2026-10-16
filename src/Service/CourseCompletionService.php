@@ -17,6 +17,7 @@ class CourseCompletionService
         private readonly MemberQualificationRepository $memberQualificationRepository,
         private readonly TrainingProgressService $trainingProgressService,
         private readonly TranslatorInterface $translator,
+        private readonly CourseAuditLogger $audit,
     ) {
     }
 
@@ -29,10 +30,13 @@ class CourseCompletionService
                 $participant,
                 $completedAt
             ): MemberQualification {
-                return $this->completeParticipant(
-                    $participant,
-                    $completedAt
-                );
+                $before = $participant->getStatus()->value;
+                $result = $this->completeParticipant($participant, $completedAt);
+                $courseId = $participant->getCourse()?->getId();
+                if ($courseId !== null) {
+                    $this->audit->record($courseId, $participant->getId(), 'participant_passed', $before, CourseParticipantStatus::PASSED->value);
+                }
+                return $result;
             }
         );
     }

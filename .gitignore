@@ -15,3 +15,7 @@ vendor/*
 .idea/
 .ddev/
 ex.sh
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

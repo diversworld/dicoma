@@ -12,14 +12,15 @@
 <div class="card">
 <h2>{{ participant.member.fullName|default('Kursteilnehmer') }}</h2>
 <p class="muted">Kurs: {{ participant.course }}</p>
-<h3>{{ progress.passed }} / {{ progress.target }} verpflichtende Einheiten bestanden ({{ progress.percent }} %)</h3>
+<h3>Pflichtfortschritt: {{ progress.passed }} / {{ progress.target }} angerechnet ({{ progress.percent }} %)</h3>
 <div class="bar"><div class="fill" style="width:{{ progress.percent }}%"></div></div>
+<p class="muted">{% if progress.optionalTarget > 0 %}Optionale Ausbildung: {{ progress.optionalCredited }} / {{ progress.optionalTarget }} angerechnet ({{ progress.optionalPercent }} %); tatsächlich bestanden: {{ progress.optionalPassed }}.{% else %}Keine optionalen Einheiten hinterlegt.{% endif %}</p>
 <p class="{{ progress.complete ? 'ok' : 'warn' }}">{{ progress.complete ? 'Alle hinterlegten Pflichtanforderungen erfüllt.' : 'Noch nicht alle Pflichtanforderungen erfüllt.' }}</p>
 </div>
 <div class="card"><h2>Ausbildungsanforderungen</h2>
 {% if progress.requirements is empty %}<p>Für diesen Kurs sind noch keine Ausbildungsanforderungen hinterlegt.</p>{% else %}
-<table><thead><tr><th>Einheit</th><th>Pflicht</th><th>Bestanden</th><th>Erforderlich</th><th>Fehlend</th><th>Fortschritt</th></tr></thead><tbody>
-{% for item in progress.requirements %}<tr><td>{{ item.name }}</td><td>{{ item.required ? 'Ja' : 'Nein' }}</td><td>{{ item.passed }}</td><td>{{ item.target }}</td><td>{{ item.missing }}</td><td>{{ item.percent }} %</td></tr>{% endfor %}
+<table><thead><tr><th>Einheit</th><th>Pflicht</th><th>Tatsächlich bestanden</th><th>Angerechnet</th><th>Erforderlich</th><th>Fehlend</th><th>Fortschritt</th></tr></thead><tbody>
+{% for item in progress.requirements %}<tr><td>{{ item.name }}</td><td>{{ item.required ? 'Ja' : 'Nein' }}</td><td>{{ item.passed }}</td><td>{{ item.credited }}</td><td>{{ item.target }}</td><td>{{ item.missing }}</td><td>{{ item.percent }} %</td></tr>{% endfor %}
 </tbody></table>{% endif %}</div>
 <div class="card"><h2>Erfasste Ausbildungsnachweise</h2>
 {% for item in progress.requirements %}

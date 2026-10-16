@@ -52,6 +52,20 @@ class TeamMember
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+    /** Explicit consent for adding a missing sport; not persisted. */
+    private bool $assignMissingSport = false;
+
+    public function isAssignMissingSport(): bool
+    {
+        return $this->assignMissingSport;
+    }
+
+    public function setAssignMissingSport(bool $assignMissingSport): static
+    {
+        $this->assignMissingSport = $assignMissingSport;
+        return $this;
+    }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -166,12 +180,12 @@ class TeamMember
             }
         }
 
-        if (!$hasSport) {
+        if (!$hasSport && !$this->assignMissingSport) {
             $context
                 ->buildViolation(
                     'team_member.missing_sport'
                 )
-                ->setParameter('%sport%', $sport->getName())
+                ->setParameter('{{ sport }}',$sport?->getName() ?? 'Unbekannte Sportart')
                 ->atPath('member')
                 ->addViolation();
         }

@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% block title %}Flaschenprüfung dokumentieren – DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container">
+  <p><a href="{{ path('equipment_manager_tank_detail', {id: tank.id}) }}">← Zur Flaschendetailseite</a></p>
+  <h1>Flaschenprüfung dokumentieren: {{ tank.inventory }}</h1>
+  <p>Aktuelle nächste Prüfung: {{ tank.nextCheckDate ? tank.nextCheckDate|date('d.m.Y') : 'Nicht hinterlegt' }}</p>
+  {% for type, messages in app.flashes %}{% for message in messages %}
+    <div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message }}</div>
+  {% endfor %}{% endfor %}
+  <p class="alert alert-info">Nur eine tatsächlich durchgeführte und nachweisbare Prüfung dokumentieren. Die Erfassung ersetzt keine gesetzlich vorgeschriebene Prüfung und gibt die Flasche nicht automatisch frei.</p>
+  <form method="post" novalidate onsubmit="if (window.tinymce) { tinymce.triggerSave(); } action="{{ path('equipment_manager_tank_inspection_submit', {id: tank.id}) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('equipment_inspection_' ~ tank.id) }}">
+    <div class="form-group"><label for="performed_at">Prüfdatum</label><input class="form-control" id="performed_at" type="date" name="performed_at" required></div>
+    <div class="form-group"><label for="next_at">Nächster Prüftermin</label><input class="form-control" id="next_at" type="date" name="next_at" required></div>
+    <div class="form-group"><label for="reference">Prüfprotokoll / Prüfstelle / Referenz (10–1000 Zeichen)</label><textarea class="form-control" id="reference" name="reference" rows="4"d></textarea></div>
+    <button type="submit" class="btn btn-primary">Prüfdaten dokumentieren</button>
+  </form>
+</div></section>
+{% endblock %}

@@ -1,0 +1,338 @@
+
+<div class="member-center container-fluid px-0">
+
+    {# Kopfbereich #}
+    <div class="d-flex flex-wrap align-items-center
+                justify-content-between gap-2 mb-3">
+
+        <div>
+            <h2 class="h4 mb-1">
+                {{ member.fullName }}
+            </h2>
+
+            <div class="text-muted">
+                {{ member.club|default('Kein Verein') }}
+                · Mitgliedsnummer
+                {{ member.memberNumber|default('—') }}
+            </div>
+        </div>
+
+        {% if memberCenterLinks.memberEdit is defined %}
+            <a href="{{ memberCenterLinks.memberEdit }}"
+               class="btn btn-outline-primary btn-sm">
+                <i class="fa fa-pen me-1"></i>
+                Stammdaten bearbeiten
+            </a>
+        {% endif %}
+    </div>
+
+    {# Kennzahlen #}
+    <div class="row g-2 mb-4">
+        {% set statistics = {
+            'Qualifikationen': memberCenterQualifications|length,
+            'Kursanmeldungen': memberCenterCourses|length,
+            'Gruppen': memberCenterTeams|length,
+            'Dokumente': memberCenterDocuments|length
+        } %}
+
+        {% for label, count in statistics %}
+            <div class="col-6 col-lg-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <strong class="fs-4">{{ count }}</strong>
+                        <div>{{ label }}</div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Stammdaten #}
+    <section class="card mb-3">
+        <div class="card-body">
+            <h3 class="h5">Stammdaten</h3>
+
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Mitgliedsstatus</dt>
+                <dd class="col-sm-9">
+                    {{ member.membershipStatus.value|default('—') }}
+                </dd>
+
+                <dt class="col-sm-3">Sportarten</dt>
+                <dd class="col-sm-9">
+                    {{ member.sportNames|default('—') }}
+                </dd>
+
+                <dt class="col-sm-3">E-Mail</dt>
+                <dd class="col-sm-9">
+                    {{ member.email|default('—') }}
+                </dd>
+            </dl>
+        </div>
+    </section>
+
+    {# Qualifikationen #}
+    <section class="card mb-3">
+        <div class="card-body">
+
+            <div class="d-flex flex-wrap align-items-center
+                        justify-content-between gap-2 mb-3">
+
+                <h3 class="h5 mb-0">Qualifikationen</h3>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if memberCenterLinks.qualificationsIndex is defined %}
+                        <a href="{{ memberCenterLinks.qualificationsIndex }}"
+                           class="btn btn-outline-primary btn-sm">
+                            Alle anzeigen
+                        </a>
+                    {% endif %}
+
+                    {% if memberCenterLinks.qualificationsNew is defined %}
+                        <a href="{{ memberCenterLinks.qualificationsNew }}"
+                           class="btn btn-primary btn-sm">
+                            <i class="fa fa-plus me-1"></i>
+                            Qualifikation hinzufügen
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Qualifikation</th>
+                            <th>Erteilt</th>
+                            <th>Gültig bis</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for q in memberCenterQualifications %}
+                            <tr>
+                                <td>
+                                    {{ q.qualification|default('—') }}
+                                </td>
+                                <td>
+                                    {{ q.issuedAt
+                                        ? q.issuedAt|date('d.m.Y')
+                                        : '—' }}
+                                </td>
+                                <td>
+                                    {{ q.validUntil
+                                        ? q.validUntil|date('d.m.Y')
+                                        : 'Unbefristet / nicht angegeben' }}
+                                </td>
+                                <td>
+                                    {% if memberCenterQualificationEditUrls[q.id] is defined %}
+                                        <a href="{{ memberCenterQualificationEditUrls[q.id] }}"
+                                           class="btn btn-outline-secondary btn-sm">
+                                            Bearbeiten
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4">
+                                    Keine Qualifikationen vorhanden.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {# Kursanmeldungen #}
+    <section class="card mb-3">
+        <div class="card-body">
+
+            <div class="d-flex flex-wrap align-items-center
+                        justify-content-between gap-2 mb-3">
+
+                <h3 class="h5 mb-0">Kursanmeldungen</h3>
+
+                {% if memberCenterLinks.coursesIndex is defined %}
+                    <a href="{{ memberCenterLinks.coursesIndex }}"
+                       class="btn btn-outline-primary btn-sm">
+                        Alle verwalten
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Kurs</th>
+                            <th>Status</th>
+                            <th>Angemeldet</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for p in memberCenterCourses %}
+                            <tr>
+                                <td>{{ p.course|default('—') }}</td>
+                                <td>{{ p.statusLabel }}</td>
+                                <td>
+                                    {{ p.registeredAt
+                                        ? p.registeredAt|date('d.m.Y')
+                                        : '—' }}
+                                </td>
+                                <td>
+                                    {% if memberCenterCourseEditUrls[p.id] is defined %}
+                                        <a href="{{ memberCenterCourseEditUrls[p.id] }}"
+                                           class="btn btn-outline-secondary btn-sm">
+                                            Bearbeiten
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4">
+                                    Keine Kursanmeldungen vorhanden.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {# Gruppen und Mannschaften #}
+    <section class="card mb-3">
+        <div class="card-body">
+
+            <div class="d-flex flex-wrap align-items-center
+                        justify-content-between gap-2 mb-3">
+
+                <h3 class="h5 mb-0">
+                    Gruppen und Mannschaften
+                </h3>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if memberCenterLinks.teamsIndex is defined %}
+                        <a href="{{ memberCenterLinks.teamsIndex }}"
+                           class="btn btn-outline-primary btn-sm">
+                            Alle anzeigen
+                        </a>
+                    {% endif %}
+
+                    {% if memberCenterLinks.teamsNew is defined %}
+                        <a href="{{ memberCenterLinks.teamsNew }}"
+                           class="btn btn-primary btn-sm">
+                            <i class="fa fa-plus me-1"></i>
+                            Zuordnung hinzufügen
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Gruppe</th>
+                            <th>Rolle</th>
+                            <th>Seit</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for t in memberCenterTeams %}
+                            <tr>
+                                <td>
+                                    {{ t.team.name|default('—') }}
+                                </td>
+                                <td>
+                                    {{ t.role.value|default('—') }}
+                                </td>
+                                <td>
+                                    {{ t.joinedAt
+                                        ? t.joinedAt|date('d.m.Y')
+                                        : '—' }}
+                                </td>
+                                <td>
+                                    {% if memberCenterTeamEditUrls[t.id] is defined %}
+                                        <a href="{{ memberCenterTeamEditUrls[t.id] }}"
+                                           class="btn btn-outline-secondary btn-sm">
+                                            Bearbeiten
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4">
+                                    Keine Gruppenzuordnungen vorhanden.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {# Dokumente #}
+    <section class="card mb-3">
+        <div class="card-body">
+
+            <h3 class="h5 mb-3">Dokumente</h3>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Datei</th>
+                            <th>Hochgeladen</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for d in memberCenterDocuments %}
+                            <tr>
+                                <td>{{ d.originalName }}</td>
+                                <td>
+                                    {{ d.createdAt
+                                        ? d.createdAt|date('d.m.Y H:i')
+                                        : '—' }}
+                                </td>
+                                <td>
+                                    <a href="{{ path(
+                                        'admin_member_document_download',
+                                        {
+                                            id: member.id,
+                                            documentId: d.id
+                                        }
+                                    ) }}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fa fa-download me-1"></i>
+                                        Herunterladen
+                                    </a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="3">
+                                    Keine Dokumente vorhanden.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+</div>

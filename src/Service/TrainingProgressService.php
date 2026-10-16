@@ -28,6 +28,7 @@ final class TrainingProgressService
             }
             $id = $type->getId();
             $requirements[$id] = [
+                'id' => $id,
                 'name' => (string) $type,
                 'required' => $requirement->isRequired(),
                 'target' => $requirement->getRequiredSessions(),
@@ -73,10 +74,24 @@ final class TrainingProgressService
         $target = 0;
         $passed = 0;
         $complete = $requirements !== [];
+        $optionalTarget = 0;
+        $optionalPassed = 0;
+        $optionalCredited = 0;
+        $optionalComplete = 0;
+        $optionalCount = 0;
         foreach ($requirements as &$row) {
             $row['credited'] = min($row['passed'], $row['target']);
             $row['missing'] = max(0, $row['target'] - $row['credited']);
             $row['percent'] = $row['target'] > 0 ? (int) round($row['credited'] / $row['target'] * 100) : 100;
+            if (!$row['required']) {
+                ++$optionalCount;
+                $optionalTarget += $row['target'];
+                $optionalPassed += $row['passed'];
+                $optionalCredited += $row['credited'];
+                if ($row['missing'] === 0) {
+                    ++$optionalComplete;
+                }
+            }
             if ($row['required']) {
                 $target += $row['target'];
                 $passed += $row['credited'];
@@ -93,6 +108,12 @@ final class TrainingProgressService
             'passed' => $passed,
             'percent' => $target > 0 ? (int) round($passed / $target * 100) : 0,
             'complete' => $complete && $target > 0,
+            'optionalTarget' => $optionalTarget,
+            'optionalPassed' => $optionalPassed,
+            'optionalCredited' => $optionalCredited,
+            'optionalComplete' => $optionalComplete,
+            'optionalCount' => $optionalCount,
+            'optionalPercent' => $optionalTarget > 0 ? (int) round($optionalCredited / $optionalTarget * 100) : 0,
         ];
     }
 }

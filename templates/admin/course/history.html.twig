@@ -1,0 +1,51 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Änderungshistorie – {{ course }}{% endblock %}
+{% block body %}
+{% set actions = {
+    'course_reopened': 'Kurs wieder geöffnet',
+    'course_completed': 'Kurs abgeschlossen',
+    'participant_passed': 'Teilnehmer bestanden',
+    'participant_failed': 'Teilnehmer nicht bestanden',
+    'participant_cancelled': 'Teilnahme abgebrochen'
+} %}
+{% set statuses = {
+    'draft': 'Entwurf', 'open': 'Offen', 'running': 'Laufend',
+    'completed': 'Abgeschlossen', 'registered': 'Angemeldet',
+    'passed': 'Bestanden', 'failed': 'Nicht bestanden',
+    'cancelled': 'Abgebrochen'
+} %}
+<main class="panel">
+    <h1>Änderungshistorie: {{ course }}</h1>
+    <p class="muted">Die letzten 100 protokollierten Abschlussentscheidungen und Kursstatusänderungen.</p>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Teilnehmer</th><th>Vorher</th><th>Nachher</th><th>Ausgeführt von</th><th>Begründung</th></tr></thead>
+            <tbody>
+            {% for event in events %}
+                <tr>
+                    <td>{{ event.occurredAt|date('d.m.Y H:i:s') }}</td>
+                    <td>{{ actions[event.action]|default(event.action) }}</td>
+                    <td>
+                        {% if event.participantId is not null %}
+                            {{ participantNames[event.participantId]|default('Nicht mehr vorhanden') }}
+                            <span class="muted small">(#{{ event.participantId }})</span>
+                        {% else %}–{% endif %}
+                    </td>
+                    <td>{{ event.oldStatus is not null ? statuses[event.oldStatus]|default(event.oldStatus) : '–' }}</td>
+                    <td>{{ statuses[event.newStatus]|default(event.newStatus) }}</td>
+                    <td>
+                        {% if event.actorUserId is not null %}
+                            {{ actorNames[event.actorUserId]|default('Benutzer nicht mehr vorhanden') }}
+                            <span class="muted small">(#{{ event.actorUserId }})</span>
+                        {% else %}System / unbekannt{% endif %}
+                    </td>
+                    <td>{{ event.reason is not null and event.reason is not empty ? event.reason : '–' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">Noch keine Änderungen protokolliert.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</main>
+{% endblock %}

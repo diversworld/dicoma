@@ -1,80 +1,53 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}Mein Profil{% endblock %}
-
+{% block title %}Mein Mitgliederbereich – DiCoMa{% endblock %}
+{% block hero %}{% endblock %}
 {% block body %}
-<section class="about section">
-    <div class="container">
-        <div class="row">
-            <div class="col-12">
-                <div class="about_content">
-                    <h2 class="section_title">Mein Profil</h2>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-3">
-                <div class="about_content">
-                    Name
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="about_content">
-                    {%  if member %}
-                    <p>{{ member.firstname }} {{ member.lastname }}</p>
-                    <p>{{ member.birthday|date('d.m.Y') }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-3">
-                <div class="about_content">
-                    Adresse
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="about_content">
-                    {%  if member %}
-                    <p>{{ member.street }}</p>
-                    <p>{{ member.postal }} {{ member.city }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-3">
-                <div class="about_content">
-                    Kontaktdaten
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="about_content">
-                    {%  if member %}
-                    <p>{{ member.phone }}</p>
-                    <p>{{ member.mobile }}</p>
-                    <p>{{ member.email }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-3">
-                <div class="about_content">
-                    Benutzerdaten
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="about_content">
-                    <p>{{ user.user }}</p>
-                    <ul>
-                        {% for role in user.roles %}
-                        <li>{{ role }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<section class="section" style="padding:2rem 0">
+<div class="container">
+<h1>Mein Mitgliederbereich</h1>
+<p>Persönliche Informationen, Qualifikationen, Gruppen und Dokumente.</p>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+<div class="row mb-4">
+<div class="col-md-3"><div class="card p-3"><strong>{{ qualifications|length }}</strong><span>Qualifikationen</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ expiringCount }}</strong><span>Laufen in 30 Tagen ab</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ groups|length }}</strong><span>Gruppenzuordnungen</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ documents|length }}</strong><span>Dokumente</span></div></div>
+</div>
+<div class="card mb-4"><div class="card-body"><h2>Persönliche Daten</h2>
+<dl class="row"><dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{ member.fullName }}</dd>
+<dt class="col-sm-3">Mitgliedsnummer</dt><dd class="col-sm-9">{{ member.memberNumber|default('—') }}</dd>
+<dt class="col-sm-3">Verein</dt><dd class="col-sm-9">{{ member.club ? member.club : '—' }}</dd>
+<dt class="col-sm-3">Mitgliedsstatus</dt><dd class="col-sm-9">{{ member.membershipStatus.value }}</dd>
+<dt class="col-sm-3">Eintritt</dt><dd class="col-sm-9">{{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }}</dd>
+<dt class="col-sm-3">Adresse</dt><dd class="col-sm-9">{{ member.street|default('') }} · {{ member.postalCode|default('') }} {{ member.city|default('') }}</dd>
+<dt class="col-sm-3">E-Mail</dt><dd class="col-sm-9">{{ member.email|default('—') }}</dd>
+<dt class="col-sm-3">Telefon</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd></dl>
+<p class="text-muted">Änderungen an Stammdaten erfolgen derzeit über die Vereinsverwaltung.</p></div></div>
+<div class="card mb-4"><div class="card-body"><h2>Meine Qualifikationen</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Qualifikation</th><th>Erteilt</th><th>Gültig bis</th><th>Status</th></tr></thead><tbody>
+{% for item in qualifications %}
+{% set expired = item.validUntil and item.validUntil|date('Y-m-d') < 'now'|date('Y-m-d') %}
+{% set soon = item.validUntil and not expired and item.validUntil|date('Y-m-d') <= '+30 days'|date('Y-m-d') %}
+<tr><td>{{ item.qualification ? item.qualification.name : '—' }}</td><td>{{ item.issuedAt ? item.issuedAt|date('d.m.Y') : '—' }}</td><td>{{ item.validUntil ? item.validUntil|date('d.m.Y') : 'Unbefristet' }}</td><td>{% if expired %}<span class="text-danger">Abgelaufen</span>{% elseif soon %}<span class="text-warning">Läuft bald ab</span>{% else %}<span class="text-success">Gültig</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="4">Noch keine Qualifikationen hinterlegt.</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+<div class="card mb-4"><div class="card-body"><h2>Meine Gruppen und Mannschaften</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Gruppe</th><th>Sportart</th><th>Rolle</th><th>Seit</th><th>Bis</th></tr></thead><tbody>
+{% for assignment in groups %}<tr><td>{{ assignment.team ? assignment.team.name : '—' }}</td><td>{{ assignment.team and assignment.team.sport ? assignment.team.sport.name : '—' }}</td><td>{{ assignment.role.value }}</td><td>{{ assignment.joinedAt ? assignment.joinedAt|date('d.m.Y') : '—' }}</td><td>{{ assignment.leftAt ? assignment.leftAt|date('d.m.Y') : 'Aktuell' }}</td></tr>
+{% else %}<tr><td colspan="5">Keine Gruppenzuordnungen vorhanden.</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+<div class="card mb-4"><div class="card-body"><h2>Meine Dokumente</h2>
+<p>Private Ablage: PDF, JPG oder PNG, maximal 5 MB. Dateien sind nur über den angemeldeten Mitgliederbereich abrufbar.</p>
+<form action="{{ path('app_profile_document_upload') }}" method="post" enctype="multipart/form-data" class="mb-3">
+<input type="hidden" name="_token" value="{{ csrf_token('member_document_upload') }}">
+<label for="member-document">Dokument auswählen</label>
+<input class="form-control mb-2" type="file" id="member-document" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
+<button class="btn btn-primary" type="submit">Dokument hochladen</button>
+</form>
+<div class="table-responsive"><table class="table"><thead><tr><th>Datei</th><th>Hochgeladen</th><th>Aktionen</th></tr></thead><tbody>
+{% for document in documents %}<tr><td>{{ document.originalName }}</td><td>{{ document.createdAt|date('d.m.Y H:i') }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ path('app_profile_document_download', {id: document.id}) }}">Herunterladen</a>
+<form method="post" action="{{ path('app_profile_document_delete', {id: document.id}) }}" style="display:inline" onsubmit="return confirm('Dokument wirklich löschen?')"><input type="hidden" name="_token" value="{{ csrf_token('delete_member_document_' ~ document.id) }}"><button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button></form></td></tr>
+{% else %}<tr><td colspan="3">Noch keine Dokumente hochgeladen.</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+</div></section>
 {% endblock %}

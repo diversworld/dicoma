@@ -7,14 +7,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: CourseTrainingUnitRepository::class)]
-#[ORM\Table(
-    name: 'course_training_unit',
-    uniqueConstraints: [
-        new ORM\UniqueConstraint(
-            name: 'uniq_course_training_unit',
-            columns: ['course_id', 'training_unit_type_id']
-        )
-    ]
+#[ORM\Table(name: 'course_training_unit')]
+#[ORM\UniqueConstraint(
+    name: 'uniq_course_training_unit',
+    columns: ['course_id', 'training_unit_type_id']
 )]
 class CourseTrainingUnit
 {
@@ -23,29 +19,17 @@ class CourseTrainingUnit
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(
-        targetEntity: Courses::class,
-        inversedBy: 'trainingUnits'
-    )]
-    #[ORM\JoinColumn(
-        nullable: false,
-        onDelete: 'CASCADE'
-    )]
+    #[ORM\ManyToOne(targetEntity: Courses::class,inversedBy: 'trainingUnits')]
+    #[ORM\JoinColumn(nullable: false,onDelete: 'CASCADE')]
     private ?Courses $course = null;
 
-    #[ORM\ManyToOne(
-        targetEntity: TrainingUnitType::class
-    )]
-    #[ORM\JoinColumn(
-        nullable: false,
-        onDelete: 'CASCADE'
-    )]
+    #[ORM\ManyToOne(targetEntity: TrainingUnitType::class)]
+	#[Assert\NotNull(message: 'Bitte eine Ausbildungseinheit auswählen.')]
+    #[ORM\JoinColumn(nullable: false,onDelete: 'CASCADE')]
     private ?TrainingUnitType $trainingUnitType = null;
 
 	#[ORM\Column(options: ['default' => 1])]
-	#[Assert\Positive(
-		message: 'Die Anzahl der Termine muss mindestens 1 betragen.'
-	)]
+	#[Assert\Positive(message: 'Die Anzahl der Termine muss mindestens 1 betragen.')]
 	private int $requiredSessions = 1;
 
     /*

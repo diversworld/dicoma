@@ -3,6 +3,16 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Member;
+use App\Entity\MemberDocument;
+use App\Entity\MemberQualification;
+use App\Entity\CourseParticipant;
+use App\Entity\TeamMember;
+use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
+use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use App\Enum\MembershipStatus;
 use App\Form\MemberSportType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -24,35 +34,152 @@ use App\Form\MemberQualificationType;
 #[IsGranted('ROLE_ADMIN')]
 class MemberCrudController extends AbstractCrudController
 {
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator) {}
+
+    public function configureActions(Actions $actions): Actions
+    {
+        $center = Action::new('memberCenter', 'Mitgliederzentrale', 'fa fa-address-card')
+            ->linkToCrudAction(Crud::PAGE_DETAIL);
+        return $actions->add(Crud::PAGE_INDEX, $center);
+    }
+
+    public function configureResponseParameters(KeyValueStore $responseParameters): KeyValueStore
+    {
+        if ($responseParameters->get('pageName') !== Crud::PAGE_DETAIL) {
+            return $responseParameters;
+        }
+        $context = $this->getContext();
+        $member = $context !== null && $context->getCrud() !== null
+            ? $context->getEntity()?->getInstance() : null;
+        if (!$member instanceof Member || $member->getId() === null) {
+            return $responseParameters;
+        }
+        $em = $this->entityManager;
+        $responseParameters->set('memberCenterQualifications', $em->getRepository(MemberQualification::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        $responseParameters->set('memberCenterCourses', $em->getRepository(CourseParticipant::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        $responseParameters->set('memberCenterTeams', $em->getRepository(TeamMember::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        $responseParameters->set('memberCenterDocuments', $em->getRepository(MemberDocument::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        // Die URLs werden serverseitig von EasyAdmin erzeugt. Keine CRUD-Parameter
+        // im Twig-Template zusammenbauen (insbesondere bei lokalisierten Dashboards).
+        $url = fn (string $controller, string $action, ?int $id = null): string =>
+            $this->adminLink($controller, $action, $id);
+        $responseParameters->set('memberCenterLinks', [
+            'memberEdit' => $url(self::class, Crud::PAGE_EDIT, $member->getId()),
+            'qualificationsNew' => $this->memberPrefillUrl(MemberQualificationCrudController::class, $member->getId()),
+            'qualificationsIndex' => $url(MemberQualificationCrudController::class, Crud::PAGE_INDEX),
+            'coursesIndex' => $url(CourseParticipantCrudController::class, Crud::PAGE_INDEX),
+            'teamsNew' => $this->memberPrefillUrl(TeamMemberCrudController::class, $member->getId()),
+            'teamsIndex' => $url(TeamMemberCrudController::class, Crud::PAGE_INDEX),
+        ]);
+        $responseParameters->set('memberCenterQualificationEditUrls', $this->editLinks(MemberQualificationCrudController::class, $responseParameters->get('memberCenterQualifications')));
+        $responseParameters->set('memberCenterCourseEditUrls', $this->editLinks(CourseParticipantCrudController::class, $responseParameters->get('memberCenterCourses')));
+        $responseParameters->set('memberCenterTeamEditUrls', $this->editLinks(TeamMemberCrudController::class, $responseParameters->get('memberCenterTeams')));
+        return $responseParameters;
+    }
+
+    private function adminLink(string $controller, string $action, ?int $id = null): string
+    {
+        $generator = (clone $this->adminUrlGenerator)->unsetAll()
+            ->setController($controller)->setAction($action);
+        if ($id !== null) {
+            $generator->setEntityId($id);
+        }
+        return $generator->generateUrl();
+    }
+	
+	private function memberReturnUrl(int $memberId): string
+	{
+		return (clone $this->adminUrlGenerator)
+			->unsetAll()
+			->setController(self::class)
+			->setAction(Crud::PAGE_DETAIL)
+			->setEntityId($memberId)
+			->generateUrl();
+	}
+
+	private function memberPrefillUrl(
+		string $controller,
+		int $memberId
+	): string {
+		return (clone $this->adminUrlGenerator)
+			->unsetAll()
+			->setController($controller)
+			->setAction(Crud::PAGE_NEW)
+			->set('memberId', $memberId)
+			->set('returnToMember', '1')
+			->generateUrl();
+	}
+
+	private function editLinks(
+		string $controller,
+		iterable $entities
+	): array {
+		$links = [];
+
+		foreach ($entities as $entity) {
+			if ($entity->getId() === null) {
+				continue;
+			}
+
+			$member = $entity->getMember();
+
+			if (!$member instanceof Member || $member->getId() === null) {
+				continue;
+			}
+
+			$links[$entity->getId()] =
+				(clone $this->adminUrlGenerator)
+					->unsetAll()
+					->setController($controller)
+					->setAction(Crud::PAGE_EDIT)
+					->setEntityId($entity->getId())
+					->set('memberId', $member->getId())
+					->set('returnToMember', '1')
+					->generateUrl();
+		}
+
+		return $links;
+	}
+
     public static function getEntityFqcn(): string
     {
         return Member::class;
     }
 
-    public function configureCrud(Crud $crud): Crud
-    {
-        return $crud
-            ->setEntityLabelInSingular('Mitglied')
-            ->setEntityLabelInPlural('Mitglieder')
-            ->setPageTitle(Crud::PAGE_INDEX, 'Mitglieder')
-            ->setPageTitle(Crud::PAGE_NEW, 'Mitglied anlegen')
-            ->setPageTitle(Crud::PAGE_EDIT, 'Mitglied bearbeiten')
-            ->setPageTitle(Crud::PAGE_DETAIL, 'Mitglied')
-            ->setDefaultSort([
-                'lastname' => 'ASC',
-                'firstname' => 'ASC',
-            ])
-            ->setSearchFields([
-                'memberNumber',
-                'firstname',
-                'lastname',
-                'email',
-                'city',
-            ]);
-    }
+	public function configureCrud(Crud $crud): Crud
+	{
+		return $crud
+			->overrideTemplate(
+				'crud/detail',
+				'admin/member/detail.html.twig'
+			)
+			->setEntityLabelInSingular('Mitglied')
+			->setEntityLabelInPlural('Mitglieder')
+			->setPageTitle(Crud::PAGE_INDEX, 'Mitglieder')
+			->setPageTitle(Crud::PAGE_NEW, 'Mitglied anlegen')
+			->setPageTitle(Crud::PAGE_EDIT, 'Mitglied bearbeiten')
+			->setPageTitle(Crud::PAGE_DETAIL, 'Mitglied')
+			->setDefaultSort([
+				'lastname' => 'ASC',
+				'firstname' => 'ASC',
+			])
+			->setSearchFields([
+				'memberNumber',
+				'firstname',
+				'lastname',
+				'email',
+				'city',
+			]);
+	}
 
     public function configureFields(string $pageName): iterable
     {
+        if ($pageName === Crud::PAGE_DETAIL) {
+			yield IdField::new('id', 'ID');
+
+			return;
+		}
+
         /*
          * Übersicht
          */
@@ -167,8 +294,15 @@ class MemberCrudController extends AbstractCrudController
         /*
          * Sportarten
          */
-        yield FormField::addFieldset('Sportarten')
-            ->collapsible();
+        if ($pageName === Crud::PAGE_DETAIL) {
+            yield FormField::addFieldset('Sportarten')->collapsible();
+            yield TextField::new('sportNames', 'Zugeordnete Sportarten')
+                ->onlyOnDetail();
+        }
+
+        if ($pageName === Crud::PAGE_NEW || $pageName === Crud::PAGE_EDIT) {
+            yield FormField::addFieldset('Sportarten')->collapsible();
+        }
 
         yield CollectionField::new('sports', 'Sportarten')
             ->setEntryType(MemberSportType::class)
@@ -181,8 +315,15 @@ class MemberCrudController extends AbstractCrudController
             )
             ->onlyOnForms();
 
-		yield FormField::addFieldset('Qualifikationen')
-			->collapsible();
+        if ($pageName === Crud::PAGE_DETAIL) {
+            yield FormField::addFieldset('Qualifikationen')->collapsible();
+            yield TextField::new('qualificationNames', 'Qualifikationen und Brevets')
+                ->onlyOnDetail();
+        }
+
+        if ($pageName === Crud::PAGE_NEW || $pageName === Crud::PAGE_EDIT) {
+            yield FormField::addFieldset('Qualifikationen')->collapsible();
+        }
 
 		yield CollectionField::new(
 			'qualifications',

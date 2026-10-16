@@ -1,0 +1,17 @@
+{% extends '@EasyAdmin/crud/detail.html.twig' %}
+
+{% block main %}
+    {% set member = entity.instance %}
+
+    {% include 'admin/member/center_field.html.twig' with {
+        member: member,
+        memberCenterQualifications: memberCenterQualifications|default([]),
+        memberCenterCourses: memberCenterCourses|default([]),
+        memberCenterTeams: memberCenterTeams|default([]),
+        memberCenterDocuments: memberCenterDocuments|default([]),
+        memberCenterLinks: memberCenterLinks|default({}),
+        memberCenterQualificationEditUrls: memberCenterQualificationEditUrls|default({}),
+        memberCenterCourseEditUrls: memberCenterCourseEditUrls|default({}),
+        memberCenterTeamEditUrls: memberCenterTeamEditUrls|default({})
+    } only %}
+{% endblock %}

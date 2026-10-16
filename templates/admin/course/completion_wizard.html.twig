@@ -1,0 +1,54 @@
+{% extends 'admin/standalone_base.html.twig' %}
+{% block title %}Kursabschluss vorbereiten – {{ course }}{% endblock %}
+{% block body %}
+<p><a class="btn" href="{{ path('admin_course_history', {id: course.id}) }}">Änderungshistorie anzeigen</a></p>
+<main class="container py-4">
+    <h1>Kursabschluss vorbereiten</h1>
+    <p>Kurs: <strong>{{ course }}</strong></p>
+    <p class="muted">Entscheidungen werden einzeln gespeichert. „Bestanden“ nutzt die bestehende Qualifikationsvergabe und setzt vollständige Pflichtnachweise sowie eine gültige Zielqualifikation voraus.</p>
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<p class="{{ type == 'success' ? 'ok' : 'warn' }}">{{ message }}</p>{% endfor %}
+    {% endfor %}
+    {% if isCompleted %}<p class="warn">Dieser Kurs ist bereits abgeschlossen und kann hier nicht bearbeitet werden.</p>{% endif %}
+    <section class="panel">
+        <div class="table-wrap"><table>
+            <thead><tr><th>Teilnehmer</th><th>Pflichtfortschritt</th><th>Fehlende Pflichtnachweise</th><th>Status</th><th>Entscheidung</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                {% set p = row.participant %}
+                <tr>
+                    <td>{{ p.member ? p.member.fullName : 'Ohne Mitglied' }}</td>
+                    <td>{{ row.progress.passed }}/{{ row.progress.target }} ({{ row.progress.percent }} %)</td>
+                    <td>{% if row.missing is empty %}<span class="ok">Vollständig</span>{% else %}{{ row.missing|join(', ') }}{% endif %}</td>
+                    <td>{{ p.status.label }}</td>
+                    <td>
+                        {% if isCompleted or row.locked %}
+                            <span class="muted">Gesperrt</span>
+                        {% else %}
+                            <form method="post" action="{{ path('admin_course_completion_wizard_decide', {id: course.id, participantId: p.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('course_participant_decision_' ~ course.id ~ '_' ~ p.id) }}">
+                                <label for="decision-{{ p.id }}" class="small">Abschlussentscheidung</label>
+                                <select id="decision-{{ p.id }}" name="decision" required>
+                                    <option value="">Bitte wählen</option>
+                                    {% if row.progress.complete %}<option value="passed">Bestanden</option>{% endif %}
+                                    <option value="failed">Nicht bestanden</option>
+                                    <option value="cancelled">Abgebrochen / storniert</option>
+                                </select>
+                                <button type="submit" class="btn" onclick="return confirm('Abschlussentscheidung für diesen Teilnehmer speichern?')">Speichern</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">Keine Kursteilnehmer vorhanden.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+    {% if canClose and not isCompleted %}
+        <p class="ok">Alle Teilnehmer besitzen einen abschließenden Status.</p>
+        <p><a class="btn" href="{{ courseCompleteUrl }}">Zur Kursabschluss-Bestätigung</a></p>
+    {% endif %}
+    <p><a class="btn" href="{{ backUrl }}">Zurück zur Kurszentrale</a></p>
+</main>
+{% endblock %}

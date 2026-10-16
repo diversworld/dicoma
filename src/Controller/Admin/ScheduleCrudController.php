@@ -3,6 +3,9 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
+use App\Enum\CourseStatus;
+use App\Enum\CourseParticipantStatus;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
 use App\Service\ScheduleParticipantSyncService;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -227,18 +230,14 @@ class ScheduleCrudController extends AbstractCrudController
 			'Teilnehmer übernehmen',
 			'fa fa-users'
 		)
-			->linkToCrudAction(
-				'syncParticipants'
-			);
+			->linkToRoute('admin_schedule_sync_participants', static fn (Schedule $schedule): array => ['id' => $schedule->getId()]);
 
 		$attendance = Action::new(
 			'attendance',
 			'Anwesenheit erfassen',
 			'fa fa-user-check'
 		)
-			->linkToCrudAction(
-				'attendance'
-			)
+			->linkToRoute('admin_schedule_attendance', static fn (Schedule $schedule): array => ['id' => $schedule->getId()])
 			->displayIf(
 				static fn (Schedule $schedule): bool =>
 					!$schedule->getBookings()->isEmpty()
@@ -263,20 +262,12 @@ class ScheduleCrudController extends AbstractCrudController
 			);
 	}
 
+	#[Route('/admin/schedule/{id}/attendance', name: 'admin_schedule_attendance', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
 	public function attendance(
-		AdminContext $context,
 		Request $request,
 		EntityManagerInterface $entityManager
 	): Response {
-		$schedule = $context
-			->getEntity()
-			->getInstance();
-
-		if (!$schedule instanceof Schedule) {
-			throw new \LogicException(
-				'Ungültiger Kurstermin.'
-			);
-		}
+        $schedule = $this->resolveSchedule($request, $entityManager);
 
 		if ($schedule->getBookings()->isEmpty()) {
 			$this->addFlash(
@@ -286,9 +277,7 @@ class ScheduleCrudController extends AbstractCrudController
 				. '"Teilnehmer übernehmen".'
 			);
 
-			return $this->redirectToReferrer(
-				$context
-			);
+			return $this->redirectToRoute('admin_schedule_sync_participants', ['id' => $schedule->getId()]);
 		}
 
 		$data = [
@@ -350,9 +339,7 @@ class ScheduleCrudController extends AbstractCrudController
 				new TranslatableMessage('attendance.saved', ['%schedule%' => $schedule->getTitle()])
 			);
 
-			return $this->redirectToReferrer(
-				$context
-			);
+			return $this->redirectToSchedule($schedule);
 		}
 
 		return $this->render(
@@ -364,69 +351,95 @@ class ScheduleCrudController extends AbstractCrudController
 		);
 	}
 	
-    /**
-     * Übernimmt die Teilnehmer des zugeordneten Kurses
-     * als Terminbuchungen.
-     */
-    public function syncParticipants(
-        AdminContext $context
-    ): RedirectResponse {
-        $schedule = $context
-            ->getEntity()
-            ->getInstance();
-
-        if (!$schedule instanceof Schedule) {
-            throw new \LogicException(
-                'Ungültiger Kurstermin.'
-            );
+    /** GET only previews; POST with CSRF performs the import. */
+    #[Route('/admin/schedule/{id}/sync-participants', name: 'admin_schedule_sync_participants', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function syncParticipants(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $schedule = $this->resolveSchedule($request, $entityManager);
+        $course = $schedule->getCourses();
+        if ($course === null) {
+            throw $this->createNotFoundException('Der Kurstermin hat keinen Kurs.');
+        }
+        if ($course->getStatus() === CourseStatus::COMPLETED) {
+            throw $this->createAccessDeniedException('Abgeschlossene Kurse können nicht synchronisiert werden.');
         }
 
-        try {
-            $created = $this
-                ->participantSyncService
-                ->sync($schedule);
-
-            if ($created === 0) {
-                $this->addFlash(
-                    'info',
-                    'Es wurden keine neuen Terminbuchungen '
-                    . 'angelegt. Alle aktiven Kursteilnehmer '
-                    . 'sind bereits für diesen Termin eingetragen.'
-                );
-            } else {
-                $this->addFlash(
-                    'success',
-                    new TranslatableMessage('attendance.participants_imported', ['%count%' => $created])
-                );
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('sync_schedule_' . $schedule->getId(), (string) $request->request->get('_token', ''))) {
+                throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
             }
-        } catch (\LogicException $exception) {
-            $this->addFlash(
-                'danger',
-                $exception->getMessage()
-            );
+            try {
+                $created = $this->participantSyncService->sync($schedule);
+                $this->addFlash($created ? 'success' : 'info', $created
+                    ? sprintf('%d Terminbuchung(en) angelegt.', $created)
+                    : 'Keine neuen Buchungen notwendig.');
+            } catch (\LogicException $exception) {
+                $this->addFlash('danger', $exception->getMessage());
+            }
+            return $this->redirectToSchedule($schedule);
         }
 
-        return $this->redirectToReferrer(
-            $context
-        );
+        // Vorschau anhand derselben Regeln wie ScheduleParticipantSyncService:
+        // Teilnehmer ohne Mitglied und stornierte Anmeldungen ausschliessen.
+        // Vorhandene Buchungen bleiben unveraendert.
+        $bookedMemberIds = [];
+        foreach ($schedule->getBookings() as $booking) {
+            $memberId = $booking->getMember()?->getId();
+            if ($memberId !== null) {
+                $bookedMemberIds[$memberId] = true;
+            }
+        }
+
+        $preview = [
+            'total' => $course->getParticipants()->count(),
+            'eligible' => 0,
+            'existing' => 0,
+            'missing' => 0,
+            'excluded' => 0,
+        ];
+        $missingParticipants = [];
+        foreach ($course->getParticipants() as $participant) {
+            $member = $participant->getMember();
+            if ($member === null || $participant->getStatus() === CourseParticipantStatus::CANCELLED) {
+                ++$preview['excluded'];
+                continue;
+            }
+
+            ++$preview['eligible'];
+            if ($member->getId() !== null && isset($bookedMemberIds[$member->getId()])) {
+                ++$preview['existing'];
+                continue;
+            }
+
+            ++$preview['missing'];
+            $missingParticipants[] = (string) $member;
+        }
+
+        natcasesort($missingParticipants);
+
+        return $this->render('admin/schedule/confirm_sync.html.twig', [
+            'schedule' => $schedule,
+            'course' => $course,
+            'preview' => $preview,
+            'missingParticipants' => array_values($missingParticipants),
+        ]);
     }
 
-    private function redirectToReferrer(
-        AdminContext $context
-    ): RedirectResponse {
-        $referrer = $context->getReferrer();
-
-        if (
-            $referrer !== null
-            && $referrer !== ''
-        ) {
-            return $this->redirect(
-                $referrer
-            );
+    private function resolveSchedule(Request $request, EntityManagerInterface $em): Schedule
+    {
+        $raw = $request->attributes->get('id') ?? $request->query->get('entityId');
+        if (!is_scalar($raw) || !ctype_digit((string) $raw) || (int) $raw < 1) {
+            throw $this->createNotFoundException('Ungültige Kurstermin-ID.');
         }
+        $schedule = $em->getRepository(Schedule::class)->find((int) $raw);
+        if (!$schedule instanceof Schedule) {
+            throw $this->createNotFoundException('Kurstermin nicht gefunden.');
+        }
+        return $schedule;
+    }
 
-        return $this->redirectToRoute(
-            'admin'
-        );
+    private function redirectToSchedule(Schedule $schedule): RedirectResponse
+    {
+        return $this->redirectToRoute('admin_schedule_attendance', ['id' => $schedule->getId()]);
     }
 }

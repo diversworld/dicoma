@@ -3,6 +3,9 @@
 namespace App\Controller\Admin;
 
 use App\Entity\MemberQualification;
+use App\Entity\Member;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
@@ -10,24 +13,108 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
-use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_ADMIN')]
 class MemberQualificationCrudController extends AbstractCrudController
 {
 	public function __construct(
-		private readonly AdminUrlGenerator $adminUrlGenerator
+		private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly EntityManagerInterface $memberEntityManager
 	) {
 	}
+    public function createEntity(string $entityFqcn): MemberQualification
+    {
+        $item = new MemberQualification();
+        $raw = $this->getContext()?->getRequest()->query->get('memberId');
+        if (is_scalar($raw) && ctype_digit((string) $raw) && (int) $raw > 0) {
+            $member = $this->memberEntityManager->getRepository(Member::class)->find((int) $raw);
+            if ($member instanceof Member) {
+                $item->setMember($member);
+            }
+        }
+        return $item;
+    }
+
+    /**
+     * Zeigt einen expliziten, sicheren Rueckweg bei Formularen aus der
+     * Mitgliederzentrale. Die EasyAdmin-Standardaktion bleibt unveraendert.
+     *
+     * Bei EDIT wird die Mitgliedszuordnung aus der Datenbank gelesen,
+     * niemals aus einem manipulierten memberId-Parameter.
+     */
+    private function memberCenterCancelUrl(): ?string
+    {
+        $request = $this->getContext()?->getRequest();
+        if ($request === null || $request->query->get('returnToMember') !== '1') {
+            return null;
+        }
+
+        $action = $request->query->get('crudAction');
+        $member = null;
+
+        if ($action === Crud::PAGE_EDIT) {
+            $rawId = $request->query->get('entityId');
+            if (!is_scalar($rawId) || !ctype_digit((string) $rawId) || (int) $rawId < 1) {
+                return null;
+            }
+            $record = $this->memberEntityManager
+                ->getRepository(\App\Entity\MemberQualification::class)
+                ->find((int) $rawId);
+            $member = $record?->getMember();
+        } elseif ($action === Crud::PAGE_NEW) {
+            $rawId = $request->query->get('memberId');
+            if (!is_scalar($rawId) || !ctype_digit((string) $rawId) || (int) $rawId < 1) {
+                return null;
+            }
+            $member = $this->memberEntityManager
+                ->getRepository(Member::class)
+                ->find((int) $rawId);
+        }
+
+        if (!$member instanceof Member || $member->getId() === null) {
+            return null;
+        }
+
+        return (clone $this->adminUrlGenerator)
+            ->unsetAll()
+            ->setController(MemberCrudController::class)
+            ->setAction(Crud::PAGE_DETAIL)
+            ->setEntityId($member->getId())
+            ->generateUrl();
+    }
+
+    private function addMemberCenterReturnAction(Actions $actions): Actions
+    {
+        $url = $this->memberCenterCancelUrl();
+        if ($url === null) {
+            return $actions;
+        }
+
+        $return = Action::new(
+            'backToMemberCenter',
+            'Zur Mitgliederzentrale (ohne Speichern)',
+            'fa fa-arrow-left'
+        )
+            ->linkToUrl($url)
+            ->createAsGlobalAction()
+            ->addCssClass('btn btn-secondary');
+
+        return $actions
+            ->add(Crud::PAGE_NEW, $return)
+            ->add(Crud::PAGE_EDIT, $return);
+    }
+
     public static function getEntityFqcn(): string
     {
         return MemberQualification::class;
@@ -156,10 +243,9 @@ class MemberQualificationCrudController extends AbstractCrudController
 			->createAsGlobalAction()
 			->addCssClass('btn btn-secondary');
 
-		return $actions->add(
-			Crud::PAGE_INDEX,
-			$resetAction
-		);
+		return $this->addMemberCenterReturnAction(
+            $actions->add(Crud::PAGE_INDEX, $resetAction)
+        );
 	}
 	
 	public function createIndexQueryBuilder(
@@ -222,4 +308,38 @@ class MemberQualificationCrudController extends AbstractCrudController
 
 		return $queryBuilder;
 	}
+	
+    protected function getRedirectResponseAfterSave(
+        AdminContext $context,
+        string $action
+    ): RedirectResponse {
+        $request = $context->getRequest();
+        if ($request->query->get('returnToMember') !== '1') {
+            return parent::getRedirectResponseAfterSave($context, $action);
+        }
+
+        // Never trust memberId as the destination. Use the actual saved relation.
+        $entity = $context->getCrud() !== null
+            ? $context->getEntity()?->getInstance()
+            : null;
+
+        if (!$entity instanceof MemberQualification) {
+            return parent::getRedirectResponseAfterSave($context, $action);
+        }
+
+        $member = $entity->getMember();
+        if (!$member instanceof Member || $member->getId() === null) {
+            return parent::getRedirectResponseAfterSave($context, $action);
+        }
+
+        $url = (clone $this->adminUrlGenerator)
+            ->unsetAll()
+            ->setController(MemberCrudController::class)
+            ->setAction(Crud::PAGE_DETAIL)
+            ->setEntityId($member->getId())
+            ->generateUrl();
+
+        return new RedirectResponse($url);
+    }
+
 }

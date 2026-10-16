@@ -94,9 +94,9 @@ final class CourseTrainingMatrixController extends AbstractController
                 continue;
             }
             $summary = $progress->calculate($participant);
-            $byName = [];
+            $byTypeId = [];
             foreach ($summary['requirements'] as $item) {
-                $byName[$item['name']] = $item;
+                $byTypeId[$item['id']] = $item;
             }
             $existing = [];
             foreach ($results->findBy(['courseParticipant' => $participant]) as $result) {
@@ -105,8 +105,9 @@ final class CourseTrainingMatrixController extends AbstractController
                 }
             }
             $cells = [];
+            $missingRequired = [];
             foreach ($requirements as $requirement) {
-                $item = $byName[$requirement['name']] ?? null;
+                $item = $byTypeId[$requirement['id']] ?? null;
                 $nextSchedule = null;
                 foreach ($scheduleByType[$requirement['id']] ?? [] as $schedule) {
                     if (!isset($existing[$schedule->getId()])) {
@@ -123,7 +124,26 @@ final class CourseTrainingMatrixController extends AbstractController
                         ->set('schedule', $nextSchedule->getId())
                         ->generateUrl();
                 }
+                if ($requirement['required'] && ($item['missing'] ?? $requirement['target']) > 0) {
+                    $availableSchedules = [];
+                    foreach ($scheduleByType[$requirement['id']] ?? [] as $schedule) {
+                        if ($schedule->getId() === null) {
+                            continue;
+                        }
+                        $availableSchedules[] = [
+                            'title' => (string) $schedule,
+                            'date' => $schedule->getStartDate()?->format('d.m.Y'),
+                            'url' => $this->generateUrl('admin_training_results_batch', ['id' => $schedule->getId()]),
+                        ];
+                    }
+                    $missingRequired[] = [
+                        'name' => $requirement['name'],
+                        'missing' => $item['missing'] ?? $requirement['target'],
+                        'schedules' => $availableSchedules,
+                    ];
+                }
                 $cells[] = [
+                    'passed' => $item['passed'] ?? 0,
                     'credited' => $item['credited'] ?? 0,
                     'target' => $requirement['target'],
                     'missing' => $item['missing'] ?? $requirement['target'],
@@ -134,6 +154,7 @@ final class CourseTrainingMatrixController extends AbstractController
                 'participant' => $participant,
                 'progress' => $summary,
                 'cells' => $cells,
+                'missingRequired' => $missingRequired,
                 'detailUrl' => $this->generateUrl('admin_training_progress', ['id' => $participant->getId()]),
             ];
         }

@@ -1,0 +1,24 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Flasche {{ tank.inventory }} – Zustand und Historie{% endblock %}
+{% block main %}
+  <p><a class="btn btn-secondary" href="{{ detailUrl }}">Zurück zur Flasche</a></p>
+  <p><strong>Technischer Zustand:</strong> {{ tank.conditionStatus }} · <strong>Verleihfreigabe:</strong> {{ tank.lendable ? 'Ja' : 'Nein' }}</p>
+  <p><strong>Nächste Prüfung:</strong> {{ tank.nextCheckDate ? tank.nextCheckDate|date('d.m.Y') : 'nicht hinterlegt' }}</p>
+  <form method="post" action="{{ statusActionUrl }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('tank_status_' ~ tank.id) }}">
+    <div class="mb-3"><label for="operation">Aktion</label>
+      <select id="operation" name="operation" class="form-select" required>
+        <option value="maintenance">Für Wartung sperren</option><option value="damaged">Als beschädigt sperren</option><option value="release">Nach technischer Prüfung freigeben</option>
+      </select>
+    </div>
+    <div class="mb-3"><label for="reason">Begründung / durchgeführte Prüfung (mindestens 10 Zeichen)</label>
+      <textarea id="reason" name="reason" class="form-control" minlength="10" maxlength="2000" required></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Statusänderung speichern</button>
+  </form>
+  <h2 class="mt-4">Letzte 100 Historieneinträge</h2>
+  <table class="table table-striped"><thead><tr><th>Zeitpunkt</th><th>Vorgang</th><th>Zustand</th><th>Freigabe</th><th>Dokumentation</th></tr></thead><tbody>
+    {% for entry in history %}<tr><td>{{ entry.occurredAt|date('d.m.Y H:i') }}</td><td>{{ entry.eventType }}</td><td>{{ entry.conditionStatus }}</td><td>{{ entry.lendable ? 'Ja' : 'Nein' }}</td><td>{{ entry.notes }}</td></tr>
+    {% else %}<tr><td colspan="5">Noch keine Einträge vorhanden.</td></tr>{% endfor %}
+  </tbody></table>
+{% endblock %}

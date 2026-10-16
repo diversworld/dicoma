@@ -1,5 +1,5 @@
 {% extends 'base.html.twig' %}
-{% block title %}Meine Ausbildung – DiCoMa</div>
+{% block title %}Meine Ausbildung – DiCoMa
 {% endblock %}
 {% block body %}
 <div class="container" style="padding-top:2rem;padding-bottom:3rem">
@@ -18,11 +18,12 @@
   {% if item.progress.target > 0 %}
   <div class="bar" role="progressbar" aria-valuenow="{{ item.progress.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Pflichtfortschritt"><div class="fill" style="width:{{ item.progress.percent }}%"></div></div>
   {% endif %}
+  <p><strong>Optionale Ausbildung:</strong> {% if item.progress.optionalTarget > 0 %}{{ item.progress.optionalCredited }} / {{ item.progress.optionalTarget }} angerechnet ({{ item.progress.optionalPercent }} %), tatsächlich bestanden: {{ item.progress.optionalPassed }}{% else %}Keine optionalen Einheiten{% endif %}</p>
   <h3>Ausbildungseinheiten</h3>
-  <div class="table-wrap"><table><thead><tr><th>Einheit</th><th>Bestanden</th><th>Erforderlich</th><th>Fehlend</th></tr></thead><tbody>
+  <div class="table-wrap"><table><thead><tr><th>Einheit</th><th>Tatsächlich bestanden</th><th>Angerechnet</th><th>Erforderlich</th><th>Fehlend</th></tr></thead><tbody>
   {% for req in item.progress.requirements %}
-  <tr><td>{{ req.name }}{% if not req.required %} (optional){% endif %}</td><td>{{ req.credited }}</td><td>{{ req.target }}</td><td>{{ req.missing }}</td></tr>
-  {% else %}<tr><td colspan="4">Noch kein Ausbildungsplan hinterlegt.</td></tr>{% endfor %}
+  <tr><td>{{ req.name }}{% if not req.required %} (optional){% endif %}</td><td>{{ req.passed }}</td><td>{{ req.credited }}</td><td>{{ req.target }}</td><td>{{ req.missing }}</td></tr>
+  {% else %}<tr><td colspan="5">Noch kein Ausbildungsplan hinterlegt.</td></tr>{% endfor %}
   </tbody></table></div>
   <h3>Kurstermine</h3>
   <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Termin</th><th>Ort</th></tr></thead><tbody>

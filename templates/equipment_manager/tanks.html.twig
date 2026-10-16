@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gerätewart – Tauchflaschen | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block body %}
+<section class="section" aria-labelledby="equipment-manager-heading">
+    <div class="container">
+        <h1 id="equipment-manager-heading">Gerätewart – Tauchflaschen</h1>
+        <p><a class="btn btn-outline-primary" href="{{ path('equipment_manager_dashboard') }}">Zum Gerätewart-Dashboard</a></p>
+        <p class="text-muted">{{ clubName }} · {{ total }} Flaschen · Wartungsverwaltung</p>
+        <nav aria-label="Flaschenfilter" class="mb-3">
+            <div class="d-flex flex-wrap gap-2">
+                {% set filters = {'all': 'Alle', 'ready': 'Freigegeben', 'blocked': 'Gesperrt', 'damaged': 'Beschädigt', 'open': 'Offene Wartungen'} %}
+                {% for value, label in filters %}
+                    <a href="{{ path('equipment_manager_tanks', {filter: value}) }}"
+                       class="btn btn-sm {{ filter == value ? 'btn-primary' : 'btn-outline-primary' }}"
+                       {% if filter == value %}aria-current="page"{% endif %}>{{ label }}</a>
+                {% endfor %}
+            </div>
+        </nav>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead><tr><th scope="col">Inventar</th><th scope="col">Seriennummer</th><th scope="col">Technischer Zustand</th><th scope="col">Verleihfreigabe</th><th scope="col">Offene Wartungen</th><th scope="col">Aktion</th></tr></thead>
+                <tbody>
+                    {% for tank in tanks %}
+                        <tr>
+                            <td><a href="{{ path('equipment_manager_tank_detail', {id: tank.id}) }}">{{ tank.inventory }}</a></td>
+                            <td>{{ tank.serialnumber }}</td>
+                            <td>{{ tank.conditionStatus }}</td>
+                            <td>{% if tank.lendable %}<span class="text-success">Ja</span>{% else %}<span class="text-danger">Nein</span>{% endif %}</td>
+                            <td>{{ openCounts[tank.id]|default(0) }}</td>
+                            <td><a class="btn btn-sm btn-outline-secondary" href="{{ path('equipment_manager_tank_detail', {id: tank.id}) }}">Details</a> <a class="btn btn-sm btn-outline-primary" href="{{ path('equipment_manager_maintenance', {id: tank.id}) }}">Wartung verwalten</a></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6">Keine Flaschen für diesen Verein und den gewählten Filter gefunden.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if pages > 1 %}
+            <nav aria-label="Seitennavigation der Flaschenübersicht">
+                <div class="d-flex align-items-center gap-3">
+                    {% if page > 1 %}<a class="btn btn-outline-secondary" href="{{ path('equipment_manager_tanks', {page: page - 1, filter: filter}) }}">Zurück</a>{% endif %}
+                    <span>Seite {{ page }} von {{ pages }}</span>
+                    {% if page < pages %}<a class="btn btn-outline-secondary" href="{{ path('equipment_manager_tanks', {page: page + 1, filter: filter}) }}">Weiter</a>{% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

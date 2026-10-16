@@ -46,7 +46,7 @@
 </head>
     <body>
         {% include 'includes/_header.html.twig' %}
-        {% include 'includes/_slider.html.twig' %}
+        {% block hero %}{% include 'includes/_slider.html.twig' %}{% endblock %}
 
         {% block body %}{% endblock %}
 

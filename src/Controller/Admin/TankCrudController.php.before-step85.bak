@@ -1,0 +1,60 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Admin;
+
+use App\Entity\Tank;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+#[IsGranted('ROLE_ADMIN')]
+class TankCrudController extends AbstractCrudController
+{
+    public static function getEntityFqcn(): string { return Tank::class; }
+
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud
+            ->setEntityLabelInSingular('Tauchflasche')
+            ->setEntityLabelInPlural('Tauchflaschen')
+            ->setDefaultSort(['inventory' => 'ASC'])
+            ->setSearchFields(['inventory', 'serialnumber']);
+    }
+
+    public function configureFields(string $pageName): iterable
+    {
+        yield FormField::addFieldset('Inventar und Verein');
+        yield IdField::new('id', 'ID')->onlyOnIndex();
+        yield AssociationField::new('club', 'Verein')->setRequired(true)->setColumns(4);
+        yield TextField::new('inventory', 'Inventarnummer')->setRequired(true)->setColumns(4);
+        yield TextField::new('serialnumber', 'Seriennummer')->setRequired(true)->setColumns(4);
+
+        yield FormField::addFieldset('Flaschendaten')->collapsible();
+        yield ChoiceField::new('size', 'Flaschengröße')
+            ->setChoices(['3 L' => 3, '5 L' => 5, '7 L' => 7, '8 L' => 8, '10 L' => 10,
+                '12 L' => 12, '15 L' => 15, '18 L' => 18, '20 L' => 20])
+            ->setRequired(true)->setColumns(4);
+        yield BooleanField::new('oxigenClean', 'O₂-rein')->setColumns(4);
+        yield DateField::new('buyDate', 'Kaufdatum')->setFormat('dd.MM.yyyy')->setColumns(4);
+
+        yield FormField::addFieldset('Prüfungen')->collapsible();
+        yield DateField::new('lastCheckDate', 'Letzte Prüfung')->setRequired(true)
+            ->setFormat('dd.MM.yyyy')->setColumns(4);
+        yield DateField::new('nextCheckDate', 'Nächste Prüfung')->setFormat('dd.MM.yyyy')
+            ->setColumns(4)->setHelp('Für die Verleihfreigabe wird die Prüfungsfrist berücksichtigt.');
+        yield AssociationField::new('tankChecks', 'Prüfungszuordnungen')->onlyOnDetail();
+
+        yield FormField::addFieldset('Bemerkungen')->collapsible();
+        yield TextareaField::new('notes', 'Notizen')->hideOnIndex()->setColumns(12);
+    }
+}

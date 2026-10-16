@@ -11,6 +11,13 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TankRepository::class)]
 class Tank
 {
+    #[ORM\ManyToOne(targetEntity: Club::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?Club $club = null;
+
+    public function getClub(): ?Club { return $this->club; }
+    public function setClub(?Club $club): static { $this->club = $club; return $this; }
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -30,6 +37,32 @@ class Tank
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $nextCheckDate = null;
+
+    #[ORM\Column(length: 20, options: ['default' => 'ready'])]
+    private string $conditionStatus = 'ready';
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $lendable = true;
+
+    public function getConditionStatus(): string { return $this->conditionStatus; }
+    public function setConditionStatus(string $status): static
+    {
+        if (!in_array($status, ['ready', 'maintenance', 'damaged'], true)) {
+            throw new \InvalidArgumentException('Ungueltiger Flaschenzustand.');
+        }
+        $this->conditionStatus = $status;
+        if ($status !== 'ready') { $this->lendable = false; }
+        return $this;
+    }
+    public function isLendable(): bool { return $this->lendable; }
+    public function setLendable(bool $lendable): static
+    {
+        if ($lendable && $this->conditionStatus !== 'ready') {
+            throw new \DomainException('Gesperrte Flasche kann nicht freigegeben werden.');
+        }
+        $this->lendable = $lendable;
+        return $this;
+    }
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;

@@ -23,6 +23,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_ADMIN')]
@@ -165,7 +166,7 @@ class CourseParticipantCrudController extends AbstractCrudController
             'Bestanden',
             'fa fa-graduation-cap'
         )
-            ->linkToCrudAction('passCourse')
+            ->linkToRoute('admin_participant_pass_confirm', static fn (CourseParticipant $participant): array => ['id' => $participant->getId()])
             ->displayIf(
                 static function (
                     CourseParticipant $participant
@@ -264,77 +265,21 @@ class CourseParticipantCrudController extends AbstractCrudController
     /**
      * Teilnehmer erfolgreich abschließen.
      */
+    /** Legacy EasyAdmin action: GET never changes qualification or participant state. */
     public function passCourse(
-        AdminContext $context
+        ?AdminContext $context,
+        Request $request,
+        EntityManagerInterface $entityManager
     ): RedirectResponse {
-        $participant = $context
-            ->getEntity()
-            ->getInstance();
-
+        $rawId = $request->query->get('entityId');
+        if (!is_scalar($rawId) || !ctype_digit((string) $rawId) || (int) $rawId < 1) {
+            throw $this->createNotFoundException('Kursteilnehmer-ID fehlt.');
+        }
+        $participant = $entityManager->getRepository(CourseParticipant::class)->find((int) $rawId);
         if (!$participant instanceof CourseParticipant) {
-            throw new \LogicException(
-                'Ungültiger Kursteilnehmer.'
-            );
+            throw $this->createNotFoundException('Kursteilnehmer nicht gefunden.');
         }
-
-        /*
-         * Abgeschlossene Kurse sind schreibgeschützt.
-         */
-        $course = $participant->getCourse();
-
-        if (
-            $course !== null
-            && $course->getStatus() === CourseStatus::COMPLETED
-        ) {
-            $this->addFlash(
-                'warning',
-                'Der Kurs ist bereits abgeschlossen. '
-                . 'Öffne ihn zuerst wieder, bevor Teilnehmer '
-                . 'geändert werden.'
-            );
-
-            return $this->redirectToReferrer($context);
-        }
-
-        /*
-         * Serverseitiger Schutz gegen mehrfachen Abschluss.
-         */
-        if ($participant->hasPassed()) {
-            $this->addFlash(
-                'info',
-                new TranslatableMessage('participant.already_passed', [
-                    '%member%' => $participant->getMember()?->getFullName() ?? '',
-                ])
-            );
-
-            return $this->redirectToReferrer($context);
-        }
-
-        try {
-            $memberQualification = $this
-                ->courseCompletionService
-                ->pass($participant);
-
-            $qualificationName = $memberQualification
-                ?->getQualification()
-                ?->getName()
-                ?? '';
-
-            $this->addFlash(
-                'success',
-                new TranslatableMessage('participant.completed', [
-                    '%member%' => $participant->getMember()?->getFullName() ?? '',
-                    '%qualification%' => $qualificationName,
-                ])
-            );
-        } catch (\LogicException $exception) {
-            $this->addFlash(
-                'danger',
-                $exception->getMessage()
-            );
-        }
-
-        return $this->redirectToReferrer($context);
+        return $this->redirectToRoute('admin_participant_pass_confirm', ['id' => $participant->getId()]);
     }
 
     /**

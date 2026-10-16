@@ -11,6 +11,13 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TankCheckRepository::class)]
 class TankCheck
 {
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isPublished = false;
+
+    public function isPublished(): bool { return $this->isPublished; }
+    public function getIsPublished(): bool { return $this->isPublished; }
+    public function setIsPublished(bool $value): static { $this->isPublished = $value; return $this; }
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -48,6 +55,25 @@ class TankCheck
     )]
     private Collection $articles;
 
+	#[ORM\Column(
+		name: 'registration_deadline',
+		type: 'date_immutable',
+		nullable: true
+	)]
+	private ?\DateTimeImmutable $registrationDeadline = null;
+
+	public function getRegistrationDeadline(): ?\DateTimeImmutable
+	{
+		return $this->registrationDeadline;
+	}
+
+	public function setRegistrationDeadline(?\DateTimeImmutable $deadline): self
+	{
+		$this->registrationDeadline = $deadline;
+
+		return $this;
+	}
+	
     public function __construct()
     {
         $this->tanks = new ArrayCollection();

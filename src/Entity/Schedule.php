@@ -9,8 +9,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Enum\BookingAttendanceStatus;
 
-#[ORM\Table(name: 'schedule',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_schedule_course_training_sequence',columns: ['courses_id','training_unit_type_id','training_unit_sequence'])])]
 #[ORM\Entity(repositoryClass: ScheduleRepository::class)]
+#[ORM\Table(name: 'schedule')]
+#[ORM\UniqueConstraint(name: 'uniq_schedule_course_training_sequence',columns: ['courses_id','training_unit_type_id','training_unit_sequence'])]
 class Schedule
 {
     #[ORM\Id]

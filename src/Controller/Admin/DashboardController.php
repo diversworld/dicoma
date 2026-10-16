@@ -23,8 +23,10 @@ use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Controller\Admin\MemberCrudController;
-use App\Repository\MemberQualificationRepository;
+use App\Controller\Admin\EquipmentReservationCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
+use App\Controller\Admin\EquipmentBookingCrudController;
+use App\Repository\MemberQualificationRepository;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -33,6 +35,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Locale;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
+use App\Service\TankInspectionOverview;
+
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,6 +56,25 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 ]
 class DashboardController extends AbstractDashboardController
 {
+    use EquipmentBookingBasketTrait;
+
+    #[AdminRoute(path: '/equipment-center', name: 'equipment_center')]
+    public function equipmentCenter(TankInspectionOverview $overview): Response
+    {
+        $tankUrl = (clone $this->adminUrlGenerator)
+            ->unsetAll()->setController(TankCrudController::class)
+            ->setAction(Crud::PAGE_INDEX)->generateUrl();
+        $checkUrl = (clone $this->adminUrlGenerator)
+            ->unsetAll()->setController(TankCheckCrudController::class)
+            ->setAction(Crud::PAGE_INDEX)->generateUrl();
+
+        return $this->render('admin/equipment/center.html.twig', [
+            'overview' => $overview->getOverview(),
+            'tankUrl' => $tankUrl,
+            'checkUrl' => $checkUrl,
+        ]);
+    }
+
 	public function __construct(
 		private readonly MemberQualificationRepository $memberQualificationRepository, 
 		private readonly AdminUrlGenerator $adminUrlGenerator
@@ -125,7 +149,8 @@ class DashboardController extends AbstractDashboardController
     {
         return Assets::new()
 		   ->addCssFile('css/admin.css')
-			->addCssFile('css/admin-logout.css');
+			->addCssFile('css/admin-logout.css')
+			->addCssFile('css/member-center.css?v=3');
 	}
 
     public function configureMenuItems(): iterable
@@ -160,10 +185,25 @@ class DashboardController extends AbstractDashboardController
             ]),
 
             MenuItem::subMenu('Ausrüstung & Prüfungen', 'fa fa-toolbox')->setSubItems([
+                MenuItem::linkTo(EquipmentItemCrudController::class, 'Ausrüstungsinventar', 'fa fa-boxes-stacked'),
+                MenuItem::linkTo(RegulatorCrudController::class, 'Atemregler', 'fa fa-gauge'),
+				MenuItem::linkTo(EquipmentReservationCrudController::class,'Ausrüstungsverleih','fa fa-hand-holding'),
+				MenuItem::linkTo(EquipmentBookingCrudController::class,'Sammelreservierungen','fa fa-layer-group'),
+                MenuItem::linkToRoute('Flaschenprüfungszentrale', 'fa fa-gauge-high', 'admin_equipment_center'),
                 MenuItem::linkTo(TankCrudController::class, 'Flaschen', 'fa fa-gauge'),
                 MenuItem::linkTo(TankCheckCrudController::class, 'Prüfungen', 'fa fa-clipboard-check'),
                 MenuItem::linkTo(TankCheckDetailCrudController::class, 'Prüfungsdetails', 'fa fa-list'),
                 MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags'),
+            ]),
+
+            MenuItem::subMenu('Einstellungen', 'fa fa-sliders')->setSubItems([
+                MenuItem::linkTo(EquipmentCategoryCrudController::class, 'Ausrüstungsarten', 'fa fa-list'),
+                MenuItem::linkTo(EquipmentSubTypeCrudController::class, 'Ausrüstungsunterarten', 'fa fa-sitemap'),
+                MenuItem::linkTo(EquipmentManufacturerCrudController::class, 'Hersteller je Verein', 'fa fa-industry'),
+                MenuItem::linkTo(EquipmentSizeCrudController::class, 'Größen je Hersteller', 'fa fa-ruler'),
+                MenuItem::linkTo(EquipmentModelCrudController::class, 'Ausrüstungsmodelle', 'fa fa-tags'),
+                MenuItem::linkTo(RegulatorModelCrudController::class, 'Atemreglermodelle', 'fa fa-gears'),
+                MenuItem::linkTo(EquipmentAttributeCrudController::class, 'Kategorie-Merkmale', 'fa fa-sliders'),
             ]),
 
             MenuItem::subMenu('Partner', 'fa fa-handshake')->setSubItems([
@@ -177,36 +217,16 @@ class DashboardController extends AbstractDashboardController
         ];
     }
 
-	public function configureUserMenu(UserInterface $user): UserMenu
-	{
-		if (!$user instanceof User || $user->getId() === null) {
-			throw new \LogicException(
-				'Das Benutzermenü benötigt einen gespeicherten Benutzer.'
-			);
-		}
-
-		return UserMenu::new()
-			->setName($user->getUserIdentifier())
-			->displayUserName(false)
-			->displayUserAvatar(false)
-			->addMenuItems([
-				MenuItem::linkTo(
-					UserCrudController::class,
-					'Mein Profil',
-					'fa fa-id-card'
-				)
-					->setAction(Crud::PAGE_DETAIL)
-					->setEntityId($user->getId()),
-
-				MenuItem::linkTo(
-					UserCrudController::class,
-					'Einstellungen',
-					'fa fa-user-cog'
-				)
-					->setAction(Crud::PAGE_EDIT)
-					->setEntityId($user->getId()),
-			]);
-	}
+    // Benutzerverwaltung ist ausschliesslich fuer Administratoren zugaenglich.
+    // Keine Profil-Links auf administrative CRUD-Masken anbieten:
+    // diese erlauben unter anderem die Verwaltung von Rollen.
+    public function configureUserMenu(UserInterface $user): UserMenu
+    {
+        return UserMenu::new()
+            ->setName($user->getUserIdentifier())
+            ->displayUserName(false)
+            ->displayUserAvatar(false);
+    }
 
 	public function configureCrud(): Crud
 	{
