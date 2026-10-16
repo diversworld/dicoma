@@ -4,7 +4,7 @@
 {% block body %}
 <section class="section"><div class="container">
   <h1>TÜV-Anmeldungen – Verwaltung</h1>
-  <p class="text-muted">Lesende Übersicht der angemeldeten Flaschen und ihrer gespeicherten Buchungspreise. Stornierungen sind separat gekennzeichnet und nicht in den aktiven Summen enthalten.</p>
+  <p class="text-muted">Übersicht der angemeldeten Flaschen, Bearbeitungsstände und gespeicherten Buchungspreise. Stornierungen sind separat gekennzeichnet und nicht in den aktiven Summen enthalten.</p>
   {% for check in checks %}
     {% set rows = grouped[check.id] ?? [] %}
     <h2 id="termin-{{ check.id }}">Termin {{ check.checkDate ? check.checkDate|date('d.m.Y') : 'ohne Datum' }} – {{ check.vendorName ?: 'ohne Prüfstelle' }}</h2>
@@ -20,14 +20,14 @@
     {% endfor %}
     <p><strong>{{ activeCount }}</strong> aktive Anmeldung(en) · Netto: <strong>{{ totalNet|number_format(2, ',', '.') }} €</strong> · Brutto: <strong>{{ totalGross|number_format(2, ',', '.') }} €</strong></p>
     <div class="table-responsive"><table class="table table-striped">
-      <thead><tr><th>Buchung</th><th>Flasche</th><th>Datum</th><th>Status</th><th>Leistungen</th><th>Netto</th><th>Brutto</th></tr></thead>
+      <thead><tr><th>Buchung</th><th>Flasche</th><th>Datum</th><th>Status</th><th>Leistungen</th><th>Netto</th><th>Brutto</th><th>Abwicklung</th></tr></thead>
       <tbody>
       {% for row in rows %}
         <tr>
           <td>#{{ row.booking.id }}</td>
           <td>{{ row.booking.memberTank ? row.booking.memberTank.label : '–' }}{% if row.booking.memberTank %} ({{ row.booking.memberTank.serialNumber }}){% endif %}</td>
           <td>{{ row.booking.createdAt|date('d.m.Y H:i') }}</td>
-          <td>{{ {'requested':'Angemeldet', 'cancelled':'Storniert'}[row.booking.status] ?? row.booking.status }}</td>
+          <td>{{ {'requested':'Angemeldet', 'received':'Angenommen', 'sent':'Bei Prüfstelle', 'returned':'Zurückerhalten', 'completed':'Abgeschlossen', 'cancelled':'Storniert'}[row.booking.status] ?? row.booking.status }}</td>
           <td>
             {% for item in row.items %}
               {{ item.titleSnapshot }}{% if item.quantity > 1 %} ({{ item.quantity }}×){% endif %}{% if not loop.last %}, {% endif %}
@@ -35,9 +35,19 @@
           </td>
           <td>{{ row.net|number_format(2, ',', '.') }} €</td>
           <td>{{ row.gross|number_format(2, ',', '.') }} €</td>
+          <td>
+            {% set next = {'requested':'received', 'received':'sent', 'sent':'returned', 'returned':'completed'}[row.booking.status] ?? null %}
+            {% if next %}
+              <form method="post" action="{{ path('admin_tuv_booking_status', {id: row.booking.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('admin_tuv_booking_status_' ~ row.booking.id) }}">
+                <input type="hidden" name="status" value="{{ next }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary">{{ {'received':'Annahme bestätigen', 'sent':'An Prüfstelle übergeben', 'returned':'Rückerhalt bestätigen', 'completed':'Abschließen'}[next] }}</button>
+              </form>
+            {% else %}–{% endif %}
+          </td>
         </tr>
       {% else %}
-        <tr><td colspan="7">Für diesen Termin liegen keine Anmeldungen vor.</td></tr>
+        <tr><td colspan="8">Für diesen Termin liegen keine Anmeldungen vor.</td></tr>
       {% endfor %}
       </tbody>
     </table></div>

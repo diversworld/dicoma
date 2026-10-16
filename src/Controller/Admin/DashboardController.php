@@ -26,6 +26,8 @@ use App\Controller\Admin\MemberCrudController;
 use App\Controller\Admin\EquipmentReservationCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
 use App\Controller\Admin\EquipmentBookingCrudController;
+use App\Controller\Admin\MemberTankCheckBookingCrudController;
+use App\Service\TankInspectionOverview;
 use App\Repository\MemberQualificationRepository;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
@@ -36,8 +38,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Locale;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
-use App\Service\TankInspectionOverview;
-
+use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
@@ -184,15 +185,20 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
             ]),
 
-            MenuItem::subMenu('Ausrüstung & Prüfungen', 'fa fa-toolbox')->setSubItems([
-                MenuItem::linkTo(EquipmentItemCrudController::class, 'Ausrüstungsinventar', 'fa fa-boxes-stacked'),
+            MenuItem::subMenu('Ausrüstung & Verleih', 'fa fa-toolbox')->setSubItems([
+                MenuItem::linkTo(EquipmentItemCrudController::class, 'Inventar', 'fa fa-boxes-stacked'),
                 MenuItem::linkTo(RegulatorCrudController::class, 'Atemregler', 'fa fa-gauge'),
-				MenuItem::linkTo(EquipmentReservationCrudController::class,'Ausrüstungsverleih','fa fa-hand-holding'),
-				MenuItem::linkTo(EquipmentBookingCrudController::class,'Sammelreservierungen','fa fa-layer-group'),
+                MenuItem::linkTo(EquipmentReservationCrudController::class, 'Einzelreservierungen', 'fa fa-hand-holding'),
+                MenuItem::linkTo(EquipmentBookingCrudController::class, 'Sammelreservierungen', 'fa fa-layer-group'),
+				MenuItem::linkTo(TankCrudController::class, 'Vereinsflaschen', 'fa fa-gauge'),
+            ]),
+
+            MenuItem::subMenu('TÜV-Verwaltung', 'fa fa-clipboard-check')->setSubItems([
                 MenuItem::linkToRoute('Flaschenprüfungszentrale', 'fa fa-gauge-high', 'admin_equipment_center'),
-                MenuItem::linkTo(TankCrudController::class, 'Flaschen', 'fa fa-gauge'),
-                MenuItem::linkTo(TankCheckCrudController::class, 'Prüfungen', 'fa fa-clipboard-check'),
-                MenuItem::linkTo(TankCheckDetailCrudController::class, 'Prüfungsdetails', 'fa fa-list'),
+				MenuItem::linkToCrud('TÜV-Anmeldungen','fa fa-clipboard-check',MemberTankCheckBooking::class)
+					->setController(MemberTankCheckBookingCrudController::class)
+					->setAction(Action::INDEX),
+                MenuItem::linkTo(TankCheckCrudController::class, 'TÜV-Termine', 'fa fa-calendar-check'),
                 MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags'),
             ]),
 

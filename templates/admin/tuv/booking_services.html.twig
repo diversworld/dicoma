@@ -1,0 +1,50 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Anmeldung #{{ booking.id }} – Gebuchte Leistungen{% endblock %}
+{% block main %}
+    <p><strong>Flasche:</strong> {{ booking.memberTank.label }}</p>
+    <p><strong>Mitglieds-ID:</strong> {{ booking.member.id }}</p>
+    <p><strong>TÜV-Termin:</strong> {{ booking.tankCheck.checkDate|date('d.m.Y') }}</p>
+
+    {% if rows is not empty %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead><tr><th>Leistung</th><th class="text-end">Menge</th><th class="text-end">Netto/Stk.</th><th class="text-end">Brutto/Stk.</th><th class="text-end">Netto gesamt</th><th class="text-end">Brutto gesamt</th></tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ row.title }}</td><td class="text-end">{{ row.quantity }}</td>
+                        <td class="text-end">{{ (row.net / 100)|number_format(2, ',', '.') }} €</td>
+                        <td class="text-end">{{ (row.gross / 100)|number_format(2, ',', '.') }} €</td>
+                        <td class="text-end">{{ (row.netTotal / 100)|number_format(2, ',', '.') }} €</td>
+                        <td class="text-end">{{ (row.grossTotal / 100)|number_format(2, ',', '.') }} €</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot><tr><th colspan="4">Gesamt</th><th class="text-end">{{ (netCents / 100)|number_format(2, ',', '.') }} €</th><th class="text-end">{{ (grossCents / 100)|number_format(2, ',', '.') }} €</th></tr></tfoot>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">Für diese ältere Anmeldung sind keine einzelnen Leistungen gespeichert.</div>
+        {% if booking.articleTitleSnapshot %}<p><strong>Frühere Leistung:</strong> {{ booking.articleTitleSnapshot }}</p>{% endif %}
+        {% if booking.priceSnapshot is not null %}<p><strong>Früherer Preis-Snapshot:</strong> {{ booking.priceSnapshot|number_format(2, ',', '.') }} €{% if booking.priceBasis %} ({{ booking.priceBasis }}){% endif %}</p>{% endif %}
+    {% endif %}
+    <h2 class="h5 mt-4">Statushistorie</h2>
+    {% if history is empty %}
+        <p class="text-muted">Für diese Anmeldung sind noch keine Statuswechsel protokolliert.</p>
+    {% else %}
+        <div class="table-responsive"><table class="table table-striped">
+            <thead><tr><th>Zeitpunkt</th><th>Vorher</th><th>Nachher</th><th>Bearbeitet durch</th></tr></thead>
+            <tbody>
+            {% for entry in history %}
+                <tr>
+                    <td>{{ entry.changedAt|date('d.m.Y H:i:s') }}</td>
+                    <td>{{ statusLabels[entry.oldStatus] ?? entry.oldStatus }}</td>
+                    <td>{{ statusLabels[entry.newStatus] ?? entry.newStatus }}</td>
+                    <td>{{ entry.actorIdentifier }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    {% endif %}
+    <a class="btn btn-secondary" href="{{ backUrl }}">Zurück zur TÜV-Verwaltung</a>
+{% endblock %}

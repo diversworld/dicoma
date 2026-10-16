@@ -1,0 +1,12 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Anmeldung #{{ booking.id }} – Statuswechsel{% endblock %}
+{% block main %}
+    <p>Flasche: <strong>{{ booking.memberTank.label }}</strong></p>
+    <p>Neuer Status: <strong>{{ nextLabel }}</strong></p>
+    <form method="post" action="{{ path('admin_tuv_booking_status', {id: booking.id}) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('admin_tuv_booking_status_' ~ booking.id) }}">
+        <input type="hidden" name="status" value="{{ next }}">
+        <button class="btn btn-primary" type="submit">Statuswechsel bestätigen</button>
+        <a class="btn btn-secondary" href="{{ backUrl }}">Abbrechen</a>
+    </form>
+{% endblock %}

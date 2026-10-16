@@ -49,8 +49,25 @@ class MemberTankCheckBooking
         return $this;
     }
     public function getStatus(): string { return $this->status; }
+    public function setStatus(string $status): self { $this->status = $status; return $this; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function setMember(Member $v): self { $this->member = $v; return $this; }
     public function setMemberTank(MemberTank $v): self { $this->memberTank = $v; return $this; }
     public function setTankCheck(TankCheck $v): self { $this->tankCheck = $v; return $this; }
+	public function getMemberDisplay(): string
+	{
+		return $this->member?->getId() !== null
+			? (string) $this->member->getId()
+			: '–';
+	}
+
+	public function getTankDisplay(): string
+	{
+		return $this->memberTank?->getLabel() ?? '–';
+	}
+
+	public function getCheckDisplay(): string
+	{
+		return $this->tankCheck?->getCheckDate()?->format('d.m.Y') ?? '–';
+	}
 }
