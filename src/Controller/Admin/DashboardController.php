@@ -42,6 +42,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Request;
+use App\Service\TuvMessageRenderer;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -129,6 +131,40 @@ class DashboardController extends AbstractDashboardController
 		]);
 	}
 
+    #[AdminRoute(path: '/settings/tuv-notifications', name: 'settings_tuv_notifications', options: ['methods' => ['GET']])]
+    public function tuvNotificationSettings(Request $request, TuvMessageRenderer $renderer): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $kind = (string) $request->query->get('kind', 'confirmation');
+        if (!isset(TuvMessageRenderer::LABELS[$kind])) {
+            throw $this->createNotFoundException();
+        }
+        return $this->render('admin/tuv/message_templates.html.twig', [
+            'kinds' => TuvMessageRenderer::LABELS,
+            'kind' => $kind,
+            'template' => $renderer->getTemplate($kind),
+        ]);
+    }
+
+    #[AdminRoute(path: '/settings/tuv-notifications/save', name: 'settings_tuv_notifications_save', options: ['methods' => ['POST']])]
+    public function saveTuvNotificationSettings(Request $request, TuvMessageRenderer $renderer): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        if (!$this->isCsrfTokenValid('tuv_message_template', (string) $request->request->get('_token', ''))) {
+            throw $this->createAccessDeniedException();
+        }
+        $kind = (string) $request->request->get('kind', '');
+        try {
+            $renderer->save($kind, trim((string) $request->request->get('subject', '')), (string) $request->request->get('body', ''), $request->request->has('enabled'));
+            $this->addFlash('success', 'Benachrichtigungsvorlage gespeichert.');
+        } catch (\InvalidArgumentException $e) {
+            $this->addFlash('danger', $e->getMessage());
+        }
+        return $this->redirectToRoute('admin_settings_tuv_notifications', [
+            'kind' => isset(TuvMessageRenderer::LABELS[$kind]) ? $kind : 'confirmation',
+        ]);
+    }
+
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
@@ -200,9 +236,12 @@ class DashboardController extends AbstractDashboardController
 					->setAction(Action::INDEX),
                 MenuItem::linkTo(TankCheckCrudController::class, 'TÜV-Termine', 'fa fa-calendar-check'),
                 MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags'),
+                MenuItem::linkToCrud('TÜV-Nachrichten / Postausgang', 'fa fa-envelope-open-text', \App\Entity\TuvNotification::class)
+                    ->setController(TuvNotificationCrudController::class)->setPermission('ROLE_ADMIN'),
             ]),
 
             MenuItem::subMenu('Einstellungen', 'fa fa-sliders')->setSubItems([
+                MenuItem::linkToRoute('TÜV-Benachrichtigungstexte', 'fa fa-envelope', 'admin_settings_tuv_notifications')->setPermission('ROLE_ADMIN'),
                 MenuItem::linkTo(EquipmentCategoryCrudController::class, 'Ausrüstungsarten', 'fa fa-list'),
                 MenuItem::linkTo(EquipmentSubTypeCrudController::class, 'Ausrüstungsunterarten', 'fa fa-sitemap'),
                 MenuItem::linkTo(EquipmentManufacturerCrudController::class, 'Hersteller je Verein', 'fa fa-industry'),

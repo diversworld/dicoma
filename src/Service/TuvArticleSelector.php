@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\MemberTank;
+use App\Entity\Tank;
 use App\Entity\TankCheck;
 use App\Entity\TankCheckArticle;
 
@@ -71,10 +72,26 @@ final class TuvArticleSelector
     public function eligible(TankCheck $check, MemberTank $tank): array
     {
         $volume = $this->volume($tank);
-        $result = [];
         // Prefer actual stamped water capacity for liter-based price tiers.
         // Only use legacy cuft-specific tariffs if capacity has not been entered.
         $cuft = $volume === null && $this->isCuft($tank) ? (str_starts_with(trim((string) $tank->getVolume()), '40') ? '40' : '80') : null;
+        return $this->eligibleForDimensions($check, $volume, $cuft);
+    }
+
+    /** Vereinsflaschen verwenden ihre hinterlegte Größe in Litern. */
+    public function eligibleForClubTank(TankCheck $check, Tank $tank): array
+    {
+        $size = $tank->getSize();
+        if ($size === null || $size <= 0 || $size > 50 || in_array($size, [40, 80], true)) {
+            throw new \DomainException('Für diese Vereinsflasche ist keine eindeutige Wasserraumgröße hinterlegt (40/80 sind als cuft-Tarife reserviert).');
+        }
+        return $this->eligibleForDimensions($check, (float) $size, null);
+    }
+
+    /** @return array<int, TankCheckArticle> */
+    private function eligibleForDimensions(TankCheck $check, ?float $volume, ?string $cuft): array
+    {
+        $result = [];
         $requiredTariffs = [];
 
         foreach ($check->getArticles() as $article) {

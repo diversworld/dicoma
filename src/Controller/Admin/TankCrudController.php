@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Tank;
+use App\Entity\TankInspectionResult;
+use App\Service\TuvNextInspectionDateCalculator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
@@ -58,8 +60,71 @@ class TankCrudController extends AbstractCrudController
             ->linkToCrudAction('tankStatus');
         $maintenance = Action::new('tankMaintenance', 'Wartungsaufträge', 'fa fa-wrench')
             ->linkToCrudAction('tankMaintenance');
-        return $actions->add(Crud::PAGE_INDEX, $status)->add(Crud::PAGE_DETAIL, $status)
+        $inspection = Action::new('clubInspection', 'TÜV-Prüfung', 'fa fa-clipboard-check')
+            ->linkToCrudAction('clubInspection');
+        return $actions->add(Crud::PAGE_INDEX, $inspection)->add(Crud::PAGE_DETAIL, $inspection)
+            ->add(Crud::PAGE_INDEX, $status)->add(Crud::PAGE_DETAIL, $status)
             ->add(Crud::PAGE_INDEX, $maintenance)->add(Crud::PAGE_DETAIL, $maintenance);
+    }
+
+    #[AdminRoute(path: '/inspection', name: 'inspection')]
+    public function clubInspection(AdminContext $context, Request $request, TuvNextInspectionDateCalculator $calculator): Response
+    {
+        $tank = $context->getEntity()?->getInstance();
+        if (!$tank instanceof Tank || $tank->getId() === null) {
+            throw $this->createNotFoundException('Vereinsflasche nicht gefunden.');
+        }
+        $id = $tank->getId();
+        $errors = [];
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('club_tuv_'.$id, (string) $request->request->get('_token', ''))) {
+                throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+            }
+            $choice = (string) $request->request->get('result', '');
+            $raw = (string) $request->request->get('inspected_at', '');
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+            $notes = trim((string) $request->request->get('notes', ''));
+            if (!in_array($choice, ['passed', 'failed'], true)) { $errors[] = 'Ungültiges Prüfergebnis.'; }
+            if ($date === false || $date->format('Y-m-d') !== $raw || $date > new \DateTimeImmutable('today')) {
+                $errors[] = 'Ungültiges Prüfdatum.';
+            }
+            if (mb_strlen($notes) > 5000) { $errors[] = 'Bemerkung ist zu lang.'; }
+            if ($errors === []) {
+                $previous = $tank->getLastCheckDate();
+                if ($choice === 'passed' && $previous !== null && $date < \DateTimeImmutable::createFromInterface($previous)->setTime(0, 0)) {
+                    $errors[] = 'Das Prüfdatum liegt vor der zuletzt dokumentierten Prüfung.';
+                } else {
+                    $record = new TankInspectionResult($tank, $choice, $date, $notes !== '' ? $notes : null, $this->getUser()?->getUserIdentifier() ?? 'Unbekannt');
+                    $this->em->persist($record);
+                    if ($choice === 'passed') {
+                        $next = $calculator->calculate($date);
+                        $existing = $tank->getNextCheckDate();
+                        $tank->setLastCheckDate(\DateTime::createFromImmutable($date));
+                        if ($existing === null || $next > \DateTimeImmutable::createFromInterface($existing)) {
+                            $tank->setNextCheckDate(\DateTime::createFromImmutable($next));
+                        }
+                    }
+                    $this->em->flush();
+                    $this->addFlash('success', 'Prüfergebnis gespeichert.');
+                    return $this->redirect($this->inspectionUrl($id), Response::HTTP_SEE_OTHER);
+                }
+            }
+        }
+        $history = $this->em->getRepository(TankInspectionResult::class)->findBy(
+            ['tank' => $tank], ['createdAt' => 'DESC', 'id' => 'DESC'], 100,
+        );
+        return $this->render('admin/tuv/club_tank_inspection.html.twig', [
+            'tank' => $tank, 'history' => $history, 'errors' => $errors,
+            'inspectionActionUrl' => $this->inspectionUrl($id),
+            'detailUrl' => (clone $this->adminUrls)->unsetAll()
+                ->setController(self::class)->setAction(Crud::PAGE_DETAIL)->setEntityId($id)->generateUrl(),
+        ]);
+    }
+
+    private function inspectionUrl(int $id): string
+    {
+        return (clone $this->adminUrls)->unsetAll()
+            ->setController(self::class)->setAction('clubInspection')->setEntityId($id)->generateUrl();
     }
 
     #[AdminRoute(path: '/status', name: 'status')]

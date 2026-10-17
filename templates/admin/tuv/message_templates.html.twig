@@ -1,0 +1,15 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Einstellungen – TÜV-Benachrichtigungen{% endblock %}
+{% block main %}
+<p>Diese Vorlagen gelten für <strong>neu vorgemerkte</strong> E-Mails. Bereits vorgemerkte Nachrichten bleiben unverändert.</p>
+<nav class="mb-3">{% for code, label in kinds %}<a class="btn btn-sm {{ code == kind ? 'btn-primary' : 'btn-outline-secondary' }}" href="{{ path('admin_settings_tuv_notifications',{kind:code}) }}">{{ label }}</a> {% endfor %}</nav>
+<form method="post" action="{{ path('admin_settings_tuv_notifications_save') }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_message_template') }}"><input type="hidden" name="kind" value="{{ kind }}">
+<label for="subject" class="form-label">E-Mail-Betreff</label><input id="subject" name="subject" class="form-control mb-3" maxlength="200" required value="{{ template.subject }}">
+<label for="body" class="form-label">Nachrichtentext (Klartext)</label><textarea id="body" name="body" class="form-control mb-3" rows="12" maxlength="10000" required>{{ template.body }}</textarea>
+<p class="text-muted">Platzhalter: <code>{buchung_id}</code>, <code>{status}</code>, <code>{flasche}</code>, <code>{termin}</code>. Keine HTML-Ausführung; unbekannte Platzhalter bleiben unverändert.</p>
+<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="enabled" value="1" id="enabled" {% if template.enabled %}checked{% endif %}><label class="form-check-label" for="enabled">Automatische Benachrichtigung für diesen Nachrichtentyp aktivieren</label></div>
+<p class="text-muted">Deaktivieren verhindert neue automatische Vormerkungen. Bereits vorgemerkte E-Mails werden dadurch nicht gelöscht oder angehalten.</p>
+<button class="btn btn-primary">Vorlage und Einstellung speichern</button>
+</form>
+{% endblock %}

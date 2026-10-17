@@ -1,0 +1,31 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Termin {{ check.checkDate ? check.checkDate|date('d.m.Y') : '#' ~ check.id }} – Anmeldungen und Kosten{% endblock %}
+{% block main %}
+    <p><a href="{{ backUrl }}" class="btn btn-secondary">Zurück zu den TÜV-Terminen</a></p>
+    <div class="row mb-3">
+        <div class="col"><strong>Anmeldungen:</strong> {{ rows|length }}</div>
+        <div class="col"><strong>Mitgliederflaschen:</strong> {{ counts.member }}</div>
+        <div class="col"><strong>Vereinsflaschen:</strong> {{ counts.club }}</div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead><tr><th>Anmeldung</th><th>Typ</th><th>Flasche</th><th>Status</th><th class="text-end">Netto</th><th class="text-end">Brutto</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td><a href="{{ row.url }}">#{{ row.id }}</a></td>
+                    <td>{{ row.type == 'club' ? 'Verein' : 'Mitglied' }}</td>
+                    <td>{{ row.tank }}</td>
+                    <td>{{ row.status }}</td>
+                    <td class="text-end">{{ (row.netCents / 100)|number_format(2, ',', '.') }} €</td>
+                    <td class="text-end">{{ (row.grossCents / 100)|number_format(2, ',', '.') }} €{% if not row.hasItems %} <span title="Keine Preispositionen gespeichert">*</span>{% endif %}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">Für diesen Termin sind noch keine Flaschen angemeldet.</td></tr>
+            {% endfor %}
+            </tbody>
+            <tfoot><tr><th colspan="4">Gesamt</th><th class="text-end">{{ (netCents / 100)|number_format(2, ',', '.') }} €</th><th class="text-end">{{ (grossCents / 100)|number_format(2, ',', '.') }} €</th></tr></tfoot>
+        </table>
+    </div>
+    <p class="text-muted">Beträge aus den gespeicherten Preis-Snapshots (Menge × Einzelpreis). * Keine Preispositionen hinterlegt; 0,00 € bedeutet nicht zwingend kostenfrei. Stornierte Anmeldungen sind in den Summen enthalten.</p>
+{% endblock %}

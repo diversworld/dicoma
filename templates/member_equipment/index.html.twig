@@ -33,7 +33,13 @@
 						Noch nicht erfasst
 					{% endif %}
 				</td>
-				<td>{{ tank.nextInspectionAt ? tank.nextInspectionAt|date('d.m.Y') : 'Noch nicht erfasst' }}</td>
+				<td>
+                    {{ tank.nextInspectionAt ? tank.nextInspectionAt|date('d.m.Y') : 'Noch nicht erfasst' }}
+                    {% set dueStatus = tank.inspectionDueStatus %}
+                    <div class="mt-1">
+                        <span class="badge {{ dueStatus == 'Überfällig' ? 'bg-danger' : (dueStatus == 'Bald fällig' ? 'bg-warning text-dark' : (dueStatus == 'Aktuell' ? 'bg-success' : 'bg-secondary')) }}">{{ dueStatus }}</span>
+                    </div>
+                </td>
 				<td>
 					<a class="btn btn-sm btn-outline-primary"
 					   href="{{ path('member_equipment_tank_edit', {id: tank.id}) }}">
@@ -43,7 +49,7 @@
 			</tr>
 			{% else %}
 			<tr>
-				<td colspan="5">Noch keine private Flasche gespeichert.</td>
+				<td colspan="7">Noch keine private Flasche gespeichert.</td>
 			</tr>
 			{% endfor %}
 		</tbody>

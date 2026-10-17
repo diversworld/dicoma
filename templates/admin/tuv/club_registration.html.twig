@@ -1,0 +1,46 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Vereinsflasche zum TÜV-Termin anmelden{% endblock %}
+{% block main %}
+    <form method="get" action="{{ formUrl }}" class="mb-4">
+        <input type="hidden" name="crudControllerFqcn" value="{{ app.request.query.get('crudControllerFqcn') }}">
+        <input type="hidden" name="crudAction" value="clubRegistration">
+        <label for="checkId" class="form-label">TÜV-Termin</label>
+        <select id="checkId" name="checkId" class="form-select mb-3" required>
+            <option value="">Bitte auswählen</option>
+            {% for check in checks %}
+                <option value="{{ check.id }}" {% if selectedCheck and selectedCheck.id == check.id %}selected{% endif %}>{{ check.checkDate|date('d.m.Y') }} – #{{ check.id }}</option>
+            {% endfor %}
+        </select>
+        <label for="tankId" class="form-label">Vereinsflasche</label>
+        <select id="tankId" name="tankId" class="form-select mb-3" required>
+            <option value="">Bitte auswählen</option>
+            {% for tank in tanks %}
+                <option value="{{ tank.id }}" {% if selectedTank and selectedTank.id == tank.id %}selected{% endif %}>{{ tank.inventory }} – {{ tank.size }} L – {{ tank.serialnumber }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-secondary" type="submit">Leistungen anzeigen</button>
+    </form>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    {% if selectedCheck and selectedTank and not error %}
+        <form method="post" action="{{ path('admin_tuv_club_booking_save') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('club_tuv_book_' ~ selectedCheck.id ~ '_' ~ selectedTank.id) }}">
+            <input type="hidden" name="check_id" value="{{ selectedCheck.id }}">
+            <input type="hidden" name="tank_id" value="{{ selectedTank.id }}">
+            <h2 class="h5">Leistungen / Preise</h2>
+            {% for line in articles %}
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="article_ids[]" id="article_{{ line.article.id }}" value="{{ line.article.id }}"
+                        {% if line.mode == 'required' %}checked disabled{% endif %}>
+                    <label class="form-check-label" for="article_{{ line.article.id }}">
+                        {{ line.article.title }} – {{ line.net }} € netto / {{ line.gross }} € brutto
+                        {% if line.mode == 'required' %}(Pflichtleistung){% endif %}
+                    </label>
+                </div>
+            {% else %}
+                <p>Für diese Flasche sind keine buchbaren Leistungen vorhanden.</p>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" {% if articles is empty %}disabled{% endif %}>Vereinsflasche verbindlich anmelden</button>
+        </form>
+    {% endif %}
+    <a href="{{ backUrl }}" class="btn btn-link mt-3">Zurück zu TÜV-Anmeldungen</a>
+{% endblock %}

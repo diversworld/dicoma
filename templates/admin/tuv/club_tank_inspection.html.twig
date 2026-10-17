@@ -1,0 +1,22 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Prüfung – Vereinsflasche {{ tank.inventory }}{% endblock %}
+{% block main %}
+    <p>Seriennummer: {{ tank.serialnumber }}</p>
+    <p>Letzte Prüfung: {{ tank.lastCheckDate ? tank.lastCheckDate|date('d.m.Y') : '–' }} · Nächste Prüfung: {{ tank.nextCheckDate ? tank.nextCheckDate|date('d.m.Y') : '–' }}</p>
+    {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
+    {% for error in errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+    <form method="post" action="{{ inspectionActionUrl }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('club_tuv_' ~ tank.id) }}">
+        <div class="mb-3"><label for="result">Prüfergebnis</label><select class="form-select" id="result" name="result" required>
+            <option value="passed" {% if app.request.request.get('result', 'passed') == 'passed' %}selected{% endif %}>Bestanden</option><option value="failed" {% if app.request.request.get('result') == 'failed' %}selected{% endif %}>Nicht bestanden</option>
+        </select></div>
+        <div class="mb-3"><label for="inspected_at">Prüfdatum</label><input class="form-control" type="date" id="inspected_at" name="inspected_at" value="{{ app.request.request.get('inspected_at') ?? 'now'|date('Y-m-d') }}" required></div>
+        <div class="mb-3"><label for="notes">Bemerkungen</label><textarea class="form-control" id="notes" name="notes" maxlength="5000">{{ app.request.request.get('notes', '') }}</textarea></div>
+        <button class="btn btn-primary" type="submit">Prüfung dokumentieren</button> <a class="btn btn-secondary" href="{{ detailUrl }}">Zurück zur Flasche</a>
+    </form>
+    <h2 class="mt-4">Prüfhistorie</h2>
+    <table class="table"><thead><tr><th>Datum</th><th>Ergebnis</th><th>Bearbeiter</th><th>Bemerkung</th></tr></thead><tbody>
+    {% for record in history %}<tr><td>{{ record.inspectedAt|date('d.m.Y') }}</td><td>{{ record.result == 'passed' ? 'Bestanden' : 'Nicht bestanden' }}</td><td>{{ record.updatedBy }}</td><td>{{ record.notes }}</td></tr>
+    {% else %}<tr><td colspan="4">Noch keine dokumentierten Ergebnisse</td></tr>{% endfor %}
+    </tbody></table>
+{% endblock %}

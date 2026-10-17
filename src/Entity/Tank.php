@@ -15,6 +15,11 @@ class Tank
     #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?Club $club = null;
 
+    public function getInspectionDueStatus(): string
+    {
+        return \App\Service\TankInspectionDueStatus::label($this->nextCheckDate);
+    }
+
     public function getClub(): ?Club { return $this->club; }
     public function setClub(?Club $club): static { $this->club = $club; return $this; }
 

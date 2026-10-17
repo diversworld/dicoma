@@ -1,0 +1,38 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Abwicklung – Anmeldung #{{ booking.id }}{% endblock %}
+{% block main %}
+<p><strong>Flasche:</strong> {{ booking.tankDisplay }} · <strong>Termin:</strong> {{ booking.checkDisplay }} · <strong>Status:</strong> {{ booking.status }}</p>
+<p><a class="btn btn-secondary" href="{{ backUrl }}">Zurück zu TÜV-Anmeldungen</a></p>
+<h2 class="h5 mt-4">36 · Annahme / Übergabe / Rückgabe</h2>
+<p><a class="btn btn-outline-primary" href="{{ path('admin_tuv_handover_print', {id: booking.id}) }}" target="_blank" rel="noopener">Übergabeprotokoll drucken / als PDF speichern</a></p>
+<p class="text-muted">Dokumentiert den physischen Übergabevorgang; der Buchungsstatus wird separat verwaltet.</p>
+<form method="post" action="{{ path('admin_tuv_handover_save',{id:booking.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_ops_' ~ booking.id) }}">
+<select name="type" class="form-select mb-2" required>
+<option value="received">Vom Mitglied / Verein angenommen</option><option value="sent">An Prüfstelle übergeben</option><option value="returned">Von Prüfstelle zurückerhalten</option><option value="collected">An Mitglied / Verein zurückgegeben</option>
+</select><textarea name="notes" class="form-control mb-2" maxlength="2000" placeholder="Zustand / Bemerkung"></textarea>
+<button class="btn btn-primary">Übergabe protokollieren</button></form>
+<table class="table mt-3"><thead><tr><th>Zeit</th><th>Vorgang</th><th>Bearbeiter</th><th>Bemerkung</th></tr></thead><tbody>
+{% for h in handovers %}<tr><td>{{ h.occurredAt|date('d.m.Y H:i') }}</td><td>{{ h.eventType }}</td><td>{{ h.actor }}</td><td>{{ h.notes }}</td></tr>{% else %}<tr><td colspan="4">Noch keine Übergabe dokumentiert.</td></tr>{% endfor %}
+</tbody></table>
+<h2 class="h5 mt-4">37 · Prüfbescheinigungen / Dokumente</h2>
+<form method="post" enctype="multipart/form-data" action="{{ path('admin_tuv_document_upload',{id:booking.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_ops_' ~ booking.id) }}"><input type="file" name="document" accept="application/pdf,image/jpeg,image/png" required class="form-control mb-2">
+<button class="btn btn-primary">Dokument sicher ablegen</button></form>
+<ul class="mt-3">{% for doc in docs %}<li><a href="{{ path('admin_tuv_document_download',{id:doc.id}) }}">{{ doc.originalName }}</a> ({{ doc.uploadedAt|date('d.m.Y H:i') }})</li>{% else %}<li>Noch keine Dokumente.</li>{% endfor %}</ul>
+<h2 class="h5 mt-4">38 · Sammelbuchung / Mehrfachflaschen</h2>
+{% if groupLink %}<p>Gruppe #{{ groupLink.group.id }} – enthaltene Anmeldungen:</p><ul>{% for m in members %}<li>#{{ m.booking.id }} – {{ m.booking.tankDisplay }} ({{ m.booking.status }})</li>{% endfor %}</ul>
+{% else %}<form method="post" action="{{ path('admin_tuv_group_save',{id:booking.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_ops_' ~ booking.id) }}"><label for="booking_ids">Weitere Anmeldungsnummern desselben TÜV-Termins (durch Komma getrennt)</label>
+<input id="booking_ids" name="booking_ids" class="form-control mb-2" required placeholder="12, 13"><button class="btn btn-primary">Sammelbuchung bilden</button></form>{% endif %}
+<p class="text-muted">Die Flaschen behalten ihre individuellen Status, Prüfergebnisse und Preispositionen.</p>
+<h2 class="h5 mt-4">39 / 41 · Benachrichtigungen (Postausgang)</h2>
+<p><a class="btn btn-outline-secondary" href="{{ path('admin_settings_tuv_notifications') }}">Benachrichtigungstexte konfigurieren</a></p>
+<form method="post" action="{{ path('admin_tuv_notification_queue',{id:booking.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_ops_' ~ booking.id) }}">
+<input type="email" name="recipient" class="form-control mb-2" placeholder="Empfänger-E-Mail" required>
+<select name="kind" class="form-select mb-2"><option value="confirmation">Buchungsbestätigung</option><option value="status">Statusinformation</option><option value="pickup">Abholinformation</option><option value="cancellation">Stornierungsinformation</option></select>
+<button class="btn btn-primary">Nachricht vormerken</button></form>
+<p class="text-muted">Nachrichten werden nicht beim Vormerken versendet. Für den Versand muss der separate CLI-Befehl eingerichtet werden.</p>
+<ul>{% for n in notifications %}<li>{{ n.subject }} → {{ n.recipient }} ({{ n.state }})</li>{% else %}<li>Keine vorgemerkten Nachrichten.</li>{% endfor %}</ul>
+{% endblock %}

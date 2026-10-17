@@ -1,0 +1,40 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Prüfergebnis – Anmeldung #{{ booking.id }}{% endblock %}
+{% block main %}
+    <p><strong>Flasche:</strong> {{ booking.tankDisplay }}</p>
+    <p><strong>Status:</strong> {{ booking.status }}</p>
+    {% for error in errors %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endfor %}
+    <form method="post" action="{{ path('admin_tuv_inspection_result_save', {id: booking.id}) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('tuv_inspection_result_' ~ booking.id) }}">
+        <div class="mb-3">
+            <label class="form-label" for="result">Prüfergebnis</label>
+            <select id="result" name="result" class="form-select" required>
+                <option value="passed" {% if (app.request.request.get('result') ?? inspection.result ?? 'passed') == 'passed' %}selected{% endif %}>Bestanden</option>
+                <option value="failed" {% if (app.request.request.get('result') ?? inspection.result ?? 'passed') == 'failed' %}selected{% endif %}>Nicht bestanden</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="inspected_at">Prüfdatum</label>
+            <input class="form-control" id="inspected_at" type="date" name="inspected_at" required
+                value="{{ app.request.request.get('inspected_at') ?? (inspection ? inspection.inspectedAt|date('Y-m-d') : 'now'|date('Y-m-d')) }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="notes">Bemerkungen</label>
+            <textarea class="form-control" id="notes" name="notes" maxlength="5000" rows="5">{{ app.request.request.get('notes') ?? inspection.notes ?? '' }}</textarea>
+        </div>
+        {% if inspection %}
+            <p class="text-muted">Zuletzt bearbeitet von {{ inspection.updatedBy }} am {{ inspection.updatedAt|date('d.m.Y H:i') }}</p>
+        {% endif %}
+        <div class="alert alert-info">
+            Bei <strong>Bestanden</strong> wird der nächste Prüftermin automatisch
+            auf <strong>30 Kalendermonate nach dem Prüfdatum</strong> gesetzt.
+            Ein bereits später hinterlegter Termin wird nicht zurückgesetzt.
+            {% set nextDate = booking.clubTank ? booking.clubTank.nextCheckDate : booking.memberTank.nextInspectionAt %}
+            {% if nextDate %}<div>Bisher hinterlegt: {{ nextDate|date('d.m.Y') }}</div>{% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Prüfergebnis speichern</button>
+        <a href="{{ backUrl }}" class="btn btn-secondary">Abbrechen</a>
+    </form>
+{% endblock %}

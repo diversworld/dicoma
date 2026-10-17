@@ -41,6 +41,11 @@ class MemberTank
 	#[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $nextInspectionAt = null;
 
+    public function getInspectionDueStatus(): string
+    {
+        return \App\Service\TankInspectionDueStatus::label($this->nextInspectionAt);
+    }
+
     public function getWaterCapacityLiters(): ?string
 	{
 		return $this->waterCapacityLiters;

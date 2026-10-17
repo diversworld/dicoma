@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TÜV-Sammelliste – {{ check.checkDate|date('d.m.Y') }}</title>
+    <style>
+        body { font: 12px/1.4 Arial, sans-serif; color: #111; margin: 22mm 12mm; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .meta { margin: 8px 0 18px; color: #444; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { padding: 5px 4px; border: 1px solid #888; text-align: left; vertical-align: top; }
+        th { background: #eee; }
+        .number { text-align: right; white-space: nowrap; }
+        .small { font-size: 10px; }
+        .actions { margin-bottom: 16px; }
+        .actions button, .actions a { margin-right: 10px; padding: 7px 12px; }
+        tr { break-inside: avoid; }
+        @page { size: A4 landscape; margin: 12mm; }
+        @media print {
+            body { margin: 0; }
+            .actions { display: none !important; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+        }
+    </style>
+</head>
+<body>
+    <div class="actions">
+        <button type="button" onclick="window.print()">Drucken / als PDF speichern</button>
+        <a href="{{ backUrl }}">Zurück zu den TÜV-Terminen</a>
+    </div>
+    <h1>TÜV-Sammelliste – {{ check.checkDate|date('d.m.Y') }}</h1>
+    <div class="meta">Erstellt am {{ generatedAt|date('d.m.Y H:i') }} ·
+        {{ rows|length }} Anmeldungen · {{ counts.member }} Mitgliederflaschen · {{ counts.club }} Vereinsflaschen
+    </div>
+    <table>
+        <thead>
+            <tr><th>Nr.</th><th>Typ</th><th>Flasche</th><th>Größe</th><th>Seriennummer</th><th>Status</th><th class="number">Netto</th><th class="number">Brutto</th><th>Übergabe / Notizen</th></tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+            <tr>
+                <td>#{{ row.id }}</td>
+                <td>{{ row.type == 'club' ? 'Verein' : 'Mitglied' }}</td>
+                <td>{{ row.tank }}</td>
+                <td>{{ row.size }}</td>
+                <td>{{ row.serial }}</td>
+                <td>{{ row.status }}</td>
+                <td class="number">{{ (row.netCents / 100)|number_format(2, ',', '.') }} €</td>
+                <td class="number">{{ (row.grossCents / 100)|number_format(2, ',', '.') }} €{{ not row.hasItems ? ' *' : '' }}</td>
+                <td>&nbsp;</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="9">Keine Anmeldungen vorhanden.</td></tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr><th colspan="6">Gesamt</th><th class="number">{{ (netCents / 100)|number_format(2, ',', '.') }} €</th><th class="number">{{ (grossCents / 100)|number_format(2, ',', '.') }} €</th><th></th></tr>
+        </tfoot>
+    </table>
+    <p class="small">* Keine gespeicherten Preispositionen. Stornierte Anmeldungen sind enthalten. Werte basieren auf gespeicherten Preis-Snapshots.</p>
+    <p>Übergabe am: __________________ &nbsp;&nbsp; Unterschrift: __________________________________</p>
+</body>
+</html>
