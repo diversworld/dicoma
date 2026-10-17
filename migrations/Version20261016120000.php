@@ -28,7 +28,6 @@ final class Version20261016120000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // Deliberately non-destructive: never drop maintenance records on rollback.
-        $this->write('No automatic rollback: maintenance records must be preserved.');
+        $this->throwIrreversibleMigrationException('Maintenance records must be preserved; restore a verified backup for a full rollback.');
     }
 }
