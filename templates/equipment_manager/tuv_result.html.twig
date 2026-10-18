@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+{% block title %}Prüfergebnis erfassen{% endblock %}{% block hero %}{% endblock %}
+{% block body %}<section class="section"><div class="container py-4" style="max-width:760px">
+<a href="{{ path('equipment_manager_tuv') }}">← Zur TÜV-Übersicht</a><h1 class="h3 mt-3">Prüfergebnis erfassen</h1>
+<p class="text-muted">Anmeldung #{{ booking.id }} · {{ booking.clubTank ? 'Vereinsflasche' : 'Mitgliederflasche' }}</p>
+<div class="alert alert-warning">Nur bei bestandener Prüfung wird die nächste Prüffrist um 30 Monate fortgeschrieben. Die Rückgabe an den Eigentümer wird anschließend separat bestätigt.</div>
+{% if existing %}
+<div class="alert alert-success">Prüfergebnis bereits erfasst: <strong>{{ existing.result == 'passed' ? 'Bestanden' : 'Nicht bestanden' }}</strong> ({{ existing.inspectedAt|date('d.m.Y') }}).</div>
+<form method="post" action="{{ path('equipment_manager_tuv_finish', {id: booking.id}) }}" onsubmit="return confirm('Rückgabe an Eigentümer bestätigen?')">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_finish_' ~ booking.id) }}"><button class="btn btn-success">Rückgabe bestätigen und abschließen</button></form>
+{% else %}
+<form method="post" class="card card-body shadow-sm" onsubmit="return confirm('Ergebnis verbindlich speichern und Anmeldung abschließen?')">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_result_' ~ booking.id) }}">
+<fieldset class="mb-3"><legend class="h6">Prüfergebnis *</legend>
+<div class="form-check"><input required class="form-check-input" type="radio" name="result" id="passed" value="passed"><label class="form-check-label" for="passed">Bestanden</label></div>
+<div class="form-check"><input required class="form-check-input" type="radio" name="result" id="failed" value="failed"><label class="form-check-label" for="failed">Nicht bestanden</label></div></fieldset>
+<div class="mb-3"><label class="form-label" for="date">Prüfdatum *</label><input class="form-control" type="date" name="date" id="date" value="{{ 'now'|date('Y-m-d') }}" max="{{ 'now'|date('Y-m-d') }}" required></div>
+<div class="mb-3"><label class="form-label" for="notes">Bemerkung (optional)</label><textarea class="form-control" name="notes" id="notes" maxlength="2000" rows="3"></textarea></div>
+<div class="d-flex gap-2"><button class="btn btn-primary">Ergebnis speichern und abschließen</button><a class="btn btn-outline-secondary" href="{{ path('equipment_manager_tuv') }}">Abbrechen</a></div></form>{% endif %}</div></section>{% endblock %}

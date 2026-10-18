@@ -1,0 +1,88 @@
+{% extends 'base.html.twig' %}
+{% block title %}TÜV-Abwicklung – Gerätewart | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container py-4">
+    <nav aria-label="Brotkrumen"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li><li class="breadcrumb-item active" aria-current="page">TÜV-Abwicklung</li></ol></nav>
+    <h1 class="h2">TÜV-Termine und Prüfungsabwicklung</h1>
+    <p class="text-muted">{{ clubName }} · Vereins- und Mitgliederflaschen gemeinsam im Blick</p>
+    <div class="alert alert-light border">Ablauf: <strong>Termin wählen → Flaschen anmelden → Annahme → Prüfstelle → Ergebnis → Rückgabe.</strong> Für Mitgliederflaschen gilt die bestehende Mitgliederanmeldung; Vereinsflaschen kannst du hier direkt auswählen.</div>
+    <div class="alert alert-info" role="status">Die Terminliste zeigt veröffentlichte Prüftermine. Darunter findest du die Anmeldungen deines Vereins für Vereins- und Mitgliederflaschen.</div>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+        <a class="btn btn-primary" href="{{ path('equipment_manager_tuv_plan') }}">Neuen Termin planen</a>
+        <a class="btn btn-outline-primary" href="{{ path('equipment_manager_tanks') }}">Vereinsflaschen</a>
+        <a class="btn btn-outline-secondary" href="{{ path('equipment_manager_dashboard') }}">Zur Übersicht</a>
+    </div>
+    <div class="card shadow-sm mb-4">
+      <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <h2 class="h5 mb-0">Kommende TÜV-Termine</h2>
+        <a class="btn btn-sm btn-primary" href="{{ path('equipment_manager_tuv_plan') }}">+ TÜV-Termin planen</a>
+      </div>
+      <div class="card-body">
+        {% if upcoming is empty %}
+          <p class="text-muted mb-0">Aktuell sind keine veröffentlichten zukünftigen Prüftermine vorhanden.</p>
+        {% else %}
+          <div class="row g-3">
+          {% for check in upcoming %}
+            <div class="col-md-6 col-xl-4"><div class="border rounded p-3 h-100">
+              <div class="fw-semibold fs-5">{{ check.checkDate|date('d.m.Y') }}</div>
+              {% if check.vendorName %}<div class="text-muted">{{ check.vendorName }}</div>{% endif %}
+              <div class="mt-2 small">Anmeldeschluss:
+                <strong>{{ check.registrationDeadline ? check.registrationDeadline|date('d.m.Y') : 'nicht angegeben' }}</strong>
+              </div>
+              {% if check.registrationDeadline and check.registrationDeadline < date('today') %}
+                <span class="badge bg-secondary mt-2">Anmeldung geschlossen</span>
+              {% else %}
+                <span class="badge bg-success mt-2">Termin veröffentlicht</span><div class="mt-3"><a class="btn btn-primary btn-sm" href="{{ path('equipment_manager_tuv_club_register', {id: check.id}) }}">Vereinsflaschen anmelden</a></div>
+              {% endif %}
+            </div></div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% if not is_granted('ROLE_ADMIN') %}
+      <p class="small text-muted">Neue Prüftermine und Leistungen werden derzeit von der Administration angelegt. Die Bearbeitung der Anmeldungen erfolgt über die vorhandenen TÜV-Verwaltungsaktionen.</p>
+    {% endif %}
+    <form method="get" class="row g-2 align-items-end mb-4">
+        <div class="col-sm-5 col-lg-4"><label for="status" class="form-label">Bearbeitungsstand</label>
+            <select id="status" name="status" class="form-select">
+                {% for value, label in {'all':'Alle','requested':'Angemeldet','received':'Angenommen','sent':'Bei der Prüfstelle','returned':'Zurück','completed':'Abgeschlossen','cancelled':'Storniert'} %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select></div>
+        <div class="col-auto"><button class="btn btn-primary" type="submit">Anzeigen</button></div>
+    </form>
+    <p aria-live="polite"><strong>{{ total }}</strong> Anmeldungen gefunden{% if limited %} (maximal 200 angezeigt){% endif %}.</p>
+    {% for group in groups %}
+        <div class="card mb-4 shadow-sm"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="h5 mb-0">Prüftermin {{ group.check.checkDate ? group.check.checkDate|date('d.m.Y') : 'ohne Datum' }}</h2>
+            <span class="badge bg-secondary">{{ group.clubCount }} Vereinsflaschen · {{ group.memberCount }} Mitgliederflaschen</span>
+        </div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead><tr><th scope="col">Flasche</th><th scope="col">Eigentum</th><th scope="col">Seriennummer</th><th scope="col">Status</th><th scope="col">Nächster Schritt</th></tr></thead><tbody>
+            {% for booking in group.bookings %}
+                {% set tank = booking.clubTank ?: booking.memberTank %}
+                <tr><td>{{ booking.clubTank ? (booking.clubTank.inventory ?: 'Vereinsflasche') : (booking.memberTank ? booking.memberTank.label : 'Mitgliederflasche') }}</td>
+                    <td>{{ booking.clubTank ? 'Verein' : 'Mitglied' }}</td>
+                    <td>{{ booking.clubTank ? (booking.clubTank.serialnumber ?: '–') : (booking.memberTank ? (booking.memberTank.serialNumber ?: '–') : '–') }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ {'requested':'Angemeldet','received':'Angenommen','sent':'Bei der Prüfstelle','returned':'Zurück','completed':'Abgeschlossen','cancelled':'Storniert'}[booking.status]|default(booking.status) }}</span></td>
+                    <td>
+                      {% set actions = {'requested':'Annahme bestätigen','received':'An Prüfstelle übergeben','sent':'Rückerhalt bestätigen'} %}
+                      {% if actions[booking.status] is defined %}
+                        <form method="post" action="{{ path('equipment_manager_tuv_advance', {id: booking.id}) }}" onsubmit="return confirm('Status für diese Flasche wirklich ändern?');">
+                          <input type="hidden" name="_token" value="{{ csrf_token('tuv_advance_' ~ booking.id) }}">
+                          <button type="submit" class="btn btn-sm btn-outline-primary">{{ actions[booking.status] }}</button>
+                        </form>
+                      {% elseif booking.status == 'returned' %}
+                        <a class="btn btn-sm btn-primary" href="{{ path('equipment_manager_tuv_result', {id: booking.id}) }}">Ergebnis / Rückgabe</a>
+                      {% elseif booking.status == 'completed' %}
+                        <span class="badge bg-success">Abgeschlossen</span>
+                      {% else %}<span class="text-muted">–</span>{% endif %}
+                    </td></tr>
+            {% endfor %}
+            </tbody></table></div></div></div>
+    {% else %}
+        <div class="alert alert-secondary">Keine passenden TÜV-Anmeldungen vorhanden. Wähle einen anderen Statusfilter.</div>
+    {% endfor %}
+</div></section>
+{% endblock %}

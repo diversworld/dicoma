@@ -2,51 +2,29 @@
 declare(strict_types=1);
 namespace App\Command;
 use App\Entity\TuvNotification;
+use App\Service\TuvNotificationSender;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
 
-#[AsCommand(name:'app:tuv:send-notifications',description:'Sendet vorgemerkte TÜV-Nachrichten')]
-final class SendTuvNotificationsCommand extends Command {
-	
-	public function __construct(private readonly EntityManagerInterface $em,private readonly MailerInterface $mailer){
-		parent::__construct();
-	}
- 
-	protected function execute(InputInterface $input,OutputInterface $output):int {
-  		$from=(string)($_SERVER['TUV_MAIL_FROM']??$_ENV['TUV_MAIL_FROM']??'');
-  
-		if(!filter_var($from,FILTER_VALIDATE_EMAIL)){
-			$output->writeln('<error>TUV_MAIL_FROM ungültig.</error>');return Command::FAILURE;
-		}
-		
-		$rows=$this->em->getRepository(TuvNotification::class)->findBy(['state'=>'pending'],['id'=>'ASC'],30);
-
-		foreach($rows as $row){
-			try{$this->mailer->send(
-				(new Email())
-					->from($from)
-					->to($row->getRecipient())
-					->subject($row->getSubject())
-					->text($row->getBody()));
-
-				$row->markSent();
-
-				$this->em->flush();
-			}
-			catch(\Throwable $e){
-				$output->writeln('<error>Nachricht #'.$row->getId().' fehlgeschlagen: '.$e->getMessage().'</error>');
-
-				return Command::FAILURE;
-			}
-		}
-		
- 		$output->writeln(count($rows).' Nachrichten verarbeitet.');
-		
-		return Command::SUCCESS;
- 	}
+#[AsCommand(name: 'app:tuv:send-notifications', description: 'Versendet ausstehende TÜV-Nachrichten')]
+final class SendTuvNotificationsCommand extends Command
+{
+    public function __construct(private readonly EntityManagerInterface $em, private readonly TuvNotificationSender $sender) { parent::__construct(); }
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $ids = $this->em->getRepository(TuvNotification::class)->createQueryBuilder('n')
+            ->select('n.id')->where('n.state = :state')->setParameter('state', 'pending')
+            ->orderBy('n.id', 'ASC')->setMaxResults(30)->getQuery()->getScalarResult();
+        $counts = ['sent' => 0, 'failed' => 0, 'locked' => 0, 'skipped' => 0];
+        foreach ($ids as $row) {
+            $result = $this->sender->sendOne((int) $row['id']);
+            ++$counts[$result];
+            if ($result === 'locked') { break; }
+        }
+        $output->writeln(sprintf('%d versendet, %d fehlgeschlagen, %d gesperrt, %d übersprungen.', ...array_values($counts)));
+        return $counts['failed'] || $counts['locked'] ? Command::FAILURE : Command::SUCCESS;
+    }
 }

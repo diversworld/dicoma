@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+{% block title %}TÜV-Termin planen{% endblock %}{% block hero %}{% endblock %}
+{% block body %}<section class="section"><div class="container py-4" style="max-width:760px">
+<a href="{{ path('equipment_manager_tuv') }}">← Zur TÜV-Übersicht</a><h1 class="h3 mt-3">TÜV-Termin planen</h1>
+<div class="alert alert-info">Der Termin wird als Entwurf angelegt. Da Termine vereinsübergreifend sichtbar sind, erfolgt die Veröffentlichung durch die Administration.</div>
+<form method="post" class="card card-body shadow-sm">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_plan') }}">
+<div class="mb-3"><label for="date" class="form-label">Prüftermin *</label><input required class="form-control" type="date" name="date" id="date" min="{{ 'now'|date('Y-m-d') }}"></div>
+<div class="mb-3"><label for="deadline" class="form-label">Anmeldeschluss</label><input class="form-control" type="date" name="deadline" id="deadline"></div>
+<div class="mb-3"><label for="vendor" class="form-label">Prüfstelle (optional)</label><input class="form-control" maxlength="150" name="vendor" id="vendor"></div>
+<div class="d-flex gap-2"><button class="btn btn-primary">Entwurf anlegen</button><a class="btn btn-outline-secondary" href="{{ path('equipment_manager_tuv') }}">Abbrechen</a></div></form></div></section>{% endblock %}

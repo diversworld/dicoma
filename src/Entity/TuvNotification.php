@@ -16,6 +16,15 @@ class TuvNotification {
  #[ORM\Column(length:20)] private string $state='pending';
  #[ORM\Column(type:'datetime_immutable')] private \DateTimeImmutable $createdAt;
  #[ORM\Column(type:'datetime_immutable',nullable:true)] private ?\DateTimeImmutable $sentAt=null;
+ #[ORM\Column(name:'attempt_count',type:'integer',options:['default'=>0])] private int $attemptCount=0;
+ #[ORM\Column(name:'last_error',type:'text',nullable:true)] private ?string $lastError=null;
+ #[ORM\Column(name:'last_attempt_at',type:'datetime_immutable',nullable:true)] private ?\DateTimeImmutable $lastAttemptAt=null;
+ public function getAttemptCount():int{return $this->attemptCount;}
+ public function getLastError():?string{return $this->lastError;}
+ public function getLastAttemptAt():?\DateTimeImmutable{return $this->lastAttemptAt;}
+ public function markAttempt():void{$this->attemptCount++;$this->lastAttemptAt=new \DateTimeImmutable();}
+ public function markFailed(string $message):void{$this->state='failed';$this->lastError=mb_substr($message,0,2000);}
+ public function resetForRetry():void{if($this->state!=='failed'){throw new \LogicException('Nur fehlgeschlagene Nachrichten dürfen erneut vorgemerkt werden.');}$this->state='pending';$this->lastError=null;}
  public function __construct(MemberTankCheckBooking $booking,string $key,string $recipient,string $subject,string $body){$this->booking=$booking;$this->dedupeKey=$key;$this->recipient=$recipient;$this->subject=$subject;$this->body=$body;$this->createdAt=new \DateTimeImmutable();}
  public function getId():?int{return $this->id;}
  public function getDedupeKey():string{return $this->dedupeKey;}
@@ -27,5 +36,5 @@ class TuvNotification {
  public function getSubject():string{return $this->subject;}
  public function getBody():string{return $this->body;}
  public function getState():string{return $this->state;}
- public function markSent():void{$this->state='sent';$this->sentAt=new \DateTimeImmutable();}
+ public function markSent():void{$this->state='sent';$this->lastError=null;$this->sentAt=new \DateTimeImmutable();}
 }

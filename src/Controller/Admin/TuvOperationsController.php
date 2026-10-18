@@ -79,7 +79,7 @@ final class TuvOperationsController extends AbstractController {
   $em->flush();$this->addFlash('success','Sammelbuchung angelegt; einzelne Prüfergebnisse und Preis-Snapshots bleiben erhalten.');return $this->redirectToRoute('admin_tuv_operations',['id'=>$id]);
  }
  #[Route('/admin/tuv/operations/{id}/notify',name:'admin_tuv_notification_queue',methods:['POST'])]
- public function queue(int $id,Request $request,EntityManagerInterface $em,TuvMessageRenderer $renderer):Response {
+ public function queue(int $id,Request $request,EntityManagerInterface $em,TuvMessageRenderer $renderer, \App\Service\TuvNotificationSender $sender):Response {
   $booking=$this->booking($id,$em);$this->csrf($request,$id);
   $recipient=trim((string)$request->request->get('recipient',''));$kind=(string)$request->request->get('kind','');
   $labels=TuvMessageRenderer::LABELS;
@@ -87,9 +87,10 @@ final class TuvOperationsController extends AbstractController {
   $key=hash('sha256',implode('|',[$booking->getId(),$kind,$booking->getStatus(),strtolower($recipient)]));
   if(!$em->getRepository(TuvNotification::class)->findOneBy(['dedupeKey'=>$key])){
    ['subject'=>$subject,'body'=>$body]=$renderer->render($kind,$booking);
-   $em->persist(new TuvNotification($booking,$key,$recipient,$subject,$body));$em->flush();
+   $notice=new TuvNotification($booking,$key,$recipient,$subject,$body);$em->persist($notice);$em->flush();
+   if($sender->isImmediate()) { $result=$sender->sendOne((int)$notice->getId()); $this->addFlash($result==='sent'?'success':'warning', 'Sofortversand: '.$result); }
   }
-  $this->addFlash('success','Nachricht im Postausgang vorgemerkt (noch nicht versendet).');return $this->redirectToRoute('admin_tuv_operations',['id'=>$id]);
+  $this->addFlash('info','Nachricht angelegt bzw. bereits vorhanden. Versandstatus im Postausgang prüfen.');return $this->redirectToRoute('admin_tuv_operations',['id'=>$id]);
  }
  private function csrf(Request $request,int $id):void {if(!$this->isCsrfTokenValid('tuv_ops_'.$id,(string)$request->request->get('_token','')))throw $this->createAccessDeniedException('CSRF-Prüfung fehlgeschlagen');}
 }

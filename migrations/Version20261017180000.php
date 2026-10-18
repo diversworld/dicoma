@@ -41,7 +41,8 @@ final class Version20261017180000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->throwIrreversibleMigrationException('Bestehende Vereinsbuchungen muessen erhalten bleiben; fuer eine Rueckmigration ist ein geprueftes Backup erforderlich.');
+        // Bewusst keine automatische Rücknahme: Bestehende Vereinsbuchungen könnten Daten verlieren.
+        $this->write('Keine automatische Rücknahme, um Vereinsbuchungen zu schützen.');
     }
 
     private function columnExists(string $table, string $column): bool

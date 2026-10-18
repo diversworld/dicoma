@@ -19,6 +19,7 @@ final class QueueTuvStatusNotificationsCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly TuvMessageRenderer $renderer,
+        private readonly \App\Service\TuvNotificationSender $sender,
     ) {
         parent::__construct();
     }
@@ -72,9 +73,11 @@ final class QueueTuvStatusNotificationsCommand extends Command
             }
             if (!$input->getOption('dry-run')) {
                 ['subject' => $subject, 'body' => $body] = $this->renderer->render($kind, $booking);
-                $this->em->persist(new TuvNotification($booking, $key, $recipient, $subject, $body));
+                $notice = new TuvNotification($booking, $key, $recipient, $subject, $body);
+                $this->em->persist($notice);
                 // Einzelne Flushes verhindern wachsenden UnitOfWork-Speicherbedarf.
                 $this->em->flush();
+                if ($this->sender->isImmediate()) { $this->sender->sendOne((int) $notice->getId()); }
             }
             ++$queued;
         }

@@ -17,6 +17,7 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\UnderscoreNamingStrategy;
 use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MigrationChainTest extends TestCase
@@ -58,12 +59,7 @@ final class MigrationChainTest extends TestCase
     {
         $this->migrate('latest');
 
-        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2) . '/src/Entity'], true);
-        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
-        $em = EntityManager::create($this->connection, $config);
-        $validator = new SchemaValidator($em);
-        self::assertSame([], $validator->validateMapping());
-        self::assertSame([], $validator->getUpdateSchemaList());
+        $this->assertSchemaMatchesMapping();
 
         $factory = $this->factory();
         $latest = $factory->getVersionAliasResolver()->resolveVersionAlias('latest');
@@ -145,7 +141,7 @@ final class MigrationChainTest extends TestCase
     public function testHistoricalReversibleMigrationsCanBeRolledBackAndReapplied(): void
     {
         $previous = '0';
-        $irreversible = ['20261013220000', '20261016120000', '20261016200000'];
+        $irreversible = ['20261013220000', '20261016120000', '20261016200000', '20261017180000', '20261017181500'];
         $migrations = $this->factory()->getMigrationPlanCalculator()->getMigrations()->getItems();
         foreach ($migrations as $migration) {
             $version = (string) $migration->getVersion();
@@ -157,6 +153,93 @@ final class MigrationChainTest extends TestCase
             $previous = $version;
         }
         self::assertSame(count($migrations), (int) $this->connection->fetchOne('SELECT COUNT(*) FROM doctrine_migration_versions'));
+    }
+
+    /** @return iterable<string, array{?string}> */
+    public static function inspectionSchemas(): iterable
+    {
+        yield 'missing inspection table' => [null];
+        yield 'existing legacy index' => ['IDX_TANK_INSPECTION_TANK'];
+        yield 'existing canonical index' => ['IDX_9EC2776B15C652B5'];
+    }
+
+    #[DataProvider('inspectionSchemas')]
+    public function testInspectionUpgradePreservesResultsAndResumesPartialIndexAlignment(?string $indexName): void
+    {
+        $this->migrate('20261017180000');
+        self::assertFalse($this->connection->createSchemaManager()->tablesExist(['tank_inspection_result']));
+        $this->connection->insert('tank', [
+            'inventory' => 'TEST-INSPECTION', 'size' => 12, 'last_check_date' => '2026-01-01', 'serialnumber' => 'TEST-SERIAL',
+        ]);
+        $tank = (int) $this->connection->lastInsertId();
+        $this->connection->insert('tank_check', ['check_date' => '2026-10-17']);
+        $check = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member_tank_check_booking', [
+            'club_tank_id' => $tank, 'tank_check_id' => $check, 'created_at' => '2026-10-17 12:00:00',
+        ]);
+        $booking = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member_tank_check_result', [
+            'booking_id' => $booking, 'result' => 'passed', 'inspected_at' => '2026-10-17',
+            'updated_by' => 'Migration test', 'updated_at' => '2026-10-17 12:00:00', 'notes' => 'Keep inspection result',
+        ]);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM member_tank_check_result');
+        $history = [];
+
+        if ($indexName !== null) {
+            $this->migrate('20261017181500');
+            $this->connection->insert('tank_inspection_result', [
+                'tank_id' => $tank, 'result' => 'passed', 'inspected_at' => '2026-10-17',
+                'updated_by' => 'Migration test', 'created_at' => '2026-10-17 12:00:00', 'notes' => 'Keep club history',
+            ]);
+            $history = $this->connection->fetchAllAssociative('SELECT * FROM tank_inspection_result');
+            if ($indexName !== 'IDX_9EC2776B15C652B5') {
+                $this->connection->executeStatement('ALTER TABLE tank_inspection_result RENAME INDEX IDX_9EC2776B15C652B5 TO ' . $indexName);
+            }
+            $this->connection->delete('doctrine_migration_versions', ['version' => 'DoctrineMigrations\\Version20261017181500']);
+        }
+
+        $this->migrate('20261017220000');
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM member_tank_check_result'));
+        self::assertSame($history, $this->connection->fetchAllAssociative('SELECT * FROM tank_inspection_result'));
+        $table = $this->connection->createSchemaManager()->introspectTable('tank_inspection_result');
+        self::assertSame(['tank_id'], $table->getIndex('IDX_9EC2776B15C652B5')->getColumns());
+        self::assertCount(1, $table->getForeignKeys());
+
+        $this->connection->executeStatement('ALTER TABLE tuv_document RENAME INDEX IDX_TUV_DOCUMENT_BOOKING TO IDX_381BAC323301C60');
+        $this->migrate('latest');
+        $this->assertSchemaMatchesMapping();
+        self::assertSame($history, $this->connection->fetchAllAssociative('SELECT * FROM tank_inspection_result'));
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM member_tank_check_result'));
+    }
+
+    public function testClubBookingRollbackAbortsBeforeRemovingReferences(): void
+    {
+        $this->migrate('20261017173000');
+        $this->connection->insert('tank_check', ['check_date' => '2026-10-17']);
+        $this->connection->insert('member_tank_check_booking', [
+            'tank_check_id' => (int) $this->connection->lastInsertId(), 'created_at' => '2026-10-17 12:00:00',
+        ]);
+        try {
+            $this->migrate('20261017140000');
+            self::fail('Rollback must reject bookings without member references before executing DDL.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('explicit data migration', $exception->getMessage());
+        }
+        $table = $this->connection->createSchemaManager()->introspectTable('member_tank_check_booking');
+        self::assertTrue($table->hasColumn('club_tank_id'));
+        self::assertTrue($table->hasForeignKey('FK_TUV_BOOKING_CLUB_TANK'));
+        self::assertTrue($table->hasIndex('UNIQ_TUV_CLUB_TANK_CHECK'));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM member_tank_check_booking'));
+    }
+
+    private function assertSchemaMatchesMapping(): void
+    {
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2) . '/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $em = EntityManager::create($this->connection, $config);
+        $validator = new SchemaValidator($em);
+        self::assertSame([], $validator->validateMapping());
+        self::assertSame([], $validator->getUpdateSchemaList());
     }
 
     private function createClub(): int

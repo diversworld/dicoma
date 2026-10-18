@@ -21,10 +21,6 @@ final class Version20261017173000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->abortIf(
-            (int) $this->connection->fetchOne('SELECT COUNT(*) FROM member_tank_check_booking WHERE member_id IS NULL OR member_tank_id IS NULL') > 0,
-            'Club tank bookings exist. Rollback requires an explicit data migration before restoring mandatory member references.'
-        );
         $this->addSql('ALTER TABLE member_tank_check_booking DROP FOREIGN KEY FK_TUV_BOOKING_CLUB_TANK');
         $this->addSql('DROP INDEX UNIQ_TUV_CLUB_TANK_CHECK ON member_tank_check_booking');
         $this->addSql('DROP INDEX IDX_TUV_BOOKING_CLUB_TANK ON member_tank_check_booking');

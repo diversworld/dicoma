@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+{% block title %}Vereinsflaschen zum TÜV anmelden | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container py-4">
+  <nav aria-label="Brotkrumen"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li><li class="breadcrumb-item"><a href="{{ path('equipment_manager_tuv') }}">TÜV-Übersicht</a></li><li class="breadcrumb-item active">Vereinsflaschen anmelden</li></ol></nav>
+  <h1 class="h3">Vereinsflaschen anmelden</h1>
+  <p class="text-muted">{{ clubName }} · TÜV-Termin am <strong>{{ check.checkDate|date('d.m.Y') }}</strong>{% if check.vendorName %} · {{ check.vendorName }}{% endif %}</p>
+  {% if tanks is empty %}
+    <div class="alert alert-info">Es gibt keine weiteren Vereinsflaschen, die zu diesem Termin angemeldet werden können.</div>
+    <a href="{{ path('equipment_manager_tuv') }}" class="btn btn-outline-primary">Zur TÜV-Übersicht</a>
+  {% else %}
+    <form method="post" class="card shadow-sm">
+      <div class="card-header"><strong>Flaschen auswählen</strong><div class="text-muted small">Mehrfachauswahl möglich. Bereits angemeldete Flaschen sind ausgeblendet.</div></div>
+      <div class="card-body"><div class="table-responsive"><table class="table table-hover align-middle">
+        <thead><tr><th scope="col">Auswahl</th><th scope="col">Inventarnummer</th><th scope="col">Seriennummer</th><th scope="col">Größe</th></tr></thead>
+        <tbody>{% for tank in tanks %}<tr><td><input class="form-check-input" type="checkbox" name="tanks[]" value="{{ tank.id }}" id="tank-{{ tank.id }}" aria-label="{{ tank.inventory ?: 'Flasche ' ~ tank.id }} auswählen"></td><td><label class="form-check-label" for="tank-{{ tank.id }}">{{ tank.inventory ?: 'Flasche #' ~ tank.id }}</label></td><td>{{ tank.serialnumber ?: '–' }}</td><td>{{ tank.size is not null ? tank.size ~ ' l' : '–' }}</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+      <div class="card-footer d-flex flex-wrap gap-2"><input type="hidden" name="_token" value="{{ csrf_token('tuv_club_register_' ~ check.id) }}"><button type="submit" class="btn btn-primary">Ausgewählte Flaschen anmelden</button><a class="btn btn-outline-secondary" href="{{ path('equipment_manager_tuv') }}">Abbrechen</a></div>
+    </form>
+  {% endif %}
+</div></section>
+{% endblock %}
