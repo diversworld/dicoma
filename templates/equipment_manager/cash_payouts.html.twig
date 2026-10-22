@@ -1,0 +1,29 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Barauszahlungen · Gerätewart-Kasse{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:1100px">
+<a href="{{ path('equipment_manager_cashbook') }}">← Zur Gerätewart-Kasse</a>
+<h1 class="h2 mt-3">Barauszahlungen</h1>
+<p>Auszahlungen an Ausbilder für Brevetierung oder Ausbildungsmaterial sowie Erstattung von Gerätewart-Material. Ausschließlich Bargeld; Überweisungen zählen nicht zum Kassenbestand.</p>
+{% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
+{% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message }}</div>{% endfor %}
+<div class="row g-3 mb-4"><div class="col-md-4"><div class="card card-body"><strong>Bar eingenommen</strong><span class="h4">{{ ((balance.tuv + balance.rental) / 100)|number_format(2, ',', '.') }} €</span></div></div><div class="col-md-4"><div class="card card-body"><strong>Ausgezahlt</strong><span class="h4">{{ (balance.out / 100)|number_format(2, ',', '.') }} €</span></div></div><div class="col-md-4"><div class="card card-body"><strong>Rechnerisch verfügbar</strong><span class="h4">{{ (balance.available / 100)|number_format(2, ',', '.') }} €</span></div></div></div>
+<div class="alert alert-warning">Der rechnerische Bestand enthält nur in DICOMA erfasste Bar-Einnahmen und Auszahlungen. Ein vorhandener Anfangsbestand oder frühere externe Kassenbewegungen sind <strong>nicht</strong> berücksichtigt. Vor einer Auszahlung muss der Gerätewart zusätzlich das tatsächlich vorhandene Bargeld prüfen.</div>
+<h2 class="h4">Barauszahlung erfassen</h2>
+<form method="post" action="{{ path('equipment_manager_cash_payout_create') }}" onsubmit="return confirm('Bargeld wurde tatsächlich ausgezahlt und soll verbindlich gebucht werden?')" class="card card-body mb-4">
+<input type="hidden" name="_token" value="{{ csrf_token('cash_payout_' ~ app.user.member.club.id) }}">
+<div class="row g-3"><div class="col-md-6"><label class="form-label" for="category">Verwendungszweck</label><select class="form-select" name="category" id="category" required><option value="certification">Brevetierung (Ausbilder)</option><option value="training_material">Ausbildungsmaterial (Ausbilder)</option><option value="equipment_material">Material / Ersatzteile (Gerätewart)</option></select></div>
+<div class="col-md-6"><label class="form-label" for="recipient">Empfänger</label><input class="form-control" name="recipient" id="recipient" maxlength="180" required></div>
+<div class="col-md-4"><label class="form-label" for="amount">Ausgezahlter Betrag in EUR</label><input class="form-control" name="amount" id="amount" inputmode="decimal" placeholder="25,00" required></div>
+<div class="col-md-8"><label class="form-label" for="reference">Beleg-/Quittungsnummer (optional)</label><input class="form-control" name="document_reference" id="reference" maxlength="120"></div>
+<div class="col-12"><label class="form-label" for="purpose">Konkreter Grund / Material</label><textarea class="form-control" name="purpose" id="purpose" maxlength="500" required rows="2"></textarea></div></div>
+<button class="btn btn-primary mt-3" type="submit">Barauszahlung verbindlich buchen</button>
+</form>
+<h2 class="h4">Letzte Barauszahlungen</h2>
+<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Zeitpunkt</th><th>Empfänger</th><th>Art</th><th>Zweck</th><th>Betrag</th><th>Ausgezahlt durch</th><th>Beleg</th></tr></thead><tbody>
+{% for p in payouts %}<tr><td>{{ p.paidAt|date('d.m.Y H:i') }}</td><td>{{ p.recipient }}</td><td>{{ p.category == 'certification' ? 'Brevetierung' : (p.category == 'training_material' ? 'Ausbildungsmaterial' : 'Gerätewart-Material') }}</td><td>{{ p.purpose }}</td><td>−{{ (p.amountCents / 100)|number_format(2, ',', '.') }} €</td><td>{{ p.paidBy }}</td><td>{{ p.documentReference ?: ('AUS-' ~ p.id) }}</td></tr>
+{% else %}<tr><td colspan="7">Noch keine Auszahlungen erfasst.</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="text-muted small">Auszahlungen können nicht nachträglich geändert oder gelöscht werden. Belege bitte außerhalb dieser Maske sicher aufbewahren. Kassensturz und Korrekturbuchungen folgen in einem eigenen Schritt.</p>
+</main>
+{% endblock %}

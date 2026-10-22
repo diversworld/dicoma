@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class EquipmentCenterController extends AbstractController
 {
     #[Route('/admin/equipment-center', name: 'admin_equipment_center', methods: ['GET'])]

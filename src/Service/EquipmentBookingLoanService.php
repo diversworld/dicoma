@@ -28,6 +28,33 @@ final class EquipmentBookingLoanService
         }
 
         $this->em->wrapInTransaction(function () use ($bookingId, $lineId, $operation, $condition, $notes): void {
+            $this->changeWithinTransaction($bookingId, $lineId, $operation, $condition, $notes);
+        });
+    }
+
+    // DICOMA_BATCH_ISSUE_V1
+    public function issueAll(int $bookingId): int
+    {
+        return $this->em->wrapInTransaction(function () use ($bookingId): int {
+            $booking = $this->em->find(EquipmentBooking::class, $bookingId, LockMode::PESSIMISTIC_WRITE);
+            if (!$booking || !in_array($booking->getStatus(), ['reserved', 'partially_issued', 'partially_returned'], true)) {
+                throw new \DomainException('Buchung ist nicht zur Sammelausgabe freigegeben.');
+            }
+            $ids = [];
+            foreach ($booking->getItems() as $line) {
+                if ($line->getLoanStatus() === 'reserved') { $ids[] = $line->getId(); }
+            }
+            sort($ids, SORT_NUMERIC);
+            if (!$ids) { throw new \DomainException('Keine reservierten Gegenstaende vorhanden.'); }
+            foreach ($ids as $id) {
+                $this->changeWithinTransaction($bookingId, $id, 'issue', null, null);
+            }
+            return count($ids);
+        });
+    }
+
+    private function changeWithinTransaction(int $bookingId, int $lineId, string $operation, ?string $condition, ?string $notes): void
+    {
             $booking = $this->em->find(EquipmentBooking::class, $bookingId, LockMode::PESSIMISTIC_WRITE);
             $line = $this->em->find(EquipmentBookingItem::class, $lineId, LockMode::PESSIMISTIC_WRITE);
             if (!$booking || !$line || $line->getBooking()?->getId() !== $booking->getId()) {
@@ -110,6 +137,5 @@ final class EquipmentBookingLoanService
                 throw new \DomainException('Unbekannte Positionsstatus in der Buchung.');
             }
             $this->em->flush();
-        });
     }
 }

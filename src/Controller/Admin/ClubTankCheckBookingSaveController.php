@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\{Request, RedirectResponse};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class ClubTankCheckBookingSaveController extends AbstractController
 {
     #[Route('/admin/tuv/club-bookings/save', name: 'admin_tuv_club_booking_save', methods: ['POST'])]

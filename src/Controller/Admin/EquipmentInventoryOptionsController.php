@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class EquipmentInventoryOptionsController extends AbstractController
 {
     #[Route('/admin/equipment/inventory-options', name: 'admin_equipment_inventory_options', methods: ['GET'])]

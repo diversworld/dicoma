@@ -1,0 +1,13 @@
+ID,Bereich,Nachweis,Datei,Zeile_von,Zeile_bis,Bewertung,Grenze
+CAL-01,Kalender,Kurskalender mit Monat/Woche/Tag,src/Controller/Admin/CourseCalendarController.php,63,97,bestätigte Teilfunktion,Kein Nachweis eines modulübergreifenden Veranstaltungskalenders
+CAL-02,Kalender,Terminduplikation mit POST und CSRF,src/Controller/Admin/CourseCalendarController.php,23,54,bestätigter Schutz,Kopiert ausdrücklich keine Buchungen
+CAL-03,Kalender,Öffentliche Terminliste mit findAll,src/Controller/ScheduleController.php,18,25,Prüfbedarf,Sichtbarkeit und Veröffentlichung der Termine fachlich prüfen
+CAL-04,Kalender,Konfliktprüfung für gleiche Lehrkraft,src/Service/ScheduleConflictService.php,23,38,bestätigte Teilfunktion,Abfrage berücksichtigt alle Termine ohne sichtbaren Vereinsfilter
+NOT-01,Benachrichtigung,Persistierte TÜV-Benachrichtigung mit Deduplizierung,src/Entity/TuvNotification.php,5,21,bestätigte Teilfunktion,Spezialisiert auf TÜV-Buchungen
+NOT-02,Benachrichtigung,Versand mit Dateisperre und Statuswechsel,src/Service/TuvNotificationSender.php,23,54,bestätigte Teilfunktion,Dateisperre gilt für gemeinsam genutztes Dateisystem; kein generisches Job-System belegt
+NOT-03,Benachrichtigung,Admin-Sofortversand mit POST/CSRF,src/Controller/Admin/TuvNotificationSendNowController.php,15,36,bestätigter Schutz,ROLE_ADMIN; keine vereinsbezogene Objektprüfung in Methode sichtbar
+PAY-01,Zahlungen,Zahlungsbeleg zu TÜV-Buchung,src/Entity/TuvPaymentReceipt.php,20,37,bestätigte Teilfunktion,Keine allgemeine Veranstaltungszahlung
+PAY-02,Zahlungen,TÜV-Rechnungsdaten,src/Entity/TuvInvoice.php,20,32,bestätigte Teilfunktion,Auf TÜV bezogen
+PAY-03,Zahlungen,Kassenauszahlung vereinsbezogen,src/Entity/EquipmentCashPayout.php,20,36,bestätigte Teilfunktion,Keine generische Clubreise- oder Eventkasse
+PAY-04,Zahlungen,Kassenabschluss mit Bewegungs-Hash,src/Entity/EquipmentCashClosing.php,26,45,bestätigte Teilfunktion,Integrationstest der Abschlussregeln offen
+PAY-05,Zahlungen,Rechnungseinstellungen-Liste über alle Vereine,src/Controller/Admin/TuvInvoiceSettingsOverviewController.php,13,20,Autorisierungsfrage,Bei globalem ROLE_ADMIN ggf. beabsichtigt

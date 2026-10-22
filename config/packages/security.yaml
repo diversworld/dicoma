@@ -33,7 +33,7 @@ security:
             security: false
 
         install:
-            pattern: ^/(install|save_db_config)
+            pattern: ^/install(?:/|$)
             security: false
 
         main:
@@ -77,7 +77,6 @@ security:
         # werden, damit nach erfolgter Installation kein erneuter
         # Zugriff möglich ist.
         - { path: ^/install, roles: PUBLIC_ACCESS }
-        - { path: ^/save_db_config, roles: PUBLIC_ACCESS }
 
         # Kursübersicht bleibt zunächst öffentlich.
         # Schreibende Kursoperationen sichern wir später zusätzlich

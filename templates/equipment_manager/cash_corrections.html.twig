@@ -1,0 +1,20 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Kassenkorrekturen | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:1100px">
+<a href="{{ path('equipment_manager_cashbook') }}">← Gerätewart-Kasse</a>
+<h1 class="h2 mt-3">Kassenkorrekturen</h1>
+<p>Nur tatsächlich ausgeführte Bargeldbewegungen erfassen: Rückzahlung einer kassierten TÜV-/Leihgebühr oder Rückgabe einer früheren Barauszahlung. Ursprungsbelege bleiben erhalten. Keine Korrekturen für Überweisungen.</p>
+{% for type in ['success','danger'] %}{% for message in app.flashes(type) %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">{{ message }}</div>{% endfor %}{% endfor %}
+<form method="post" class="card card-body mb-4" onsubmit="return confirm('Ist das Bargeld tatsächlich übergeben worden? Die Korrektur ist nicht löschbar.')">
+<input type="hidden" name="_token" value="{{ csrf_token('cash_correction_' ~ clubId) }}">
+<div class="row g-3"><div class="col-md-4"><label class="form-label" for="kind">Originalbeleg</label><select id="kind" name="kind" class="form-select" required><option value="tuv">TÜV-Barzahlung (Rückgabe)</option><option value="rental">Leihgebühr bar (Rückgabe)</option><option value="payout">Barauszahlung (Rückgabe an Kasse)</option></select></div>
+<div class="col-md-3"><label class="form-label" for="reference_id">Beleg-ID</label><input id="reference_id" name="reference_id" type="number" min="1" class="form-control" required></div>
+<div class="col-md-5"><label class="form-label" for="reason">Begründung (mind. 10 Zeichen)</label><input id="reason" name="reason" class="form-control" minlength="10" maxlength="500" required></div></div>
+<button class="btn btn-danger mt-3" type="submit">Bargeldkorrektur verbindlich buchen</button>
+</form>
+<h2 class="h4">Letzte Korrekturen</h2><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Zeitpunkt</th><th>Original</th><th>Bewegung</th><th>Grund</th><th>Erfasst durch</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.created_at|date('d.m.Y H:i') }}</td><td>{{ r.source_type }} #{{ r.source_id }}</td><td>{{ r.direction == 'in' ? '+' : '−' }}{{ (r.amount_cents / 100)|number_format(2, ',', '.') }} €</td><td>{{ r.reason }}</td><td>{{ r.created_by }}</td></tr>{% else %}<tr><td colspan="5">Keine Korrekturen.</td></tr>{% endfor %}
+</tbody></table></div></main>
+{% endblock %}

@@ -29,6 +29,10 @@ final class ParticipantPassActionController extends AbstractController
             throw $this->createNotFoundException('Kursteilnehmer nicht gefunden.');
         }
         $course = $participant->getCourse();
+        if ($course === null) {
+            throw $this->createNotFoundException('Kurs nicht gefunden.');
+        }
+        $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
         $allowed = $course !== null && $course->getStatus() !== CourseStatus::COMPLETED && !$participant->hasPassed();
         $backUrl = (clone $this->urls)->unsetAll()->setController(CourseParticipantCrudController::class)->setAction(Crud::PAGE_DETAIL)->setEntityId($id)->generateUrl();
 

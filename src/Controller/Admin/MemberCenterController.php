@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Member;
+use App\Security\Voter\MemberManagementVoter;
 use App\Entity\MemberDocument;
 use App\Entity\MemberQualification;
 use App\Entity\CourseParticipant;
@@ -28,6 +29,7 @@ final class MemberCenterController extends AbstractController
     #[Route('/admin/member/{id}/center', name: 'admin_member_center', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function center(Member $member, AdminUrlGenerator $urlGenerator): RedirectResponse
     {
+        $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
         $url = (clone $urlGenerator)->unsetAll()
             ->setController(MemberCrudController::class)
             ->setAction(Crud::PAGE_DETAIL)
@@ -39,6 +41,7 @@ final class MemberCenterController extends AbstractController
     #[Route('/admin/member/{id}/document/{documentId}/download', name: 'admin_member_document_download', requirements: ['id' => '\\d+', 'documentId' => '\\d+'], methods: ['GET'])]
     public function download(Member $member, int $documentId, EntityManagerInterface $em, PrivateMemberDocumentStorage $storage): Response
     {
+        $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
         $document = $em->getRepository(MemberDocument::class)->find($documentId);
         if (!$document instanceof MemberDocument || $document->getMember()?->getId() !== $member->getId()) {
             throw $this->createNotFoundException('Dokument nicht gefunden.');

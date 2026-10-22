@@ -1,0 +1,11 @@
+Prüfpunkt,Quelldatei,Zeilen,Quellcodebefund
+Security-Rollenhierarchie,config/packages/security.yaml,5-22,ROLE_ADMIN erbt ROLE_BOARD und ROLE_TREASURER; keine Vereinsdimension in der Hierarchie.
+Globale Admin-Route,config/packages/security.yaml,88-92,/admin erfordert ROLE_ADMIN; keine zusätzliche Club-Regel in access_control.
+Fallback ROLE_MEMBER,config/packages/security.yaml,142-146,"Fallback erfordert ROLE_MEMBER, obwohl User::getRoles() die Rolle jedem Konto ergänzt."
+Doctrine-Konfiguration,config/packages/doctrine.yaml,10-26,ORM-Mapping konfiguriert; kein Doctrine-ORM-Filter in dieser Konfiguration deklariert.
+Admin-Dashboard,src/Controller/Admin/DashboardController.php,52-61,Dashboard unter /admin/{_locale}; Berechtigung über access_control.
+Rechnungseinstellungen-Liste,src/Controller/Admin/DashboardController.php,195-203,ROLE_ADMIN kann die Liste sämtlicher Clubs aus Repository findBy([]) abrufen.
+Rechnungseinstellungen-Änderung,src/Controller/Admin/DashboardController.php,205-235,"ROLE_ADMIN und CSRF vorhanden; Club wird per beliebiger ID geladen, keine zusätzliche Vereinsprüfung sichtbar."
+Bestätigungen,src/Controller/Admin/DashboardController.php,238-246,Bestätigungen werden ohne Vereinsfilter auf maximal 200 Einträge abgefragt.
+TrainingAssessmentVoter,src/Security/Voter/TrainingAssessmentVoter.php,30-48,Administratoren können alle nicht abgeschlossenen Kurse beurteilen; Ausbilder nur eigene Termine.
+User Rollen,src/Entity/User.php,108-114,ROLE_MEMBER wird jedem User hinzugefügt.

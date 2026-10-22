@@ -1,0 +1,38 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Tagesabschluss · Gerätewart-Kasse{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:950px">
+<a href="{{ path('equipment_manager_cashbook_day', {date: date}) }}">← Tagesauswertung</a>
+<h1 class="h2 mt-3">Kassensturz und Tagesabschluss</h1>
+<p>Nur Bargeld. Überweisungen sind nicht Teil des Kassenbestands. Abschluss je Verein und Kalendertag.</p>
+<form method="get" class="d-flex gap-2 mb-4"><input class="form-control" style="max-width:200px" type="date" name="date" value="{{ date }}" required><button class="btn btn-outline-primary">Datum anzeigen</button></form>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">{{ message }}</div>{% endfor %}{% endfor %}
+{% if existing %}
+<div class="alert alert-success"><strong>Abgeschlossen</strong> am {{ existing.closedAt|date('d.m.Y H:i') }} von {{ existing.closedBy }}. Dieser Abschluss ist nicht nachträglich bearbeitbar.</div>
+{% if changed %}<div class="alert alert-danger"><strong>Achtung:</strong> Die aktuellen Kassenbewegungen weichen vom gespeicherten Abschluss ab. Bitte die nachträglichen Buchungen prüfen und administrativ klären.</div>{% endif %}
+<table class="table table-bordered"><tbody>
+<tr><th>Anfangsbestand</th><td>{{ (existing.openingCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Bareinnahmen</th><td>{{ (existing.cashInCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Barauszahlungen</th><td>{{ (existing.cashOutCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Sollbestand</th><td>{{ (existing.expectedCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Gezählter Istbestand</th><td>{{ (existing.countedCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Differenz</th><td>{{ (existing.differenceCents/100)|number_format(2,',','.') }} €</td></tr>
+<tr><th>Bemerkung</th><td>{{ existing.note ?: '—' }}</td></tr>
+<tr><th>Übergabe an</th><td>{{ existing.handoverTo ?: 'Keine Übergabe dokumentiert' }}</td></tr>
+</tbody></table>
+{% else %}
+{% if later %}<div class="alert alert-warning">Für diesen Verein besteht bereits ein späterer Tagesabschluss. Ein rückwirkender Abschluss ist nicht möglich.</div>{% endif %}
+<p><strong>Bareinnahmen:</strong> {{ (movements.in/100)|number_format(2,',','.') }} € · <strong>Barauszahlungen:</strong> {{ (movements.out/100)|number_format(2,',','.') }} € · <strong>Bewegungen:</strong> {{ movements.count }}</p>
+<form method="post" class="card card-body" onsubmit="return confirm('Tagesabschluss unwiderruflich speichern?')">
+<input type="hidden" name="_token" value="{{ csrf_token('cash_close_' ~ app.user.member.club.id ~ '_' ~ date) }}"><input type="hidden" name="date" value="{{ date }}">
+{% if opening is null %}<div class="mb-3"><label class="form-label" for="opening">Erster dokumentierter Anfangsbestand (€)</label><input class="form-control" id="opening" name="opening" inputmode="decimal" required placeholder="0,00"><small>Den tatsächlichen Bestand vor den Tagesbewegungen eintragen. Die erstmalige Erfassung ist zu begründen.</small></div>
+{% else %}<p>Übernommener Anfangsbestand aus letztem Abschluss: <strong>{{ (opening/100)|number_format(2,',','.') }} €</strong></p>{% endif %}
+<div class="mb-3"><label class="form-label" for="counted">Gezählter Bargeldbestand (€)</label><input class="form-control" id="counted" name="counted" inputmode="decimal" required placeholder="0,00"></div>
+<div class="mb-3"><label class="form-label" for="note">Bemerkung / Erklärung einer Differenz oder des ersten Anfangsbestands</label><textarea class="form-control" id="note" name="note" maxlength="500" rows="2"></textarea></div>
+<div class="mb-3"><label class="form-label" for="handover">Kassenübergabe an (optional)</label><input class="form-control" id="handover" name="handover" maxlength="180"></div>
+<button class="btn btn-primary" {% if later %}disabled{% endif %}>Tagesabschluss verbindlich speichern</button>
+</form>
+{% endif %}
+<p class="small text-muted mt-4">Der Abschluss ist ein gespeicherter Nachweis, keine automatische Kassenkorrektur. Nachträgliche Zahlungen können Abweichungen verursachen; diese werden bei erneutem Aufruf angezeigt. Eine dokumentierte Übergabe ist noch keine Gegenbestätigung des Empfängers.</p>
+</main>
+{% endblock %}

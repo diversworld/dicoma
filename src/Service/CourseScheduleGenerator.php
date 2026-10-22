@@ -82,6 +82,9 @@ class CourseScheduleGenerator
                         )
                     );
 
+                if ($course->getLeadInstructor() !== null) {
+                    $schedule->setInstructor($course->getLeadInstructor());
+                }
                 $this->entityManager->persist(
                     $schedule
                 );

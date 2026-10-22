@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class TuvInspectionResultSaveController extends AbstractController
 {
     #[Route('/admin/tuv/inspection-result/{id}/save', name: 'admin_tuv_inspection_result_save', requirements: ['id' => '\\d+'], methods: ['POST'])]

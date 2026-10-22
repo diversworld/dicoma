@@ -5,7 +5,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\{AssociationField,ChoiceField,TextField,BooleanField};
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class RegulatorModelCrudController extends AbstractCrudController {
  public static function getEntityFqcn(): string {return RegulatorModel::class;}
  public function configureCrud(Crud $crud): Crud {return $crud->setEntityLabelInSingular('Atemreglermodell')->setEntityLabelInPlural('Atemreglermodelle');}

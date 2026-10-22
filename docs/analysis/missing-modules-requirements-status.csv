@@ -1,0 +1,65 @@
+Modul,Teilbereich,Anforderung,Ergebnis statische Prüfung,Begründung
+Thekendienste,Funktionen,Dienstkalender,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Schichtdefinitionen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Dienstanmeldung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Dienstzuweisung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Diensttausch,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Vertretungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Erinnerungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Anwesenheitsbestätigung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Erfassung geleisteter Stunden,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Dienststundenkonten,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Pflichtstunden,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Ausnahmen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Thekendienste,Funktionen,Auswertungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Vereinsveranstaltungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Mitgliederversammlungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Vereinsfeste,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Arbeitseinsätze,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Tauchausflüge,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Trainingsveranstaltungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Seminare,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Wettkämpfe,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Veranstaltungstypen,Sonstige Veranstaltungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Veranstaltung erstellen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Öffentlich oder vereinsintern veröffentlichen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Teilnehmerregistrierung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Teilnehmerbegrenzung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Wartelisten,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Anmeldefristen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Teilnahmegebühren,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Zahlungsstatus,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Stornierung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Erinnerungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Teilnehmerlisten,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Veranstaltungen,Funktionen,Dokumente,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Reiseziel,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Reisezeitraum,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Reiseleitung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Beschreibung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Maximale Teilnehmerzahl,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Reisepreis,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Leistungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Stammdaten,Stornobedingungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Reiseanmeldung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Warteliste,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Teilnehmerverwaltung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Unterkunft,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Zimmerbelegung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Anreise,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Transport,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Tauchpakete,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Zusatzleistungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Organisation,Reiseunterlagen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Reisepreise,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Anzahlungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Restzahlungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Zusatzkosten,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Zahlungsstatus,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Stornierungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Finanzen,Erstattungen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Tauchspezifische Anforderungen,Ausbildungsstand,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Tauchspezifische Anforderungen,Tauchtauglichkeit,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Tauchspezifische Anforderungen,Benötigte Qualifikationen,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Tauchspezifische Anforderungen,Leihausrüstung,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg
+Clubreisen,Tauchspezifische Anforderungen,Tauchpakete,Nicht nachgewiesen,Keine durchgängige fachliche Implementierung durch diese Prüfung nachgewiesen; reine Suchtreffer sind kein Funktionsbeleg

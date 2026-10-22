@@ -3,6 +3,8 @@ namespace App\Form;
 
 use App\Entity\Schedule;
 use App\Entity\Member;
+use App\Entity\Club;
+use App\Repository\MemberRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -41,10 +43,19 @@ class SchedulePlanningRowType extends AbstractType
             ->add('location',
 				TextType::class, ['label' => false, 'required' => false])
             ->add('instructor',
-				EntityType::class, ['class' => Member::class, 'label' => false, 'required' => false, 'placeholder' => '—']);
+				EntityType::class, ['class' => Member::class, 'label' => false, 'required' => false,  'placeholder' => '—',
+                    'query_builder' => static function (MemberRepository $repo) use ($options) {
+                        $qb = $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
+                            ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
+                            ->orderBy('m.lastname', 'ASC');
+                        if ($options['club'] instanceof Club) {
+                            $qb->andWhere('m.club = :club')->setParameter('club', $options['club']);
+                        }
+                        return $qb;
+                    }]);
     }
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => Schedule::class]);
+        $resolver->setDefaults(['data_class' => Schedule::class, 'club' => null]);
     }
 }

@@ -19,6 +19,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Entity\TankConditionHistory;
 use App\Entity\TankMaintenanceOrder;
@@ -31,7 +32,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class TankCrudController extends AbstractCrudController
 {
     public function __construct(
@@ -247,6 +248,7 @@ class TankCrudController extends AbstractCrudController
             ]);
             yield DateField::new('nextCheckDate', 'Nächste Prüfung')->setFormat('dd.MM.yyyy');
             yield BooleanField::new('oxigenClean', 'O₂-rein');
+			yield MoneyField::new('rentalFee', 'Leihgebühr (€)')->setCurrency('EUR')->setStoredAsCents(false);
             yield ChoiceField::new('conditionStatus', 'Technischer Zustand')->setChoices(['Einsatzbereit' => 'ready', 'Wartung' => 'maintenance', 'Beschädigt' => 'damaged']);
             yield BooleanField::new('lendable', 'Verleihfreigabe')->renderAsSwitch(false)->setDisabled(true);
             return;
@@ -262,9 +264,11 @@ class TankCrudController extends AbstractCrudController
         yield ChoiceField::new('size', 'Flaschengröße')
             ->setChoices(['3 L' => 3, '5 L' => 5, '7 L' => 7, '8 L' => 8, '10 L' => 10,
                 '12 L' => 12, '15 L' => 15, '18 L' => 18, '20 L' => 20])
-            ->setRequired(true)->setColumns(4);
-        yield BooleanField::new('oxigenClean', 'O₂-rein')->setColumns(4);
-        yield DateField::new('buyDate', 'Kaufdatum')->setFormat('dd.MM.yyyy')->setColumns(4);
+            ->setRequired(true)->setColumns(3);
+        yield BooleanField::new('oxigenClean', 'O₂-rein')->setColumns(3);
+        yield DateField::new('buyDate', 'Kaufdatum')->setFormat('dd.MM.yyyy')->setColumns(3);
+		yield MoneyField::new('rentalFee', 'Leihgebühr')
+					->setCurrency('EUR')->setStoredAsCents(false)->setColumns(3);
 
         yield FormField::addFieldset('Prüfungen')->collapsible();
         yield DateField::new('lastCheckDate', 'Letzte Prüfung')->setRequired(true)

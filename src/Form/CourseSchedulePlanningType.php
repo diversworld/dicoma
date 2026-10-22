@@ -12,13 +12,13 @@ class CourseSchedulePlanningType extends AbstractType
     {
         $builder->add('schedules', CollectionType::class, [
             'entry_type' => SchedulePlanningRowType::class,
-            'entry_options' => ['label' => false],
+            'entry_options' => ['label' => false, 'club' => $options['club']],
             'allow_add' => false, 'allow_delete' => false,
             'by_reference' => true, 'label' => false,
         ]);
     }
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => null]);
+        $resolver->setDefaults(['data_class' => null, 'club' => null]);
     }
 }

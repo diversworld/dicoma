@@ -1,0 +1,226 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Kompressor – Füllabende | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:1150px">
+	<a href="{{ path('equipment_manager_dashboard') }}">← Gerätewartportal</a>
+	<h1 class="h2 mt-3">Kompressor – Füllabende und Viererfüllungen</h1>
+	<p class="text-muted">Anlagen- und Filterstatus einmal vor dem Füllabend prüfen. Jede Viererfüllung hat einen gemeinsamen Enddruck; die angeschlossenen Flaschen werden einzeln zugeordnet. Nur Atemluft.</p>
+	{% for type in ['success','danger'] %}
+		{% for msg in app.flashes(type) %}
+			<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">
+				{{ msg }}
+			</div>
+		{% endfor %}
+	{% endfor %}
+	{% if selected %}
+		<section class="card card-body mb-3">
+			<h2 class="h5">Füllabend #{{ selected.id }} – {{ selected.compressor }}</h2>
+			<p>Beginn: {{ selected.openedAt|date('d.m.Y H:i') }} · Betriebsstunden: {{ (selected.openingHoursTenths / 10)|number_format(1, ',', '.') }} · Bediener: {{ selected.operator }} · {{ selected.closedAt ? 'Abgeschlossen' : 'Offen' }}</p>
+			{% if selected.notes %}
+				<p>{{ selected.notes }}</p>
+			{% endif %}
+			{% if not selected.closedAt %}
+				<h3 class="h6" id="naechste-fuellung">Naechste Viererfuellung dokumentieren</h3><p>Beliebig viele Fuellvorgaenge pro Abend, maximal vier Flaschen gleichzeitig.</p>
+				<form method="post" class="g-3" onsubmit="return confirm('Alle aufgeführten Flaschen wurden tatsächlich auf den angegebenen Druck gefüllt?')">
+				<div class="row">
+					<input type="hidden" name="action" value="batch">
+					<input type="hidden" name="session_id" value="{{ selected.id }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_batch') }}">
+					<div class="col-md-4">
+						<label class="form-label">Gemeinsamer Enddruck (bar)</label>
+						<input class="form-control" type="number" name="pressure" value="210" min="1" max="350" required>
+					</div>
+				</div>
+					<div class="row">
+						{% for i in 1..4 %}
+							<div class="col-md-3">
+								<label class="form-label">Flasche {{ i }}</label>
+								<input class="form-control mb-1" name="cylinder_{{ i }}" maxlength="100" placeholder="Kennung / Vereinsnummer">\n                                <label class="form-label small">Flaschengröße (Liter)</label>\n                                <input class="form-control mb-1" type="number" name="volume_{{ i }}" min="0.1" max="100" step="0.1" placeholder="z. B. 7, 10, 12, 15">
+								<select class="form-select" name="tank_{{ i }}">
+									<option value="">Externe Flasche / Kennung oben</option>
+									{% for tank in tanks %}
+										<option value="{{ tank.id }}">{{ tank.inventory }} – {{ tank.serialnumber }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						{% endfor %}
+					</div>
+					<div class="col-12">
+						<label class="form-label">Bemerkung</label>
+						<textarea class="form-control" name="notes" maxlength="2000"></textarea>
+					</div>
+					<div class="col-12 form-check ms-2">
+						<input class="form-check-input" type="checkbox" name="cylinder_check" value="1" id="cylinder_check" required>
+						<label class="form-check-label" for="cylinder_check">Kennzeichnung, Prüffrist, Zustand und zulässigen Fülldruck aller angeschlossenen Flaschen kontrolliert</label>
+					</div>
+					<div class="col-12">
+						<button class="btn btn-primary">Fuellvorgang speichern und naechste Vierergruppe erfassen</button>
+					</div>
+				</form>
+				<hr>
+				<form method="post" onsubmit="return confirm('Füllabend abschließen?')">
+					<input type="hidden" name="action" value="close">
+					<input type="hidden" name="session_id" value="{{ selected.id }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_close') }}">
+					<button class="btn btn-outline-secondary">Füllabend abschließen</button>
+				</form>
+			{% endif %}
+		</section>
+		<section class="card card-body mb-4">
+			<h2 class="h5">Füllungen dieses Abends</h2>
+			{% set total = 0 %}
+			{% for batch in batches %}
+				{% set total = total + items[batch.id]|length %}
+			{% endfor %}
+			<p><strong>{{ batches|length }} Fuellvorgaenge, {{ total }} Flaschen</strong></p>
+			<table class="table table-sm">
+				<thead>
+					<tr>
+						<th>Zeit</th>
+						<th>Flaschen</th>
+						<th>Enddruck</th>
+						<th>Füller</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for batch in batches %}
+						<tr>
+							<td>{{ batch.filledAt|date('H:i') }}</td>
+							<td>
+							{% for cylinder in items[batch.id] %}
+								{{ cylinder.volumeLiters is not null ? cylinder.volumeLiters ~ ' l – ' : 'Größe unbekannt – ' }}{{ cylinder.identification }}
+								{% if not loop.last %}, {% endif %}
+							{% endfor %}</td>
+							<td>{{ batch.endPressureBar }} bar</td>
+							<td>{{ batch.recordedBy }}</td>
+						</tr>
+					{% else %}
+						<tr>
+							<td colspan="4">Noch keine Füllung.</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</section>
+	{% endif %}
+	<section class="card card-body mb-4"><h2 class="h5">Neuen Füllabend eröffnen</h2>
+		<p class="small text-muted">Voraussetzung: gültiger Filterwechsel mit nächstem Fälligkeitsdatum im Wartungsbuch. Betriebsanleitung und betriebliche Prüfintervalle beachten.</p>
+		<form method="post" class="row g-3" onsubmit="return confirm('Anlagenkontrolle abgeschlossen und Füllabend freigeben?')">
+			<input type="hidden" name="action" value="open">
+			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_open') }}">
+			<div class="col-md-6">
+				<label class="form-label">Kompressor / Anlagenkennung</label>
+				<input class="form-control" name="compressor" maxlength="100" required>
+			</div>
+			<div class="col-md-6">
+				<label class="form-label">Betriebsstunden</label>
+				<input class="form-control" name="hours" placeholder="z. B. 123,4" required>
+			</div>
+			<div class="col-12">
+				<label class="form-label">Anmerkungen</label>
+				<textarea class="form-control" name="notes" maxlength="2000"></textarea>
+			</div>
+				{% for flag,label in {'system_check':'Anlage vor dem Füllabend geprüft','filter_check':'Filterstatus und Filterfrist geprüft','air_check':'Atemluftfreigabe anhand gültiger Nachweise geprüft'} %}			<div class="col-12 form-check ms-2">
+					<input class="form-check-input" type="checkbox" name="{{ flag }}" value="1" id="{{ flag }}" required>
+					<label class="form-check-label" for="{{ flag }}">{{ label }}</label>
+				</div>
+			{% endfor %}
+			<div class="col-12"><button class="btn btn-primary">Füllabend eröffnen</button>
+			</div>
+		</form>
+	</section>
+	<section class="card card-body mb-4">
+		<h2 class="h5">Wartungs- und Prüfnachweis</h2>
+		<p class="small text-muted">Filterwechsel nur bei tatsächlicher Durchführung dokumentieren. Jährliches Intervall ist ein Vereinsrichtwert; Hersteller- und Betriebsstundenvorgaben gehen vor. Luftanalyse nur bei tatsächlicher Messung erfassen.</p>
+		<form method="post" class="row g-2">
+			<input type="hidden" name="action" value="maintenance">
+			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_maintenance') }}">
+			<div class="col-md-4">
+				<label class="form-label">Kompressor</label>
+				<input class="form-control" name="compressor" required maxlength="100">
+			</div>
+			<div class="col-md-4">
+				<label class="form-label">Ereignis</label>
+				<select class="form-select" name="kind">
+					<option value="filter">Filterwechsel</option>
+					<option value="air_analysis">Atemluftanalyse</option>
+					<option value="inspection">Prüfung / Wartung</option>
+					<option value="repair">Reparatur</option>
+				</select>
+			</div>
+			<div class="col-md-4">
+				<label class="form-label">Durchgeführt am</label>
+				<input class="form-control" type="date" name="performed" value="{{ 'now'|date('Y-m-d') }}" required>
+			</div>
+			<div class="col-md-4">
+				<label class="form-label">Nächste Fälligkeit</label>
+				<input class="form-control" type="date" name="due">
+			</div>
+			<div class="col-md-8">
+				<label class="form-label">Nachweis / Bericht / Filterreferenz</label>
+				<input class="form-control" name="description" maxlength="2000" required>
+			</div>
+			<div class="col-12">
+				<button class="btn btn-outline-primary">Wartung dokumentieren</button>
+			</div>
+		</form>
+		<table class="table table-sm mt-3">
+			<thead>
+				<tr>
+					<th>Datum</th>
+					<th>Anlage</th>
+					<th>Ereignis</th>
+					<th>Fällig</th>
+					<th>Nachweis</th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for entry in maintenance %}
+				<tr>
+					<td>{{ entry.performedAt|date('d.m.Y') }}</td>
+					<td>{{ entry.compressor }}</td>
+					<td>{{ entry.kind }}</td>
+					<td>{{ entry.dueAt ? entry.dueAt|date('d.m.Y') : '–' }}</td>
+					<td>{{ entry.description }}</td>
+				</tr>
+			{% else %}
+				<tr>
+					<td colspan="5">Keine Wartungen dokumentiert.</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</section>
+	<div class="d-flex justify-content-between">
+		<h2 class="h5">Letzte Füllabende</h2>
+		<a href="{{ path('equipment_manager_compressor_evenings_csv') }}">CSV der Viererfüllungen</a>
+	</div>
+	<table class="table table-sm">
+		<thead>
+			<tr>
+				<th>Datum</th>
+				<th>Kompressor</th>
+				<th>Status</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for session in sessions %}
+				<tr>
+					<td>{{ session.openedAt|date('d.m.Y H:i') }}</td>
+					<td>{{ session.compressor }}</td>
+					<td>{{ session.closedAt ? 'Abgeschlossen' : 'Offen' }}</td>
+					<td><a href="{{ path('equipment_manager_compressor_evenings',{session:session.id}) }}">Öffnen</a></td>
+				</tr>
+			{% else %}
+				<tr>
+					<td colspan="4">Keine Füllabende.</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	<p class="small text-muted">
+	Alte Einzelfüllungen bleiben unverändert unter <a href="{{ path('equipment_manager_compressor_log') }}">bisheriges Fülllogbuch</a> abrufbar. Keine automatische Bestätigung einer Atemluftmessung pro Flasche.
+	</p>
+</main>
+{% endblock %}

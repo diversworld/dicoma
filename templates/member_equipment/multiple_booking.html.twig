@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+{% block title %}TÜV-Mehrfachanmeldung | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container">
+  <a href="{{ path('member_equipment_index') }}">← Meine Ausrüstung</a>
+  <h1>TÜV-Mehrfachanmeldung</h1>
+  <p>Prüftermin: <strong>{{ check.checkDate|date('d.m.Y') }}</strong>. Wähle mehrere eigene Flaschen und die jeweiligen Leistungen. Erst mit der Bestätigung wird gebucht.</p>
+  {% for message in app.flashes('danger') %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
+  <form method="post" id="tuv-multiple-form">
+    <input type="hidden" name="_token" value="{{ csrf_token('member_tuv_multiple_' ~ check.id) }}">
+    {% for row in rows %}
+      <div class="panel panel-default" style="margin-bottom:16px">
+        <div class="panel-heading"><label><input type="checkbox" class="js-tank" name="tanks[]" value="{{ row.tank.id }}"> <strong>{{ row.tank.label }}</strong> · {{ row.tank.serialNumber }} · {{ row.tank.volume ?: 'Größe unbekannt' }}</label></div>
+        <div class="panel-body table-responsive">
+          <table class="table table-striped"><thead><tr><th>Auswahl</th><th>Leistung</th><th>Netto</th><th>Brutto</th></tr></thead><tbody>
+          {% for item in row.articles %}
+            <tr><td><input type="checkbox" class="js-article" name="articles[{{ row.tank.id }}][]" value="{{ item.article.id }}" data-net="{{ (item.price.net * 100)|round }}" data-gross="{{ (item.price.gross * 100)|round }}" {% if item.required %}checked disabled{% endif %}></td>
+              <td>{{ item.article.title }} {% if item.required %}<small>(Pflichtleistung)</small>{% endif %}</td><td>{{ item.price.net|number_format(2, ',', '.') }} €</td><td>{{ item.price.gross|number_format(2, ',', '.') }} €</td></tr>
+          {% endfor %}
+          </tbody></table>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-info">Keine noch anmeldbaren eigenen Flaschen mit gültigen TÜV-Leistungen vorhanden.</div>
+    {% endfor %}
+    <div class="well" aria-live="polite"><strong id="selection-count">0 Flaschen</strong><br>Gesamt netto: <strong id="net-total">0,00 €</strong><br>Gesamt brutto: <strong id="gross-total">0,00 €</strong><p class="text-muted small">Die endgültigen Preise werden bei der Buchung serverseitig neu ermittelt.</p></div>
+    {% if agencyEnabled %}
+      <div class="alert alert-info">
+        <p>Du beauftragst das Pruefunternehmen mit der Pruefung deiner ausgewaehlten Flaschen. Der Verein uebermittelt deinen Auftrag als Vertreter und organisiert die Sammelzahlung. Das Pruefunternehmen muss dieses Auftragsmodell akzeptiert haben.</p>
+        <label><input type="checkbox" name="agency_consent" value="1" required> Ich beauftrage die Pruefung im eigenen Namen und fuer eigene Rechnung und bevollmaechtige den Verein zur Sammelabwicklung.</label>
+      </div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary" id="confirm-booking" disabled>Auswahl verbindlich anmelden</button>
+  </form>
+</div></section>
+<script>
+(function(){'use strict';const form=document.getElementById('tuv-multiple-form'),tanks=Array.from(form.querySelectorAll('.js-tank')),money=new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'});function update(){let net=0,gross=0,count=0;tanks.forEach(t=>{const panel=t.closest('.panel');panel.querySelectorAll('.js-article').forEach(a=>{a.disabled=!t.checked||a.dataset.required==='yes';if(t.checked&&a.checked){net+=Number(a.dataset.net);gross+=Number(a.dataset.gross);}});if(t.checked)count++;});document.getElementById('selection-count').textContent=count+' Flasche(n)';document.getElementById('net-total').textContent=money.format(net/100);document.getElementById('gross-total').textContent=money.format(gross/100);document.getElementById('confirm-booking').disabled=count===0;}tanks.forEach(t=>{t.closest('.panel').querySelectorAll('.js-article').forEach(a=>{if(a.disabled)a.dataset.required='yes';});});form.addEventListener('change',update);form.addEventListener('submit',e=>{if(!confirm('Die ausgewählten Flaschen verbindlich zum TÜV anmelden?'))e.preventDefault();});update();})();
+</script>
+{% endblock %}

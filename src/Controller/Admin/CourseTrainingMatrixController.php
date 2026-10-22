@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Courses;
+use App\Security\Voter\CourseManagementVoter;
 use App\Entity\CourseParticipant;
 use App\Entity\TrainingUnitResult;
 use App\Repository\CourseParticipantRepository;
@@ -36,6 +37,8 @@ final class CourseTrainingMatrixController extends AbstractController
         if (!$course instanceof Courses) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
+
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
 
         $requirements = [];
         foreach ($course->getTrainingUnits() as $unit) {

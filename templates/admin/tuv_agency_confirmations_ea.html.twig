@@ -1,0 +1,9 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Einzelaufträge – Vertretungsnachweise{% endblock %}
+{% block main %}
+<p>Dokumentierte Bestätigungen aus der geführten TÜV-Mehrfachanmeldung. Die Annahme durch das Prüfunternehmen ist hiermit noch nicht nachgewiesen.</p>
+<table class="table"><thead><tr><th>Gruppe</th><th>TÜV-Termin-ID</th><th>Bestätigt am</th><th>Textversion</th></tr></thead>
+<tbody>{% for group in groups %}<tr><td>#{{ group.id }}</td><td>{{ group.tankCheck.id }}</td><td>{{ group.agencyConfirmedAt|date('d.m.Y H:i') }}</td><td>{{ group.agencyTextVersion }}</td></tr>
+{% else %}<tr><td colspan="4">Keine Bestätigungen vorhanden.</td></tr>{% endfor %}</tbody></table>
+<p class="text-muted small">Anzeige der letzten 200 Bestätigungen. Nur für Administratoren.</p>
+{% endblock %}

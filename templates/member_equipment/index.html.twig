@@ -2,157 +2,25 @@
 {% block title %}Meine Ausrüstung | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
-<section class="section"><div class="container">
-<h1>Meine Ausrüstung</h1>
-{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">{{ message }}</div>{% endfor %}{% endfor %}
-<h2>Meine privaten Flaschen</h2>
-<div class="table-responsive">
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th>Bezeichnung</th>
-				<th>Seriennummer</th>
-				<th>Hersteller</th>
-				<th>Größe</th>
-				<th>Wasserkapazität</th>
-				<th>Nächste Prüfung</th>
-				<th>Aktion</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for tank in tanks %}
-			<tr>
-				<td>{{ tank.label }}</td>
-				<td>{{ tank.serialNumber }}</td>
-				<td>{{ tank.manufacturer ?: '–' }}</td>
-				<td>{{ tank.volume ?: '–' }}</td>
-				<td>
-					{% if tank.waterCapacityLiters is not null %}
-						{{ tank.waterCapacityLiters|number_format(2, ',', '.') }} L
-					{% else %}
-						Noch nicht erfasst
-					{% endif %}
-				</td>
-				<td>
-                    {{ tank.nextInspectionAt ? tank.nextInspectionAt|date('d.m.Y') : 'Noch nicht erfasst' }}
-                    {% set dueStatus = tank.inspectionDueStatus %}
-                    <div class="mt-1">
-                        <span class="badge {{ dueStatus == 'Überfällig' ? 'bg-danger' : (dueStatus == 'Bald fällig' ? 'bg-warning text-dark' : (dueStatus == 'Aktuell' ? 'bg-success' : 'bg-secondary')) }}">{{ dueStatus }}</span>
-                    </div>
-                </td>
-				<td>
-					<a class="btn btn-sm btn-outline-primary"
-					   href="{{ path('member_equipment_tank_edit', {id: tank.id}) }}">
-						Bearbeiten
-					</a>
-				</td>
-			</tr>
-			{% else %}
-			<tr>
-				<td colspan="7">Noch keine private Flasche gespeichert.</td>
-			</tr>
-			{% endfor %}
-		</tbody>
-	</table>
-</div>
-<h2>Private Flasche hinzufügen</h2>
-<form method="post" action="{{ path('member_equipment_tank_create') }}">
-	<input type="hidden" name="_token" value="{{ csrf_token('member_tank_create') }}">
-	<div class="form-group">
-		<label for="tank_label">Bezeichnung</label>
-		<input class="form-control" id="tank_label" name="label" maxlength="100" required>
-	</div>
-	<div class="form-group">
-		<label for="tank_serial">Seriennummer</label>
-		<input class="form-control" id="tank_serial" name="serial" maxlength="120" required>
-	</div>
-	<div class="form-group">
-		<label for="tank_manufacturer">Hersteller (optional)</label>
-		<input class="form-control" id="tank_manufacturer" name="manufacturer" maxlength="120">
-	</div>
-	<div class="form-group">
-		<label for="water_capacity_liters">Eingeprägter Wasserinhalt (Liter)</label>
-		<input
-			class="form-control"
-			id="water_capacity_liters"
-			name="water_capacity_liters"
-			type="text"
-			inputmode="decimal"
-			placeholder="z. B. 11,10"
-			required
-		>
-		<small>Zum Beispiel 11,10 bei einer 40-cuft-Flasche. Bitte den auf der Flasche eingeprägten Wert ablesen.</small>
-	</div>
-	<div class="form-group">
-		<label for="tank_volume">Flaschengröße (erforderlich)</label>
-		<select class="form-control" id="tank_volume" name="volume" required>
-			<option value="">Bitte Größe auswählen</option>
-			{% for liters in [3, 5, 7, 8, 10, 12, 15, 18, 20] %}
-				<option value="{{ liters }}">{{ liters }} Liter</option>
-			{% endfor %}
-			<option value="40 cuft">40 cuft</option>
-			<option value="80 cuft">80 cuft</option>
-		</select>
-	</div>
-	<button class="btn btn-primary" type="submit">Flasche speichern</button>
-</form>
-<h2 class="mt-4">Kommende TÜV-Termine</h2>
-<p class="text-muted">Diese Übersicht zeigt derzeit künftige Termine aus der bestehenden TÜV-Verwaltung. Es werden nur durch die Verwaltung veröffentlichte Termine angezeigt. Die Anmeldung erfolgt für eine gespeicherte private Flasche.</p>
-<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Datum</th><th>Prüfstelle</th><th>Informationen</th><th>Anmeldung</th></tr></thead><tbody>
-{% for check in checks %}<tr><td>{{ check.checkDate|date('d.m.Y') }}</td><td>{{ check.vendorName ?: '–' }}</td><td>{{ (check.costInformation ?: '–')|striptags|replace({'&nbsp;': ' '}) }}</td><td>
-{% if tanks is not empty %}
-<form method="get" class="tuv-service-navigation" data-check-id="{{ check.id }}">
-<label for="tank_for_check_{{ check.id }}">Private Flasche</label>
-<select id="tank_for_check_{{ check.id }}" class="form-control tuv-tank-selector" required>
-<option value="">Bitte Flasche auswählen</option>
-{% for tank in tanks %}
-<option value="{{ tank.id }}" data-url="{{ path('member_tuv_services', {id: check.id, tankId: tank.id}) }}">{{ tank.label }} – {{ tank.serialNumber }}{% if tank.volume %} ({{ tank.volume }}{% if "cuft" not in (tank.volume|lower) and "liter" not in (tank.volume|lower) and " l" not in (tank.volume|lower) %} L{% endif %}){% else %} (Größe fehlt){% endif %}</option>
-{% endfor %}
-</select>
-<p class="text-muted mt-2">Die passende Grundprüfung wird anhand der Flaschengröße automatisch zugeordnet. Zusatzleistungen wählen Sie im nächsten Schritt.</p>
-<button type="submit" class="btn btn-primary mt-2">Leistungen und Preis anzeigen</button>
-</form>
-{% else %}Bitte zuerst eine Flasche speichern.{% endif %}
-</td></tr>
-{% else %}<tr><td colspan="4">Keine kommenden Termine hinterlegt.</td></tr>{% endfor %}
-</tbody></table></div>
-<h2 class="mt-4">Meine TÜV-Anmeldungen</h2>
-<div class="table-responsive">
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th>Termin</th>
-				<th>Flasche</th>
-				<th>Prüfleistung</th>
-				<th>Preis bei Anmeldung</th>
-				<th>Status</th></tr>
-		</thead>
-		<tbody>
-			{% for booking in bookings %}
-			<tr>
-				<td>{{ booking.tankCheck.checkDate|date('d.m.Y') }}</td>
-				<td>{{ booking.memberTank.label }} – {{ booking.memberTank.serialNumber }}</td>
-				<td>{{ booking.articleTitleSnapshot ?: 'Frühere Anmeldung ohne Leistung' }}</td>
-				<td>{% if booking.priceSnapshot is not null %}{{ booking.priceSnapshot|number_format(2, ',', '.') }} € ({{ booking.priceBasis == 'gross' ? 'brutto' : 'netto' }}){% else %}–{% endif %}</td>				<td>{{ booking.status }}</td>
-			</tr>
-			{% else %}
-			<tr>
-				<td colspan="5">Noch keine Anmeldungen vorhanden.</td>
-			</tr>
-			{% endfor %}
-		</tbody>
-	</table>
-</div>
+<style>
+.mp-equipment{padding:35px 0 65px;background:#f7f9fc}.mp-equipment .mp-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px;margin-bottom:22px}.mp-equipment .mp-tank{border:1px solid #e4eaf0;border-radius:9px;padding:18px;margin-bottom:15px}.mp-equipment .mp-muted{color:#526274}.mp-equipment .mp-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.mp-equipment .mp-heading{margin:0 0 10px}.mp-equipment .mp-row{padding:15px 0;border-bottom:1px solid #e9eef2}.mp-equipment .mp-row:last-child{border-bottom:0}.mp-equipment label{display:block;margin-top:8px}
+</style>
+<main class="mp-equipment"><div class="container">
+<a href="{{ path('member_portal_dashboard') }}">← Mein Mitgliederbereich</a>
+<div class="mp-head" style="margin:18px 0 24px"><div><h1>Meine Ausrüstung</h1><p class="mp-muted">Private Flaschen verwalten und für TÜV-Termine anmelden.</p></div><a class="btn btn-primary" href="#flasche-hinzufuegen">+ Flasche hinzufügen</a></div>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message }}</div>{% endfor %}{% endfor %}
+<section id="meine-flaschen" class="mp-panel" aria-labelledby="flaschen-titel"><div class="mp-head"><h2 id="flaschen-titel" class="mp-heading">Meine privaten Flaschen <small>({{ tanks|length }})</small></h2><a href="#tuv-termine">Zum TÜV anmelden →</a></div>
+<div class="row">{% for tank in tanks %}<div class="col-md-6"><article class="mp-tank"><h3 class="h4" style="margin-top:0">{{ tank.label }}</h3><p class="mp-muted">Seriennummer: {{ tank.serialNumber }}<br>{{ tank.manufacturer ?: 'Hersteller nicht erfasst' }} · {{ tank.volume ?: 'Größe fehlt' }}{% if tank.waterCapacityLiters %} · {{ tank.waterCapacityLiters|number_format(2, ',', '.') }} L Wasserinhalt{% endif %}</p>
+{% set due = tank.inspectionDueStatus %}<p>Nächste Prüfung: <strong>{{ tank.nextInspectionAt ? tank.nextInspectionAt|date('d.m.Y') : 'Noch nicht erfasst' }}</strong><br><span class="label label-{{ due == 'Überfällig' ? 'danger' : (due == 'Bald fällig' ? 'warning' : (due == 'Aktuell' ? 'success' : 'default')) }}">{{ due }}</span></p>
+<a class="btn btn-default" href="{{ path('member_equipment_tank_edit', {id:tank.id}) }}">Flasche bearbeiten</a></article></div>{% else %}<div class="col-sm-12"><p>Du hast noch keine private Flasche hinterlegt. Lege deine erste Flasche an, um sie zum TÜV anzumelden.</p><a class="btn btn-primary" href="#flasche-hinzufuegen">Erste Flasche hinzufügen</a></div>{% endfor %}</div></section>
+<section id="tuv-termine" class="mp-panel" aria-labelledby="termine-titel"><h2 id="termine-titel" class="mp-heading">Kommende TÜV-Termine</h2><p class="mp-muted">Wähle einen Termin und deine Flasche. Im nächsten Schritt siehst du die Prüfleistungen und den Preis vor der Buchung.</p>
+{% for check in checks %}<div class="mp-row"><p><a class="btn btn-primary" href="{{ path('member_tuv_multiple', {id:check.id}) }}">Mehrere Flaschen gemeinsam anmelden →</a></p><div class="row"><div class="col-md-5"><h3 class="h4">{{ check.checkDate|date('d.m.Y') }}</h3><p class="mp-muted">{{ check.vendorName ?: 'Prüfstelle wird bekannt gegeben' }}</p>{% if check.costInformation %}<p>{{ check.costInformation|striptags|replace({'&nbsp;':' '}) }}</p>{% endif %}</div><div class="col-md-7">{% if tanks is not empty %}<form method="get" class="tuv-service-navigation"><label for="tank_for_check_{{ check.id }}">Welche Flasche möchtest du anmelden?</label><select id="tank_for_check_{{ check.id }}" class="form-control tuv-tank-selector" required><option value="">Flasche auswählen</option>{% for tank in tanks %}<option value="{{ tank.id }}" data-url="{{ path('member_tuv_services', {id:check.id,tankId:tank.id}) }}">{{ tank.label }} – {{ tank.serialNumber }}</option>{% endfor %}</select><button type="submit" class="btn btn-primary" style="margin-top:12px">Leistungen und Preis anzeigen →</button></form>{% else %}<p>Bitte zuerst eine private Flasche hinterlegen.</p><a href="#flasche-hinzufuegen">Flasche hinzufügen →</a>{% endif %}</div></div></div>{% else %}<p>Derzeit sind keine veröffentlichten TÜV-Termine verfügbar.</p>{% endfor %}</section>
+<section id="meine-anmeldungen" class="mp-panel" aria-labelledby="anmeldungen-titel"><h2 id="anmeldungen-titel" class="mp-heading">Meine TÜV-Anmeldungen</h2>
+{% for booking in bookings %}<div class="mp-row"><div class="mp-head"><div><strong>{{ booking.tankCheck.checkDate|date('d.m.Y') }}</strong> · {{ booking.memberTank ? booking.memberTank.label : 'Flasche' }}<div class="mp-muted">{{ booking.articleTitleSnapshot ?: 'Prüfleistung nicht hinterlegt' }}{% if booking.priceSnapshot is not null %} · {{ booking.priceSnapshot|number_format(2, ',', '.') }} € ({{ booking.priceBasis == 'gross' ? 'brutto' : 'netto' }}){% endif %}</div><div>Status: {% include 'member_portal/_booking_status.html.twig' with {status: booking.status} only %}</div></div><a class="btn btn-default" href="{{ path('member_tank_check_booking_detail', {id:booking.id}) }}">Details</a></div></div>{% else %}<p>Du hast noch keine TÜV-Anmeldungen.</p>{% endfor %}</section>
+<section id="flasche-hinzufuegen" class="mp-panel" aria-labelledby="hinzufuegen-titel"><h2 id="hinzufuegen-titel" class="mp-heading">Private Flasche hinzufügen</h2><p class="mp-muted">Die Angaben findest du auf der Flasche. Der Wasserinhalt ist nicht immer identisch mit der Größenbezeichnung.</p>
+<form method="post" action="{{ path('member_equipment_tank_create') }}"><input type="hidden" name="_token" value="{{ csrf_token('member_tank_create') }}"><div class="row"><div class="col-md-6"><label for="tank_label">Bezeichnung *</label><input class="form-control" id="tank_label" name="label" maxlength="100" required></div><div class="col-md-6"><label for="tank_serial">Seriennummer *</label><input class="form-control" id="tank_serial" name="serial" maxlength="120" required></div><div class="col-md-6"><label for="tank_manufacturer">Hersteller (optional)</label><input class="form-control" id="tank_manufacturer" name="manufacturer" maxlength="120"></div><div class="col-md-6"><label for="tank_volume">Flaschengröße *</label><select class="form-control" id="tank_volume" name="volume" required><option value="">Bitte auswählen</option>{% for liters in [3,5,7,8,10,12,15,18,20] %}<option value="{{ liters }}">{{ liters }} Liter</option>{% endfor %}<option value="40 cuft">40 cuft</option><option value="80 cuft">80 cuft</option></select></div><div class="col-md-6"><label for="water_capacity_liters">Eingeprägter Wasserinhalt in Litern *</label><input class="form-control" id="water_capacity_liters" name="water_capacity_liters" inputmode="decimal" placeholder="z. B. 11,10" required><small>Bitte den tatsächlichen Wert auf der Flasche ablesen.</small></div></div><button class="btn btn-primary" type="submit" style="margin-top:20px">Flasche speichern</button></form></section>
+</div></main>
 <script>
-document.querySelectorAll('.tuv-service-navigation').forEach(function(form) {
-  form.addEventListener('submit', function(event) {
-    event.preventDefault();
-    const select = form.querySelector('.tuv-tank-selector');
-    const option = select.options[select.selectedIndex];
-    if (option && option.dataset.url) window.location.assign(option.dataset.url);
-    else select.reportValidity();
-  });
-});
+document.querySelectorAll('.tuv-service-navigation').forEach(function(form){form.addEventListener('submit',function(e){e.preventDefault();var select=form.querySelector('.tuv-tank-selector');var option=select.options[select.selectedIndex];if(option && option.dataset.url){window.location.assign(option.dataset.url);}else{select.reportValidity();}});});
 </script>
-</div></section>
 {% endblock %}

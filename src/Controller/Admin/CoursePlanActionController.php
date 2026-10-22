@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Courses;
+use App\Security\Voter\CourseManagementVoter;
 use App\Enum\CourseStatus;
 use App\Repository\ScheduleRepository;
 use App\Service\CourseScheduleGenerator;
@@ -33,6 +34,12 @@ final class CoursePlanActionController extends AbstractController
     #[Route('/admin/course/{id}/import-training-plan', name: 'admin_course_import_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function import(int $id, Request $request): Response
     {
+        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
+            return $this->redirectToRoute('admin_training_workflow', [
+                'id' => $id, 'step' => 'import',
+            ], Response::HTTP_SEE_OTHER);
+        }
+
         $course = $this->loadEditableCourse($id);
         $qualification = $course->getQualification();
         $entries = [];
@@ -77,6 +84,12 @@ final class CoursePlanActionController extends AbstractController
     #[Route('/admin/course/{id}/generate-schedules', name: 'admin_course_generate_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function generate(int $id, Request $request): Response
     {
+        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
+            return $this->redirectToRoute('admin_training_workflow', [
+                'id' => $id, 'step' => 'generate',
+            ], Response::HTTP_SEE_OTHER);
+        }
+
         $course = $this->loadEditableCourse($id);
         $rows = [];
         $missing = 0;
@@ -119,6 +132,7 @@ final class CoursePlanActionController extends AbstractController
         if (!$course instanceof Courses) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         if ($course->getStatus() === CourseStatus::COMPLETED) {
             throw $this->createAccessDeniedException('Abgeschlossene Kurse duerfen nicht veraendert werden.');
         }

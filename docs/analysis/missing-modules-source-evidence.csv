@@ -1,0 +1,5 @@
+Modul,Datei,Zeile,Textauszug
+Veranstaltungen,src/Controller/Admin/ScheduleCrudController.php,184,"yield TextField::new('location','Veranstaltungsort')"
+Veranstaltungen,templates/admin/course/history.html.twig,29,{% if event.participantId is not null %}
+Veranstaltungen,templates/admin/course/history.html.twig,30,{{ participantNames[event.participantId]|default('Nicht mehr vorhanden') }}
+Veranstaltungen,templates/admin/course/history.html.twig,31,"<span class=""muted small"">(#{{ event.participantId }})</span>"

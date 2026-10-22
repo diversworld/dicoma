@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Courses;
+use App\Security\Voter\CourseManagementVoter;
 use App\Enum\CourseStatus;
 use App\Service\TrainingProgressService;
 use App\Service\CourseAuditLogger;
@@ -104,6 +105,7 @@ final class CourseStatusActionController extends AbstractController
         if (!$course instanceof Courses) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         return $course;
     }
 

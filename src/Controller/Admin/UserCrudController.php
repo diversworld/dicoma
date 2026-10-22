@@ -18,7 +18,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-#[IsGranted('ROLE_ADMIN')]
+// Benutzer- und Rollenverwaltung ist bis zur fachlichen Freigabe
+// einer delegierten Rollenvergabe ausschließlich Super-Admins erlaubt.
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class UserCrudController extends AbstractCrudController
 {
     public function __construct(

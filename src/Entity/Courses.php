@@ -21,6 +21,9 @@ class Courses
     #[ORM\Column]
     private ?int $id = null;
 	
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $schedulePublishedAt = null;
+
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
@@ -39,6 +42,10 @@ class Courses
     #[ORM\OneToMany(mappedBy: 'courses', targetEntity: Schedule::class)]
     private Collection $schedule;
 
+	#[ORM\Column(type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
+    #[Assert\PositiveOrZero]
+    private string $courseFee = '0.00';
+	
     #[ORM\Column(length: 30)]
     private ?string $category = null;
 	
@@ -49,6 +56,10 @@ class Courses
 	#[ORM\ManyToOne]
 	#[ORM\JoinColumn(nullable: true)]
 	private ?Qualification $qualification = null;
+
+    #[ORM\ManyToOne(targetEntity: Member::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Member $leadInstructor = null;
 	
 	#[ORM\Column(type: Types::STRING,length: 20,enumType: CourseStatus::class,options: ['default' => 'draft'])]
 	private CourseStatus $status = CourseStatus::DRAFT;
@@ -93,6 +104,12 @@ class Courses
         return $this->title;
     }
 
+    public function getSchedulePublishedAt(): ?\DateTimeImmutable { return $this->schedulePublishedAt; }
+    public function publishSchedule(): void { $this->schedulePublishedAt = new \DateTimeImmutable(); }
+    public function unpublishSchedule(): void { $this->schedulePublishedAt = null; }
+
+    public function getLeadInstructor(): ?Member { return $this->leadInstructor; }
+    public function setLeadInstructor(?Member $member): static { $this->leadInstructor = $member; return $this; }
     public function getId(): ?int
     {
         return $this->id;
@@ -327,7 +344,8 @@ class Courses
 
 		return $this;
 	}
-	
+    public function getCourseFee(): string { return $this->courseFee; }
+    public function setCourseFee(string $value): static { $this->courseFee = $value; return $this; }	
 	public function validateQualification(
 		ExecutionContextInterface $context
 	): void {

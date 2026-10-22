@@ -43,6 +43,12 @@ class Tank
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $nextCheckDate = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
+    private string $rentalFee = '0.00';
+
+    public function getRentalFee(): string { return $this->rentalFee; }
+    public function setRentalFee(string $value): static { $this->rentalFee = $value; return $this; }
+
     #[ORM\Column(length: 20, options: ['default' => 'ready'])]
     private string $conditionStatus = 'ready';
 

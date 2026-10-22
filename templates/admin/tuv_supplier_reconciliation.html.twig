@@ -1,0 +1,26 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Sammelrechnung abgleichen – Termin #{{ checkId }}{% endblock %}
+{% block main %}
+<p>Hier werden nur TÜV-Einzelaufträge mit dokumentierter Mitgliederbestätigung angezeigt. Die Annahme des Auftrags durch das Prüfunternehmen muss gesondert nachgewiesen werden.</p>
+<p><a class="btn btn-secondary" href="{{ path('admin_tuv_supplier_reconciliation_csv', {id: checkId}) }}">Abgleichliste als CSV herunterladen</a></p>
+{% for error in errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+<form method="post">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_supplier_reconciliation_' ~ checkId) }}">
+<div class="table-responsive"><table class="table table-striped align-middle">
+<thead><tr><th>Auftrag</th><th>Mitglied</th><th>Flasche</th><th>Leistungen</th><th>Erwartet</th><th>Rechnung</th><th>Differenz</th></tr></thead>
+<tbody>
+{% for row in rows %}
+{% set paid = actual[row.reference] ?? null %}
+<tr>
+<td>{{ row.reference }}<div class="small text-muted">Gruppe #{{ row.group }}</div></td>
+<td>{{ row.member }}</td><td>{{ row.tank }}</td><td>{{ row.services ?: 'Keine Leistungen hinterlegt' }}</td>
+<td>{{ (row.expected / 100)|number_format(2, ',', '.') }} €</td>
+<td><input class="form-control form-control-sm" name="actual[{{ row.reference }}]" value="{{ paid is not null ? (paid / 100)|number_format(2, ',', '') : '' }}" placeholder="0,00" inputmode="decimal" aria-label="Rechnungsbetrag für {{ row.reference }}"></td>
+<td>{% if paid is not null %}<strong class="{{ paid != row.expected ? 'text-danger' : 'text-success' }}">{{ ((paid - row.expected) / 100)|number_format(2, ',', '.') }} €</strong>{% else %}–{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="7">Keine bestätigten Einzelaufträge zu diesem Termin gefunden.</td></tr>{% endfor %}
+</tbody></table></div>
+<button type="submit" class="btn btn-primary">Differenzen berechnen</button>
+</form>
+<p class="small text-muted mt-3">Die eingegebenen Rechnungsbeträge werden nur für diesen Seitenaufruf verglichen und nicht gespeichert. Es werden keine Mitgliederforderungen oder Rechnungen erzeugt.</p>
+{% endblock %}

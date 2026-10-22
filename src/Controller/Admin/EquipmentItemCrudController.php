@@ -20,7 +20,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class EquipmentItemCrudController extends AbstractCrudController
 {
     /** Keep the legacy string in sync only when an explicit model was selected. */
@@ -83,6 +83,8 @@ class EquipmentItemCrudController extends AbstractCrudController
             yield AssociationField::new('manufacturer', 'Hersteller');
             yield TextField::new('displayModel', 'Modell');
             yield AssociationField::new('size', 'Größe');
+			 yield MoneyField::new('rentalFee', 'Leihgebühr')
+            ->setCurrency('EUR')->setStoredAsCents(false);
             yield ChoiceField::new('conditionStatus', 'Zustand')->setChoices([
                 'Einsatzbereit' => 'ready', 'Wartung' => 'maintenance',
                 'Beschädigt' => 'damaged', 'Ausgemustert' => 'retired',

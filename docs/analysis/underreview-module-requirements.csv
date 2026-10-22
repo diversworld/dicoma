@@ -1,0 +1,88 @@
+Modul,Teilbereich,Anforderung,Prüfstatus,Belegstatus
+Mannschaften und Turniere,Mannschaften,Mannschaftsstammdaten,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Sportart,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Trainer,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Betreuer,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Spieler,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Kader,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Spielerpositionen,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Trainingszeiten,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Trainingsorte,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Mannschaften,Teilnahmeberechtigungen,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Turnierverwaltung,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Veranstalter,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Veranstaltungsort,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Termine,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Mannschaftsmeldung,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Spielerregistrierung,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Spielpläne,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Gegner,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Ergebnisse,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Tabellen,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Turnierhistorie,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Teilnahmegebühren,offen,keine End-to-End-Verifikation
+Mannschaften und Turniere,Turniere,Dokumente,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Dienstkalender,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Schichtdefinitionen,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Dienstanmeldung,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Dienstzuweisung,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Diensttausch,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Vertretungen,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Erinnerungen,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Anwesenheitsbestätigung,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Erfassung geleisteter Stunden,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Dienststundenkonten,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Pflichtstunden,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Ausnahmen,offen,keine End-to-End-Verifikation
+Thekendienste,Funktionen,Auswertungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Vereinsveranstaltungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Mitgliederversammlungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Vereinsfeste,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Arbeitseinsätze,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Tauchausflüge,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Trainingsveranstaltungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Seminare,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Wettkämpfe,offen,keine End-to-End-Verifikation
+Veranstaltungen,Veranstaltungstypen,Sonstige Veranstaltungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Veranstaltung erstellen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Öffentlich oder vereinsintern veröffentlichen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Teilnehmerregistrierung,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Teilnehmerbegrenzung,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Wartelisten,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Anmeldefristen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Teilnahmegebühren,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Zahlungsstatus,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Stornierung,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Erinnerungen,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Teilnehmerlisten,offen,keine End-to-End-Verifikation
+Veranstaltungen,Funktionen,Dokumente,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Reiseziel,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Reisezeitraum,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Reiseleitung,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Beschreibung,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Maximale Teilnehmerzahl,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Reisepreis,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Leistungen,offen,keine End-to-End-Verifikation
+Clubreisen,Stammdaten,Stornobedingungen,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Reiseanmeldung,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Warteliste,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Teilnehmerverwaltung,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Unterkunft,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Zimmerbelegung,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Anreise,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Transport,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Tauchpakete,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Zusatzleistungen,offen,keine End-to-End-Verifikation
+Clubreisen,Organisation,Reiseunterlagen,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Reisepreise,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Anzahlungen,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Restzahlungen,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Zusatzkosten,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Zahlungsstatus,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Stornierungen,offen,keine End-to-End-Verifikation
+Clubreisen,Finanzen,Erstattungen,offen,keine End-to-End-Verifikation
+Clubreisen,Tauchspezifische Anforderungen,Ausbildungsstand,offen,keine End-to-End-Verifikation
+Clubreisen,Tauchspezifische Anforderungen,Tauchtauglichkeit,offen,keine End-to-End-Verifikation
+Clubreisen,Tauchspezifische Anforderungen,Benötigte Qualifikationen,offen,keine End-to-End-Verifikation
+Clubreisen,Tauchspezifische Anforderungen,Leihausrüstung,offen,keine End-to-End-Verifikation
+Clubreisen,Tauchspezifische Anforderungen,Tauchpakete,offen,keine End-to-End-Verifikation

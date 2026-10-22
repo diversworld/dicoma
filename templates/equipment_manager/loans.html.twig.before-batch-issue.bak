@@ -1,0 +1,103 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Ausleihe und Rücknahme | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section"><div class="container py-4">
+  <a href="{{ path('equipment_manager_dashboard') }}">← Gerätewart-Übersicht</a>
+  	<h1 class="h2 mt-3">Ausleihe und Rücknahme
+  		<p><a class="btn btn-primary" href="{{ path('equipment_manager_loans_direct') }}">+ Direktausleihe am Schalter</a></p>
+	</h1>
+  <p><a class="btn btn-outline-primary btn-sm" href="{{ path('equipment_manager_cashbook') }}">Gerätewart-Kasse öffnen</a></p>
+  <p class="text-muted">Reservierungen deines Vereins. Ausgabe und Rücknahme werden je Gegenstand bestätigt.</p>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {% for value, label in {'open':'Offene Vorgänge','all':'Alle','returned':'Zurückgegeben','cancelled':'Storniert'} %}
+      <a class="btn btn-sm {{ filter == value ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ path('equipment_manager_loans', {status:value}) }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
+  {% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message }}</div>{% endfor %}
+  {% if app.request.query.get('checkout') %}
+    <div class="alert alert-primary">
+      <strong>Ausgabe und Kassieren</strong>
+      <p class="mb-1">Inventar und Gebühr prüfen, Gegenstände tatsächlich ausgeben und anschließend die Zahlung separat bestätigen.</p>
+      <a href="{{ path('equipment_manager_loans') }}">Zurück zu allen offenen Ausleihen</a>
+    </div>
+  {% endif %}
+  {% for booking in bookings %}
+    <div class="card shadow-sm mb-3"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <strong>Buchung #{{ booking.id }}</strong>
+      <span>{{ booking.startsAt|date('d.m.Y') }} – {{ booking.endsAt|date('d.m.Y') }}</span>
+      <span class="badge bg-secondary">{{ {'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert'}[booking.status] ?? booking.status }}</span>
+    </div><div class="card-body">
+      {# DICOMA_CHECKOUT_WORKSPACE_V1 #}
+      {% if not app.request.query.get('checkout') %}
+        <p><a class="btn btn-sm btn-outline-primary" href="{{ path('equipment_manager_loans', {checkout: booking.id}) }}">Ausgabe und Kassieren öffnen</a></p>
+      {% endif %}
+      <p class="mb-2"><strong>Mitglied:</strong> {{ booking.member }}</p>
+      {% if booking.status == 'reserved' %}
+        <form method="post" action="{{ path('equipment_manager_loan_cancel', {bookingId:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm('Diese Reservierung verbindlich stornieren?')">
+          <input type="hidden" name="_token" value="{{ csrf_token('loan_cancel_' ~ booking.id) }}">
+          <input type="text" name="reason" class="form-control form-control-sm" style="max-width:380px" minlength="5" maxlength="500" placeholder="Stornogrund (erforderlich)" required>
+          <button type="submit" class="btn btn-sm btn-outline-danger">Reservierung stornieren</button>
+        </form>
+      {% endif %}
+      {% if booking.status == 'cancelled' and booking.notes %}<p class="small text-muted">{{ booking.notes|nl2br }}</p>{% endif %}
+      {# DICOMA_RENTAL_FEE_PREVIEW_V1 #}
+      {% set expectedCents = rentalFeePreview[booking.id] ?? 0 %}
+      {% set missingFee = rentalFeeMissing[booking.id] ?? false %}
+      <div class="alert alert-info py-2 mb-2">
+        <strong>Voraussichtliche Leihgebühr: {{ (expectedCents / 100)|number_format(2, ',', '.') }} €</strong>
+        {% if missingFee %}<span class="d-block small text-danger">Nicht vollständig berechenbar: Für mindestens einen Gegenstand ist kein auswertbarer Leihpreis hinterlegt (z. B. Flasche). Betrag bitte prüfen.</span>{% endif %}
+        <span class="d-block small">{# DICOMA_AGREED_FEE_DISPLAY_V1 #}{% if booking.agreedRentalFeeCents is not null %}Bei Buchung festgeschriebener Gesamtpreis.{% else %}Summe der aktuell hinterlegten Einzelpreise; noch kein festgeschriebener Buchungspreis.{% endif %}</span>
+      </div>
+      {% set payment = rentalReceipts[booking.id] ?? null %}
+      {% if payment %}
+        <div class="alert alert-success py-2 mb-3" role="status">
+          <strong>✓ Leihgebühr bezahlt</strong> – {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} €
+          ({{ payment.method == 'cash' ? 'Barzahlung' : 'Überweisung' }})
+          am {{ payment.collectedAt|date('d.m.Y H:i') }}
+          <span class="d-block small">Kassiert von: {{ payment.collectedBy }}</span>
+        </div>
+      {% elseif booking.status in ['partially_issued','issued','partially_returned','returned'] %}
+        <div class="alert alert-warning py-2 mb-2" role="status"><strong>Leihgebühr noch offen</strong> – für diese Buchung ist keine Zahlung erfasst.</div>
+        <form method="post" action="{{ path('equipment_manager_collect_rental_fee', {id:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm('Leihgebühr jetzt verbindlich kassieren? Bereits kassierte Buchungen werden abgewiesen.')">
+          <input type="hidden" name="_token" value="{{ csrf_token('rental_collect_' ~ booking.id) }}">
+          <label class="form-label mb-0">Leihgebühr kassieren</label>
+          <input type="text" inputmode="decimal" name="amount" class="form-control form-control-sm" style="max-width:110px" placeholder="EUR" {% if not missingFee and expectedCents > 0 %}value="{{ (expectedCents / 100)|number_format(2, ',', '') }}"{% endif %} required>
+          <select name="method" class="form-select form-select-sm" style="max-width:140px"><option value="cash">Bar erhalten</option><option value="bank">Überweisung</option></select>
+          <input type="text" name="note" class="form-control form-control-sm" style="max-width:180px" maxlength="500" placeholder="Bemerkung">
+          <button type="submit" class="btn btn-sm btn-success">Zahlung erfassen</button>
+        </form>
+      {% else %}
+        <p class="text-muted small mb-3"><strong>Leihgebühr:</strong> Noch keine Zahlung erfasst. Zahlung bei Ausgabe kassieren.</p>
+      {% endif %}
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Gegenstand</th><th>Inventar</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
+      {% for line in booking.items %}
+        <tr><td>{{ line.assetLabel }}</td><td>{{ line.assetInventory }}</td>
+        <td>{{ {'reserved':'Reserviert','issued':'Ausgegeben','returned':'Zurückgegeben'}[line.loanStatus] ?? line.loanStatus }}</td>
+        <td>
+          {% if line.loanStatus == 'reserved' and booking.status != 'cancelled' %}
+            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'issue'}) }}" onsubmit="return confirm('Diesen Gegenstand tatsächlich ausgeben?')">
+              <input type="hidden" name="_token" value="{{ csrf_token('loan_' ~ booking.id ~ '_' ~ line.id ~ '_issue') }}">
+              <button class="btn btn-sm btn-primary" type="submit">Ausgabe bestätigen</button>
+            </form>
+          {% elseif line.loanStatus == 'issued' %}
+            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'return'}) }}" onsubmit="return confirm('Rücknahme mit angegebenem Zustand bestätigen?')">
+              <input type="hidden" name="_token" value="{{ csrf_token('loan_' ~ booking.id ~ '_' ~ line.id ~ '_return') }}">
+              <label class="visually-hidden" for="condition-{{ line.id }}">Rückgabezustand</label>
+              <select id="condition-{{ line.id }}" name="condition" class="form-select form-select-sm mb-2" required>
+                <option value="ready">In Ordnung</option><option value="maintenance">Wartung erforderlich</option><option value="damaged">Beschädigt</option>
+              </select>
+              <label class="visually-hidden" for="notes-{{ line.id }}">Bemerkung</label>
+              <input id="notes-{{ line.id }}" class="form-control form-control-sm mb-2" name="notes" maxlength="1000" placeholder="Bemerkung (optional)">
+              <button class="btn btn-sm btn-success" type="submit">Rücknahme bestätigen</button>
+            </form>
+          {% else %}<span class="text-muted">Keine Aktion</span>{% endif %}
+        </td></tr>
+      {% else %}<tr><td colspan="4">Keine Positionen vorhanden.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div></div>
+  {% else %}<div class="alert alert-info">Für diesen Filter liegen keine Buchungen vor.</div>{% endfor %}
+  {% if bookings|length >= 100 %}<p class="text-muted small">Es werden maximal die 100 neuesten Buchungen angezeigt.</p>{% endif %}
+</div></section>
+{% endblock %}

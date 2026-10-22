@@ -3,6 +3,13 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Member;
+use App\Entity\User;
+use App\Security\Voter\MemberManagementVoter;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use App\Entity\MemberDocument;
 use App\Entity\MemberQualification;
 use App\Entity\CourseParticipant;
@@ -36,6 +43,102 @@ class MemberCrudController extends AbstractCrudController
 {
     public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator) {}
 
+    /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $clubId = $this->currentClubId();
+            if ($clubId === null) {
+                $qb->andWhere('1 = 0');
+            } else {
+                $qb->andWhere('entity.club = :memberManagedClub')->setParameter('memberManagedClub', $clubId);
+            }
+        }
+        return $qb;
+    }
+
+    private function currentClubId(): ?int
+    {
+        $user = $this->getUser();
+        return $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
+    }
+
+    private function assertMemberAccess(Member $member): void
+    {
+        $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
+    }
+
+    /** Schritte 34-36: Formulardaten duerfen keine fremde Vereinszuordnung erzeugen. */
+    private function enforceMemberClub(Member $member, ?EntityManagerInterface $em = null): void
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return;
+        }
+        $user = $this->getUser();
+        $club = $user instanceof User ? $user->getMember()?->getClub() : null;
+        if ($club === null || $club->getId() === null) {
+            throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+        }
+        if ($em !== null) {
+            // Die Datenbankzuordnung pruefen, nicht den bereits durch das Formular
+            // veraenderbaren Entity-Zustand. Auch eine manipulierte club-ID darf
+            // keinen Zugriff auf Mitglieder eines anderen Vereins ermoeglichen.
+            $memberId = $member->getId();
+            if ($memberId === null) {
+                throw $this->createAccessDeniedException('Mitglied nicht vorhanden.');
+            }
+
+            $storedClubId = $em->getConnection()->fetchOne(
+                'SELECT club_id FROM member WHERE id = :id',
+                ['id' => $memberId]
+            );
+            if ($storedClubId === false || (int) $storedClubId !== $club->getId()) {
+                throw $this->createAccessDeniedException('Mitglied gehoert nicht zum eigenen Verein.');
+            }
+        }
+        $member->setClub($club);
+    }
+
+    public function createEntity(string $entityFqcn): Member
+    {
+        $member = new Member();
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $user = $this->getUser();
+            $club = $user instanceof User ? $user->getMember()?->getClub() : null;
+            if ($club === null || $club->getId() === null) {
+                throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+            }
+            $member->setClub($club);
+        }
+        return $member;
+    }
+
+    public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof Member) {
+            $this->enforceMemberClub($entityInstance);
+        }
+        parent::persistEntity($entityManager, $entityInstance);
+    }
+
+    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof Member) {
+            $this->enforceMemberClub($entityInstance, $entityManager);
+            $this->assertMemberAccess($entityInstance);
+        }
+        parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof Member) {
+            $this->assertMemberAccess($entityInstance);
+        }
+        parent::deleteEntity($entityManager, $entityInstance);
+    }
+
     public function configureActions(Actions $actions): Actions
     {
         $center = Action::new('memberCenter', 'Mitgliederzentrale', 'fa fa-address-card')
@@ -54,6 +157,7 @@ class MemberCrudController extends AbstractCrudController
         if (!$member instanceof Member || $member->getId() === null) {
             return $responseParameters;
         }
+        $this->assertMemberAccess($member);
         $em = $this->entityManager;
         $responseParameters->set('memberCenterQualifications', $em->getRepository(MemberQualification::class)->findBy(['member' => $member], ['id' => 'DESC']));
         $responseParameters->set('memberCenterCourses', $em->getRepository(CourseParticipant::class)->findBy(['member' => $member], ['id' => 'DESC']));
@@ -174,6 +278,13 @@ class MemberCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
+        if ($pageName === Crud::PAGE_EDIT || $pageName === Crud::PAGE_DETAIL) {
+            $entity = $this->getContext()?->getEntity()?->getInstance();
+            if ($entity instanceof Member) {
+                $this->assertMemberAccess($entity);
+            }
+        }
+
         if ($pageName === Crud::PAGE_DETAIL) {
 			yield IdField::new('id', 'ID');
 
@@ -206,6 +317,7 @@ class MemberCrudController extends AbstractCrudController
             ->collapsible();
 
         yield AssociationField::new('club', 'Verein')
+            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN'))
             ->setRequired(true)
             ->setColumns(4)
             ->hideOnIndex();
@@ -346,6 +458,7 @@ class MemberCrudController extends AbstractCrudController
             ->collapsible();
 
         yield AssociationField::new('user', 'Benutzer')
+            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN'))
             ->setRequired(false)
             ->setColumns(4)
             ->setHelp(

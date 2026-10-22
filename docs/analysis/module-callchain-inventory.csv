@@ -1,0 +1,13 @@
+Modul,Quelldatei,Treffer,Nachweisgrad
+Mannschaften/Turniere,src/Entity/Team.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Entity/TeamMember.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Repository/TeamMemberRepository.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Repository/TeamRepository.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Controller/Admin/TeamCrudController.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Controller/Admin/TeamMemberSportCheckController.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,src/Controller/Admin/TeamMemberCrudController.php,team,Dateiname – kein Funktionsnachweis
+Mannschaften/Turniere,templates/admin/team/detail.html.twig,team,Dateiname – kein Funktionsnachweis
+Veranstaltungen,src/Entity/CourseAuditEvent.php,event,Dateiname – kein Funktionsnachweis
+Veranstaltungen,src/Controller/Admin/CourseCalendarController.php,calendar,Dateiname – kein Funktionsnachweis
+Veranstaltungen,templates/schedule/calendar.html.twig,calendar,Dateiname – kein Funktionsnachweis
+Veranstaltungen,templates/admin/calendar/index.html.twig,calendar,Dateiname – kein Funktionsnachweis

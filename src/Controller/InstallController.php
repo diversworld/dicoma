@@ -13,8 +13,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\Range;
 
@@ -58,9 +56,14 @@ class InstallController extends AbstractController
 
             // Parse data into DATABASE_URL format.
             $databaseUrl = sprintf('%s://%s:%s@%s:%d/%s?serverVersion=%s&charset=utf8mb4',
-                $data['db_driver'], $data['db_user'], $data['db_pass'], $data['db_host'],
-                $data['db_port'], $data['db_name'], $data['db_version']
+                 $data['db_driver'], rawurlencode((string) $data['db_user']), rawurlencode((string) $data['db_pass']), $data['db_host'],
+                $data['db_port'], rawurlencode((string) $data['db_name']), rawurlencode((string) $data['db_version'])
             );
+
+            // Reject control characters and quotes before writing a dotenv value.
+            if (preg_match('/[\x00-\x1F\x7F"\\\\]/', $databaseUrl)) {
+                throw new \Symfony\Component\HttpKernel\Exception\BadRequestHttpException('Invalid database configuration.');
+            }
 
             // Write DATABASE_URL to .env.local
             $envFilePath = $this->getParameter('kernel.project_dir').'/.env.local';
@@ -104,87 +107,4 @@ class InstallController extends AbstractController
         ]);
     }
 
-    #[Route('/save_db_config', name: 'save_db_config', methods: ['GET', 'POST'])]
-    public function saveDbConfig(Request $request, InstallationGuard $installationGuard): Response
-    {
-        $installationGuard->denyUnlessExplicitlyEnabled();
-        $dbDriver = $request->request->get('db_driver');
-        $dbUser = $request->request->get('db_user');
-        $dbPass = $request->request->get('db_pass');
-        $dbHost = $request->request->get('db_host');
-        $dbPort = $request->request->get('db_port');
-        $dbName = $request->request->get('db_name');
-        $dbVersion = $request->request->get('db_version');
-
-        // Write the DB config to .env.local
-        $filesystem = new Filesystem();
-        try {
-            $databaseUrl = sprintf('DATABASE_URL="%s://%s:%s@%s:%d/%s?serverVersion=%s&charset=utf8mb4"',
-                $dbDriver,
-                $dbUser,
-                $dbPass,
-                $dbHost,
-                $dbPort,
-                $dbName,
-                $dbVersion
-            );
-
-            // Dateienpfad festlegen
-            $envFilePath = $this->getParameter('kernel.project_dir').'/.env.local';
-
-            // Sicherstellen das die Datei existiert
-            if (!$filesystem->exists($envFilePath)) {
-                $filesystem->touch($envFilePath);
-            }
-
-            // Dateiinhalt laden
-            $envContent = file_get_contents($envFilePath);
-
-            // Überprüfen und aktualisieren
-            if (strpos($envContent, 'DATABASE_URL') === false) {
-                $envContent .= "\n$databaseUrl";
-            } else {
-                $envContent = preg_replace(
-                    '/^DATABASE_URL=.*$/m',
-                    $databaseUrl,
-                    $envContent
-                );
-            }
-
-            // Datei/das File überschreiben
-            $filesystem->dumpFile($envFilePath, $envContent);
-
-            // Arbeitsverzeichnis für die Prozesse
-            $kernelProjectDir = $this->getParameter('kernel.project_dir');
-
-            // Prozess zum Erstellen der Datenbank ausführen
-            $process = new Process(['php', 'bin/console', 'doctrine:database:create'], $kernelProjectDir);
-            $process->run();
-
-            if (!$process->isSuccessful()) {
-                throw new ProcessFailedException($process);
-            }
-
-            // Prozess zum Aktualisieren des Schemas ausführen
-            $process = new Process(['php', 'bin/console', 'doctrine:schema:update', '--force'], $kernelProjectDir);
-            $process->run();
-
-            if (!$process->isSuccessful()) {
-                throw new ProcessFailedException($process);
-            }
-
-            // Nach erfolgreichem Schreiben der Daten und der Ausführung der Prozesse, den Admin-Benutzer erstellen.
-            return $this->redirectToRoute('app_register_install', ['adminUser' => true]);
-
-        } catch (IOExceptionInterface $exception) {
-            // Fehlerbehandlung beim Schreiben der Datei
-            echo htmlspecialchars($this->translator->trans('install.configuration_write_failed', [
-                '%path%' => $exception->getPath(),
-            ]), ENT_QUOTES);
-            // Fehlernachricht an den Benutzer zurückgeben
-        }
-
-        // Weiterleitung zur Startseite oder zu einer anderen Seite nach der erfolgreichen Speicherung der Datenbankdetails
-        return $this->redirectToRoute('app_home');
-    }
 }

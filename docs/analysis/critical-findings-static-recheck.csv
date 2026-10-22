@@ -1,0 +1,10 @@
+ID,Befund,Datei,Zeile,Statischer_Nachweis,Einschraenkung
+STATIC-01,Registrierung ruft setPostal auf,src/Controller/RegistrationController.php,58,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-02,E-Mail-Verifikation fordert volle Anmeldung,src/Controller/RegistrationController.php,166,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-03,Pre-Auth verweigert unverifizierte Benutzer,src/Security/UserChecker.php,14,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-04,Reset-Bundle verwendet Fake-Repository,config/packages/reset_password.yaml,5,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-05,Logout nur per POST,src/Controller/SecurityController.php,27,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-06,Logout mit CSRF konfiguriert,config/packages/security.yaml,57,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-07,Mitgliedsrolle wird in getRoles ergänzt,src/Entity/User.php,112,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-08,Öffentliche Registrierung konfiguriert,config/packages/security.yaml,72,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden
+STATIC-09,Admin-Rechtehierarchie,config/packages/security.yaml,21,bestätigt,Kein Laufzeittest; Code kann durch andere Schichten beeinflusst werden

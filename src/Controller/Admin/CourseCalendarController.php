@@ -31,6 +31,12 @@ final class CourseCalendarController extends AbstractController
             throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
         }
 
+        $course = $schedule->getCourses();
+        if ($course === null) {
+            throw $this->createAccessDeniedException('Termin ohne Kurszuordnung.');
+        }
+        $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
+
         // No bookings, attendance records or unique training-unit sequence are copied.
         $copy = new Schedule();
         $copy->setTitle(($schedule->getTitle() ?? 'Termin') . ' (Kopie)');
@@ -127,7 +133,8 @@ final class CourseCalendarController extends AbstractController
             ->getQuery()->getResult() as $schedule) {
             if (!$schedule instanceof Schedule) { continue; }
             $course = $schedule->getCourses();
-            $club = $course?->getClub();
+            if ($course === null || !$this->isGranted('COURSE_MANAGE', $course)) { continue; }
+            $club = $course->getClub();
             $instructor = $schedule->getInstructor();
             if ($club?->getId()) { $options['clubs'][$club->getId()] = (string) $club; }
             if ($course?->getId()) { $options['courses'][$course->getId()] = (string) $course; }
@@ -139,6 +146,8 @@ final class CourseCalendarController extends AbstractController
         $events = [];
         foreach ($qb->getQuery()->getResult() as $schedule) {
             if (!$schedule instanceof Schedule || !$schedule->getStartDate()) { continue; }
+            $course = $schedule->getCourses();
+            if ($course === null || !$this->isGranted('COURSE_MANAGE', $course)) { continue; }
             $day = $schedule->getStartDate()->format('Y-m-d');
             $startTime = $schedule->getStartTime()?->format('H:i');
             $duration = $schedule->getDuration();

@@ -1,7 +1,7 @@
 
-{% extends 'admin/standalone_base.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block title %}
+{% block content_title %}
     {{ 'Terminplanung'|trans }}: {{ course }}
 {% endblock %}
 
@@ -18,7 +18,7 @@
 .schedule-page .g-2{gap:.5rem}.schedule-page button{cursor:pointer}
 </style>
 {% endblock %}
-{% block body %}
+{% block main %}
 <div class="schedule-page container-fluid py-3">
 {% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Terminplanung'} only %}
 

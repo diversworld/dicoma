@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% block title %}TÜV – Geldannahme bei Flaschenabgabe{% endblock %}{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+<p>Prüftermin #{{ checkId }}. Hier werden tatsächliche Zahlungen dokumentiert, keine Rechnungen des Vereins erstellt. Beträge sind je Flasche zu erfassen.</p>
+<p><a href="{{ path('admin_tuv_supplier_reconciliation', {id: checkId}) }}">Zum späteren Abgleich der Prüfunternehmensrechnung →</a></p>
+{% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
+{% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message }}</div>{% endfor %}
+<div class="table-responsive"><table class="table align-middle">
+<thead><tr><th>Auftrag</th><th>Mitglied</th><th>Flasche</th><th>Voraussichtlich</th><th>Geldannahme</th></tr></thead>
+<tbody>{% for row in rows %}
+<tr><td>TUV-{{ checkId }}-{{ row.booking.id }}</td><td>{{ row.booking.member.memberNumber ?: ('ID-' ~ row.booking.member.id) }}</td>
+<td>{{ row.booking.memberTank.label }}</td><td>{{ (row.expected / 100)|number_format(2, ',', '.') }} €</td>
+<td>{% if row.receipt %}<strong>{{ (row.receipt.amountCents / 100)|number_format(2, ',', '.') }} € erhalten</strong><div class="small text-muted">{{ row.receipt.method == 'cash' ? 'Bar' : 'Überweisung' }} · {{ row.receipt.collectedAt|date('d.m.Y H:i') }} · {{ row.receipt.collectedBy }}</div>{% if row.receipt.note %}<div class="small">{{ row.receipt.note }}</div>{% endif %}
+{% else %}<form method="post" action="{{ path('admin_tuv_collect_payment', {id: row.booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center">
+<input type="hidden" name="_token" value="{{ csrf_token('tuv_collect_' ~ row.booking.id) }}">
+<input type="text" inputmode="decimal" name="amount" class="form-control form-control-sm" style="max-width:110px" value="{{ (row.expected / 100)|number_format(2, ',', '') }}" aria-label="Erhaltener Betrag in Euro" required>
+<select name="method" class="form-select form-select-sm" style="max-width:140px"><option value="cash">Bar erhalten</option><option value="bank">Überweisung</option></select>
+<input type="text" name="note" class="form-control form-control-sm" style="max-width:180px" maxlength="500" placeholder="Bemerkung (optional)">
+<button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Zahlungseingang verbindlich erfassen?')">Zahlung erfassen</button>
+</form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5">Keine Mitgliederflaschen für diesen TÜV-Termin angemeldet.</td></tr>{% endfor %}</tbody></table></div>
+<p class="text-muted small">Einmal erfasste Zahlungen sind absichtlich nicht überschreibbar. Korrekturen müssen später über einen dokumentierten Storno-/Gegenbuchungsprozess erfolgen. Die Anzeige des erwarteten Betrags basiert auf den gespeicherten Buchungspreisen.</p>
+</main>
+{% endblock %}

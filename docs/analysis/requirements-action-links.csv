@@ -1,0 +1,292 @@
+﻿Abschnitt,Modul,Teilbereich,Anforderung,Zugeordnete Maßnahmen (Schlagwort-Hinweis),Anforderungsstatus
+6,Mitglieder,Stammdaten,Persönliche Daten,,nicht verifiziert
+6,Mitglieder,Stammdaten,Kontaktdaten,,nicht verifiziert
+6,Mitglieder,Stammdaten,Notfallkontakte,,nicht verifiziert
+6,Mitglieder,Stammdaten,Mitgliedsnummer,,nicht verifiziert
+6,Mitglieder,Stammdaten,Eintrittsdatum,,nicht verifiziert
+6,Mitglieder,Stammdaten,Mitgliedschaftsstatus,P1-02,nicht verifiziert
+6,Mitglieder,Stammdaten,Mitgliedschaftsart,,nicht verifiziert
+6,Mitglieder,Stammdaten,Vereinsfunktionen,P0-08,nicht verifiziert
+6,Mitglieder,Stammdaten,Dokumente,,nicht verifiziert
+6,Mitglieder,Stammdaten,Qualifikationen,,nicht verifiziert
+6,Mitglieder,Stammdaten,Tauchtauglichkeitsnachweise,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Online-Mitgliedsantrag,P0-01,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Aufnahmeverfahren,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Genehmigung durch Berechtigte,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Mitgliedschaftswechsel,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Austritt,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Kündigung,,nicht verifiziert
+6,Mitglieder,Mitgliedschaft,Archivierung,,nicht verifiziert
+6,Mitglieder,Beiträge,Beitragsklassen,,nicht verifiziert
+6,Mitglieder,Beiträge,Mitgliedsbeiträge,,nicht verifiziert
+6,Mitglieder,Beiträge,Familienbeiträge,,nicht verifiziert
+6,Mitglieder,Beiträge,Sonderbeiträge,,nicht verifiziert
+6,Mitglieder,Beiträge,Beitragsermäßigungen,,nicht verifiziert
+6,Mitglieder,Beiträge,Zahlungsstatus,,nicht verifiziert
+6,Mitglieder,Beiträge,SEPA-Mandatsverwaltung,,nicht verifiziert
+6,Mitglieder,Beiträge,Offene Forderungen,,nicht verifiziert
+6,Mitglieder,Automatisierung,Erinnerungen an ablaufende Tauchtauglichkeit,,nicht verifiziert
+6,Mitglieder,Automatisierung,Hinweise zu fehlenden Unterlagen,,nicht verifiziert
+6,Mitglieder,Automatisierung,Benachrichtigungen zu Mitgliedschaftsvorgängen,,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Kursarten,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Kursbeschreibung,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Voraussetzungen,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Kursgebühren,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Maximale Teilnehmerzahl,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Termine,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Ausbildungsorte,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Ausbilderzuordnung,P1-04,nicht verifiziert
+7,Tauchausbildung,Kursverwaltung,Benötigte Ausrüstung,P1-04,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Öffentliche Kursanmeldung,P1-04,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Mitgliederanmeldung,,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Gastregistrierung,P0-01; P1-03,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Warteliste,,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Teilnahmebestätigung,,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Zahlungsabwicklung,,nicht verifiziert
+7,Tauchausbildung,Anmeldung,Stornierung,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Theorieeinheiten,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Praxiseinheiten,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Anwesenheiten,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Lernziele,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Ausbildungsnachweise,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Individueller Ausbildungsfortschritt,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Prüfungsergebnisse,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsdurchführung,Nachholtermine,,nicht verifiziert
+7,Tauchausbildung,Abschluss,Kursabschluss,P1-07; P1-04,nicht verifiziert
+7,Tauchausbildung,Abschluss,Bescheinigungen,P1-07,nicht verifiziert
+7,Tauchausbildung,Abschluss,Brevetierungsdaten,P1-07,nicht verifiziert
+7,Tauchausbildung,Abschluss,Archivierung der Ausbildungsnachweise,P1-07,nicht verifiziert
+7,Tauchausbildung,Ausbildungsportal,Ausbilder,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsportal,Tauchschüler,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsportal,Ausbildungsleiter,,nicht verifiziert
+7,Tauchausbildung,Ausbildungsportal,Kursverwaltung,P1-04,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Mannschaftsstammdaten,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Sportart,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Trainer,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Betreuer,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Spieler,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Kader,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Spielerpositionen,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Trainingszeiten,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Trainingsorte,,nicht verifiziert
+8,Mannschaften und Turniere,Mannschaften,Teilnahmeberechtigungen,P0-04,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Turnierverwaltung,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Veranstalter,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Veranstaltungsort,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Termine,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Mannschaftsmeldung,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Spielerregistrierung,P0-01,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Spielpläne,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Gegner,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Ergebnisse,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Tabellen,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Turnierhistorie,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Teilnahmegebühren,,nicht verifiziert
+8,Mannschaften und Turniere,Turniere,Dokumente,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Ausrüstungsgegenstände,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Kategorien,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Seriennummern,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Eigentumsverhältnisse,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Lagerorte,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Zustand,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Anschaffungsdaten,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Wartungshistorie,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Prüftermine,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Inventar,Dokumente,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Wartungsaufträge,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Prüfintervalle,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Reparaturen,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Defektmeldungen,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Technische Sperren,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Gerätehistorie,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Gerätewart,Verantwortlichkeiten,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Flaschenstammdaten,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Prüffristen,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Füllberechtigungen,P0-04,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Füllvorgänge,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Prüfgebühren,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Wartung,,nicht verifiziert
+9,Ausrüstung und Gerätewart,Tauchflaschen,Abrechnung,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Verleihgebühren,P1-06,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Füllgebühren,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Prüfgebühren,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Sonstige Gerätewartleistungen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Zahlungsarten,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Barzahlungen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Unbare Zahlungen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Kassenbuch,P1-07,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Einnahmen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Ausgaben,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Kassenabschluss,P1-07,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Kassenbestand,P1-07,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Belege,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Stornierungen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Korrekturbuchungen,,nicht verifiziert
+10,Gerätewartkasse,Funktionen,Übergabe an die Vereinskasse,P1-07; P0-08,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Keine unprotokollierten Änderungen abgeschlossener Kassenbuchungen,P1-07,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Eindeutige Belegnummern,,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Berechtigungsprüfung,P0-04,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Nachvollziehbare Korrekturen,,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Transaktionssicherheit,,nicht verifiziert
+10,Gerätewartkasse,Sicherheitsanforderungen,Vermeidung doppelter Zahlungsvorgänge,,nicht verifiziert
+11,Thekendienste,Funktionen,Dienstkalender,,nicht verifiziert
+11,Thekendienste,Funktionen,Schichtdefinitionen,,nicht verifiziert
+11,Thekendienste,Funktionen,Dienstanmeldung,,nicht verifiziert
+11,Thekendienste,Funktionen,Dienstzuweisung,,nicht verifiziert
+11,Thekendienste,Funktionen,Diensttausch,,nicht verifiziert
+11,Thekendienste,Funktionen,Vertretungen,,nicht verifiziert
+11,Thekendienste,Funktionen,Erinnerungen,,nicht verifiziert
+11,Thekendienste,Funktionen,Anwesenheitsbestätigung,,nicht verifiziert
+11,Thekendienste,Funktionen,Erfassung geleisteter Stunden,,nicht verifiziert
+11,Thekendienste,Funktionen,Dienststundenkonten,,nicht verifiziert
+11,Thekendienste,Funktionen,Pflichtstunden,,nicht verifiziert
+11,Thekendienste,Funktionen,Ausnahmen,,nicht verifiziert
+11,Thekendienste,Funktionen,Auswertungen,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Vereinsveranstaltungen,P0-08,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Mitgliederversammlungen,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Vereinsfeste,P0-08,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Arbeitseinsätze,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Tauchausflüge,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Trainingsveranstaltungen,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Seminare,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Wettkämpfe,,nicht verifiziert
+12,Veranstaltungen,Veranstaltungstypen,Sonstige Veranstaltungen,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Veranstaltung erstellen,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Öffentlich oder vereinsintern veröffentlichen,P0-08,nicht verifiziert
+12,Veranstaltungen,Funktionen,Teilnehmerregistrierung,P0-01,nicht verifiziert
+12,Veranstaltungen,Funktionen,Teilnehmerbegrenzung,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Wartelisten,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Anmeldefristen,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Teilnahmegebühren,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Zahlungsstatus,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Stornierung,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Erinnerungen,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Teilnehmerlisten,,nicht verifiziert
+12,Veranstaltungen,Funktionen,Dokumente,,nicht verifiziert
+13,Clubreisen,Stammdaten,Reiseziel,,nicht verifiziert
+13,Clubreisen,Stammdaten,Reisezeitraum,,nicht verifiziert
+13,Clubreisen,Stammdaten,Reiseleitung,,nicht verifiziert
+13,Clubreisen,Stammdaten,Beschreibung,,nicht verifiziert
+13,Clubreisen,Stammdaten,Maximale Teilnehmerzahl,,nicht verifiziert
+13,Clubreisen,Stammdaten,Reisepreis,,nicht verifiziert
+13,Clubreisen,Stammdaten,Leistungen,,nicht verifiziert
+13,Clubreisen,Stammdaten,Stornobedingungen,,nicht verifiziert
+13,Clubreisen,Organisation,Reiseanmeldung,,nicht verifiziert
+13,Clubreisen,Organisation,Warteliste,,nicht verifiziert
+13,Clubreisen,Organisation,Teilnehmerverwaltung,,nicht verifiziert
+13,Clubreisen,Organisation,Unterkunft,,nicht verifiziert
+13,Clubreisen,Organisation,Zimmerbelegung,,nicht verifiziert
+13,Clubreisen,Organisation,Anreise,,nicht verifiziert
+13,Clubreisen,Organisation,Transport,,nicht verifiziert
+13,Clubreisen,Organisation,Tauchpakete,,nicht verifiziert
+13,Clubreisen,Organisation,Zusatzleistungen,,nicht verifiziert
+13,Clubreisen,Organisation,Reiseunterlagen,,nicht verifiziert
+13,Clubreisen,Finanzen,Reisepreise,,nicht verifiziert
+13,Clubreisen,Finanzen,Anzahlungen,,nicht verifiziert
+13,Clubreisen,Finanzen,Restzahlungen,,nicht verifiziert
+13,Clubreisen,Finanzen,Zusatzkosten,,nicht verifiziert
+13,Clubreisen,Finanzen,Zahlungsstatus,,nicht verifiziert
+13,Clubreisen,Finanzen,Stornierungen,,nicht verifiziert
+13,Clubreisen,Finanzen,Erstattungen,,nicht verifiziert
+13,Clubreisen,Tauchspezifische Anforderungen,Ausbildungsstand,,nicht verifiziert
+13,Clubreisen,Tauchspezifische Anforderungen,Tauchtauglichkeit,,nicht verifiziert
+13,Clubreisen,Tauchspezifische Anforderungen,Benötigte Qualifikationen,,nicht verifiziert
+13,Clubreisen,Tauchspezifische Anforderungen,Leihausrüstung,,nicht verifiziert
+13,Clubreisen,Tauchspezifische Anforderungen,Tauchpakete,,nicht verifiziert
+14,Portale,Öffentliches Portal,Vereinsinformationen,P0-08,nicht verifiziert
+14,Portale,Öffentliches Portal,Kontakt,,nicht verifiziert
+14,Portale,Öffentliches Portal,Mannschaften,,nicht verifiziert
+14,Portale,Öffentliches Portal,Öffentliche Termine,,nicht verifiziert
+14,Portale,Öffentliches Portal,Veranstaltungen,,nicht verifiziert
+14,Portale,Öffentliches Portal,Clubreisen,,nicht verifiziert
+14,Portale,Öffentliches Portal,Kursangebote,P1-04,nicht verifiziert
+14,Portale,Öffentliches Portal,Kursanmeldungen,P1-04,nicht verifiziert
+14,Portale,Öffentliches Portal,Mitgliedsantrag,P0-01,nicht verifiziert
+14,Portale,Mitgliederportal,Persönliches Dashboard,,nicht verifiziert
+14,Portale,Mitgliederportal,Profildaten,,nicht verifiziert
+14,Portale,Mitgliederportal,Mitgliedschaft,,nicht verifiziert
+14,Portale,Mitgliederportal,Dokumente,,nicht verifiziert
+14,Portale,Mitgliederportal,Qualifikationen,,nicht verifiziert
+14,Portale,Mitgliederportal,Ausbildungen,,nicht verifiziert
+14,Portale,Mitgliederportal,Ausrüstungsreservierungen,P1-06,nicht verifiziert
+14,Portale,Mitgliederportal,Veranstaltungen,,nicht verifiziert
+14,Portale,Mitgliederportal,Clubreisen,,nicht verifiziert
+14,Portale,Mitgliederportal,Mannschaften,,nicht verifiziert
+14,Portale,Mitgliederportal,Thekendienste,,nicht verifiziert
+14,Portale,Mitgliederportal,Offene Zahlungen,,nicht verifiziert
+14,Portale,Mitgliederportal,Benachrichtigungen,,nicht verifiziert
+14,Portale,Ausbildungsportal,Kursverwaltung,P1-04,nicht verifiziert
+14,Portale,Ausbildungsportal,Ausbildungsplanung,,nicht verifiziert
+14,Portale,Ausbildungsportal,Teilnehmer,,nicht verifiziert
+14,Portale,Ausbildungsportal,Ausbilder,,nicht verifiziert
+14,Portale,Ausbildungsportal,Lernfortschritt,,nicht verifiziert
+14,Portale,Ausbildungsportal,Prüfungen,,nicht verifiziert
+14,Portale,Ausbildungsportal,Bescheinigungen,,nicht verifiziert
+14,Portale,Vorstandsportal,Mitgliederstatistik,,nicht verifiziert
+14,Portale,Vorstandsportal,Mitgliederverwaltung,,nicht verifiziert
+14,Portale,Vorstandsportal,Vereinsfinanzen,P0-08,nicht verifiziert
+14,Portale,Vorstandsportal,Kassenübersichten,P1-07,nicht verifiziert
+14,Portale,Vorstandsportal,Veranstaltungen,,nicht verifiziert
+14,Portale,Vorstandsportal,Beschlüsse,,nicht verifiziert
+14,Portale,Vorstandsportal,Aufgaben,,nicht verifiziert
+14,Portale,Vorstandsportal,Dokumente,,nicht verifiziert
+14,Portale,Vorstandsportal,Berichte,,nicht verifiziert
+14,Portale,Gerätewartportal,Inventar,,nicht verifiziert
+14,Portale,Gerätewartportal,Ausrüstung,,nicht verifiziert
+14,Portale,Gerätewartportal,Reservierungen,P1-06,nicht verifiziert
+14,Portale,Gerätewartportal,Verleih,P1-06,nicht verifiziert
+14,Portale,Gerätewartportal,Rückgabe,,nicht verifiziert
+14,Portale,Gerätewartportal,Wartung,,nicht verifiziert
+14,Portale,Gerätewartportal,Flaschen,,nicht verifiziert
+14,Portale,Gerätewartportal,Prüfungen,,nicht verifiziert
+14,Portale,Gerätewartportal,Gebühren,,nicht verifiziert
+14,Portale,Gerätewartportal,Kasse,P1-07,nicht verifiziert
+14,Portale,Sportportal,Mannschaften,,nicht verifiziert
+14,Portale,Sportportal,Spieler,,nicht verifiziert
+14,Portale,Sportportal,Training,,nicht verifiziert
+14,Portale,Sportportal,Turniere,,nicht verifiziert
+14,Portale,Sportportal,Ergebnisse,,nicht verifiziert
+14,Portale,Sportportal,Statistiken,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Ausbildung,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Mannschaftstraining,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Turniere,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Vereinsveranstaltungen,P0-08,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Clubreisen,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Thekendienste,,nicht verifiziert
+15,Übergreifende Funktionen,Kalender,Gerätewarttermine,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Anmeldebestätigungen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Terminänderungen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Zahlungserinnerungen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Ablaufende Qualifikationen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Wartungsfristen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Dienstpläne,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Veranstaltungen,,nicht verifiziert
+15,Übergreifende Funktionen,Benachrichtigungen,Reisen,,nicht verifiziert
+17,Datenschutz,Allgemein,DSGVO,,nicht verifiziert
+17,Datenschutz,Allgemein,Datenminimierung,,nicht verifiziert
+17,Datenschutz,Allgemein,Berechtigungskonzepte,P0-04,nicht verifiziert
+17,Datenschutz,Allgemein,Einwilligungen,,nicht verifiziert
+17,Datenschutz,Allgemein,Aufbewahrungsfristen,,nicht verifiziert
+17,Datenschutz,Allgemein,Lösch- und Anonymisierungskonzepte,,nicht verifiziert
+17,Datenschutz,Allgemein,Datenexport,,nicht verifiziert
+17,Datenschutz,Allgemein,Auskunftsfunktionen,,nicht verifiziert
+17,Datenschutz,Allgemein,Audit-Protokolle,,nicht verifiziert
+17,Datenschutz,Allgemein,Verschlüsselung bei Übertragung,,nicht verifiziert
+17,Datenschutz,Allgemein,Schutz sensibler Dokumente,,nicht verifiziert
+19,Qualitätssicherung,Testarten,Unit-Tests,,nicht verifiziert
+19,Qualitätssicherung,Testarten,Integrationstests,,nicht verifiziert
+19,Qualitätssicherung,Testarten,Controller-Tests,,nicht verifiziert
+19,Qualitätssicherung,Testarten,Berechtigungstests,P0-04,nicht verifiziert
+19,Qualitätssicherung,Testarten,Datenbanktests,,nicht verifiziert
+19,Qualitätssicherung,Testarten,Funktionale End-to-End-Tests,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Mitglied besitzt mehrere Rollen.,P0-04,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Nichtmitglied bucht einen Ausbildungskurs.,P1-04,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Gast wird später Mitglied.,P1-03,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Zwei Mitglieder reservieren gleichzeitig denselben Ausrüstungsgegenstand.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Gerätewart versucht gesperrte Ausrüstung auszugeben.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Eine Zahlung wird versehentlich doppelt ausgelöst.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Benutzer versucht fremde Dokumente einzusehen.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Ein Mitglied tauscht einen Thekendienst.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Eine Veranstaltung erreicht ihre maximale Teilnehmerzahl.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Eine Clubreise wird storniert.,,nicht verifiziert
+19,Qualitätssicherung,Besondere Testfälle,Eine Kasse wird abgeschlossen und anschließend korrigiert.,P1-07,nicht verifiziert

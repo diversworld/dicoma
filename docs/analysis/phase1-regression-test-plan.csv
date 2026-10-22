@@ -1,0 +1,20 @@
+Test-ID,Maßnahme,Testfall,Erwartung,Voraussetzung,Status
+AUTH-01,P0-01,POST /register gültige Daten,HTTP 2xx/3xx; User+Member persistiert; keine 500,"Registrierungsformular, Test-DB, Mailer-Sandbox",nicht ausgeführt
+AUTH-02,P0-01,POST /register/install/{adminUser} bei Setup an,Installationsregistrierung ohne Methodenfehler; Admin-Rechte nur gemäß Rollenvertrag,Setup-Testkonfiguration; isolierte DB,nicht ausgeführt
+AUTH-03,P0-02,"Unverifizierten Benutzer registrieren, Link öffnen",Signatur wird akzeptiert; isVerified=true; anschließender Login möglich,"Signierter Link, Test-Mailer",nicht ausgeführt
+AUTH-04,P0-02,Verifikationslink manipulieren/ablaufen lassen,Signaturfehler ohne Kontoaktivierung,"Signierter Link, kontrollierbare Uhr",nicht ausgeführt
+AUTH-05,P0-03,Passwort-Reset anfordern,ResetRequest persistent; Link über Test-Mailer zugestellt,"Test-DB, Mailer-Sandbox",nicht ausgeführt
+AUTH-06,P0-03,Reset-Link zweimal verwenden,Erster Reset gültig; zweiter abgelehnt; neues Passwort funktioniert,Test-DB,nicht ausgeführt
+AUTH-07,P0-03,Reset-Link nach Ablauf verwenden,"Ablauf wird abgelehnt, Passwort bleibt unverändert",Kontrollierbare Uhr,nicht ausgeführt
+AUTH-08,P1-08,GET /logout und POST /logout mit/ohne CSRF,GET loggt nicht aus; POST nur mit gültigem CSRF,Authentifizierter Testclient,nicht ausgeführt
+AUTH-09,P1-01,User ohne Member-Beziehung ruft Mitgliederbereich auf,Zugriff entsprechend Rollenvertrag untersagt,Testbenutzer ohne Member,nicht ausgeführt
+AUTHZ-01,P0-04,ROLE_ADMIN vergibt ROLE_SUPER_ADMIN,Unzulässige Rechtevergabe wird serverseitig verhindert,Rollenvertrag erforderlich,nicht ausgeführt
+AUTHZ-02,P0-08,Admin Verein A öffnet CRUD-Datensatz Verein B,"403 oder 404 für Detail/Edit/Delete, falls vereinsgebunden","Zwei Vereine, zwei Admins, Datensätze",nicht ausgeführt
+AUTHZ-03,P0-09,Admin A ändert Rechnungseinstellungen Verein B,"Keine fremde Mutation, falls vereinsgebunden","Zwei Vereine, zwei Admins",nicht ausgeführt
+SETUP-01,P0-05,Setup nach abgeschlossener Installation mit Flag an,Alle Setup-Endpunkte verweigern Änderung,Isolierte Setup-Umgebung,nicht ausgeführt
+SETUP-02,P0-06,GET /save_db_config und POST ohne CSRF,Keine Änderung an Konfigurationsdatei,Isolierte Testkopie; niemals Produktion,nicht ausgeführt
+EQUIP-01,P1-06,Sammelausgabe: letzte Position schlägt fehl,Alle Positionen zurückgerollt,Transaktionsfähige Test-DB,nicht ausgeführt
+EQUIP-02,P1-06,Zwei parallele Ausgaben derselben Position,Genau eine erfolgreiche Ausgabe,Zwei DB-Verbindungen,nicht ausgeführt
+CASH-01,P1-07,Rückdatierte Buchung vor letztem Kassenabschluss,Buchung abgelehnt; Abschluss unverändert,Kassenfixtures,nicht ausgeführt
+COURSE-01,P1-04,Kursleiter Verein A bearbeitet Kurs B,Änderung abgelehnt,"Zwei Vereine, zwei Leiter",nicht ausgeführt
+COURSE-02,P1-05,Fremdes Bild löschen ohne gültigen CSRF,Keine Löschung,"Zwei Kurse, Testdateien",nicht ausgeführt

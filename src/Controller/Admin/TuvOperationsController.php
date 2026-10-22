@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\{Request, Response, BinaryFileResponse};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class TuvOperationsController extends AbstractController {
  private function booking(int $id,EntityManagerInterface $em):MemberTankCheckBooking {
   $booking=$em->getRepository(MemberTankCheckBooking::class)->find($id);

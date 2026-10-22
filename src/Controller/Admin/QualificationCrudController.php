@@ -17,7 +17,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Form\QualificationTrainingUnitType;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class QualificationCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string

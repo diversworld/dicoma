@@ -1,4 +1,4 @@
-{% extends 'base.html.twig' %}
+{% extends 'equipment_manager/layout.html.twig' %}
 {% block title %}Gerätewart – Übersicht | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
@@ -33,6 +33,14 @@
         </div>
       </div>
     </div>
+    <div class="card border-primary shadow-sm mb-4"><div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div><h2 class="h5 mb-1">Ausrüstungsausleihe</h2><p class="text-muted mb-0">Reservierungen prüfen, einzelne Gegenstände ausgeben und Rücknahmen dokumentieren.</p></div>
+      <a class="btn btn-primary" href="{{ path('equipment_manager_loans') }}">Ausleihe und Rücknahme öffnen</a>
+    </div></div>
+    <div class="card border-primary shadow-sm mb-4"><div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div><h2 class="h5 mb-1">Kasse: TÜV und Ausrüstungsverleih</h2><p class="text-muted mb-0">Geldannahmen bei Abgabe und Abholung dokumentieren; beide Einnahmearten im Journal prüfen.</p></div>
+      <a class="btn btn-primary" href="{{ path('equipment_manager_cashbook') }}">Gerätewart-Kasse öffnen</a>
+    </div></div>
     <h2>Flaschenprüfungen</h2>
     <p><strong>{{ expired }}</strong> überfällig · <strong>{{ dueSoon }}</strong> innerhalb der nächsten 30 Tage fällig · <strong>{{ missingDate }}</strong> ohne hinterlegten Termin</p>
     <p class="text-muted">Die Prüftermine sind eine Übersicht, keine automatische Freigabeentscheidung.</p>

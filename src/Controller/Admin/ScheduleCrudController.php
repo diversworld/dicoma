@@ -33,7 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use App\Enum\BookingAttendanceStatus;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class ScheduleCrudController extends AbstractCrudController
 {
     public function __construct(

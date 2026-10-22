@@ -7,16 +7,20 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
+                    {% if app.user %}
+                        <div class="mb-3">
+                            {{ 'Du bist angemeldet als %user%.'|trans({'%user%': app.user.userIdentifier}) }}
+                            <form method="post" action="{{ path('app_logout') }}" class="d-inline">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                                <button type="submit" class="btn btn-link p-0">{{ 'Abmelden'|trans }}</button>
+                            </form>
+                        </div>
+                    {% endif %}
                     <form method="post">
                         {% if error %}
                             <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
                         {% endif %}
 
-                        {% if app.user %}
-                            <div class="mb-3">
-                                {{ 'Du bist angemeldet als %user%.'|trans({'%user%': app.user.userIdentifier}) }} <a href="{{ path('app_logout') }}">{{ 'Abmelden'|trans }}</a>
-                            </div>
-                        {% endif %}
 
                         <h1 class="h3 mb-3 font-weight-normal">{{ 'Bitte melde Dich an'|trans }}</h1>
 

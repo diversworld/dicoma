@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class TankStatusController extends AbstractController
 {
     #[Route('/admin/{_locale}/tank-status/{id}', name: 'admin_tank_status', requirements: ['id' => '\\d+', '_locale' => 'de|en|fr|es'], defaults: ['_locale' => 'de'], methods: ['GET', 'POST'])]

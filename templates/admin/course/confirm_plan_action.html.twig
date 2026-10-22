@@ -1,19 +1,20 @@
-{% extends 'admin/standalone_base.html.twig' %}
-{% block title %}{{ mode == 'import' ? 'Ausbildungsplan übernehmen' : 'Kurstermine erzeugen' }} – {{ course }}{% endblock %}
-{% block body %}
-<main class="container py-4">
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}{{ mode == 'import' ? 'Ausbildungsplan übernehmen' : 'Kurstermine erzeugen' }} – {{ course }}{% endblock %}
+{% block main %}
+<div class="container-fluid py-3">
     <h1>{{ mode == 'import' ? 'Ausbildungsplan übernehmen' : 'Kurstermine erzeugen' }}</h1>
     <p>Kurs: <strong>{{ course }}</strong></p>
-    <div class="panel table-wrap">
+    <div class="card p-3 table-responsive">
         {% if mode == 'import' %}
             <p>Diese bislang fehlenden Ausbildungsanforderungen werden ergänzt. Bestehende Einträge bleiben unverändert.</p>
-            <table><thead><tr><th>Ausbildungseinheit</th><th>Vorgesehene Termine</th></tr></thead><tbody>
+            <table class="table table-striped"><thead><tr><th>Ausbildungseinheit</th><th>Vorgesehene Termine</th></tr></thead><tbody>
             {% for row in rows %}<tr><td>{{ row.name }}</td><td>{{ row.count }}</td></tr>
             {% else %}<tr><td colspan="2">Keine neuen Ausbildungsanforderungen vorhanden.</td></tr>{% endfor %}
             </tbody></table>
         {% else %}
             <p>Es fehlen insgesamt <strong>{{ missing }}</strong> Kurstermine. Bestehende Termine werden nicht gelöscht oder überschrieben.</p>
-            <table><thead><tr><th>Ausbildungseinheit</th><th>Soll</th><th>Vorhanden</th><th>Fehlend</th><th>Über Soll</th></tr></thead><tbody>
+            <table class="table table-striped"><thead><tr><th>Ausbildungseinheit</th><th>Soll</th><th>Vorhanden</th><th>Fehlend</th><th>Über Soll</th></tr></thead><tbody>
             {% for row in rows %}<tr><td>{{ row.name }}</td><td>{{ row.target }}</td><td>{{ row.existing }}</td><td>{{ row.missing }}</td><td>{{ row.excess }}</td></tr>
             {% else %}<tr><td colspan="5">Keine Ausbildungsanforderungen vorhanden.</td></tr>{% endfor %}
             </tbody></table>
@@ -28,5 +29,5 @@
         {% endif %}
         <a class="btn btn-outline-secondary" href="{{ backUrl }}">Abbrechen / Zur Kurszentrale</a>
     </div>
-</main>
+</div>
 {% endblock %}

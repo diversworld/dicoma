@@ -1,0 +1,14 @@
+{% extends 'instructor_portal/layout.html.twig' %}
+{% block body %}
+<h1>Mein Ausbilder-Dashboard</h1><p>Deine zugewiesenen Ausbildungstermine und offenen Aufgaben.</p>
+<div class="row">
+{% for title, number in {'Anstehende Termine':totals.upcoming,'Offene Anwesenheiten':totals.attendance,'Offene Bewertungen':totals.assessments,'Nachholbedarf':totals.makeup} %}
+<div class="col-md-3"><div class="ip-card"><h2>{{ number }}</h2><p>{{ title }}</p></div></div>{% endfor %}
+</div>
+<div class="ip-card"><h2>Nächste Termine</h2><div class="table-responsive"><table class="table">
+<thead><tr><th>Datum</th><th>Termin</th><th>Kurs</th><th>Aktion</th></tr></thead><tbody>
+{% for item in upcoming %}<tr><td>{{ item.date }} {{ item.time }}</td><td>{{ item.title }}</td><td>{{ item.course }}</td>
+<td><a href="{{ path('instructor_training_assess',{id:item.id}) }}">Bewertungen</a></td></tr>
+{% else %}<tr><td colspan="4">Keine anstehenden Termine.</td></tr>{% endfor %}
+</tbody></table></div><a class="btn btn-primary" href="{{ path('instructor_portal_tasks') }}">Alle Aufgaben</a></div>
+{% endblock %}

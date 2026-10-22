@@ -25,7 +25,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 
     private $logger;
 
-    public function __construct(UrlGeneratorInterface $urlGenerator, LoggerInterface $logger)
+    public function __construct(private UrlGeneratorInterface $urlGenerator, LoggerInterface $logger)
     {
         $this->urlGenerator = $urlGenerator;
         $this->logger = $logger;

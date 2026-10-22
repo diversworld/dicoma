@@ -1,0 +1,8 @@
+ID,Datei,Zeilen,Befund,Status
+ROLE-01,config/packages/security.yaml,17–22,ROLE_SUPER_ADMIN erbt ROLE_ADMIN; ROLE_ADMIN erbt Vorstand/Kassenwart,Bestätigt
+ROLE-02,src/Controller/Admin/UserCrudController.php,"21–22, 104–115",ROLE_ADMIN kann Benutzer-CRUD öffnen; Rollenfeld bietet ROLE_ADMIN und ROLE_SUPER_ADMIN,Bestätigt
+ROLE-03,src/Controller/Admin/UserCrudController.php,127–155,"Persist/Update überschreiben Passwort-Hashing, aber keine Rollen-Eskalationsprüfung sichtbar",Bestätigt (lokaler Code)
+ROLE-04,src/Entity/User.php,"120–135, 271–282",setRoles akzeptiert beliebige ROLE_-Strings; angebotene Rollen enthalten Super-Admin,Bestätigt
+ROLE-05,src/Controller/RegistrationController.php,92–115,"Installationsroute setzt bei nicht-null adminUser ROLE_ADMIN, abhängig vom InstallationGuard","Bestätigt, Guard begrenzt"
+ROLE-06,src/Command/CreateAdminCommand.php,181–199,CLI-Adminanlage vergibt ROLE_SUPER_ADMIN,Bestätigt
+ROLE-07,src/Entity/User.php,108–116,ROLE_MEMBER wird getRoles unabhängig von Mitgliedschaft ergänzt,Bestätigt

@@ -16,6 +16,14 @@ final class Version20261014120000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+		if (!$this->connection->createSchemaManager()->tablesExist([
+			'equipment_model',
+			'equipment_size',
+			'equipment_item',
+		])) {
+			return;
+		}
+		
         $this->addSql(
             'ALTER TABLE equipment_model RENAME INDEX idx_eq_model_club TO IDX_3ECC533D61190A32'
         );

@@ -1,0 +1,29 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Tagesauswertung · Gerätewart-Kasse{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:1100px">
+<a href="{{ path('equipment_manager_cashbook') }}">← Zur Gerätewart-Kasse</a>
+<h1 class="h2 mt-3">Tagesauswertung der Kassenbewegungen</h1>
+<p>Übersicht der erfassten Einnahmen und Barauszahlungen eines Kalendertags. Überweisungen zählen nicht zum Bargeld.</p>
+<form method="get" action="{{ path('equipment_manager_cashbook_day') }}" class="d-flex flex-wrap gap-2 align-items-end mb-4">
+<div><label for="cash-date" class="form-label">Datum</label><input id="cash-date" type="date" class="form-control" name="date" value="{{ date }}" required></div>
+<button class="btn btn-primary" type="submit">Anzeigen</button>
+<a class="btn btn-outline-secondary" href="{{ path('equipment_manager_cashbook_day_csv', {date: date}) }}">CSV herunterladen</a>
+</form>
+<div class="row g-3 mb-4">
+<div class="col-md-4"><div class="card card-body"><strong>Bar eingenommen</strong><span class="h4">{{ (summary.cash / 100)|number_format(2, ',', '.') }} €</span></div></div>
+<div class="col-md-4"><div class="card card-body"><strong>Überweisungen</strong><span class="h4">{{ (summary.bank / 100)|number_format(2, ',', '.') }} €</span></div></div>
+<div class="col-md-4"><div class="card card-body"><strong>Gesamt</strong><span class="h4">{{ ((summary.cash + summary.bank) / 100)|number_format(2, ',', '.') }} €</span></div></div>
+</div>
+<p><strong>Bar-Auszahlungen:</strong> {{ ((summary.payout + summary.correction_out) / 100)|number_format(2, ',', '.') }} € · <strong>Netto-Barbewegung:</strong> {{ ((summary.cash + summary.correction_in - summary.payout - summary.correction_out) / 100)|number_format(2, ',', '.') }} €</p>
+<p><strong>TÜV:</strong> {{ (summary.tuv / 100)|number_format(2, ',', '.') }} € · <strong>Ausleihe:</strong> {{ (summary.rental / 100)|number_format(2, ',', '.') }} €</p>
+<div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Zeit</th><th>Bereich</th><th>Buchung</th><th>Zahlungsart</th><th>Betrag</th><th>Kassiert von</th><th>Beleg</th></tr></thead><tbody>
+{% for row in rows %}
+{% if row.type == 'correction' %}<tr><td>{{ row.receipt.created_at|date('d.m.Y H:i') }}</td><td>Korrektur {{ row.receipt.source_type }} #{{ row.receipt.source_id }}</td><td>{{ row.receipt.reason }}</td><td>Bar</td><td>{{ row.receipt.direction == 'in' ? '+' : '−' }}{{ (row.receipt.amount_cents / 100)|number_format(2, ',', '.') }} €</td><td>{{ row.receipt.created_by }}</td></tr>
+{% else %}
+<tr><td>{{ (row.type == 'payout' ? row.receipt.paidAt : row.receipt.collectedAt)|date('H:i:s') }}</td><td>{{ row.type == 'payout' ? 'Barauszahlung' : (row.type == 'tuv' ? 'TÜV' : 'Leihgebühr') }}</td><td>#{{ row.type == 'payout' ? row.receipt.recipient : row.receipt.booking.id }}</td><td>{{ row.type == 'payout' ? 'Bar ausgezahlt' : (row.receipt.method == 'cash' ? 'Bar' : 'Überweisung') }}</td><td>{{ row.type == 'payout' ? '−' : '' }}{{ (row.receipt.amountCents / 100)|number_format(2, ',', '.') }} €</td><td>{{ row.type == 'payout' ? row.receipt.paidBy : row.receipt.collectedBy }}</td><td>{{ row.type }}-{{ row.receipt.id }}</td></tr>
+{% endif %}{% else %}<tr><td colspan="7">Keine Geldannahmen für diesen Tag gespeichert.</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="text-muted small">Diese Tagesauswertung ist kein abgeschlossener Kassensturz: Der Kassensturz und der gezählte Ist-Bestand sind im Tagesabschluss dokumentiert. Die Summen beruhen auf dem gespeicherten Zahlungszeitpunkt.</p>
+</main>
+{% endblock %}

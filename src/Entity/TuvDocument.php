@@ -19,6 +19,7 @@ class TuvDocument {
   $this->booking=$booking;$this->storedName=$storedName;$this->originalName=mb_substr($originalName,0,255);$this->mime=$mime;$this->size=$size;$this->sha256=$sha256;$this->uploadedBy=mb_substr($actor,0,180);$this->uploadedAt=new \DateTimeImmutable();
  }
  public function getId():?int{return $this->id;}
+ public function getBooking():MemberTankCheckBooking{return $this->booking;}
  public function getStoredName():string{return $this->storedName;}
  public function getOriginalName():string{return $this->originalName;}
  public function getMime():string{return $this->mime;}

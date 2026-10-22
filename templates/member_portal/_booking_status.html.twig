@@ -1,0 +1,2 @@
+{% set labels = {requested:'Angemeldet',received:'Beim Gerätewart',sent:'Bei der Prüfstelle',returned:'Von der Prüfstelle zurück',completed:'Abgeschlossen',cancelled:'Storniert'} %}
+{{ labels[status]|default(status) }}

@@ -22,6 +22,7 @@ use App\Entity\CourseParticipant;
 use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
+use Doctrine\ORM\EntityManagerInterface;
 use App\Controller\Admin\MemberCrudController;
 use App\Controller\Admin\EquipmentReservationCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
@@ -190,65 +191,204 @@ class DashboardController extends AbstractDashboardController
 			->addCssFile('css/member-center.css?v=3');
 	}
 
+
+    // DICOMA invoice settings EasyAdmin integration v1
+    #[AdminRoute(path: '/invoice-settings', name: 'invoice_settings_overview')]
+    public function invoiceSettingsOverview(\Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        return $this->render('admin/tuv_invoice_settings_overview_ea.html.twig', [
+            'clubs' => $em->getRepository(\App\Entity\Club::class)->findBy([], ['name' => 'ASC']),
+        ]);
+    }
+
+    #[AdminRoute(path: '/invoice-settings/{id}', name: 'invoice_settings_edit')]
+    public function invoiceSettingsEdit(int $id, Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $club = $em->getRepository(\App\Entity\Club::class)->find($id);
+        if (!$club) { throw $this->createNotFoundException(); }
+        $settings = $em->getRepository(\App\Entity\TuvInvoiceSettings::class)->find($id);
+        if (!$settings) { $settings = new \App\Entity\TuvInvoiceSettings($club); }
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('invoice_settings_'.$id, (string) $request->request->get('_token', ''))) {
+                throw $this->createAccessDeniedException('Ungueltiges CSRF-Token.');
+            }
+            try {
+                $settings->configure(
+                    (string) $request->request->get('tax_mode', ''),
+                    (string) $request->request->get('tax_number', ''),
+                    (string) $request->request->get('vat_id', ''),
+                    (string) $request->request->get('invoice_note', '')
+                );
+                $settings->setMemberAgencyEnabled($request->request->get('member_agency_enabled') === '1');
+                $em->persist($settings);
+                $em->flush();
+                $this->addFlash('success', 'Rechnungseinstellungen gespeichert.');
+                return $this->redirectToRoute('admin_invoice_settings_edit', ['id' => $id]);
+            } catch (\InvalidArgumentException $e) {
+                $this->addFlash('danger', $e->getMessage());
+            }
+        }
+        return $this->render('admin/tuv_invoice_settings_ea.html.twig', [
+            'club' => $club, 'settings' => $settings,
+        ]);
+    }
+
+    #[AdminRoute(path: '/invoice-agency-confirmations', name: 'invoice_agency_confirmations')]
+    public function invoiceAgencyConfirmations(\Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $groups = $em->getRepository(\App\Entity\TuvBookingGroup::class)->createQueryBuilder('g')
+            ->where('g.agencyConfirmedAt IS NOT NULL')
+            ->orderBy('g.agencyConfirmedAt', 'DESC')
+            ->setMaxResults(200)->getQuery()->getResult();
+        return $this->render('admin/tuv_agency_confirmations_ea.html.twig', ['groups' => $groups]);
+    }
+
+    #[AdminRoute(path: '/training-workflow/{id}/{step}', name: 'training_workflow', options: ['methods' => ['GET']])]
+    public function trainingWorkflow(
+        int $id,
+        string $step,
+        \Doctrine\ORM\EntityManagerInterface $em,
+        \Symfony\Component\HttpFoundation\Request $request,
+        CoursePlanActionController $planActions,
+        CoursesCrudController $coursesCrud,
+        \App\Repository\ScheduleRepository $scheduleRepository,
+        \App\Service\ScheduleConflictService $conflictService,
+        \App\Repository\ScheduleTemplateRepository $templateRepository
+    ): Response {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $course = $em->getRepository(\App\Entity\Courses::class)->find($id);
+        if (!$course) {
+            throw $this->createNotFoundException('Kurs nicht gefunden.');
+        }
+
+        // Kein Symfony forward(): Subrequests verlieren EasyAdmin-Requestdaten.
+        // Den bestehenden Controller direkt im urspruenglichen Admin-Request
+        // ausfuehren, damit ea und die URL-Parameter erhalten bleiben.
+        $request->attributes->set('ea_workflow_embedded', true);
+        $request->attributes->set('id', $id);
+
+        return match ($step) {
+            'import' => $planActions->import($id, $request),
+            'generate' => $planActions->generate($id, $request),
+            'plan' => $coursesCrud->planSchedules(
+                $request, $scheduleRepository, $em, $conflictService, $templateRepository
+            ),
+            default => throw $this->createNotFoundException('Unbekannte Kursaktion.'),
+        };
+    }
+
+    #[AdminRoute(path: '/training-overview', name: 'training_overview')]
+    public function trainingOverview(\Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $courses = $em->getRepository(\App\Entity\Courses::class)->findAll();
+        $rows = [];
+        $statuses = [];
+        $instructorLoad = [];
+        $now = new \DateTimeImmutable('today');
+        $active = 0;
+        foreach ($courses as $course) {
+            $status = $course->getStatus()->value;
+            $statuses[$status] = ($statuses[$status] ?? 0) + 1;
+            $participants = $course->getParticipants()->count();
+            $capacity = $course->getMaxParticipants();
+            $appointments = 0;
+            foreach ($course->getSchedule() as $appointment) {
+                if ($appointment->getStartDate() && $appointment->getStartDate()->format('Y-m-d') >= $now->format('Y-m-d')) {
+                    ++$appointments;
+                }
+                $instructor = $appointment->getInstructor();
+                if ($instructor !== null) {
+                    $id = $instructor->getId();
+                    if ($id !== null) {
+                        if (!isset($instructorLoad[$id])) {
+                            $instructorLoad[$id] = ['name' => (string) $instructor, 'appointments' => 0, 'hours' => 0.0];
+                        }
+                        ++$instructorLoad[$id]['appointments'];
+                        $instructorLoad[$id]['hours'] += $appointment->getDurationHours() ?? 0.0;
+                    }
+                }
+            }
+            if ($appointments > 0) ++$active;
+            $rows[] = ['id' => $course->getId(), 'title' => (string) $course,
+                'status' => $status, 'participants' => $participants,
+                'capacity' => $capacity, 'upcoming' => $appointments,
+                'occupancy' => $capacity && $capacity > 0 ? round(100 * $participants / $capacity) : null];
+        }
+        usort($rows, static fn (array $a, array $b): int => $b['upcoming'] <=> $a['upcoming']);
+        uasort($instructorLoad, static fn (array $a, array $b): int => $b['hours'] <=> $a['hours']);
+        return $this->render('admin/training/overview.html.twig', [
+            'courses' => $rows, 'statuses' => $statuses,
+            'instructors' => $instructorLoad, 'active' => $active,
+            'total' => count($rows),
+        ]);
+    }
+
     public function configureMenuItems(): iterable
     {
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
 
             MenuItem::subMenu('Ausbildung & Kurse', 'fa fa-graduation-cap')->setSubItems([
+                MenuItem::linkToRoute('Ausbildungsdashboard', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkTo(CoursesCrudController::class, 'Kurse verwalten', 'fa fa-book-open'),
                 MenuItem::linkTo(CourseParticipantCrudController::class, 'Kursteilnehmer', 'fa fa-users'),
-                MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-days'),
-                MenuItem::linkTo(BookingCrudController::class, 'Terminbuchungen', 'fa fa-ticket')->setPermission('ROLE_ADMIN'),
-                MenuItem::linkTo(TrainingUnitResultCrudController::class, 'Ausbildungsnachweise', 'fa fa-clipboard-check'),
+                MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-days')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(BookingCrudController::class, 'Terminbuchungen', 'fa fa-ticket')->setPermission('ROLE_ADMIN')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TrainingUnitResultCrudController::class, 'Ausbildungsnachweise', 'fa fa-clipboard-check')->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkToRoute('Kurskalender', 'fa fa-calendar', 'admin_course_calendar'),
-                MenuItem::linkTo(ScheduleTemplateCrudController::class, 'Planungsvorlagen', 'fa fa-layer-group'),
-                MenuItem::linkTo(TrainingUnitTypeCrudController::class, 'Ausbildungseinheiten', 'fa fa-list-check'),
+                MenuItem::linkTo(ScheduleTemplateCrudController::class, 'Planungsvorlagen', 'fa fa-layer-group')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TrainingUnitTypeCrudController::class, 'Ausbildungseinheiten', 'fa fa-list-check')->setPermission('ROLE_SUPER_ADMIN'),
 				MenuItem::linkToRoute('Ausbildungsaufgaben', 'fa fa-list-check', 'admin_instructor_tasks'),
             ]),
 
             MenuItem::subMenu('Qualifikationen', 'fa fa-award')->setSubItems([
-                MenuItem::linkTo(QualificationCrudController::class, 'Qualifikationskatalog', 'fa fa-certificate'),
-                MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card'),
+                MenuItem::linkTo(QualificationCrudController::class, 'Qualifikationskatalog', 'fa fa-certificate')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card')->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 
             MenuItem::subMenu('Vereinsverwaltung', 'fa fa-building')->setSubItems([
-                MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building'),
+                MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building')->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
-                MenuItem::linkTo(SportCrudController::class, 'Sportarten', 'fa fa-person-swimming'),
-                MenuItem::linkTo(TeamCrudController::class, 'Gruppen & Mannschaften', 'fa fa-people-group'),
-                MenuItem::linkTo(TeamMemberCrudController::class, 'Gruppenzuordnungen', 'fa fa-user-group'),
-                MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
+                MenuItem::linkTo(SportCrudController::class, 'Sportarten', 'fa fa-person-swimming')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TeamCrudController::class, 'Gruppen & Mannschaften', 'fa fa-people-group')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TeamMemberCrudController::class, 'Gruppenzuordnungen', 'fa fa-user-group')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 
             MenuItem::subMenu('Ausrüstung & Verleih', 'fa fa-toolbox')->setSubItems([
-                MenuItem::linkTo(EquipmentItemCrudController::class, 'Inventar', 'fa fa-boxes-stacked'),
-                MenuItem::linkTo(RegulatorCrudController::class, 'Atemregler', 'fa fa-gauge'),
-                MenuItem::linkTo(EquipmentReservationCrudController::class, 'Einzelreservierungen', 'fa fa-hand-holding'),
-                MenuItem::linkTo(EquipmentBookingCrudController::class, 'Sammelreservierungen', 'fa fa-layer-group'),
-				MenuItem::linkTo(TankCrudController::class, 'Vereinsflaschen', 'fa fa-gauge'),
+                MenuItem::linkTo(EquipmentItemCrudController::class, 'Inventar', 'fa fa-boxes-stacked')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(RegulatorCrudController::class, 'Atemregler', 'fa fa-gauge')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentReservationCrudController::class, 'Einzelreservierungen', 'fa fa-hand-holding')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentBookingCrudController::class, 'Sammelreservierungen', 'fa fa-layer-group')->setPermission('ROLE_SUPER_ADMIN'),
+				MenuItem::linkTo(TankCrudController::class, 'Vereinsflaschen', 'fa fa-gauge')->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 
             MenuItem::subMenu('TÜV-Verwaltung', 'fa fa-clipboard-check')->setSubItems([
                 MenuItem::linkToRoute('Flaschenprüfungszentrale', 'fa fa-gauge-high', 'admin_equipment_center'),
 				MenuItem::linkToCrud('TÜV-Anmeldungen','fa fa-clipboard-check',MemberTankCheckBooking::class)
 					->setController(MemberTankCheckBookingCrudController::class)
-					->setAction(Action::INDEX),
-                MenuItem::linkTo(TankCheckCrudController::class, 'TÜV-Termine', 'fa fa-calendar-check'),
-                MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags'),
+					->setAction(Action::INDEX)
+					->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TankCheckCrudController::class, 'TÜV-Termine', 'fa fa-calendar-check')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags')->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkToCrud('TÜV-Nachrichten / Postausgang', 'fa fa-envelope-open-text', \App\Entity\TuvNotification::class)
                     ->setController(TuvNotificationCrudController::class)->setPermission('ROLE_ADMIN'),
             ]),
 
             MenuItem::subMenu('Einstellungen', 'fa fa-sliders')->setSubItems([
+				MenuItem::linkToRoute('Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview')->setPermission('ROLE_ADMIN'),
                 MenuItem::linkToRoute('TÜV-Benachrichtigungstexte', 'fa fa-envelope', 'admin_settings_tuv_notifications')->setPermission('ROLE_ADMIN'),
-                MenuItem::linkTo(EquipmentCategoryCrudController::class, 'Ausrüstungsarten', 'fa fa-list'),
-                MenuItem::linkTo(EquipmentSubTypeCrudController::class, 'Ausrüstungsunterarten', 'fa fa-sitemap'),
-                MenuItem::linkTo(EquipmentManufacturerCrudController::class, 'Hersteller je Verein', 'fa fa-industry'),
-                MenuItem::linkTo(EquipmentSizeCrudController::class, 'Größen je Hersteller', 'fa fa-ruler'),
-                MenuItem::linkTo(EquipmentModelCrudController::class, 'Ausrüstungsmodelle', 'fa fa-tags'),
-                MenuItem::linkTo(RegulatorModelCrudController::class, 'Atemreglermodelle', 'fa fa-gears'),
-                MenuItem::linkTo(EquipmentAttributeCrudController::class, 'Kategorie-Merkmale', 'fa fa-sliders'),
+                MenuItem::linkTo(EquipmentCategoryCrudController::class, 'Ausrüstungsarten', 'fa fa-list')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentSubTypeCrudController::class, 'Ausrüstungsunterarten', 'fa fa-sitemap')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentManufacturerCrudController::class, 'Hersteller je Verein', 'fa fa-industry')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentSizeCrudController::class, 'Größen je Hersteller', 'fa fa-ruler')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentModelCrudController::class, 'Ausrüstungsmodelle', 'fa fa-tags')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(RegulatorModelCrudController::class, 'Atemreglermodelle', 'fa fa-gears')->setPermission('ROLE_SUPER_ADMIN'),
+                MenuItem::linkTo(EquipmentAttributeCrudController::class, 'Kategorie-Merkmale', 'fa fa-sliders')->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 
             MenuItem::subMenu('Partner', 'fa fa-handshake')->setSubItems([
@@ -257,7 +397,7 @@ class DashboardController extends AbstractDashboardController
 			
 			MenuItem::subMenu('Administration','fa fa-gear')->setSubItems([
 					MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
-						->setPermission('ROLE_ADMIN'),
+						->setPermission('ROLE_SUPER_ADMIN'),
 			]),
         ];
     }

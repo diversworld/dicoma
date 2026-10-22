@@ -15,6 +15,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/instructor')]
+#[IsGranted("ROLE_ADMIN")]
 class InstructorController extends AbstractController
 {
     #[Route('/', name: 'app_instructor_index', methods: ['GET'])]

@@ -3,6 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Courses;
+use App\Entity\User;
+use App\Security\Voter\CourseManagementVoter;
+use App\Enum\CourseStatus;
 use App\Form\CoursesType;
 use App\Repository\CoursesRepository;
 use App\Repository\ScheduleRepository;
@@ -27,10 +30,11 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/', name: 'app_courses_index', methods: ['GET'])]
+    #[IsGranted("ROLE_MEMBER")]
     public function index(CoursesRepository $coursesRepository): Response
     {
         return $this->render('courses/index.html.twig', [
-            'courses' => $coursesRepository->findAll(),
+            'courses' => $coursesRepository->findBy(['club' => $this->currentClub(), 'status' => CourseStatus::OPEN], ['id' => 'DESC']),
         ]);
     }
 
@@ -39,12 +43,17 @@ class CoursesController extends AbstractController
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $course = new Courses();
+        // Die Vereinszuordnung kommt ausschließlich aus dem angemeldeten Konto.
+        // Eine abweichende Formularauswahl darf sie nicht überschreiben.
+        $club = $this->currentClub();
+        $course->setClub($club);
 
         $form = $this->createForm(CoursesType::class, $course);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid())
         {
+            $course->setClub($club);
             $imageFile = $form->get('image')->getData();
 
             if ($imageFile) {
@@ -109,8 +118,12 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_courses_show', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[IsGranted("ROLE_MEMBER")]
     public function show(Courses $course, $id, ScheduleRepository $scheduleRepository): Response
     {
+        if ($course->getClub()?->getId() !== $this->currentClub()->getId() || $course->getStatus() !== CourseStatus::OPEN) {
+            throw $this->createNotFoundException('Kurs nicht verfuegbar.');
+        }
         return $this->render('courses/show.html.twig', [
             'course' => $course,
             'schedules' => $scheduleRepository->findScheduleWithBookingCount($id),
@@ -121,6 +134,8 @@ class CoursesController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Courses $course, EntityManagerInterface $entityManager): Response
     {
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+        $originalClub = $course->getClub();
         $files = $this->getFiles();
 
         $form = $this->createForm(CoursesType::class, $course, [
@@ -129,6 +144,8 @@ class CoursesController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Eine Vereinsverschiebung ist nicht Teil dieses Bearbeitungsablaufs.
+            $course->setClub($originalClub);
             $selectedFile = $request->request->get('selectedFile');
 
                 if ($selectedFile) {
@@ -148,6 +165,12 @@ class CoursesController extends AbstractController
         ]);
     }
 
+    private function currentClub(): \App\Entity\Club {
+        $user=$this->getUser();
+        $club=$user instanceof User ? $user->getMember()?->getClub() : null;
+        if (!$club) throw $this->createAccessDeniedException('Keine Vereinszuordnung.');
+        return $club;
+    }
     private function getFiles(): array
     {
         $dirPath = $this->getParameter('bilder_ordner');
@@ -162,6 +185,7 @@ class CoursesController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Courses $course, EntityManagerInterface $entityManager): Response
     {
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         if ($this->isCsrfTokenValid('delete'.$course->getId(), $request->request->get('_token'))) {
             $entityManager->remove($course);
             $entityManager->flush();
@@ -170,19 +194,16 @@ class CoursesController extends AbstractController
         return $this->redirectToRoute('app_courses_index', [], Response::HTTP_SEE_OTHER);
     }
 
+    /**
+     * Der alte Endpunkt nahm beliebige Dateinamen ohne Objektbindung/CSRF an.
+     * Bis zur Einführung einer kursbezogenen Bildverwaltung bewusst gesperrt.
+     */
     #[Route('/image/delete', name: 'delete_image', methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN')]
     public function delete_image(Request $request): JsonResponse
     {
-        $filename = $request->request->get('filename');
-
-        $filepath = $this->getParameter('bilder_ordner') . '/' . $filename;
-
-        if (file_exists($filepath)) {
-            unlink($filepath);
-            return new JsonResponse(['status' => 200, 'message' => 'File deleted.']);
-        } else {
-            return new JsonResponse(['status' => 400, 'message' => 'File not found']);
-        }
+        return new JsonResponse([
+            'message' => 'Bildlöschung nur über eine autorisierte Kursverwaltung möglich.',
+        ], Response::HTTP_GONE);
     }
 }

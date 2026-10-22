@@ -12,12 +12,12 @@
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="frontendCoursesMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tauchkurse</a>
                 <ul class="dropdown-menu" aria-labelledby="frontendCoursesMenu">
-                    <li><a class="dropdown-item" href="{{ path('app_courses_index') }}">Kursangebot</a></li>
+                    <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kursangebot</a></li>
                     {% if is_granted('ROLE_MEMBER') %}
                         <li><a class="dropdown-item" href="{{ path('app_schedule_index') }}">Kurstermine</a></li>
                         <li><a class="dropdown-item" href="{{ path('app_schedule_calendar', {'month': 'now'|date('m')}) }}">Kurskalender</a></li>
                     {% endif %}
-                    <li><a class="dropdown-item" href="{{ path('app_instructor_index') }}">Instruktoren</a></li>
+
                 </ul>
             </li>
             {% if app.user is null %}
@@ -25,11 +25,14 @@
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
             {% else %}
                 {% if is_granted('ROLE_MEMBER') %}
+                    
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Mein Bereich</a>
                         <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
+                            <li><a class="dropdown-item" href="{{ path('member_portal_dashboard') }}">Mein Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_profile') }}">Meine Daten</a></li>
 							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
+                            <li><a class="dropdown-item" href="{{ path('member_reservations') }}">Ausrüstung reservieren</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a></li>
                             <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kurse buchen</a></li>
@@ -38,12 +41,7 @@
                     </li>
                 {% endif %}
                 {% if is_granted('ROLE_INSTRUCTOR') %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="frontendInstructorMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Ausbildung</a>
-                        <ul class="dropdown-menu" aria-labelledby="frontendInstructorMenu">
-                            <li><a class="dropdown-item" href="{{ path('instructor_my_tasks') }}">Meine Ausbildungsaufgaben</a></li>
-                        </ul>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ path('instructor_portal_dashboard') }}">Ausbilderportal</a></li>
                 {% endif %}
                 {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
                     <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>

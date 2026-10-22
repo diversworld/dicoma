@@ -7,6 +7,8 @@ namespace App\Controller;
 use App\Entity\MemberTankCheckBooking;
 use App\Entity\MemberTankCheckBookingItem;
 use App\Entity\User;
+use App\Entity\TuvDocument;
+use App\Entity\TuvInvoice;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -49,6 +51,8 @@ final class MemberTankCheckBookingDetailController extends AbstractController
             'items' => $items,
             'netTotal' => $netCents / 100,
             'grossTotal' => $grossCents / 100,
+            'documents' => $em->getRepository(TuvDocument::class)->findBy(['booking' => $booking], ['id' => 'DESC']),
+            'invoice' => $em->getRepository(TuvInvoice::class)->findOneBy(['booking' => $booking]),
         ]);
     }
 }

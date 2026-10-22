@@ -14,7 +14,7 @@ final class AppReadinessCommandTest extends TestCase
 {
     public function testDatabaseConnectionFailureReturnsFailureWithoutLeakingDetails(): void
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('connect')->willThrowException(new \RuntimeException('secret password'));
         $tester = new CommandTester(new AppReadinessCommand($connection));
         self::assertSame(Command::FAILURE, $tester->execute([]));

@@ -47,6 +47,17 @@ class EquipmentBooking
     #[Assert\Count(min: 1, minMessage: 'Mindestens einen Ausrüstungsartikel auswählen.')]
     private Collection $items;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $agreedRentalFeeCents = null;
+
+    public function getAgreedRentalFeeCents(): ?int { return $this->agreedRentalFeeCents; }
+    public function setAgreedRentalFeeCents(?int $cents): static
+    {
+        if ($cents !== null && $cents < 0) { throw new \InvalidArgumentException('Invalid amount.'); }
+        $this->agreedRentalFeeCents = $cents;
+        return $this;
+    }
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();

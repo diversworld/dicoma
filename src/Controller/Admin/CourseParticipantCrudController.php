@@ -3,6 +3,14 @@
 namespace App\Controller\Admin;
 
 use App\Entity\CourseParticipant;
+use App\Entity\User;
+use App\Security\Voter\CourseManagementVoter;
+use App\Security\Voter\MemberManagementVoter;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use Symfony\Component\Translation\TranslatableMessage;
 use App\Enum\CourseParticipantStatus;
 use App\Enum\CourseStatus;
@@ -35,6 +43,41 @@ class CourseParticipantCrudController extends AbstractCrudController
         private readonly ScheduleRepository $scheduleRepository,
         private readonly ScheduleParticipantSyncService $participantSyncService
     ) {
+    }
+
+    /** Schritt 37: SQL-basierter Vereinsfilter fuer Teilnehmerlisten. */
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $user = $this->getUser();
+            $clubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
+            if ($clubId === null) {
+                $qb->andWhere('1 = 0');
+            } else {
+                $qb->join('entity.course', 'managedParticipantCourse')
+                    ->join('entity.member', 'managedParticipantMember')
+                    ->andWhere('managedParticipantCourse.club = :participantManagedClub')
+                    ->andWhere('managedParticipantMember.club = :participantManagedClub')
+                    ->setParameter('participantManagedClub', $clubId);
+            }
+        }
+        return $qb;
+    }
+
+    /** Schritte 38-40: Objektberechtigung und Zuordnungspruefung. */
+    private function assertParticipantAccess(CourseParticipant $participant): void
+    {
+        $course = $participant->getCourse();
+        if ($course === null) {
+            throw $this->createAccessDeniedException('Kurszuordnung fehlt.');
+        }
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+        $member = $participant->getMember();
+        if ($member === null) {
+            throw $this->createAccessDeniedException('Mitgliedszuordnung fehlt.');
+        }
+        $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
     }
 
     public static function getEntityFqcn(): string
@@ -76,6 +119,13 @@ class CourseParticipantCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
+        if ($pageName === Crud::PAGE_EDIT || $pageName === Crud::PAGE_DETAIL) {
+            $participant = $this->getContext()?->getEntity()?->getInstance();
+            if ($participant instanceof CourseParticipant) {
+                $this->assertParticipantAccess($participant);
+            }
+        }
+
         yield AssociationField::new(
             'course',
             'Kurs'
@@ -300,6 +350,20 @@ class CourseParticipantCrudController extends AbstractCrudController
             return;
         }
 
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            $originalCourse = $original['course'] ?? null;
+            $originalMember = $original['member'] ?? null;
+            if (!$originalCourse instanceof \App\Entity\Courses || !$originalMember instanceof \App\Entity\Member) {
+                throw $this->createAccessDeniedException('Urspruengliche Teilnehmerzuordnung fehlt.');
+            }
+            $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $originalCourse);
+            $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $originalMember);
+            // Die Verknuepfungen sind bei einer normalen Bearbeitung unveraenderlich.
+            $entityInstance->setCourse($originalCourse);
+            $entityInstance->setMember($originalMember);
+        }
+        $this->assertParticipantAccess($entityInstance);
         $course = $entityInstance->getCourse();
 
         if (
@@ -317,6 +381,7 @@ class CourseParticipantCrudController extends AbstractCrudController
          * Bestandene Teilnehmer werden ebenfalls nicht mehr über
          * das normale Formular verändert.
          */
+        $this->assertParticipantAccess($entityInstance);
         if ($entityInstance->hasPassed()) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht mehr '
@@ -338,6 +403,7 @@ class CourseParticipantCrudController extends AbstractCrudController
         $entityInstance
     ): void {
         if ($entityInstance instanceof CourseParticipant) {
+            $this->assertParticipantAccess($entityInstance);
             $course = $entityInstance->getCourse();
 
             if (
@@ -392,6 +458,7 @@ class CourseParticipantCrudController extends AbstractCrudController
             return;
         }
 
+        $this->assertParticipantAccess($entityInstance);
         if ($entityInstance->hasPassed()) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht gelöscht '

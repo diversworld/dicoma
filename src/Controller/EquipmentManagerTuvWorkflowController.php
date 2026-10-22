@@ -91,8 +91,11 @@ final class EquipmentManagerTuvWorkflowController extends AbstractController
                 ->where('b.id = :id')->andWhere('(IDENTITY(ct.club) = :clubId OR IDENTITY(m.club) = :clubId)')
                 ->setParameter('id', $id)->setParameter('clubId', $clubId)->getQuery()->getOneOrNullResult();
             if (!$scope) { throw $this->createAccessDeniedException(); }
-            if ($booking->getStatus() !== 'returned') { throw $this->createAccessDeniedException('Ergebnis erst nach Rückerhalt möglich.'); }
-            return $this->render('equipment_manager/tuv_result.html.twig', ['booking' => $booking]);
+            $existing = $em->getRepository(MemberTankCheckResult::class)->findOneBy(['booking' => $booking]);
+            if ($booking->getStatus() !== 'returned' && !($booking->getStatus() === 'completed' && $existing !== null)) {
+                throw $this->createAccessDeniedException('Ergebnis erst nach Rückerhalt möglich.');
+            }
+            return $this->render('equipment_manager/tuv_result.html.twig', ['booking' => $booking, 'existing' => $existing]);
         }
         if (!$this->isCsrfTokenValid('tuv_result_'.$id, (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');

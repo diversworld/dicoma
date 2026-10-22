@@ -12,7 +12,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class EquipmentRegulatorDetailsCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string { return EquipmentRegulatorDetails::class; }

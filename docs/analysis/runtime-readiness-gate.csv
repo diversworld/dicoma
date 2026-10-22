@@ -1,0 +1,9 @@
+Dependency,Required,Observed,Status
+PHP >=8.2,>=8.2,8.4.24,check
+Composer executable,present,absent,blocked
+vendor/autoload.php,present,absent,blocked
+ext-intl,present,absent,blocked
+ext-iconv,present,present,check
+ext-ctype,present,present,check
+PDO driver,test database dependent,none,blocked
+isolated test DB,required,not supplied,blocked

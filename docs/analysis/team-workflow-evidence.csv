@@ -1,0 +1,9 @@
+ID,Prüfaussage,Quelldatei,Zeile,Status
+TM-01,Team-Sportart ist Pflicht,src/Entity/Team.php,30,bestätigt
+TM-02,Team-Mitglied eindeutig,src/Entity/TeamMember.php,17,bestätigt
+TM-03,Vereinsabgleich bei Teammitglied,src/Entity/TeamMember.php,159,bestätigt
+TM-04,Fehlende Sportart kann optional zugeordnet werden,src/Controller/Admin/TeamMemberCrudController.php,267,bestätigt
+TM-05,Speichern erfolgt in Transaktion,src/Controller/Admin/TeamMemberCrudController.php,259,bestätigt
+TM-06,Sportcheck-Endpunkt nur für Admins,src/Controller/Admin/TeamMemberSportCheckController.php,17,bestätigt
+TM-07,Team-Crud nur für Admins,src/Controller/Admin/TeamCrudController.php,27,bestätigt
+TM-08,Sportcheck weist Vereinsabweichung aus,src/Controller/Admin/TeamMemberSportCheckController.php,42,bestätigt

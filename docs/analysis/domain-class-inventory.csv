@@ -1,0 +1,17 @@
+Fachbegriff,Exakte Klassendatei(en),Bewertungsgrenze
+Person,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+Club,src/Entity/Club.php,Dateiname allein ist kein Funktionsnachweis
+Member,src/Entity/Member.php,Dateiname allein ist kein Funktionsnachweis
+Courses,src/Entity/Courses.php,Dateiname allein ist kein Funktionsnachweis
+CourseParticipant,src/Entity/CourseParticipant.php,Dateiname allein ist kein Funktionsnachweis
+Team,src/Entity/Team.php,Dateiname allein ist kein Funktionsnachweis
+Tournament,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+Event,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+ClubTravel,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+Trip,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+BarDuty,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+Shift,Keine gleichnamige PHP-Klasse gefunden,Dateiname allein ist kein Funktionsnachweis
+EquipmentReservation,src/Entity/EquipmentReservation.php,Dateiname allein ist kein Funktionsnachweis
+EquipmentBooking,src/Entity/EquipmentBooking.php,Dateiname allein ist kein Funktionsnachweis
+EquipmentCashClosing,src/Entity/EquipmentCashClosing.php,Dateiname allein ist kein Funktionsnachweis
+Schedule,src/Entity/Schedule.php,Dateiname allein ist kein Funktionsnachweis

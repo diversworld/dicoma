@@ -24,7 +24,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Form\TeamMemberType;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class TeamCrudController extends AbstractCrudController
 {
     public function __construct(

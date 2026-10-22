@@ -1,0 +1,9 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}TÜV-Rechnungseinstellungen{% endblock %}
+{% block main %}
+<p>Wähle den Verein, dessen Rechnungs- und Steuerangaben du bearbeiten möchtest.</p>
+<div class="list-group">{% for club in clubs %}
+<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ path('admin_invoice_settings_edit', {id: club.id}) }}">{{ club.name }} <span>→</span></a>
+{% else %}<p>Keine Vereine vorhanden.</p>{% endfor %}</div>
+<p class="mt-4"><a href="{{ path('admin_invoice_agency_confirmations') }}">Bestätigte TÜV-Einzelaufträge prüfen</a></p>
+{% endblock %}

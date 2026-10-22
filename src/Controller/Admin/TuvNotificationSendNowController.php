@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class TuvNotificationSendNowController extends AbstractController
 {
     #[Route('/admin/tuv-notification/{id}/send-now', name: 'admin_tuv_notification_send_now', methods: ['POST'], requirements: ['id' => '\\d+'])]

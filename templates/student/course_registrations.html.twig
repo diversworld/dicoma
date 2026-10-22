@@ -1,5 +1,6 @@
 {% extends 'base.html.twig' %}
 {% block title %}Meine Kursanmeldungen – DiCoMa{% endblock %}
+{% block hero %}{% endblock %}
 {% block body %}
 <main class="container py-4">
     <h1>Meine Kursanmeldungen</h1>
@@ -15,7 +16,11 @@
                     <td>{{ registration.course.title }}</td>
                     <td>{{ registration.registeredAt|date('d.m.Y H:i') }}</td>
                     <td>{{ registration.status.label() }}</td>
-                    <td><a href="{{ path('frontend_course_registration_confirmation', {id: registration.id}) }}">Ansehen</a></td>
+                    <td><a href="{{ path('frontend_course_registration_confirmation', {id: registration.id}) }}">Ansehen</a>
+                    {% if registration.course.schedulePublishedAt %}
+                      · <a href="{{ path('student_course_timetable', {id: registration.id}) }}">Terminplan</a>
+                      · <a href="{{ path('student_course_timetable_csv', {id: registration.id}) }}">CSV</a>
+                    {% else %} · <span class="text-muted">Terminplan noch nicht freigegeben</span>{% endif %}</td>
                 </tr>
             {% endfor %}
             </tbody>

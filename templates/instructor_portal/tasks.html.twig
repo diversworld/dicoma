@@ -1,0 +1,56 @@
+{% extends 'instructor_portal/layout.html.twig' %}
+{% block title %}Ausbildungsaufgaben – DiCoMa</div>{% endblock %}
+{% block body %}<div class="ip-card">
+<h1>{{ personalView|default(false) ? 'Meine Ausbildungsaufgaben' : 'Ausbildungsaufgaben' }}</h1>
+<p class="muted">Kommende Termine der nächsten 30 Tage und offene Aufgaben der vergangenen 30 Tage.</p>
+<section class="panel">
+  <h2>Ansicht filtern</h2>
+  <form method="get" action="{{ path(personalView|default(false) ? 'instructor_portal_tasks' : 'admin_instructor_tasks') }}" style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:end">
+    {% set selectors = [
+      {key: 'course', label: 'Kurs', choices: options.courses},
+      {key: 'instructor', label: 'Instruktor', choices: options.instructors}
+    ] %}
+    {% for selector in selectors %}
+      {% if selector.key != 'instructor' %}
+      <label style="display:grid;gap:.25rem;min-width:190px">{{ selector.label }}
+        <select name="{{ selector.key }}" style="padding:.5rem;border:1px solid #c9d5e7;border-radius:6px">
+          <option value="">Alle</option>
+          {% for id, name in selector.choices %}
+            <option value="{{ id }}" {% if attribute(filters, selector.key) is not null and attribute(filters, selector.key) == id %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+    {% endfor %}
+    <button type="submit" class="btn">Filter anwenden</button>
+    <a class="btn" href="{{ path(personalView|default(false) ? 'instructor_portal_tasks' : 'admin_instructor_tasks') }}">Zurücksetzen</a>
+  </form>
+</section>
+<section class="panel">
+  <div class="heading"><h2>Überblick</h2><span class="tag">Aufgabenübersicht</span></div>
+  <p><strong>{{ totals.upcoming }}</strong> anstehende Termine · <strong>{{ totals.attendance }}</strong> offene Anwesenheiten · <strong>{{ totals.assessments }}</strong> offene Bewertungen · <strong>{{ totals.makeup }}</strong> Fälle mit Nachholbedarf</p>
+</section>
+<section class="panel">
+  <h2>Offene Aufgaben – nach Dringlichkeit</h2>
+  <div class="table-wrap"><table><thead><tr><th>Priorität</th><th>Termin</th><th>Kurs</th><th>Datum</th><th>Anwesenheit offen</th><th>Bewertung offen</th><th>Nachholbedarf</th><th>Aktion</th></tr></thead><tbody>
+  {% for item in attention %}
+    <tr>
+      <td><span class="tag" {% if item.priority == 3 %}style="background:#fee2e2;color:#991b1b"{% elseif item.priority == 2 %}style="background:#fef3c7;color:#92400e"{% endif %}>{{ item.priorityLabel }}</span></td>
+      <td>{{ item.title }}</td><td>{{ item.course }}</td>
+      <td>{{ item.date }}{% if item.time %} · {{ item.time }}{% endif %}</td>
+      <td>{{ item.attendance }}</td><td>{{ item.assessments }}</td><td>{{ item.makeup }}</td>
+      <td><a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Sammelbewertung</a></td>
+    </tr>
+  {% else %}<tr><td colspan="8">Keine offenen Aufgaben für diese Filter.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="panel">
+  <h2>Nächste Ausbildungstermine</h2>
+  <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Termin</th><th>Kurs</th><th>Instruktor</th><th>Aktion</th></tr></thead><tbody>
+  {% for item in upcoming %}
+    <tr><td>{{ item.date }}{% if item.time %} · {{ item.time }}{% endif %}</td><td>{{ item.title }}</td><td>{{ item.course }}</td><td>{{ item.instructor ?: 'Nicht zugewiesen' }}</td><td><a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Erfassung öffnen</a></td></tr>
+  {% else %}<tr><td colspan="5">Keine Termine in den nächsten 30 Tagen.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<p class="muted small">Die Priorisierung ist eine Anzeigehilfe. Die bestehenden Anwesenheits-, Bewertungs- und Abschlussregeln bleiben unverändert.</p>
+</div>{% endblock %}

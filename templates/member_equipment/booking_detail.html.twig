@@ -30,5 +30,9 @@
     <tfoot><tr><th colspan="2">Gesamt</th><th class="text-right">{{ netTotal|number_format(2, ',', '.') }} €</th><th class="text-right">{{ grossTotal|number_format(2, ',', '.') }} €</th></tr></tfoot>
   </table></div>
   <p class="text-muted">Die Beträge stammen aus den bei der Anmeldung gespeicherten Preisen. Spätere Preisänderungen beeinflussen diese Übersicht nicht.</p>
+  <h2>TÜV-Dokumente</h2>
+  <ul>{% for doc in documents %}<li><a href="{{ path('member_tuv_document_download', {id:doc.id}) }}">{{ doc.originalName }}</a> ({{ doc.uploadedAt|date('d.m.Y') }})</li>{% else %}<li>Noch keine Dokumente hinterlegt.</li>{% endfor %}</ul>
+  <h2>Rechnung</h2>
+  {% if invoice %}<p><a href="{{ path('member_tuv_invoice', {id:invoice.id}) }}">Rechnung {{ invoice.number }} anzeigen / drucken</a></p>{% else %}<p class="text-muted">Noch keine Rechnung ausgestellt.</p>{% endif %}
 </div></section>
 {% endblock %}

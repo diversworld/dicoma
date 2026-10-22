@@ -25,6 +25,8 @@ final class CourseAuditController extends AbstractController
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
 
+        $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
+
         $events = $em->getRepository(CourseAuditEvent::class)->findBy(
             ['courseId' => $id], ['occurredAt' => 'DESC', 'id' => 'DESC'], 100
         );

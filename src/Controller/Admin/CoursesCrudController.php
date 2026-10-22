@@ -12,6 +12,12 @@ use App\Form\CourseParticipantType;
 use App\Form\CourseTrainingUnitType;
 use App\Form\CourseSchedulePlanningType;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use App\Security\Voter\CourseManagementVoter;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -61,6 +67,54 @@ class CoursesCrudController extends AbstractCrudController
         return Courses::class;
     }
 
+    /** Paket 11: Listenansicht serverseitig auf den eigenen Verein beschraenken. */
+    public function createIndexQueryBuilder(
+        SearchDto $searchDto,
+        EntityDto $entityDto,
+        FieldCollection $fields,
+        FilterCollection $filters
+    ): QueryBuilder {
+        $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $qb;
+        }
+        $clubId = $this->getUser() instanceof \App\Entity\User
+            ? $this->getUser()->getMember()?->getClub()?->getId() : null;
+        if ($clubId === null) {
+            $qb->andWhere('1 = 0');
+        } else {
+            $qb->andWhere('entity.club = :managedClub')->setParameter('managedClub', $clubId);
+        }
+        return $qb;
+    }
+
+    /** Paket 12: objektbezogene Autorisierung fuer alle direkten Kursaktionen. */
+    private function assertCourseManage(Courses $course): void
+    {
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+    }
+
+    /** Paket 13: Vereinszuordnung beim Anlegen und Bearbeiten unveraenderlich halten. */
+    private function enforceCourseClub(Courses $course, ?EntityManagerInterface $em = null): void
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return;
+        }
+        $club = $this->getUser() instanceof \App\Entity\User
+            ? $this->getUser()->getMember()?->getClub() : null;
+        if ($club === null || $club->getId() === null) {
+            throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+        }
+        if ($em !== null && $course->getId() !== null) {
+            $original = $em->getUnitOfWork()->getOriginalEntityData($course);
+            $originalClub = $original['club'] ?? null;
+            if (!$originalClub instanceof \App\Entity\Club || $originalClub->getId() !== $club->getId()) {
+                throw $this->createAccessDeniedException('Kurs gehoert nicht zum eigenen Verein.');
+            }
+        }
+        $course->setClub($club);
+    }
+
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
@@ -100,6 +154,14 @@ class CoursesCrudController extends AbstractCrudController
      */
     public function configureResponseParameters(KeyValueStore $responseParameters): KeyValueStore
     {
+        // Paket 12: direkte Detail-/Bearbeitungs-URLs duerfen Listenfilter nicht umgehen.
+        $page = $responseParameters->get('pageName');
+        if (in_array($page, [Crud::PAGE_DETAIL, Crud::PAGE_EDIT], true)) {
+            $candidate = $responseParameters->get('entity')?->getInstance();
+            if ($candidate instanceof Courses) {
+                $this->assertCourseManage($candidate);
+            }
+        }
         if ($responseParameters->get('pageName') !== Crud::PAGE_DETAIL) {
             return $responseParameters;
         }
@@ -197,6 +259,23 @@ class CoursesCrudController extends AbstractCrudController
         return $responseParameters;
     }
 
+    private function validateLeadInstructor(Courses $course): void {
+        $lead = $course->getLeadInstructor();
+        if ($lead !== null && ($course->getClub() === null
+            || $lead->getClub()?->getId() !== $course->getClub()->getId()
+            || $lead->getUser() === null
+            || !in_array(\App\Entity\User::ROLE_INSTRUCTOR, $lead->getUser()->getRoles(), true))) {
+            throw new \DomainException('Kursausbilder muss ein Ausbilder des Kursvereins sein.');
+        }
+    }
+    public function persistEntity(EntityManagerInterface $em, $entityInstance): void {
+        if ($entityInstance instanceof Courses) {
+            $this->enforceCourseClub($entityInstance);
+            $this->validateLeadInstructor($entityInstance);
+        }
+        parent::persistEntity($em, $entityInstance);
+    }
+
     public function configureFields(string $pageName): iterable
     {
         /*
@@ -204,25 +283,23 @@ class CoursesCrudController extends AbstractCrudController
          */
         yield FormField::addFieldset('Kursinformation')
             ->collapsible();
-
         yield IdField::new('id', 'ID')
             ->hideOnForm()
             ->setColumns(2);
-
-        yield AssociationField::new(
-            'club',
-            'Verein'
-        )
+        yield AssociationField::new('club','Verein')
+            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN'))
             ->setRequired(true)
             ->setColumns(4);
-
-        yield TextField::new(
-            'title',
-            'Titel'
-        )
+        yield \EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField::new('courseFee', 'Kurspreis')
+            ->setCurrency('EUR')
+            ->setStoredAsCents(false)
+            ->setNumDecimals(2)
+            ->setRequired(true)
+            ->setColumns(3)
+            ->setHelp('Gesamtpreis pro Teilnehmer für diesen Kurs.');
+        yield TextField::new('title','Titel')
             ->setRequired(true)
             ->setColumns(6);
-
         /*
          * Status
          *
@@ -260,91 +337,61 @@ class CoursesCrudController extends AbstractCrudController
             if (!$isCompleted) {
                 unset($statusChoices['Abgeschlossen']);
             }
-
-            yield ChoiceField::new(
-                'status',
-                'Kursstatus'
-            )
+            yield ChoiceField::new('status','Kursstatus')
                 ->setChoices($statusChoices)
                 ->setColumns(3)
-                ->setFormTypeOption(
-                    'disabled',
-                    $isCompleted
-                );
+                ->setFormTypeOption('disabled',$isCompleted);
         }
-
-        yield AssociationField::new(
-            'qualification',
-            'Zielqualifikation'
-        )
+        yield AssociationField::new('leadInstructor', 'Verantwortlicher Kursausbilder')
+            ->setColumns(4)
+            ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
+            ->setFormTypeOption('query_builder', static function (\App\Repository\MemberRepository $repo) {
+                return $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
+                    ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
+                    ->orderBy('m.lastname', 'ASC');
+            });
+        yield AssociationField::new('qualification','Zielqualifikation')
             ->setRequired(false)
             ->setColumns(4)
             ->setHelp(
                 'Qualifikation oder Brevet, das nach erfolgreichem '
                 . 'Abschluss des Kurses erworben wird.'
             );
-
         /*
          * Kapazität / Anmeldung
          */
-        yield IntegerField::new(
-            'participantCount',
-            'Teilnehmer'
-        )
+        yield IntegerField::new('participantCount','Teilnehmer')
             ->onlyOnIndex();
-
-        yield IntegerField::new(
-            'freePlaces',
-            'Freie Plätze'
-        )
+        yield IntegerField::new('freePlaces','Freie Plätze')
             ->onlyOnIndex();
-
-        yield IntegerField::new(
-            'maxParticipants',
-            'Max. Teilnehmer'
-        )
+        yield IntegerField::new('maxParticipants','Max. Teilnehmer')
             ->setColumns(3)
             ->setHelp(
                 'Leer lassen, wenn die Teilnehmerzahl '
                 . 'nicht begrenzt ist.'
             );
-
-        yield DateField::new(
-            'registrationDeadline',
-            'Anmeldeschluss'
-        )
+        yield DateField::new('registrationDeadline','Anmeldeschluss')
             ->setFormat('dd.MM.yyyy')
             ->setColumns(3);
-
         /*
          * Bild
          */
         yield FormField::addFieldset('Bild')
             ->collapsible();
-
-        yield ImageField::new(
-            'image',
-            'Bild'
-        )
+        yield ImageField::new('image','Bild')
             ->setBasePath('/images/kurse/')
             ->setUploadDir('public/images/kurse/')
-            ->setUploadedFileNamePattern(
-                '[name].[extension]'
-            )
+            ->setUploadedFileNamePattern('[name].[extension]')
             ->setRequired(false)
             ->setColumns(5)
             ->hideOnIndex();
-
         /*
          * Legacy-Kategorie.
          *
          * Noch nicht entfernen, solange alter Kurs-Code darauf
          * zugreift.
          */
-        yield ChoiceField::new(
-            'category',
-            'Kategorie'
-        )
+        yield ChoiceField::new('category','Kategorie')
             ->setChoices([
                 'Beginner' => 'beginner',
                 'Aufbaukurse' => 'aufbau',
@@ -353,86 +400,53 @@ class CoursesCrudController extends AbstractCrudController
                 'Technische Kurse' => 'technisch',
             ])
             ->setColumns(3);
-
         /*
          * Detailinformationen
          */
         yield FormField::addFieldset('Detailinformation')
             ->collapsible();
-
-        yield TextEditorField::new(
-            'requirements',
-            'Voraussetzungen'
-        )
+        yield TextEditorField::new('requirements','Voraussetzungen')
             ->hideOnIndex()
             ->setColumns(8);
-
-        yield TextEditorField::new(
-            'description',
-            'Beschreibung'
-        )
+        yield TextEditorField::new('description','Beschreibung')
             ->hideOnIndex()
             ->setColumns(8);
-
         /*
          * Notizen
          */
         yield FormField::addFieldset('Notizen')
             ->collapsible();
-
-        yield TextEditorField::new(
-            'notes',
-            'Bemerkungen'
-        )
+        yield TextEditorField::new('notes','Bemerkungen')
             ->hideOnIndex()
             ->setColumns(8);
 
-		yield FormField::addFieldset(
-			'Ausbildungsplan'
-		)
+		yield FormField::addFieldset('Ausbildungsplan')
 			->collapsible();
-
-		yield CollectionField::new(
-			'trainingUnits',
-			'Ausbildungseinheiten'
-		)
+		yield CollectionField::new('trainingUnits','Ausbildungseinheiten')
 			->setEntryType(
 				CourseTrainingUnitType::class
 			)
 			->allowAdd()
 			->allowDelete()
-			->setFormTypeOption(
-				'by_reference',
-				false
-			)
+			->setFormTypeOption('by_reference',false)
 			->setHelp(
 				'Definiert, welche Ausbildungseinheiten dieser Kurs '
 				. 'enthält und wie viele Termine jeweils vorgesehen sind.'
 			)
 			->onlyOnForms();
-		
         /*
          * Teilnehmer
          */
         yield FormField::addFieldset('Teilnehmer')
             ->collapsible();
-
-        yield CollectionField::new(
-            'participants',
-            'Kursteilnehmer'
-        )
+        yield CollectionField::new('participants','Kursteilnehmer')
             ->setEntryType(
                 CourseParticipantType::class
             )
             ->allowAdd()
             ->allowDelete()
-            ->setFormTypeOption(
-                'by_reference',
-                false
-            )
-            ->setHelp(
-                'Mitglieder, die an diesem Kurs teilnehmen.'
-            )
+            ->setFormTypeOption('by_reference',false)
+            ->setHelp('Mitglieder, die an diesem Kurs teilnehmen.')
             ->onlyOnForms();
     }
 
@@ -442,73 +456,31 @@ class CoursesCrudController extends AbstractCrudController
         /*
          * Kurs abschließen.
          */
-        $completeCourse = Action::new(
-            'completeCourse',
-            'Kurs abschließen',
-            'fa fa-flag-checkered'
-        )
+        $completeCourse = Action::new('completeCourse','Kurs abschließen','fa fa-flag-checkered')
             ->linkToRoute('admin_course_complete_confirm', static fn (Courses $course): array => ['id' => $course->getId()])
-            ->displayIf(
-                static fn (Courses $course): bool =>
-                    $course->getStatus()
-                        !== CourseStatus::COMPLETED
-            );
-		
-		$generateSchedules = Action::new(
-			'generateSchedules',
-			'Kurstermine erzeugen',
-			'fa fa-calendar-plus'
-		)
+            ->displayIf(static fn (Courses $course): bool =>$course->getStatus()!== CourseStatus::COMPLETED);
+		$generateSchedules = Action::new('generateSchedules','Kurstermine erzeugen','fa fa-calendar-plus')
 			->linkToRoute('admin_course_generate_confirm', static fn (Courses $course): array => ['id' => $course->getId()])
-			->displayIf(
-			static fn (Courses $course): bool =>
-			!$course->getTrainingUnits()->isEmpty()
-		);
-        $exportTemplate = Action::new(
-            'createTemplateFromCourse',
-            'Als Planungsvorlage speichern',
-            'fa fa-copy'
-        )
+			->displayIf(static fn (Courses $course): bool =>!$course->getTrainingUnits()->isEmpty());
+        $exportTemplate = Action::new('createTemplateFromCourse','Als Planungsvorlage speichern','fa fa-copy')
             ->linkToCrudAction('createTemplateFromCourse')
             ->displayIf(static fn (Courses $course): bool => $course->getClub() !== null);
-
         $trainingMatrix = Action::new('trainingMatrix', 'Ausbildungsübersicht', 'fa fa-table')
-            ->linkToRoute('admin_course_training_matrix',
-                static fn (Courses $course): array => ['id' => $course->getId()]
-            );
-
+            ->linkToRoute('admin_course_training_matrix',static fn (Courses $course): array => ['id' => $course->getId()]);
 		$planSchedules = Action::new('planSchedules','Termine planen','fa fa-calendar-days')
-			->linkToRoute('admin_course_plan',
-				static fn (Courses $course): array => ['id' => $course->getId(),]
-			)
+			->linkToRoute('admin_course_plan',static fn (Courses $course): array => ['id' => $course->getId(),])
 			->displayIf(static fn (Courses $course): bool => $course->getStatus() !== CourseStatus::COMPLETED);
-
         /*
          * Abgeschlossenen Kurs wieder für Korrekturen öffnen.
          */
-        $reopenCourse = Action::new(
-            'reopenCourse',
-            'Kurs wieder öffnen',
-            'fa fa-lock-open'
-        )
+        $reopenCourse = Action::new('reopenCourse','Kurs wieder öffnen','fa fa-lock-open')
             ->linkToRoute('admin_course_reopen_confirm', static fn (Courses $course): array => ['id' => $course->getId()])
-            ->displayIf(
-                static fn (Courses $course): bool =>
-                    $course->getStatus()
-                        === CourseStatus::COMPLETED
-            );
-
-		$importTrainingPlan = Action::new(
-			'importTrainingPlan',
-			'Ausbildungsplan übernehmen',
-			'fa fa-list-check'
-		)
+            ->displayIf(static fn (Courses $course): bool =>$course->getStatus()=== CourseStatus::COMPLETED);
+        $timetableAction = Action::new('courseTimetable', 'Terminplan', 'fa fa-calendar-check')
+            ->linkToRoute('admin_training_timetable', static fn (Courses $course): array => ['id' => $course->getId()]);
+		$importTrainingPlan = Action::new('importTrainingPlan','Ausbildungsplan übernehmen','fa fa-list-check')
 			->linkToRoute('admin_course_import_confirm', static fn (Courses $course): array => ['id' => $course->getId()])
-			->displayIf(
-				static fn (Courses $course): bool =>
-					$course->getQualification() !== null
-					&& $course->getStatus() !== CourseStatus::COMPLETED
-			);
+			->displayIf(static fn (Courses $course): bool =>$course->getQualification() !== null&& $course->getStatus() !== CourseStatus::COMPLETED);
         /*
          * Abgeschlossene Kurse dürfen nicht über die normale
          * Bearbeiten-Aktion geöffnet werden.
@@ -518,21 +490,19 @@ class CoursesCrudController extends AbstractCrudController
 
         // Auf der Detailseite die haeufigsten Aktionen deutlich hervorheben.
         // Die fachlichen displayIf()-Bedingungen bleiben unveraendert.
-        $trainingMatrix->addCssClass('btn btn-primary');
+        /*$trainingMatrix->addCssClass('btn btn-primary');
         $planSchedules->addCssClass('btn btn-secondary');
         $generateSchedules->addCssClass('btn btn-secondary');
         $importTrainingPlan->addCssClass('btn btn-secondary');
         $exportTemplate->addCssClass('btn btn-secondary');
         $completeCourse->addCssClass('btn btn-warning');
-        $reopenCourse->addCssClass('btn btn-secondary');
+        $reopenCourse->addCssClass('btn btn-secondary');*/
 
+        $actions->add(Crud::PAGE_INDEX, $timetableAction);
+        $actions->add(Crud::PAGE_DETAIL, $timetableAction);
         $actions->add(Crud::PAGE_INDEX, $trainingMatrix);
-
         $actions->add(Crud::PAGE_INDEX, $exportTemplate);
-
         $actions->add(Crud::PAGE_INDEX, $planSchedules);
-
-
         $actions->update(
             Crud::PAGE_INDEX,
             Action::EDIT,
@@ -593,6 +563,7 @@ class CoursesCrudController extends AbstractCrudController
         if ($context !== null && $context->getCrud() !== null) {
             $entity = $context->getEntity()?->getInstance();
             if ($entity instanceof Courses) {
+                $this->assertCourseManage($entity);
                 return $entity;
             }
         }
@@ -606,6 +577,7 @@ class CoursesCrudController extends AbstractCrudController
         if (!$course instanceof Courses) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
+        $this->assertCourseManage($course);
         return $course;
     }
 
@@ -750,6 +722,11 @@ class CoursesCrudController extends AbstractCrudController
             );
         }
 
+        if ($entityInstance instanceof Courses) {
+            $this->enforceCourseClub($entityInstance, $entityManager);
+            $this->assertCourseManage($entityInstance);
+            $this->validateLeadInstructor($entityInstance);
+        }
         parent::updateEntity(
             $entityManager,
             $entityInstance
@@ -774,6 +751,9 @@ class CoursesCrudController extends AbstractCrudController
             );
         }
 
+        if ($entityInstance instanceof Courses) {
+            $this->assertCourseManage($entityInstance);
+        }
         parent::deleteEntity(
             $entityManager,
             $entityInstance
@@ -824,6 +804,12 @@ class CoursesCrudController extends AbstractCrudController
 		ScheduleTemplateRepository $templateRepository
 	): Response {
 
+        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
+            return $this->redirectToRoute('admin_training_workflow', [
+                'id' => $request->attributes->get('id'), 'step' => 'plan',
+            ], Response::HTTP_SEE_OTHER);
+        }
+
 		/* Kurs-ID aus der eigenstaendigen GET/POST-Route ermitteln. */
 		$courseId = $request->attributes->get('id');
 
@@ -858,15 +844,44 @@ class CoursesCrudController extends AbstractCrudController
             ['trainingUnitSequence' => 'ASC', 'id' => 'ASC']
         );
 
+        // In der Planungsmaske fachlich gruppieren, unabhaengig von
+        // Erzeugungsreihenfolge und Datenbank-ID.
+        // Innerhalb jeder Gruppe die laufende Nummer beibehalten.
+        $trainingPhase = static function (\App\Entity\Schedule $schedule): int {
+            $type = $schedule->getTrainingUnitType();
+            $text = mb_strtolower(trim(
+                ($type?->getCode() ?? '') . ' ' . ($type?->getName() ?? '') . ' ' . ($schedule->getTitle() ?? '')
+            ), 'UTF-8');
+            if (preg_match('/theorie|theory|pruefung|prüfung|exam/u', $text)) return 0;
+            if (preg_match('/schwimmbad|pool|hallenbad|becken/u', $text)) return 1;
+            if (preg_match('/freiwasser|open.?water|see|tauchgang/u', $text)) return 2;
+            return 3;
+        };
+        usort($schedules, static function ($a, $b) use ($trainingPhase): int {
+            $phase = $trainingPhase($a) <=> $trainingPhase($b);
+            if ($phase !== 0) return $phase;
+            $sequence = ($a->getTrainingUnitSequence() ?? PHP_INT_MAX)
+                <=> ($b->getTrainingUnitSequence() ?? PHP_INT_MAX);
+            if ($sequence !== 0) return $sequence;
+            return ($a->getId() ?? 0) <=> ($b->getId() ?? 0);
+        });
+
         if ($schedules === []) {
             $this->addFlash('warning', 'Bitte zuerst Kurstermine erzeugen.');
             return $this->redirectToRoute('admin');
+        }
+
+        foreach ($schedules as $schedule) {
+            if ($schedule->getInstructor() === null && $course->getLeadInstructor() !== null) {
+                $schedule->setInstructor($course->getLeadInstructor());
+            }
         }
 
 		$form = $this->createForm(
 			CourseSchedulePlanningType::class,
 			['schedules' => $schedules],
 			[
+                'club' => $course->getClub(),
 				'action' => $this->generateUrl(
 					'admin_course_plan',
 					['id' => $course->getId()]
@@ -895,6 +910,13 @@ class CoursesCrudController extends AbstractCrudController
                 $messages[json_encode($parameters)] = new TranslatableMessage('planning.server_conflict', $parameters);
             }
 
+            if ($messages !== []) {
+                foreach ($messages as $message) $this->addFlash('danger', $message);
+                $this->addFlash('danger', 'Terminüberschneidung: Planung nicht gespeichert.');
+                return $this->render('admin/course/schedule_planning.html.twig', [
+                    'course' => $course, 'form' => $form->createView(), 'templatePlans' => [],
+                ]);
+            }
             $entityManager->flush();
 
             foreach ($messages as $message) {

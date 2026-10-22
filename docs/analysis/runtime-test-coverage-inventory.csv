@@ -1,0 +1,10 @@
+Existing test file,Scope
+tests/Command/AppReadinessCommandTest.php,existing source file; execution not verified
+tests/Integration/TeamMemberPersistenceTest.php,existing source file; execution not verified
+tests/Membership/ClubMembershipTest.php,existing source file; execution not verified
+tests/Unit/CourseAuditEventTest.php,existing source file; execution not verified
+tests/Unit/CourseParticipantStatusTest.php,existing source file; execution not verified
+tests/Unit/DiveClub/Billing/Domain/ClubPricingPolicyTest.php,existing source file; execution not verified
+tests/Unit/DiveClub/Inspection/Domain/InspectionIntervalPolicyTest.php,existing source file; execution not verified
+tests/Unit/DiveClub/Shared/Domain/TimeRangeTest.php,existing source file; execution not verified
+tests/Unit/TeamMemberAssignmentValidationTest.php,existing source file; execution not verified

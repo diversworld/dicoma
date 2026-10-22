@@ -1,0 +1,262 @@
+{% extends 'base.html.twig' %}
+{% block title %}Reservierungssystem | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4" style="max-width:1200px">
+	<a href="{{ path('member_portal_dashboard') }}">← Mein Dashboard</a>
+	<h1 class="h2 mt-3 mb-3">Reservierungssystem</h1>
+	{% for message in app.flashes('success') %}
+		<div class="alert alert-success" role="status">
+			{{ message }}
+		</div>
+	{% endfor %}
+	{% for message in app.flashes('danger') %}
+		<div class="alert alert-danger" role="alert">
+			{{ message }}
+		</div>
+	{% endfor %}
+	<a class="btn btn-outline-primary btn-sm mb-3" href="#meine-reservierungen">Meine Reservierungen ansehen</a>
+	<p>Zur Auswahl stehen nur aktuell angebotene, verleihbare und betriebsbereite Vereinsartikel. Deaktivierte Kategorien werden nicht angeboten. Stelle deine Ausrüstung in Ruhe zusammen. <strong>Vormerken ist noch keine Reservierung.</strong> Erst mit „Verbindlich reservieren“ werden alle vorgemerkten Artikel gemeinsam gebucht.</p>
+	<form method="post" id="reservation-form">
+		<input type="hidden" name="_token" value="{{ csrf_token('member_equipment_reserve') }}">
+		<div class="row g-3 mb-4">
+			 <div class="">
+			 	<label class="form-label" for="category">Kategorie auswählen</label>
+	 			<select class="form-select" id="category">
+					<option value="all">Alle Kategorien</option>
+	 				{% for item in items %}
+						{% if item.category %}
+							<option value="c{{ item.category.id }}">{{ item.category.name }}</option>
+						{% endif %}
+					{% endfor %}
+	 				<option value="cother">Sonstige Ausrüstung</option>
+					<option value="regulator">Atemregler / Automaten</option>
+					<option value="tank">Tauchflaschen</option>
+				</select>
+			</div>
+		</div>
+		<h2 class="h4">Ausrüstungsgegenstände auswählen</h2>
+		<p class="text-muted small">Wähle beliebig viele Gegenstände aus unterschiedlichen Kategorien. „Vormerken“ fügt sie deiner Liste hinzu.</p>
+		<div class="table-responsive">
+			<table class="table table-striped table-hover align-middle">
+				<thead>
+					<tr>
+						<th>Inventarnummer</th>
+						<th>Kategorie</th>
+						<th>Hersteller</th>
+						<th>Modell / Bezeichnung</th>
+						<th>Größe</th><th>Leihgebühr</th>
+						<th>Auswahl</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for item in items %}
+						<tr data-category="c{{ item.category ? item.category.id : 'other' }}" data-key="item:{{ item.id }}" data-label="{{ (item.displayModel ?: item.name)|e('html_attr') }}" data-number="{{ item.inventoryNumber|e('html_attr') }}" data-fee="{{ item.rentalFee is not null ? item.rentalFee : '' }}">
+							<td>{{ item.inventoryNumber }}</td>
+							<td>{{ item.category ? item.category.name : 'Sonstige' }}</td>
+							<td>{{ item.manufacturer ? item.manufacturer.name : '–' }}</td>
+							<td>{{ item.displayModel ?: item.name }}</td>
+							<td>{{ item.size ? item.size.name : '–' }}</td>
+							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage' }}</td>
+							<td>
+								<button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button>
+							</td>
+						</tr>
+					{% endfor %}
+					{% for item in regulators %}
+						<tr data-category="regulator" data-key="regulator:{{ item.id }}" data-label="{{ (item.firstStageModel ?: 'Atemregler')|e('html_attr') }}" data-number="{{ item.inventoryNumber|e('html_attr') }}" data-fee="{{ item.rentalFee is not null ? item.rentalFee : '' }}">
+							<td>{{ item.inventoryNumber }}</td>
+							<td>Atemregler / Automaten</td>
+							<td>{{ item.manufacturer ? item.manufacturer.name : '–' }}</td>
+							<td>{{ item.firstStageModel ?: 'Atemregler' }}</td>
+							<td>–</td>
+							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage' }}</td>
+							<td><button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button></td>
+						</tr>
+					{% endfor %}
+					{% for item in tanks %}
+						<tr data-category="tank" data-key="tank:{{ item.id }}" data-label="{{ (item.serialnumber ?: 'Tauchflasche')|e('html_attr') }}" data-number="{{ item.inventory|e('html_attr') }}" data-fee="">
+							<td>{{ item.inventory }}</td>
+							<td>Tauchflaschen</td>
+							<td>–</td>
+							<td>{{ item.serialnumber ?: 'Flasche' }}</td>
+							<td>{{ item.size ?: '–' }} l</td>
+							<td>auf Anfrage</td>
+							<td>
+								<button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		<div class="card shadow-sm mt-4" id="cart">
+			<div class="card-header">
+				<h2 class="h5 mb-0">Meine Vormerkliste <span class="badge bg-primary" id="cart-count">0</span></h2>
+			</div>
+			<div class="card-body">
+				<p id="cart-empty" class="text-muted">Noch keine Gegenstände vorgemerkt. Du kannst aus jeder Kategorie Artikel hinzufügen.</p>
+				<div class="table-responsive">
+					<table class="table align-middle" id="cart-table" hidden>
+						<thead>
+							<tr>
+								<th>Inventarnummer</th>
+								<th>Artikel</th>
+								<th>Leihgebühr</th>
+								<th>Entfernen</th>
+							</tr>
+						</thead>
+						<tbody id="cart-items">
+						</tbody>
+					</table>
+				</div>
+			<div id="cart-total" class="fw-bold text-end" hidden>
+				Summe der angezeigten Leihgebühren: <span id="fee-total">0,00 €</span>
+			</div>
+				<p id="cart-note" class="text-muted small mt-2" hidden>
+					Die Summe basiert auf den angezeigten Artikelgebühren. Gebühren „auf Anfrage“, zeitabhängige Kosten und mögliche Anzahlungen sind darin nicht enthalten. Der endgültige Betrag kann abweichen.
+				</p>
+				<div id="cart-fields"></div>
+				<div class="border rounded p-3 mt-3 bg-light row" id="booking-summary" aria-live="polite">
+					<strong>Gewählter Leihzeitraum</strong>
+					<div id="booking-dates" class="mt-1 col-md-12">
+						Bitte Leihbeginn und Leihende auswählen.
+					</div>
+					<div class="small text-muted mt-1 col-md-12">
+						Die Reservierung wird erst nach deiner verbindlichen Bestätigung gespeichert.
+					</div>
+					<div class="col-md-4">
+						<label class="form-label" for="start">Leihbeginn *</label>
+						<input type="date" class="form-control" id="start" name="start" min="{{ 'now'|date('Y-m-d') }}" required>
+					</div>
+					<div class="col-md-4">
+						<label class="form-label" for="end">Leihende (exklusiv) *</label>
+						<input type="date" class="form-control" id="end" name="end" min="{{ 'tomorrow'|date('Y-m-d') }}" required>
+					</div>
+
+				</div>
+				<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+					<button type="button" id="clear-cart" class="btn btn-outline-secondary" disabled>Vormerkliste leeren</button>
+					<button type="submit" id="submit-booking" class="btn btn-success" disabled>Verbindlich reservieren</button>
+				</div>
+			</div>
+		</div>
+	</form>
+	<section class="mt-5" id="meine-reservierungen">
+		<h2 class="h4">Meine Reservierungen</h2>
+		<p class="text-muted">Hier erscheinen gespeicherte Reservierungen sofort – auch bevor die Ausrüstung ausgegeben wurde.</p>
+		{% for b in bookings %}
+			<div class="card mb-2">
+				<div class="card-body d-flex flex-wrap justify-content-between gap-2">
+					<div>
+						<strong>Buchung #{{ b.id }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }} 
+							<span class="badge {{ b.status == 'reserved' ? 'bg-primary' : (b.status == 'cancelled' ? 'bg-secondary' : 'bg-success') }}">
+								{{ {'reserved':'Reserviert – Ausgabe ausstehend','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurückgegeben','returned':'Zurückgegeben','cancelled':'Storniert'}[b.status] ?? b.status }}
+							</span>
+						<ul class="small mb-0 mt-2">
+							{% for line in b.items %}
+								<li>{{ line.assetLabel }} 
+									<span class="text-muted">(Inventar: {{ line.assetInventory }})</span>
+									{% if b.status == 'cancelled' %}
+										<span class="badge bg-secondary">Storniert</span>
+									{% elseif line.loanStatus == 'returned' %}
+										<span class="badge bg-success">Zurückgegeben</span>
+										{% if line.returnedAt %}<span class="text-muted">am {{ line.returnedAt|date('d.m.Y H:i') }}</span>{% endif %}
+										{% if line.returnCondition %}<span class="{{ line.returnCondition == 'ready' ? 'text-success' : 'text-danger' }}">{{ {'ready':'In Ordnung','maintenance':'Wartung erforderlich','damaged':'Beschädigt'}[line.returnCondition] ?? line.returnCondition }}</span>{% endif %}
+										{% if line.returnNotes %}<span class="text-muted">– {{ line.returnNotes }}</span>{% endif %}
+									{% elseif line.loanStatus == 'issued' %}
+										<span class="badge bg-info text-dark">Ausgegeben</span>
+										{% if line.issuedAt %}<span class="text-muted">am {{ line.issuedAt|date('d.m.Y H:i') }}</span>{% endif %}
+									{% else %}
+										<span class="badge bg-primary">Reserviert</span>
+									{% endif %}
+							</li>
+								{% else %}
+								<li>Keine Positionen gespeichert</li>
+							{% endfor %}
+						</ul>
+					</div>
+					{% if b.status == 'reserved' and b.startsAt > date() %}
+						<form method="post" action="{{ path('member_reservation_cancel',{id:b.id}) }}" onsubmit="return confirm('Buchung stornieren?')">
+							<input type="hidden" name="_token" value="{{ csrf_token('member_reservation_cancel_' ~ b.id) }}">
+							<button class="btn btn-outline-danger btn-sm">Stornieren</button>
+						</form>
+					{% endif %}
+				</div>
+			</div>
+		{% endfor %}
+		{% for b in legacy %}
+			<div class="card mb-2">
+				<div class="card-body">
+					<strong>{{ b.equipmentItem.name }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }} 
+					<span class="badge bg-secondary">{{ b.status }}</span>
+				</div>
+			</div>
+		{% endfor %}
+		{% if bookings is empty and legacy is empty %}
+			<p class="text-muted">Es wurden noch keine Reservierungen vorgenommen.</p>
+		{% endif %}
+	</section>
+</main>
+<script>
+	(function(){
+	'use strict';
+	const form=document.getElementById('reservation-form'),category=document.getElementById('category');
+	const rows=Array.from(document.querySelectorAll('tr[data-key]'));
+	const selected=new Map();
+	const euro=new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'});
+	const body=document.getElementById('cart-items'),fields=document.getElementById('cart-fields');
+	const count=document.getElementById('cart-count'),empty=document.getElementById('cart-empty');
+	const table=document.getElementById('cart-table'),total=document.getElementById('cart-total');
+	const note=document.getElementById('cart-note'),clear=document.getElementById('clear-cart');
+	const submit=document.getElementById('submit-booking');
+	const startInput=document.getElementById('start'),endInput=document.getElementById('end');
+	const dateSummary=document.getElementById('booking-dates');
+	function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return null;const [y,m,d]=v.split('-');return d+'.'+m+'.'+y;}
+	function updateDates(){const start=formatDate(startInput.value),end=formatDate(endInput.value);dateSummary.textContent=start&&end?'Von '+start+' bis '+end+' (Enddatum exklusiv)':'Bitte Leihbeginn und Leihende auswählen.';}
+	startInput.addEventListener('change',updateDates);endInput.addEventListener('change',updateDates);updateDates();
+	function render(){
+	 body.replaceChildren();fields.replaceChildren();
+	 let sum=0,unknown=false;
+	 selected.forEach((item,key)=>{
+	  const tr=document.createElement('tr');
+	  [item.number,item.label,item.fee===null?'auf Anfrage':euro.format(item.fee)].forEach(value=>{
+	   const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
+	  });
+	  const td=document.createElement('td'),remove=document.createElement('button');
+	  remove.type='button';remove.className='btn btn-sm btn-outline-danger';remove.textContent='Entfernen';
+	  remove.addEventListener('click',()=>{selected.delete(key);render();});
+	  td.appendChild(remove);tr.appendChild(td);body.appendChild(tr);
+	  const hidden=document.createElement('input');hidden.type='hidden';hidden.name='items[]';hidden.value=key;fields.appendChild(hidden);
+	  if(item.fee===null)unknown=true;else sum+=item.fee;
+	 });
+	 rows.forEach(row=>{
+	  const added=selected.has(row.dataset.key),btn=row.querySelector('.js-add');
+	  btn.disabled=added;btn.textContent=added?'Vorgemerkt ✓':'Vormerken';
+	 });
+	 count.textContent=String(selected.size);empty.hidden=selected.size>0;
+	 table.hidden=selected.size===0;total.hidden=selected.size===0;note.hidden=selected.size===0;
+	 document.getElementById('fee-total').textContent=euro.format(sum)+(unknown?' + Gebühren auf Anfrage':'');
+	 clear.disabled=selected.size===0;submit.disabled=selected.size===0;
+	}
+	rows.forEach(row=>row.querySelector('.js-add').addEventListener('click',()=>{
+	 if(selected.size>=30){alert('Es können höchstens 30 Gegenstände gemeinsam reserviert werden.');return;}
+	 const raw=row.dataset.fee.trim().replace(',','.');
+	 const fee=raw!==''&&Number.isFinite(Number(raw))?Number(raw):null;
+	 selected.set(row.dataset.key,{number:row.dataset.number,label:row.dataset.label,fee});
+	 render();
+	}));
+	category.addEventListener('change',()=>rows.forEach(row=>{row.hidden=category.value!=='all'&&row.dataset.category!==category.value;}));
+	const seen=new Set();Array.from(category.options).forEach(option=>{if(seen.has(option.value))option.remove();else seen.add(option.value);});
+	clear.addEventListener('click',()=>{selected.clear();render();});
+	form.addEventListener('submit',event=>{
+	 if(!selected.size){event.preventDefault();return;}
+	 const start=formatDate(startInput.value),end=formatDate(endInput.value);
+	 if(!start||!end){event.preventDefault();return;}
+	 const items=Array.from(selected.values()).map(x=>'• '+x.number+' – '+x.label).join('\n');
+	 if(!confirm('Verbindliche Reservierung\n\nZeitraum: '+start+' bis '+end+' (Enddatum exklusiv)\n\n'+items+'\n\nJetzt verbindlich reservieren?'))event.preventDefault();
+	});
+	render();
+	})();
+</script>
+{% endblock %}

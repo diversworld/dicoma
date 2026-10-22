@@ -1,0 +1,11 @@
+ID,Bereich,Komponente,Quelldatei,Zeilen,Beobachtung,Nachweisgrad,Bewertung
+EV-01,Kursanmeldung,FrontendCourseRegistrationService.php,src/Service/FrontendCourseRegistrationService.php,20-59,"Transaktion mit pessimistischem Lock, Frist, Vereinsprüfung und DB-Zählung aktiver Anmeldungen",Bestätigt,positiv
+EV-02,Kapazität,Courses.php,src/Entity/Courses.php,295-333,UI-/Entity-Zählung nutzt alle Teilnehmer inklusive CANCELLED; Service zählt CANCELLED nicht,Bestätigt,mittel
+EV-03,Wiederanmeldung,FrontendCourseRegistrationService.php,src/Service/FrontendCourseRegistrationService.php,38-40,Bereits vorhandene Anmeldung wird unabhängig vom Status abgewiesen; CANCELLED kann nicht erneut anmelden,Bestätigt,mittel
+EV-04,Dubletten,CourseParticipant.php,src/Entity/CourseParticipant.php,12-20,UniqueConstraint auf course_id/member_id,Bestätigt,positiv
+EV-05,Mandantentrennung,CourseRegistrationController.php,src/Controller/Frontend/CourseRegistrationController.php,"24-47,63-76",Listenfilter nach Verein im PHP-Code; Bestätigung per Member-Predicate,Bestätigt,positiv
+EV-06,CSRF,CourseRegistrationController.php,src/Controller/Frontend/CourseRegistrationController.php,80-89,POST und CSRF-Validierung vor Anmeldung,Bestätigt,positiv
+EV-07,Terminbuchung,BookingController.php,src/Controller/BookingController.php,126-190,"POST+CSRF, Mitglied/Kurs/Verein geprüft, Lock und Transaktion",Bestätigt,positiv
+EV-08,Terminbuchung,Booking.php,src/Entity/Booking.php,17-18,UniqueConstraint für schedule/member,Bestätigt,positiv
+EV-09,Veranstaltungen/Clubreisen,Quellcodeinventur,src/Entity/;src/Controller/;src/Service/,—,Keine eigenständigen Event/Trip/Shift-Klassen nach diesen Dateinamensmustern; keine Aussage zur fachlichen Vollständigkeit,"Indiz, nicht verifiziert",offen
+EV-10,Warteliste,Kursanmeldeservice,src/Service/FrontendCourseRegistrationService.php,51-54,Bei ausgebuchtem Kurs wird DomainException ausgelöst; in diesem Pfad keine Wartelisteneintragung,Bestätigt für diesen Pfad,offen

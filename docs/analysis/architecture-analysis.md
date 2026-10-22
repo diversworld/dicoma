@@ -1,0 +1,437 @@
+# DICOMA – Architektur-Bestandsaufnahme
+
+Quelle: `dicoma2110.zip`, statische Analyse; keine produktiven Dateien verändert.
+
+## Technologie
+PHP >=8.2, Symfony ^7.0, Doctrine ORM ^2.17, EasyAdmin ^4.8, Twig. Angaben aus composer.json sind Versionsanforderungen, keine Laufzeitmessung.
+
+## Umfang
+- 66 PHP-Entities, 122 PHP-Controller, 37 PHP-Services, 26 PHP-Repositories
+- 184 Twig-Templates, 117 PHP-Migrationen, 11 PHP-Testdateien
+- 216 attributbasierte Route-Deklarationen (einschließlich Klassenrouten, nicht zwingend endgültige Routenanzahl)
+
+## Symfony-Routing-Konfiguration
+```yaml
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+easyadmin:
+    resource: .
+    type: easyadmin.routes
+
+```
+
+## Controller-Inventar
+- `src/Controller/Admin/BookingCrudController.php`
+- `src/Controller/Admin/BrevetsCrudController.php`
+- `src/Controller/Admin/ClubCrudController.php`
+- `src/Controller/Admin/ClubTankCheckBookingSaveController.php`
+- `src/Controller/Admin/ClubTankInspectionController.php`
+- `src/Controller/Admin/CourseAuditController.php`
+- `src/Controller/Admin/CourseCalendarController.php`
+- `src/Controller/Admin/CourseCompletionWizardController.php`
+- `src/Controller/Admin/CourseParticipantCrudController.php`
+- `src/Controller/Admin/CoursePlanActionController.php`
+- `src/Controller/Admin/CourseStatusActionController.php`
+- `src/Controller/Admin/CourseTimetablePublicationController.php`
+- `src/Controller/Admin/CourseTrainingMatrixController.php`
+- `src/Controller/Admin/CoursesCrudController.php`
+- `src/Controller/Admin/DashboardController.php`
+- `src/Controller/Admin/EquipmentAttributeCrudController.php`
+- `src/Controller/Admin/EquipmentAttributeSchemaController.php`
+- `src/Controller/Admin/EquipmentBookingBasketTrait.php`
+- `src/Controller/Admin/EquipmentBookingCrudController.php`
+- `src/Controller/Admin/EquipmentBookingPositionController.php`
+- `src/Controller/Admin/EquipmentCategoryCrudController.php`
+- `src/Controller/Admin/EquipmentCenterController.php`
+- `src/Controller/Admin/EquipmentInventoryOptionsController.php`
+- `src/Controller/Admin/EquipmentItemCrudController.php`
+- `src/Controller/Admin/EquipmentLoanActionController.php`
+- `src/Controller/Admin/EquipmentManufacturerCrudController.php`
+- `src/Controller/Admin/EquipmentManufacturerOptionsController.php`
+- `src/Controller/Admin/EquipmentModelCrudController.php`
+- `src/Controller/Admin/EquipmentRegulatorDetailsCrudController.php`
+- `src/Controller/Admin/EquipmentReservationCrudController.php`
+- `src/Controller/Admin/EquipmentSizeCrudController.php`
+- `src/Controller/Admin/EquipmentSubTypeCrudController.php`
+- `src/Controller/Admin/InstructorTaskController.php`
+- `src/Controller/Admin/MemberCenterController.php`
+- `src/Controller/Admin/MemberCrudController.php`
+- `src/Controller/Admin/MemberQualificationCrudController.php`
+- `src/Controller/Admin/MemberSportCrudController.php`
+- `src/Controller/Admin/MemberTankCheckBookingCrudController.php`
+- `src/Controller/Admin/ParticipantPassActionController.php`
+- `src/Controller/Admin/QualificationCrudController.php`
+- `src/Controller/Admin/RegulatorCrudController.php`
+- `src/Controller/Admin/RegulatorModelCrudController.php`
+- `src/Controller/Admin/RegulatorModelOptionsController.php`
+- `src/Controller/Admin/ScheduleCrudController.php`
+- `src/Controller/Admin/ScheduleTemplateCrudController.php`
+- `src/Controller/Admin/SportCrudController.php`
+- `src/Controller/Admin/TankCheckArticleCrudController.php`
+- `src/Controller/Admin/TankCheckCrudController.php`
+- `src/Controller/Admin/TankCheckDetailCrudController.php`
+- `src/Controller/Admin/TankCrudController.php`
+- `src/Controller/Admin/TankStatusController.php`
+- `src/Controller/Admin/TeamCrudController.php`
+- `src/Controller/Admin/TeamMemberCrudController.php`
+- `src/Controller/Admin/TeamMemberSportCheckController.php`
+- `src/Controller/Admin/TrainingProgressController.php`
+- `src/Controller/Admin/TrainingUnitBatchController.php`
+- `src/Controller/Admin/TrainingUnitResultCrudController.php`
+- `src/Controller/Admin/TrainingUnitTypeCrudController.php`
+- `src/Controller/Admin/TuvBookingOverviewController.php`
+- `src/Controller/Admin/TuvBookingServicesController.php`
+- `src/Controller/Admin/TuvInspectionResultSaveController.php`
+- `src/Controller/Admin/TuvInvoiceController.php`
+- `src/Controller/Admin/TuvInvoiceSettingsController.php`
+- `src/Controller/Admin/TuvInvoiceSettingsOverviewController.php`
+- `src/Controller/Admin/TuvMemberOrderExportController.php`
+- `src/Controller/Admin/TuvMessageTemplateController.php`
+- `src/Controller/Admin/TuvNotificationCrudController.php`
+- `src/Controller/Admin/TuvNotificationSendNowController.php`
+- `src/Controller/Admin/TuvOperationsController.php`
+- `src/Controller/Admin/TuvPaymentIntakeController.php`
+- `src/Controller/Admin/TuvSupplierReconciliationController.php`
+- `src/Controller/Admin/UserCrudController.php`
+- `src/Controller/Admin/VendorCrudController.php`
+- `src/Controller/BookingController.php`
+- `src/Controller/BrevetsController.php`
+- `src/Controller/CheckController.php`
+- `src/Controller/CoursesController.php`
+- `src/Controller/EquipmentDashboardController.php`
+- `src/Controller/EquipmentInspectionController.php`
+- `src/Controller/EquipmentManagerCashClosingController.php`
+- `src/Controller/EquipmentManagerCashCorrectionController.php`
+- `src/Controller/EquipmentManagerCashPayoutController.php`
+- `src/Controller/EquipmentManagerCashbookController.php`
+- `src/Controller/EquipmentManagerCompressorEveningController.php`
+- `src/Controller/EquipmentManagerCompressorLogController.php`
+- `src/Controller/EquipmentManagerController.php`
+- `src/Controller/EquipmentManagerDailyCashReportController.php`
+- `src/Controller/EquipmentManagerLoanController.php`
+- `src/Controller/EquipmentManagerTuvClubRegistrationController.php`
+- `src/Controller/EquipmentManagerTuvController.php`
+- `src/Controller/EquipmentManagerTuvWorkflowController.php`
+- `src/Controller/EquipmentManagerWalkInLoanController.php`
+- `src/Controller/FileController.php`
+- `src/Controller/Frontend/CourseRegistrationController.php`
+- `src/Controller/Frontend/CourseTimetableController.php`
+- `src/Controller/Frontend/StudentAttendanceController.php`
+- `src/Controller/HealthController.php`
+- `src/Controller/HomeController.php`
+- `src/Controller/InstallController.php`
+- `src/Controller/InstructorController.php`
+- `src/Controller/InstructorPortalController.php`
+- `src/Controller/MemberController.php`
+- `src/Controller/MemberEquipmentController.php`
+- `src/Controller/MemberEquipmentReservationController.php`
+- `src/Controller/MemberPortalController.php`
+- `src/Controller/MemberTankCheckBookingController.php`
+- `src/Controller/MemberTankCheckBookingDetailController.php`
+- `src/Controller/MemberTuvFilesController.php`
+- `src/Controller/MemberTuvMultiBookingController.php`
+- `src/Controller/ProfileController.php`
+- `src/Controller/RegistrationController.php`
+- `src/Controller/ResetPasswordController.php`
+- `src/Controller/ScheduleController.php`
+- `src/Controller/SecurityController.php`
+- `src/Controller/SettingsController.php`
+- `src/Controller/StudentController.php`
+- `src/Controller/StudentDashboardController.php`
+- `src/Controller/TankCheckArticleController.php`
+- `src/Controller/TankCheckController.php`
+- `src/Controller/TankCheckDetailController.php`
+- `src/Controller/TankController.php`
+- `src/Controller/VendorController.php`
+
+## Service-Inventar
+- `src/Service/BookingNumberGenerator.php`
+- `src/Service/CourseAuditLogger.php`
+- `src/Service/CourseCompletionService.php`
+- `src/Service/CourseScheduleGenerator.php`
+- `src/Service/CourseTemplateExportService.php`
+- `src/Service/CourseTimetableService.php`
+- `src/Service/CourseTrainingPlanService.php`
+- `src/Service/EquipmentAssetAvailability.php`
+- `src/Service/EquipmentBookingLoanService.php`
+- `src/Service/EquipmentBookingPositionService.php`
+- `src/Service/EquipmentBookingService.php`
+- `src/Service/EquipmentCashGuard.php`
+- `src/Service/EquipmentLoanService.php`
+- `src/Service/EquipmentRentalEligibility.php`
+- `src/Service/EquipmentReservationService.php`
+- `src/Service/FrontendCourseRegistrationService.php`
+- `src/Service/InstructorTaskService.php`
+- `src/Service/MakeupBookingService.php`
+- `src/Service/PrivateMemberDocumentStorage.php`
+- `src/Service/ScheduleConflictService.php`
+- `src/Service/ScheduleParticipantSyncService.php`
+- `src/Service/TankCheckService.php`
+- `src/Service/TankConditionHistoryRecorder.php`
+- `src/Service/TankInspectionDueStatus.php`
+- `src/Service/TankInspectionOverview.php`
+- `src/Service/TankInspectionService.php`
+- `src/Service/TankMaintenanceService.php`
+- `src/Service/TankStatusWorkflow.php`
+- `src/Service/TrainingAssessmentService.php`
+- `src/Service/TrainingProgressService.php`
+- `src/Service/TuvArticleSelector.php`
+- `src/Service/TuvDocumentStorage.php`
+- `src/Service/TuvMessageRenderer.php`
+- `src/Service/TuvNextInspectionDateCalculator.php`
+- `src/Service/TuvNotificationSender.php`
+- `src/Service/TuvPriceCalculator.php`
+- `src/Service/TuvXlsxExporter.php`
+
+## Repository-Inventar
+- `src/Repository/BookingRepository.php`
+- `src/Repository/BrevetsRepository.php`
+- `src/Repository/ClubRepository.php`
+- `src/Repository/CourseParticipantRepository.php`
+- `src/Repository/CourseTrainingUnitRepository.php`
+- `src/Repository/CoursesRepository.php`
+- `src/Repository/MemberQualificationRepository.php`
+- `src/Repository/MemberRepository.php`
+- `src/Repository/MemberSportRepository.php`
+- `src/Repository/QualificationRepository.php`
+- `src/Repository/QualificationTrainingUnitRepository.php`
+- `src/Repository/ResetPasswordRequestRepository.php`
+- `src/Repository/ScheduleRepository.php`
+- `src/Repository/ScheduleTemplateEntryRepository.php`
+- `src/Repository/ScheduleTemplateRepository.php`
+- `src/Repository/SportRepository.php`
+- `src/Repository/TankCheckArticleRepository.php`
+- `src/Repository/TankCheckDetailRepository.php`
+- `src/Repository/TankCheckRepository.php`
+- `src/Repository/TankRepository.php`
+- `src/Repository/TeamMemberRepository.php`
+- `src/Repository/TeamRepository.php`
+- `src/Repository/TrainingUnitResultRepository.php`
+- `src/Repository/TrainingUnitTypeRepository.php`
+- `src/Repository/UserRepository.php`
+- `src/Repository/VendorRepository.php`
+
+## Attribut-Routen-Inventar
+- `src/Controller/Admin/ClubTankCheckBookingSaveController.php`: `'/admin/tuv/club-bookings/save', name: 'admin_tuv_club_booking_save', methods: ['POST']`
+- `src/Controller/Admin/ClubTankInspectionController.php`: `'/admin/tuv/club-tank/{id}', name: 'admin_tuv_club_tank_inspection', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/CourseAuditController.php`: `'/admin/course/{id}/history', name: 'admin_course_history', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/Admin/CourseCalendarController.php`: `'/admin/course-calendar/duplicate/{id}', name: 'admin_course_calendar_duplicate', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/Admin/CourseCalendarController.php`: `'/admin/course-calendar', name: 'admin_course_calendar', methods: ['GET']`
+- `src/Controller/Admin/CourseCompletionWizardController.php`: `'/admin/course/{id}/completion-wizard', name: 'admin_course_completion_wizard', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/CourseCompletionWizardController.php`: `'/admin/course/{id}/completion-wizard/{participantId}', name: 'admin_course_completion_wizard_decide', requirements: ['id' => '\\d+', 'participantId' => '\\d+'], methods: ['POST']`
+- `src/Controller/Admin/CoursePlanActionController.php`: `'/admin/course/{id}/import-training-plan', name: 'admin_course_import_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/CoursePlanActionController.php`: `'/admin/course/{id}/generate-schedules', name: 'admin_course_generate_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/CourseStatusActionController.php`: `'/admin/course/{id}/complete', name: 'admin_course_complete_confirm', requirements: ['id' => '\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/CourseStatusActionController.php`: `'/admin/course/{id}/reopen', name: 'admin_course_reopen_confirm', requirements: ['id' => '\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/CourseTimetablePublicationController.php`: `'/admin/training/timetable/{id}', name:'admin_training_timetable', requirements:['id'=>'\d+'], methods:['GET']`
+- `src/Controller/Admin/CourseTimetablePublicationController.php`: `'/admin/training/timetable/{id}/publish', name:'admin_training_timetable_publish', requirements:['id'=>'\d+'], methods:['POST']`
+- `src/Controller/Admin/CourseTimetablePublicationController.php`: `'/admin/training/timetable/{id}/send', name:'admin_training_timetable_send', requirements:['id'=>'\d+'], methods:['POST']`
+- `src/Controller/Admin/CourseTrainingMatrixController.php`: `'/admin/course-training-matrix/{id}', name: 'admin_course_training_matrix', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/Admin/CoursesCrudController.php`: ` '/admin/course/{id}/plan', name: 'admin_course_plan', requirements: ['id' => '\d+'], methods: ['GET', 'POST'] `
+- `src/Controller/Admin/EquipmentAttributeSchemaController.php`: `'/admin/equipment-attribute-schema', name: 'admin_equipment_attribute_schema', methods: ['GET']`
+- `src/Controller/Admin/EquipmentBookingPositionController.php`: `'/admin/equipment-booking/add-position', name: 'admin_equipment_booking_add_position', methods: ['POST']`
+- `src/Controller/Admin/EquipmentCenterController.php`: `'/admin/equipment-center', name: 'admin_equipment_center', methods: ['GET']`
+- `src/Controller/Admin/EquipmentInventoryOptionsController.php`: `'/admin/equipment/inventory-options', name: 'admin_equipment_inventory_options', methods: ['GET']`
+- `src/Controller/Admin/EquipmentLoanActionController.php`: `'/admin/equipment-loan/{id}/{action}', name: 'admin_equipment_loan_action', requirements: ['id' => '\\d+', 'action' => 'issue|return|cancel'], methods: ['POST']`
+- `src/Controller/Admin/EquipmentManufacturerOptionsController.php`: `'/admin/api/equipment-manufacturers', name: 'admin_equipment_manufacturer_options', methods: ['GET']`
+- `src/Controller/Admin/InstructorTaskController.php`: `'/admin/instructor/tasks', name: 'admin_instructor_tasks', methods: ['GET']`
+- `src/Controller/Admin/InstructorTaskController.php`: `'/my-training/tasks', name: 'instructor_my_tasks', methods: ['GET']`
+- `src/Controller/Admin/MemberCenterController.php`: `'/admin/member/{id}/center', name: 'admin_member_center', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/MemberCenterController.php`: `'/admin/member/{id}/document/{documentId}/download', name: 'admin_member_document_download', requirements: ['id' => '\\d+', 'documentId' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/ParticipantPassActionController.php`: `'/admin/course-participant/{id}/pass', name: 'admin_participant_pass_confirm', requirements: ['id' => '\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/RegulatorModelOptionsController.php`: `'/admin/api/regulator-model-options', name: 'admin_regulator_model_options', methods: ['GET']`
+- `src/Controller/Admin/ScheduleCrudController.php`: `'/admin/schedule/{id}/attendance', name: 'admin_schedule_attendance', requirements: ['id' => '\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/ScheduleCrudController.php`: `'/admin/schedule/{id}/sync-participants', name: 'admin_schedule_sync_participants', requirements: ['id' => '\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/TankStatusController.php`: `'/admin/{_locale}/tank-status/{id}', name: 'admin_tank_status', requirements: ['id' => '\\d+', '_locale' => 'de|en|fr|es'], defaults: ['_locale' => 'de'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/TeamMemberSportCheckController.php`: `'/admin/team-member/sport-check', name: 'admin_team_member_sport_check', methods: ['GET']`
+- `src/Controller/Admin/TrainingProgressController.php`: `'/admin/training-progress/{id}', name: 'admin_training_progress', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/TrainingUnitBatchController.php`: `'/admin/training-results/batch/{id}', name: 'admin_training_results_batch', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/TrainingUnitBatchController.php`: `'/my-training/assess/{id}', name: 'instructor_training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/TrainingUnitResultCrudController.php`: `'/admin/training-unit-result/schedules', name: 'admin_training_result_schedules', methods: ['GET']`
+- `src/Controller/Admin/TuvBookingOverviewController.php`: `'/admin/tuv/bookings/{id}/status', name: 'admin_tuv_booking_status', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/Admin/TuvBookingOverviewController.php`: `'/admin/tuv/bookings', name: 'admin_tuv_booking_overview', methods: ['GET']`
+- `src/Controller/Admin/TuvBookingServicesController.php`: `'/admin/tuv/booking/{id}/services', name: 'admin_tuv_booking_services', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/TuvInspectionResultSaveController.php`: `'/admin/tuv/inspection-result/{id}/save', name: 'admin_tuv_inspection_result_save', requirements: ['id' => '\\d+'], methods: ['POST']`
+- `src/Controller/Admin/TuvInvoiceController.php`: `'/admin/tuv/invoice/issue/{id}',name:'admin_tuv_invoice_issue',requirements:['id'=>'\d+'],methods:['POST']`
+- `src/Controller/Admin/TuvInvoiceSettingsController.php`: `'/admin/tuv/invoice/settings/{id}', name: 'admin_tuv_invoice_settings', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/Admin/TuvInvoiceSettingsOverviewController.php`: `'/admin/tuv/invoice/settings', name: 'admin_tuv_invoice_settings_overview', methods: ['GET']`
+- `src/Controller/Admin/TuvMemberOrderExportController.php`: `'/admin/tuv/check/{id}/member-orders.csv', name: 'admin_tuv_member_orders_csv', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/TuvMessageTemplateController.php`: `'/admin/tuv/message-templates', name: 'admin_tuv_message_templates', methods: ['GET']`
+- `src/Controller/Admin/TuvNotificationSendNowController.php`: `'/admin/tuv-notification/{id}/send-now', name: 'admin_tuv_notification_send_now', methods: ['POST'], requirements: ['id' => '\\d+']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}',name:'admin_tuv_operations',methods:['GET']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}/handover/print',name:'admin_tuv_handover_print',methods:['GET']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}/handover',name:'admin_tuv_handover_save',methods:['POST']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}/document',name:'admin_tuv_document_upload',methods:['POST']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/document/{id}',name:'admin_tuv_document_download',methods:['GET']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}/group',name:'admin_tuv_group_save',methods:['POST']`
+- `src/Controller/Admin/TuvOperationsController.php`: `'/admin/tuv/operations/{id}/notify',name:'admin_tuv_notification_queue',methods:['POST']`
+- `src/Controller/Admin/TuvPaymentIntakeController.php`: `'/admin/tuv/check/{id}/payment-intake', name: 'admin_tuv_payment_intake', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/Admin/TuvPaymentIntakeController.php`: `'/admin/tuv/booking/{id}/collect-payment', name: 'admin_tuv_collect_payment', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/Admin/TuvSupplierReconciliationController.php`: `'/admin/tuv/check/{id}/supplier-reconciliation.csv', name: 'admin_tuv_supplier_reconciliation_csv', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Admin/TuvSupplierReconciliationController.php`: `'/admin/tuv/check/{id}/supplier-reconciliation', name: 'admin_tuv_supplier_reconciliation', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/BookingController.php`: `'/booking'`
+- `src/Controller/BookingController.php`: `'/', name: 'app_booking_index', methods: ['GET']`
+- `src/Controller/BookingController.php`: `'/new', name: 'app_booking_new', methods: ['GET', 'POST']`
+- `src/Controller/BookingController.php`: `'/book/{id}/{user}', name: 'app_booking_book_legacy', methods: ['GET']`
+- `src/Controller/BookingController.php`: `'/book/{id}', name: 'app_booking_book', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/BookingController.php`: `'/{id}', name: 'app_booking_show', methods: ['GET']`
+- `src/Controller/BookingController.php`: `'/{id}/edit', name: 'app_booking_edit', methods: ['GET', 'POST']`
+- `src/Controller/BookingController.php`: `'/{id}', name: 'app_booking_delete', methods: ['POST']`
+- `src/Controller/BrevetsController.php`: `'/brevets'`
+- `src/Controller/BrevetsController.php`: `'/', name: 'app_brevets_index', methods: ['GET']`
+- `src/Controller/BrevetsController.php`: `'/new', name: 'app_brevets_new', methods: ['GET', 'POST']`
+- `src/Controller/BrevetsController.php`: `'/{id}', name: 'app_brevets_show', methods: ['GET']`
+- `src/Controller/BrevetsController.php`: `'/{id}/edit', name: 'app_brevets_edit', methods: ['GET', 'POST']`
+- `src/Controller/BrevetsController.php`: `'/{id}', name: 'app_brevets_delete', methods: ['POST']`
+- `src/Controller/CheckController.php`: `'/check/book', name: 'book_check'`
+- `src/Controller/CoursesController.php`: `'/courses'`
+- `src/Controller/CoursesController.php`: `'/', name: 'app_courses_index', methods: ['GET']`
+- `src/Controller/CoursesController.php`: `'/new', name: 'app_courses_new', methods: ['GET', 'POST']`
+- `src/Controller/CoursesController.php`: `'/upload', name: 'upload', methods: ['POST']`
+- `src/Controller/CoursesController.php`: `'/{id}', name: 'app_courses_show', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/CoursesController.php`: `'/{id}/edit', name: 'app_courses_edit', methods: ['GET', 'POST']`
+- `src/Controller/CoursesController.php`: `'/{id}', name: 'app_courses_delete', methods: ['POST']`
+- `src/Controller/CoursesController.php`: `'/image/delete', name: 'delete_image', methods: ['DELETE']`
+- `src/Controller/EquipmentDashboardController.php`: `'/equipment-manager', name: 'equipment_manager_dashboard', methods: ['GET']`
+- `src/Controller/EquipmentInspectionController.php`: `'/equipment-manager/tanks/{id}/inspection', name: 'equipment_manager_tank_inspection', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/EquipmentInspectionController.php`: `'/equipment-manager/tanks/{id}/inspection', name: 'equipment_manager_tank_inspection_submit', requirements: ['id' => '\\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerCashClosingController.php`: `'/equipment-manager/cashbook/closing', name:'equipment_manager_cash_closing', methods:['GET','POST']`
+- `src/Controller/EquipmentManagerCashCorrectionController.php`: `'/equipment-manager/cashbook/corrections', name: 'equipment_manager_cash_corrections', methods: ['GET','POST']`
+- `src/Controller/EquipmentManagerCashPayoutController.php`: `'/equipment-manager/cashbook/payouts', name: 'equipment_manager_cash_payouts', methods: ['GET']`
+- `src/Controller/EquipmentManagerCashPayoutController.php`: `'/equipment-manager/cashbook/payouts', name: 'equipment_manager_cash_payout_create', methods: ['POST']`
+- `src/Controller/EquipmentManagerCashbookController.php`: `'/equipment-manager/cashbook', name: 'equipment_manager_cashbook', methods: ['GET']`
+- `src/Controller/EquipmentManagerCashbookController.php`: `'/equipment-manager/loans/{id}/collect-fee', name: 'equipment_manager_collect_rental_fee', requirements: ['id'=>'\\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerCashbookController.php`: `'/equipment-manager/tuv/booking/{id}/collect-payment', name: 'equipment_manager_tuv_collect_payment', requirements: ['id'=>'\\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerCompressorEveningController.php`: `'/equipment-manager/compressor-evenings',name:'equipment_manager_compressor_evenings',methods:['GET','POST']`
+- `src/Controller/EquipmentManagerCompressorEveningController.php`: `'/equipment-manager/compressor-evenings/export.csv',name:'equipment_manager_compressor_evenings_csv',methods:['GET']`
+- `src/Controller/EquipmentManagerCompressorLogController.php`: `'/equipment-manager/compressor-log', name:'equipment_manager_compressor_log', methods:['GET','POST']`
+- `src/Controller/EquipmentManagerCompressorLogController.php`: `'/equipment-manager/compressor-log/export.csv', name:'equipment_manager_compressor_log_csv', methods:['GET']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks/{id}', name: 'equipment_manager_tank_detail', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks/{id}/maintenance', name: 'equipment_manager_maintenance', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks/{id}/maintenance', name: 'equipment_manager_maintenance_submit', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks/{id}/block', name: 'equipment_manager_tank_block', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks/{id}/release', name: 'equipment_manager_tank_release', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/EquipmentManagerController.php`: `'/equipment-manager/tanks', name: 'equipment_manager_tanks', methods: ['GET']`
+- `src/Controller/EquipmentManagerDailyCashReportController.php`: `'/equipment-manager/cashbook/day', name: 'equipment_manager_cashbook_day', methods: ['GET']`
+- `src/Controller/EquipmentManagerDailyCashReportController.php`: `'/equipment-manager/cashbook/day.csv', name: 'equipment_manager_cashbook_day_csv', methods: ['GET']`
+- `src/Controller/EquipmentManagerLoanController.php`: `'/equipment-manager/loans', name: 'equipment_manager_loans', methods: ['GET']`
+- `src/Controller/EquipmentManagerLoanController.php`: `'/equipment-manager/loans/{bookingId}/cancel', name: 'equipment_manager_loan_cancel', methods: ['POST'], requirements: ['bookingId' => '\d+']`
+- `src/Controller/EquipmentManagerLoanController.php`: `'/equipment-manager/loans/{bookingId}/issue-all', name: 'equipment_manager_loan_issue_all', methods: ['POST'], requirements: ['bookingId' => '\\d+']`
+- `src/Controller/EquipmentManagerLoanController.php`: `'/equipment-manager/loans/{bookingId}/items/{lineId}/{operation}', name: 'equipment_manager_loan_action', methods: ['POST'], requirements: ['bookingId' => '\d+', 'lineId' => '\d+', 'operation' => 'issue|return']`
+- `src/Controller/EquipmentManagerTuvClubRegistrationController.php`: `'/equipment-manager/tuv/{id}/club-tanks', name: 'equipment_manager_tuv_club_register', methods: ['GET', 'POST'], requirements: ['id' => '\\d+']`
+- `src/Controller/EquipmentManagerTuvController.php`: `'/equipment-manager/tuv', name: 'equipment_manager_tuv', methods: ['GET']`
+- `src/Controller/EquipmentManagerTuvController.php`: `'/equipment-manager/tuv/booking/{id}/advance', name: 'equipment_manager_tuv_advance', methods: ['POST'], requirements: ['id' => '\d+']`
+- `src/Controller/EquipmentManagerTuvWorkflowController.php`: `'/equipment-manager/tuv/plan', name: 'equipment_manager_tuv_plan', methods: ['GET', 'POST']`
+- `src/Controller/EquipmentManagerTuvWorkflowController.php`: `'/equipment-manager/tuv/booking/{id}/result', name: 'equipment_manager_tuv_result', methods: ['GET', 'POST'], requirements: ['id' => '\d+']`
+- `src/Controller/EquipmentManagerWalkInLoanController.php`: `'/equipment-manager/loans/direct', name: 'equipment_manager_loans_direct', methods: ['GET','POST']`
+- `src/Controller/FileController.php`: `'/files'`
+- `src/Controller/FileController.php`: `'/', name: 'app_files_index'`
+- `src/Controller/FileController.php`: `'/list', name: 'app_files_list'`
+- `src/Controller/FileController.php`: `'/choose', name: 'app_files_choose', methods: ['POST'] `
+- `src/Controller/FileController.php`: `'/upload', name: 'app_file_upload', methods: ['POST'] `
+- `src/Controller/Frontend/CourseRegistrationController.php`: `'/my-training/courses', name: 'frontend_course_registration_index', methods: ['GET']`
+- `src/Controller/Frontend/CourseRegistrationController.php`: `'/my-training/courses/registrations', name: 'frontend_course_registrations', methods: ['GET']`
+- `src/Controller/Frontend/CourseRegistrationController.php`: `'/my-training/courses/confirmation/{id}', name: 'frontend_course_registration_confirmation', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/Frontend/CourseRegistrationController.php`: `'/my-training/courses/{id}/register', name: 'frontend_course_register', requirements: ['id' => '\\d+'], methods: ['POST']`
+- `src/Controller/Frontend/CourseTimetableController.php`: `'/my-training/registrations/{id}/timetable', name: 'student_course_timetable', requirements: ['id'=>'\d+'], methods: ['GET']`
+- `src/Controller/Frontend/CourseTimetableController.php`: `'/my-training/registrations/{id}/timetable.csv', name: 'student_course_timetable_csv', requirements: ['id'=>'\d+'], methods: ['GET']`
+- `src/Controller/Frontend/StudentAttendanceController.php`: `'/my-training/attendance', name: 'app_my_training_attendance', methods: ['GET']`
+- `src/Controller/HealthController.php`: `'/health', name: 'app_health', methods: ['GET']`
+- `src/Controller/HomeController.php`: `'/', name: 'app_home'`
+- `src/Controller/InstallController.php`: `'/install', name: 'app_install', methods: ['GET', 'POST']`
+- `src/Controller/InstallController.php`: `'/save_db_config', name: 'save_db_config', methods: ['GET', 'POST']`
+- `src/Controller/InstructorController.php`: `'/instructor'`
+- `src/Controller/InstructorController.php`: `'/', name: 'app_instructor_index', methods: ['GET']`
+- `src/Controller/InstructorController.php`: `'/new', name: 'app_instructor_new', methods: ['GET', 'POST']`
+- `src/Controller/InstructorController.php`: `'/{id}', name: 'app_instructor_show', methods: ['GET']`
+- `src/Controller/InstructorController.php`: `'/{id}/edit', name: 'app_instructor_edit', methods: ['GET', 'POST']`
+- `src/Controller/InstructorController.php`: `'/{id}', name: 'app_instructor_delete', methods: ['POST']`
+- `src/Controller/InstructorPortalController.php`: `'/instructor-portal', name: 'instructor_portal_dashboard', methods: ['GET']`
+- `src/Controller/InstructorPortalController.php`: `'/instructor-portal/tasks', name: 'instructor_portal_tasks', methods: ['GET']`
+- `src/Controller/MemberController.php`: `'/member'`
+- `src/Controller/MemberController.php`: `'/', name: 'app_member_index', methods: ['GET']`
+- `src/Controller/MemberController.php`: `'/new', name: 'app_member_new', methods: ['GET', 'POST']`
+- `src/Controller/MemberController.php`: `'/{id}', name: 'app_member_show', methods: ['GET']`
+- `src/Controller/MemberController.php`: `'/{id}/edit', name: 'app_member_edit', methods: ['GET', 'POST']`
+- `src/Controller/MemberController.php`: `'/{id}', name: 'app_member_delete', methods: ['POST']`
+- `src/Controller/MemberEquipmentController.php`: `'/my/equipment', name: 'member_equipment_index', methods: ['GET']`
+- `src/Controller/MemberEquipmentController.php`: `'/my/equipment/tanks', name: 'member_equipment_tank_create', methods: ['POST']`
+- `src/Controller/MemberEquipmentController.php`: `'/my/equipment/tanks/{id}/edit', name: 'member_equipment_tank_edit', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/MemberEquipmentController.php`: `'/my/equipment/tanks/{id}/edit', name: 'member_equipment_tank_update', requirements: ['id' => '\\d+'], methods: ['POST']`
+- `src/Controller/MemberEquipmentReservationController.php`: `'/my/reservations', name: 'member_reservations', methods: ['GET','POST']`
+- `src/Controller/MemberEquipmentReservationController.php`: `'/my/reservations/{id}/cancel', name: 'member_reservation_cancel', methods: ['POST'], requirements: ['id'=>'\d+']`
+- `src/Controller/MemberPortalController.php`: `'/my', name: 'member_portal_dashboard', methods: ['GET']`
+- `src/Controller/MemberTankCheckBookingController.php`: `'/my/equipment/checks/{id}/tanks/{tankId}/services', name: 'member_tuv_services', requirements: ['id' => '\d+', 'tankId' => '\d+'], methods: ['GET']`
+- `src/Controller/MemberTankCheckBookingController.php`: `'/my/equipment/checks/{id}/book', name: 'member_tank_check_book', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/MemberTankCheckBookingController.php`: `'/my/equipment/bookings/{id}/cancel', name: 'member_tank_check_cancel', requirements: ['id' => '\d+'], methods: ['POST']`
+- `src/Controller/MemberTankCheckBookingDetailController.php`: `'/my/equipment/bookings/{id}', name: 'member_tank_check_booking_detail', requirements: ['id' => '\d+'], methods: ['GET']`
+- `src/Controller/MemberTuvFilesController.php`: `'/my/equipment/tuv/document/{id}',name:'member_tuv_document_download',requirements:['id'=>'\d+'],methods:['GET']`
+- `src/Controller/MemberTuvFilesController.php`: `'/my/equipment/tuv/invoice/{id}',name:'member_tuv_invoice',requirements:['id'=>'\d+'],methods:['GET']`
+- `src/Controller/MemberTuvMultiBookingController.php`: `'/my/equipment/checks/{id}/multiple', name: 'member_tuv_multiple', requirements: ['id' => '\\d+'], methods: ['GET', 'POST']`
+- `src/Controller/ProfileController.php`: `'/profile', name: 'app_profile', methods: ['GET']`
+- `src/Controller/ProfileController.php`: `'/profile/documents', name: 'app_profile_document_upload', methods: ['POST']`
+- `src/Controller/ProfileController.php`: `'/profile/documents/{id}/download', name: 'app_profile_document_download', requirements: ['id' => '\\d+'], methods: ['GET']`
+- `src/Controller/ProfileController.php`: `'/profile/documents/{id}/delete', name: 'app_profile_document_delete', requirements: ['id' => '\\d+'], methods: ['POST']`
+- `src/Controller/RegistrationController.php`: `'/register', name: 'app_register'`
+- `src/Controller/RegistrationController.php`: `'/register/install/{adminUser}', name: 'app_register_install', methods: ['GET', 'POST']`
+- `src/Controller/RegistrationController.php`: `'/verify/email', name: 'app_verify_email'`
+- `src/Controller/ResetPasswordController.php`: `'/reset-password'`
+- `src/Controller/ResetPasswordController.php`: `'', name: 'app_forgot_password_request'`
+- `src/Controller/ResetPasswordController.php`: `'/check-email', name: 'app_check_email'`
+- `src/Controller/ResetPasswordController.php`: `'/reset/{token}', name: 'app_reset_password'`
+- `src/Controller/ScheduleController.php`: `'/schedule'`
+- `src/Controller/ScheduleController.php`: `'/', name: 'app_schedule_index', methods: ['GET']`
+- `src/Controller/ScheduleController.php`: `'/calendar/{month?}', name: 'app_schedule_calendar', methods: ['GET']`
+- `src/Controller/ScheduleController.php`: `'/new', name: 'app_schedule_new', methods: ['GET', 'POST']`
+- `src/Controller/ScheduleController.php`: `'/{id}', name: 'app_schedule_show', methods: ['GET']`
+- `src/Controller/ScheduleController.php`: `'/{id}/edit', name: 'app_schedule_edit', methods: ['GET', 'POST']`
+- `src/Controller/ScheduleController.php`: `'/{id}', name: 'app_schedule_delete', methods: ['POST']`
+- `src/Controller/SecurityController.php`: `path: '/login', name: 'app_login'`
+- `src/Controller/SecurityController.php`: `path: '/logout', name: 'app_logout', methods: ['POST']`
+- `src/Controller/SettingsController.php`: `'/settings', name: 'app_settings'`
+- `src/Controller/StudentController.php`: `'/student'`
+- `src/Controller/StudentController.php`: `'/', name: 'app_student_index', methods: ['GET']`
+- `src/Controller/StudentController.php`: `'/new', name: 'app_student_new', methods: ['GET', 'POST']`
+- `src/Controller/StudentController.php`: `'/{id}', name: 'app_student_show', methods: ['GET']`
+- `src/Controller/StudentController.php`: `'/{id}/edit', name: 'app_student_edit', methods: ['GET', 'POST']`
+- `src/Controller/StudentController.php`: `'/{id}', name: 'app_student_delete', methods: ['POST']`
+- `src/Controller/StudentDashboardController.php`: `'/my-training/progress', name: 'app_my_training_progress', methods: ['GET']`
+- `src/Controller/TankCheckArticleController.php`: `'/tank/check/article'`
+- `src/Controller/TankCheckArticleController.php`: `'/', name: 'app_tank_check_article_index', methods: ['GET']`
+- `src/Controller/TankCheckArticleController.php`: `'/new/{tank_check_id}', name: 'app_tank_check_article_new', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckArticleController.php`: `'/{id}', name: 'app_tank_check_article_show', methods: ['GET']`
+- `src/Controller/TankCheckArticleController.php`: `'/{id}/edit', name: 'app_tank_check_article_edit', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckArticleController.php`: `'/{id}', name: 'app_tank_check_article_delete', methods: ['POST']`
+- `src/Controller/TankCheckController.php`: `'/tankcheck'`
+- `src/Controller/TankCheckController.php`: `'/', name: 'app_tank_check_index', methods: ['GET']`
+- `src/Controller/TankCheckController.php`: `'/book-inspection/{tankId}', name: 'app_book_inspection', methods: ['GET']`
+- `src/Controller/TankCheckController.php`: `'/new', name: 'app_tank_check_new', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckController.php`: `'/{id}', name: 'app_tank_check_show', methods: ['GET']`
+- `src/Controller/TankCheckController.php`: `'/{id}/edit', name: 'app_tank_check_edit', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckController.php`: `'/{id}', name: 'app_tank_check_delete', methods: ['POST']`
+- `src/Controller/TankCheckDetailController.php`: `'/tank/check/detail'`
+- `src/Controller/TankCheckDetailController.php`: `'/{id}', name: 'app_tank_check_detail_index', methods: ['GET']`
+- `src/Controller/TankCheckDetailController.php`: `'/new', name: 'app_tank_check_detail_new', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckDetailController.php`: `'/{id}', name: 'app_tank_check_detail_show', methods: ['GET']`
+- `src/Controller/TankCheckDetailController.php`: `'/{id}/edit', name: 'app_tank_check_detail_edit', methods: ['GET', 'POST']`
+- `src/Controller/TankCheckDetailController.php`: `'/{id}', name: 'app_tank_check_detail_delete', methods: ['POST']`
+- `src/Controller/TankController.php`: `'/tank'`
+- `src/Controller/TankController.php`: `'/', name: 'app_tank_index', methods: ['GET']`
+- `src/Controller/TankController.php`: `'/new', name: 'app_tank_new', methods: ['GET', 'POST']`
+- `src/Controller/TankController.php`: `'/{id}', name: 'app_tank_show', methods: ['GET']`
+- `src/Controller/TankController.php`: `'/{id}/edit', name: 'app_tank_edit', methods: ['GET', 'POST']`
+- `src/Controller/TankController.php`: `'/{id}', name: 'app_tank_delete', methods: ['POST']`
+- `src/Controller/TankController.php`: `'/book-inspection/{tankId}/{checkId}', name: 'app_book_inspection', methods: ['GET']`
+- `src/Controller/VendorController.php`: `'/vendor'`
+- `src/Controller/VendorController.php`: `'/', name: 'app_vendor_index', methods: ['GET']`
+- `src/Controller/VendorController.php`: `'/new', name: 'app_vendor_new', methods: ['GET', 'POST']`
+- `src/Controller/VendorController.php`: `'/{id}', name: 'app_vendor_show', methods: ['GET']`
+- `src/Controller/VendorController.php`: `'/{id}/edit', name: 'app_vendor_edit', methods: ['GET', 'POST']`
+- `src/Controller/VendorController.php`: `'/{id}', name: 'app_vendor_delete', methods: ['POST']`
+
+## Befund
+Vorhandene Module dürfen nicht aus Dateinamen als vollständig abgenommen gelten. Dynamische Routenauflösung und Laufzeittests stehen aus.

@@ -1,0 +1,12 @@
+# Test-Inventar
+- `tests/Command/AppReadinessCommandTest.php`
+- `tests/Integration/TeamMemberPersistenceTest.php`
+- `tests/Membership/ClubMembershipTest.php`
+- `tests/Unit/CourseAuditEventTest.php`
+- `tests/Unit/CourseParticipantStatusTest.php`
+- `tests/Unit/DiveClub/Billing/Domain/ClubPricingPolicyTest.php`
+- `tests/Unit/DiveClub/Inspection/Domain/InspectionIntervalPolicyTest.php`
+- `tests/Unit/DiveClub/Shared/Domain/TimeRangeTest.php`
+- `tests/Unit/TeamMemberAssignmentValidationTest.php`
+- `tests/bootstrap.php`
+- `tests/translation_health.php`

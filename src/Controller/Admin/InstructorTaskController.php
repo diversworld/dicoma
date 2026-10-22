@@ -15,7 +15,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class InstructorTaskController extends AbstractController
 {
     #[Route('/admin/instructor/tasks', name: 'admin_instructor_tasks', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function index(Request $request, InstructorTaskService $tasks): Response
     {
         return $this->render('admin/instructor/tasks.html.twig', $tasks->overview(
@@ -28,22 +28,9 @@ final class InstructorTaskController extends AbstractController
 
     #[Route('/my-training/tasks', name: 'instructor_my_tasks', methods: ['GET'])]
     #[IsGranted('ROLE_INSTRUCTOR')]
-    public function myTasks(Request $request, InstructorTaskService $tasks): Response
+    public function myTasks(): Response
     {
-        $user = $this->getUser();
-        if (!$user instanceof User || $user->getMember()?->getId() === null) {
-            throw $this->createAccessDeniedException('Dem Benutzer ist kein Mitglied zugeordnet.');
-        }
-
-        // The instructor ID is never accepted from request parameters.
-        $memberId = $user->getMember()->getId();
-        return $this->render('admin/instructor/tasks.html.twig', $tasks->overview(
-            30,
-            $this->positiveId($request->query->get('club')),
-            $this->positiveId($request->query->get('course')),
-            $memberId,
-            true
-        ) + ['personalView' => true]);
+        return $this->redirectToRoute('instructor_portal_tasks', [], Response::HTTP_SEE_OTHER);
     }
 
     private function positiveId(mixed $value): ?int

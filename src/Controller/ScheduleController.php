@@ -26,7 +26,7 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/calendar/{month?}', name: 'app_schedule_calendar', methods: ['GET'])]
-    public function calendar(int $month = null, ScheduleRepository $scheduleRepository): Response
+    public function calendar(ScheduleRepository $scheduleRepository, ?int $month = null): Response
     {
         if ($month === null) {
             $currentDate = new \DateTime();

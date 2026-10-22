@@ -22,6 +22,12 @@ final class TrainingProgressController extends AbstractController
             throw $this->createNotFoundException('Kursteilnehmer nicht gefunden.');
         }
 
+        $course = $participant->getCourse();
+        if ($course === null) {
+            throw $this->createNotFoundException('Kurs nicht gefunden.');
+        }
+        $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
+
         return $this->render('admin/training_progress/show.html.twig', [
             'participant' => $participant,
             'progress' => $progress->calculate($participant),

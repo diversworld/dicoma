@@ -1,0 +1,21 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}Terminplan: {{ course.title }}{% endblock %}
+{% block main %}
+<p>Die Termine werden beim ersten Kurstermin mit den Schülern vereinbart und danach freigegeben.</p>
+<p><strong>Freigabe:</strong> {{ course.schedulePublishedAt ? course.schedulePublishedAt|date('d.m.Y H:i') : 'noch nicht freigegeben' }}</p>
+<div class="d-flex gap-2 mb-3">
+<form method="post" action="{{ path('admin_training_timetable_publish',{id:course.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('publish_timetable_' ~ course.id) }}">
+<button class="btn btn-primary" {% if appointments is empty %}disabled{% endif %}>Terminplan freigeben / aktualisieren</button>
+</form>
+<form method="post" action="{{ path('admin_training_timetable_send',{id:course.id}) }}" onsubmit="return confirm('Aktuellen Terminplan per E-Mail an alle angemeldeten Teilnehmer senden?')">
+<input type="hidden" name="_token" value="{{ csrf_token('send_timetable_' ~ course.id) }}">
+<button class="btn btn-outline-primary" {% if not course.schedulePublishedAt %}disabled{% endif %}>Terminplan per E-Mail senden</button>
+</form>
+</div>
+<table class="table"><thead><tr><th>Datum</th><th>Beginn</th><th>Einheit</th><th>Ort</th></tr></thead><tbody>
+{% for item in appointments %}<tr><td>{{ item.startDate|date('d.m.Y') }}</td><td>{{ item.startTime ? item.startTime|date('H:i') : 'offen' }}</td><td>{{ item.trainingUnitLabel }}</td><td>{{ item.location }}</td></tr>
+{% else %}<tr><td colspan="4">Noch keine Termine geplant.</td></tr>{% endfor %}
+</tbody></table>
+<p class="text-muted">Terminänderungen werden in der Schüleransicht unmittelbar sichtbar. Nach einer Änderung den Versand erneut auslösen, um die Teilnehmer zu informieren.</p>
+{% endblock %}

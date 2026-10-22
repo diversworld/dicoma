@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+{% block title %}Terminplan – {{ registration.course.title }}{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+<h1>Terminplan: {{ registration.course.title }}</h1>
+<p>Stand: {{ registration.course.schedulePublishedAt|date('d.m.Y H:i') }} · Änderungen sind möglich. Bitte vor jedem Termin den aktuellen Plan prüfen.</p>
+<div class="mb-3 d-print-none">
+<a class="btn btn-primary" href="{{ path('student_course_timetable_csv',{id:registration.id}) }}">CSV herunterladen</a>
+<button class="btn btn-outline-secondary" type="button" onclick="window.print()">Drucken / als PDF speichern</button>
+<a class="btn btn-link" href="{{ path('frontend_course_registrations') }}">Meine Kurse</a>
+</div>
+<div class="table-responsive"><table class="table table-striped">
+<thead><tr><th>Datum</th><th>Zeit</th><th>Einheit</th><th>Ort</th><th>Ausbilder</th></tr></thead><tbody>
+{% for appointment in appointments %}
+<tr><td>{{ appointment.startDate|date('d.m.Y') }}</td>
+<td>{{ appointment.startTime ? appointment.startTime|date('H:i') : 'offen' }}</td>
+<td>{{ appointment.trainingUnitLabel }}</td>
+<td>{{ appointment.location ?: 'wird bekanntgegeben' }}</td>
+<td>{{ appointment.instructor ? appointment.instructor.fullName : 'wird bekanntgegeben' }}</td></tr>
+{% else %}<tr><td colspan="5">Noch keine Termine festgelegt.</td></tr>{% endfor %}
+</tbody></table></div></main>
+{% endblock %}
