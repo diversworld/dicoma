@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/tank/check/article')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class TankCheckArticleController extends AbstractController
 {
     #[Route('/', name: 'app_tank_check_article_index', methods: ['GET'])]
