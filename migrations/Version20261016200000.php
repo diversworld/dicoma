@@ -77,7 +77,8 @@ final class Version20261016200000 extends AbstractMigration
         if ($schema->getTable('equipment_item')->hasIndex('UNIQ_259FF418C6525B5')) {
             $this->addSql('ALTER TABLE equipment_item RENAME INDEX UNIQ_259FF418C6525B5 TO UNIQ_259FF41815C652B5');
         }
-        if ($schema->getTable('training_unit_type')->hasForeignKey('FK_6E94D58761190A32')) {
+        if ($schema->getTable('training_unit_type')->hasForeignKey('FK_6E94D58761190A32')
+            && $schema->getTable('training_unit_type')->hasForeignKey('FK_TRAINING_UNIT_TYPE_CLUB')) {
             $schema->getTable('training_unit_type')->removeForeignKey('FK_6E94D58761190A32');
         }
     }

@@ -23,7 +23,7 @@ use App\Repository\UserRepository;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Finder\Exception\AccessDeniedException;
+
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -56,7 +56,7 @@ class BookingController extends AbstractController
     {
         // Überprüfen, ob der Benutzer als Admin authentifiziert ist
         if (!$this->isGranted('ROLE_ADMIN')) {
-            throw new AccessDeniedException('You are not authorized to perform this action.');
+            throw $this->createAccessDeniedException('Keine Berechtigung.');
         }
 
         // Aktuelles Datum
@@ -90,13 +90,14 @@ class BookingController extends AbstractController
 
         $form = $this->createForm(BookingType::class, $booking, [
             'admin_mode' => $this->isGranted('ROLE_ADMIN'),
-            'available_schedules' => $scheduleRepository->findAll(), // Alle verfügbaren Termine laden
-            'available_students' => $studentsRepository->findByCategory('student',25), // Alle verfügbaren Schüler laden
+            'available_schedules' => $this->allowedSchedules($entityManager),
+            'available_students' => $this->allowedMembers($entityManager),
         ]);
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->assertBookingAccess($booking);
 
             $entityManager->persist($booking);
             $entityManager->flush();
@@ -205,6 +206,10 @@ class BookingController extends AbstractController
             }
         }
 
+        if ($this->isGranted('ROLE_ADMIN')) {
+            $this->assertBookingAccess($booking);
+        }
+
         return $this->render('booking/show.html.twig', [
             'booking' => $booking,
         ]);
@@ -214,22 +219,18 @@ class BookingController extends AbstractController
     #[Route('/{id}/edit', name: 'app_booking_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Booking $booking, EntityManagerInterface $entityManager, ScheduleRepository $scheduleRepository, $id): Response
     {
-        // Überprüfen, ob der Benutzer als Admin authentifiziert ist
-        if (!$this->isGranted('ROLE_ADMIN')) {
-            throw new AccessDeniedException('You are not authorized to perform this action.');
-        }
-
-        // Annahme: Laden der Buchung aus der Datenbank mit der ID $id
-        $booking = $entityManager->getRepository(Booking::class)->find($id);
+        $this->assertBookingAccess($booking);
 
         $form = $this->createForm(BookingType::class, $booking, [
-            'admin_mode' => $this->isGranted('ROLE_ADMIN'),
-            'available_schedules' => $scheduleRepository->findAll(), // Alle verfügbaren Termine laden
+            'admin_mode' => true,
+            'available_schedules' => $this->allowedSchedules($entityManager),
+            'available_students' => $this->allowedMembers($entityManager),
         ]);
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->assertBookingAccess($booking);
             $entityManager->flush();
 
             return $this->redirectToRoute('app_booking_index', [], Response::HTTP_SEE_OTHER);
@@ -245,10 +246,7 @@ class BookingController extends AbstractController
     #[Route('/{id}', name: 'app_booking_delete', methods: ['POST'])]
     public function delete(Request $request, Booking $booking, EntityManagerInterface $entityManager): Response
     {
-        // Überprüfen, ob der Benutzer als Admin authentifiziert ist
-        if (!$this->isGranted('ROLE_ADMIN')) {
-            throw new AccessDeniedException('You are not authorized to perform this action.');
-        }
+        $this->assertBookingAccess($booking);
 
         if ($this->isCsrfTokenValid('delete'.$booking->getId(), $request->request->get('_token'))) {
             $entityManager->remove($booking);
@@ -256,6 +254,71 @@ class BookingController extends AbstractController
         }
 
         return $this->redirectToRoute('app_booking_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Prüft sowohl den Kursverein als auch den Verein des gebuchten Mitglieds.
+     * Superadministratoren behalten den globalen Zugriff.
+     */
+    private function assertBookingAccess(Booking $booking): void
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return;
+        }
+
+        $clubId = $this->currentAdminClubId();
+        $scheduleClubId = $booking->getSchedule()?->getCourses()?->getClub()?->getId();
+        $memberClubId = $booking->getMember()?->getClub()?->getId();
+
+        if ($scheduleClubId !== $clubId || $memberClubId !== $clubId) {
+            throw $this->createAccessDeniedException('Diese Buchung gehört nicht zu deinem Verein.');
+        }
+    }
+
+    private function currentAdminClubId(): int
+    {
+        $user = $this->getUser();
+        if (!$this->isGranted('ROLE_ADMIN') || !$user instanceof User) {
+            throw $this->createAccessDeniedException('Administratorberechtigung erforderlich.');
+        }
+
+        $clubId = $user->getMember()?->getClub()?->getId();
+        if ($clubId === null) {
+            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
+        }
+
+        return $clubId;
+    }
+
+    /** @return list<Schedule> */
+    private function allowedSchedules(EntityManagerInterface $em): array
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $em->getRepository(Schedule::class)->findAll();
+        }
+
+        return $em->createQueryBuilder()
+            ->select('s')->from(Schedule::class, 's')
+            ->join('s.courses', 'c')
+            ->join('c.club', 'club')
+            ->where('club.id = :clubId')
+            ->setParameter('clubId', $this->currentAdminClubId())
+            ->getQuery()->getResult();
+    }
+
+    /** @return list<Member> */
+    private function allowedMembers(EntityManagerInterface $em): array
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $em->getRepository(Member::class)->findAll();
+        }
+
+        return $em->createQueryBuilder()
+            ->select('m')->from(Member::class, 'm')
+            ->join('m.club', 'club')
+            ->where('club.id = :clubId')
+            ->setParameter('clubId', $this->currentAdminClubId())
+            ->getQuery()->getResult();
     }
 
     public static function  nextBookingNumber(EntityManagerInterface $entityManager): string
@@ -286,16 +349,16 @@ class BookingController extends AbstractController
         return $monthYearInt . $bookingNumberPadded;
     }
 
-	private function checkBookings(
-		Schedule $schedule,
-		Member $member
-	): bool {
-		foreach ($schedule->getBookings() as $booking) {
-			if ($booking->getMember() === $member) {
-				return true;
-			}
-		}
+        private function checkBookings(
+                Schedule $schedule,
+                Member $member
+        ): bool {
+                foreach ($schedule->getBookings() as $booking) {
+                        if ($booking->getMember() === $member) {
+                                return true;
+                        }
+                }
 
-		return false;
-	}
+                return false;
+        }
 }

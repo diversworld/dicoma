@@ -1,0 +1,73 @@
+<div class="col-lg-8 mt-5 mt-lg-0">
+    <br>
+    {{ form_start(form) }}
+    <div class="row g-3">
+        <div class="col-md-3 form-group">
+            <label class="required form_label">{{ 'Buchungsnummer'|trans }}</label>
+            <input
+                name="{{ field_name(form.bookingnumber) }}"
+                value="{{ field_value(form.bookingnumber) }}"
+                class="form-control"
+            >
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-3 form-group">
+            <label class="required form_label">{{ 'Datum der Buchung'|trans }}</label>
+            {{ form_widget(form.bookingdate, {'attr': {'class': 'form-control'}}) }}
+        </div>
+    </div>
+    <!-- Anzeige des Buchungsstatus (editierbar für Admin) -->
+    <div class="row g-3">
+        <div class="col-md-4 form-group">
+            <label class="required form_label">{{ 'Status der Buchung'|trans }}</label>
+            <select name="{{ field_name(form.status) }}" class="form-control">
+                <option value="">{{ 'Status auswählen'|trans }}</option>
+                {% for label, value in field_choices(form.status) %}
+                    <option value="{{ value }}" {% if value == booking.status %}selected{% endif %}>{{ label|trans }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6 form-group">
+            <label for="courseSelect" class="form-label">{{ 'Kurstermin(e)'|trans }}</label>
+            <select name="{{ field_name(form.schedule) }}" class="form-select form-control">
+                <option value="" >{{ 'Kurstermin(e) auswählen'|trans }}</option>
+                {% for label, value in field_choices(form.schedule) %}
+                    {% if booking.schedule is not null %}
+                        <option value="{{ value }}" {% if value == booking.schedule.id %}selected{% endif %}>{{ label }}</option>
+                    {% else %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <div id="emailHelp" class="form-text">{{ 'Bitte den zugehörigen Kurs auswählen.'|trans }}</div>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6 form-group">
+            <label for="studentSelect" class="form_label">{{ 'Student'|trans }}</label>
+            {% if is_granted('ROLE_ADMIN') %}
+                <select name="{{ field_name(form.member) }}" class="form-select form-control">
+                    <option value="">{{ 'Schüler auswählen'|trans }}</option>
+                    {% for label, value in field_choices(form.member) %}
+                        {% if booking.students is not null %}
+                            <option value="{{ value }}" {% if value == booking.member.id %}selected{% endif %}>{{ label }}</option>
+                        {% else %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            {% else %}
+                <input class="form-control" type="text" value="{{ booking.member.fullName }}" aria-label="{{ 'Member'|trans }}" readonly>
+            {% endif %}    
+        </div>
+    </div>
+    <br>
+    <div>
+        <button class="btn btn-outline-secondary btn-sm">{{ button_label|default('Speichern')|trans }}</button>
+    </div>
+    {{ form_end(form) }}
+</div>
+<br>

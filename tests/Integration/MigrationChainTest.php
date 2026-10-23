@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ConfigurationArray;
 use Doctrine\Migrations\DependencyFactory;
@@ -28,7 +29,7 @@ final class MigrationChainTest extends TestCase
 
     protected function setUp(): void
     {
-        $url = getenv('MIGRATION_TEST_DATABASE_URL');
+        $url = $_ENV['MIGRATION_TEST_DATABASE_URL'] ?? $_SERVER['MIGRATION_TEST_DATABASE_URL'] ?? getenv('MIGRATION_TEST_DATABASE_URL');
         if ($url === false || $url === '') {
             self::markTestSkipped('Set MIGRATION_TEST_DATABASE_URL to a MySQL/MariaDB server with CREATE DATABASE permission.');
         }
@@ -90,11 +91,27 @@ final class MigrationChainTest extends TestCase
 
         $this->migrate('20261014130000');
         $schema = $this->connection->createSchemaManager()->introspectSchema();
-        foreach (['IDX_3ECC533D61190A32', 'IDX_3ECC533D12469DE2', 'IDX_3ECC533DA23B42D'] as $index) {
-            self::assertTrue($schema->getTable('equipment_model')->hasIndex($index));
+
+        foreach ([
+            'IDX_EQ_MODEL_CLUB',
+            'IDX_EQ_MODEL_CATEGORY',
+            'IDX_EQ_MODEL_MANUFACTURER',
+        ] as $index) {
+            self::assertTrue(
+                $schema->getTable('equipment_model')->hasIndex($index),
+                sprintf('Historischer Index fehlt: %s', $index)
+            );
         }
-        self::assertTrue($schema->getTable('equipment_item')->hasIndex('IDX_259FF418BF9772C3'));
-        self::assertTrue($schema->getTable('equipment_size')->hasIndex('IDX_CD44F56CA23B42D'));
+
+        self::assertTrue(
+            $schema->getTable('equipment_item')->hasIndex('IDX_EQ_ITEM_MODEL_REFERENCE'),
+            'Historischer Index für equipment_item.model_reference_id fehlt'
+        );
+
+        self::assertTrue(
+            $schema->getTable('equipment_size')->hasIndex('IDX_EQ_SIZE_MANUFACTURER'),
+            'Historischer Index für equipment_size.manufacturer_id fehlt'
+        );
 
         $this->migrate('20261014100000');
         self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM equipment_item'));
@@ -141,18 +158,50 @@ final class MigrationChainTest extends TestCase
     public function testHistoricalReversibleMigrationsCanBeRolledBackAndReapplied(): void
     {
         $previous = '0';
-        $irreversible = ['20261013220000', '20261016120000', '20261016200000', '20261017180000', '20261017181500'];
-        $migrations = $this->factory()->getMigrationPlanCalculator()->getMigrations()->getItems();
+        $this->factory()->getMetadataStorage()->ensureInitialized();
+        $schemaDifferences = [];
+
+        $irreversible = [
+            '20240210143454',
+            '20261013220000',
+            '20261016120000',
+            '20261016200000',
+            '20261017180000',
+            '20261017181500',
+        ];
+
+        $migrations = $this->factory()
+            ->getMigrationPlanCalculator()
+            ->getMigrations()
+            ->getItems();
+
         foreach ($migrations as $migration) {
             $version = (string) $migration->getVersion();
+            $before = $this->connection->createSchemaManager()->introspectSchema();
             $this->migrate($version);
+
             if (!in_array(substr($version, -14), $irreversible, true)) {
+                $after = $this->connection->createSchemaManager()->introspectSchema();
                 $this->migrate($previous);
+                $rollbackDiff = $this->schemaChangesTo($before);
                 $this->migrate($version);
+                $reapplyDiff = $this->schemaChangesTo($after);
+                if ($rollbackDiff !== [] || $reapplyDiff !== []) {
+                    $schemaDifferences[$version] = ['rollback' => $rollbackDiff, 'reapply' => $reapplyDiff];
+                }
             }
+
             $previous = $version;
         }
-        self::assertSame(count($migrations), (int) $this->connection->fetchOne('SELECT COUNT(*) FROM doctrine_migration_versions'));
+
+        self::assertSame([], $schemaDifferences, 'Rollback and reapply must restore each historical schema.');
+        self::assertSame(
+            count($migrations),
+            (int) $this->connection->fetchOne(
+                'SELECT COUNT(*) FROM doctrine_migration_versions'
+            )
+        );
+        $this->assertSchemaMatchesMapping();
     }
 
     /** @return iterable<string, array{?string}> */
@@ -223,7 +272,11 @@ final class MigrationChainTest extends TestCase
             $this->migrate('20261017140000');
             self::fail('Rollback must reject bookings without member references before executing DDL.');
         } catch (AbortMigration $exception) {
-            self::assertStringContainsString('explicit data migration', $exception->getMessage());
+            //self::assertStringContainsString('explicit data migration', $exception->getMessage());
+            self::assertStringContainsString(
+                'Rollback nicht möglich',
+                $exception->getMessage()
+            );
         }
         $table = $this->connection->createSchemaManager()->introspectTable('member_tank_check_booking');
         self::assertTrue($table->hasColumn('club_tank_id'));
@@ -240,6 +293,36 @@ final class MigrationChainTest extends TestCase
         $validator = new SchemaValidator($em);
         self::assertSame([], $validator->validateMapping());
         self::assertSame([], $validator->getUpdateSchemaList());
+    }
+
+    /** @return list<string> */
+    private function schemaChangesTo(Schema $expected): array
+    {
+        $manager = $this->connection->createSchemaManager();
+        $actual = $manager->introspectSchema();
+        $expected = clone $expected;
+        foreach ($expected->getTables() as $table) {
+            if (!$actual->hasTable($table->getName())) {
+                continue;
+            }
+            foreach ($table->getColumns() as $column) {
+                $actualTable = $actual->getTable($table->getName());
+                if (!$actualTable->hasColumn($column->getName())) {
+                    continue;
+                }
+                $actualColumn = $actualTable->getColumn($column->getName());
+                // DBAL otherwise reports unchanged legacy LONGTEXT/JSON columns as differences.
+                if ($column->hasPlatformOption('declarationMismatch')
+                    && $actualColumn->hasPlatformOption('declarationMismatch')
+                    && $column->getPlatformOption('declarationMismatch') === $actualColumn->getPlatformOption('declarationMismatch')) {
+                    $column->setPlatformOptions(array_diff_key($column->getPlatformOptions(), ['declarationMismatch' => true]));
+                    $actualColumn->setPlatformOptions(array_diff_key($actualColumn->getPlatformOptions(), ['declarationMismatch' => true]));
+                }
+            }
+        }
+        $diff = $manager->createComparator()->compareSchemas($actual, $expected);
+
+        return $this->connection->getDatabasePlatform()->getAlterSchemaSQL($diff);
     }
 
     private function createClub(): int

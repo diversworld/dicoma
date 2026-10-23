@@ -47,24 +47,52 @@ final class Version20261014120000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addSql(
-            'ALTER TABLE equipment_model RENAME INDEX IDX_3ECC533D61190A32 TO idx_eq_model_club'
-        );
+        $schemaManager = $this->connection->createSchemaManager();
 
-        $this->addSql(
-            'ALTER TABLE equipment_model RENAME INDEX IDX_3ECC533D12469DE2 TO idx_eq_model_category'
-        );
+        $renames = [
+            'equipment_model' => [
+                'IDX_3ECC533D61190A32' => 'idx_eq_model_club',
+                'IDX_3ECC533D12469DE2' => 'idx_eq_model_category',
+                'IDX_3ECC533DA23B42D' => 'idx_eq_model_manufacturer',
+            ],
+            'equipment_size' => [
+                'IDX_CD44F56CA23B42D' => 'idx_eq_size_manufacturer',
+            ],
+            'equipment_item' => [
+                'IDX_259FF418BF9772C3' => 'idx_eq_item_model_reference',
+            ],
+        ];
 
-        $this->addSql(
-            'ALTER TABLE equipment_model RENAME INDEX IDX_3ECC533DA23B42D TO idx_eq_model_manufacturer'
-        );
+        foreach ($renames as $tableName => $indexes) {
+            if (!$schemaManager->tablesExist([$tableName])) {
+                continue;
+            }
 
-        $this->addSql(
-            'ALTER TABLE equipment_size RENAME INDEX IDX_CD44F56CA23B42D TO idx_eq_size_manufacturer'
-        );
+            $table = $schemaManager->introspectTable($tableName);
 
-        $this->addSql(
-            'ALTER TABLE equipment_item RENAME INDEX IDX_259FF418BF9772C3 TO idx_eq_item_model_reference'
-        );
+            foreach ($indexes as $oldName => $newName) {
+                if (!$table->hasIndex($oldName)) {
+                    continue;
+                }
+
+                if ($table->hasIndex($newName)) {
+                    $this->abortIf(
+                        true,
+                        sprintf(
+                            'Indexumbenennung nicht möglich: %s.%s existiert bereits.',
+                            $tableName,
+                            $newName
+                        )
+                    );
+                }
+
+                $this->addSql(sprintf(
+                    'ALTER TABLE `%s` RENAME INDEX `%s` TO `%s`',
+                    $tableName,
+                    $oldName,
+                    $newName
+                ));
+            }
+        }
     }
 }

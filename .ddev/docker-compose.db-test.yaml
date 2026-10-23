@@ -1,0 +1,31 @@
+services:
+  db_test:
+    image: mariadb:11.8
+    container_name: ddev-${DDEV_SITENAME}-db_test
+    restart: "no"
+    stop_grace_period: 60s
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: db_test
+      MARIADB_USER: db
+      MARIADB_PASSWORD: db
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - db_test:/var/lib/mysql
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  web:
+    depends_on:
+      db_test:
+        condition: service_healthy
+
+volumes:
+  db_test:

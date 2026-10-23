@@ -22,10 +22,12 @@ use App\Entity\CourseParticipant;
 use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
-use Doctrine\ORM\EntityManagerInterface;
 use App\Controller\Admin\MemberCrudController;
+use App\Security\Voter\MemberManagementVoter;
+use \App\Entity\TuvInvoiceSettings;
 use App\Controller\Admin\EquipmentReservationCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
+use App\Controller\Admin\MemberTankCheckBooking;
 use App\Controller\Admin\EquipmentBookingCrudController;
 use App\Controller\Admin\MemberTankCheckBookingCrudController;
 use App\Service\TankInspectionOverview;
@@ -47,6 +49,7 @@ use Symfony\Component\HttpFoundation\Request;
 use App\Service\TuvMessageRenderer;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use \Doctrine\ORM\EntityManagerInterface;
 
 
 #[AdminDashboard(
@@ -194,22 +197,22 @@ class DashboardController extends AbstractDashboardController
 
     // DICOMA invoice settings EasyAdmin integration v1
     #[AdminRoute(path: '/invoice-settings', name: 'invoice_settings_overview')]
-    public function invoiceSettingsOverview(\Doctrine\ORM\EntityManagerInterface $em): Response
+    public function invoiceSettingsOverview(EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
         return $this->render('admin/tuv_invoice_settings_overview_ea.html.twig', [
-            'clubs' => $em->getRepository(\App\Entity\Club::class)->findBy([], ['name' => 'ASC']),
+            'clubs' => $em->getRepository(Club::class)->findBy([], ['name' => 'ASC']),
         ]);
     }
 
     #[AdminRoute(path: '/invoice-settings/{id}', name: 'invoice_settings_edit')]
-    public function invoiceSettingsEdit(int $id, Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    public function invoiceSettingsEdit(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
-        $club = $em->getRepository(\App\Entity\Club::class)->find($id);
+        $club = $em->getRepository(Club::class)->find($id);
         if (!$club) { throw $this->createNotFoundException(); }
-        $settings = $em->getRepository(\App\Entity\TuvInvoiceSettings::class)->find($id);
-        if (!$settings) { $settings = new \App\Entity\TuvInvoiceSettings($club); }
+        $settings = $em->getRepository(TuvInvoiceSettings::class)->find($id);
+        if (!$settings) { $settings = new TuvInvoiceSettings($club); }
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('invoice_settings_'.$id, (string) $request->request->get('_token', ''))) {
                 throw $this->createAccessDeniedException('Ungueltiges CSRF-Token.');
@@ -281,10 +284,10 @@ class DashboardController extends AbstractDashboardController
     }
 
     #[AdminRoute(path: '/training-overview', name: 'training_overview')]
-    public function trainingOverview(\Doctrine\ORM\EntityManagerInterface $em): Response
+    public function trainingOverview(EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
-        $courses = $em->getRepository(\App\Entity\Courses::class)->findAll();
+        $courses = $em->getRepository(Courses::class)->findAll();
         $rows = [];
         $statuses = [];
         $instructorLoad = [];
@@ -368,15 +371,19 @@ class DashboardController extends AbstractDashboardController
             ]),
 
             MenuItem::subMenu('TÜV-Verwaltung', 'fa fa-clipboard-check')->setSubItems([
-                MenuItem::linkToRoute('Flaschenprüfungszentrale', 'fa fa-gauge-high', 'admin_equipment_center'),
-				MenuItem::linkToCrud('TÜV-Anmeldungen','fa fa-clipboard-check',MemberTankCheckBooking::class)
-					->setController(MemberTankCheckBookingCrudController::class)
-					->setAction(Action::INDEX)
-					->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkTo(TankCheckCrudController::class, 'TÜV-Termine', 'fa fa-calendar-check')->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkTo(TankCheckArticleCrudController::class, 'TÜV-Preise', 'fa fa-tags')->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkToCrud('TÜV-Nachrichten / Postausgang', 'fa fa-envelope-open-text', \App\Entity\TuvNotification::class)
-                    ->setController(TuvNotificationCrudController::class)->setPermission('ROLE_ADMIN'),
+                MenuItem::linkToRoute('Flaschenprüfungszentrale','fa fa-gauge-high','admin_equipment_center'),
+                MenuItem::linkTo(MemberTankCheckBookingCrudController::class,'TÜV-Anmeldungen','fa fa-clipboard-check')
+                    ->setAction(Action::INDEX)
+                    ->setPermission('ROLE_SUPER_ADMIN'),
+
+                MenuItem::linkTo(TankCheckCrudController::class,'TÜV-Termine','fa fa-calendar-check')
+                    ->setPermission('ROLE_SUPER_ADMIN'),
+
+                MenuItem::linkTo(TankCheckArticleCrudController::class,'TÜV-Preise','fa fa-tags')
+                    ->setPermission('ROLE_SUPER_ADMIN'),
+
+                MenuItem::linkTo(TuvNotificationCrudController::class,'TÜV-Nachrichten / Postausgang','fa fa-envelope-open-text')
+                    ->setPermission('ROLE_ADMIN'),
             ]),
 
             MenuItem::subMenu('Einstellungen', 'fa fa-sliders')->setSubItems([

@@ -3,6 +3,9 @@
 namespace App\Controller\Admin;
 
 use App\Entity\CourseParticipant;
+use App\Entity\Courses;
+use App\Entity\Member;
+use Doctrine\ORM\EntityRepository;
 use App\Entity\User;
 use App\Security\Voter\CourseManagementVoter;
 use App\Security\Voter\MemberManagementVoter;
@@ -126,15 +129,37 @@ class CourseParticipantCrudController extends AbstractCrudController
             }
         }
 
-        yield AssociationField::new(
-            'course',
-            'Kurs'
-        );
+        // Auswahlfilter sind UI-Schutz; die Voter in persist/update/delete
+        // bleiben die verbindliche serverseitige Zugriffskontrolle.
+        $isForm = $pageName === Crud::PAGE_NEW || $pageName === Crud::PAGE_EDIT;
+        $isSuperAdmin = $this->isGranted('ROLE_SUPER_ADMIN');
+        $currentUser = $this->getUser();
+        $clubId = $currentUser instanceof User ? $currentUser->getMember()?->getClub()?->getId() : null;
 
-        yield AssociationField::new(
-            'member',
-            'Teilnehmer'
-        );
+        $courseField = AssociationField::new('course', 'Kurs');
+        $memberField = AssociationField::new('member', 'Teilnehmer');
+        if ($isForm && !$isSuperAdmin) {
+            $courseField->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $qb = $repository->createQueryBuilder('courseChoice');
+                return $clubId === null
+                    ? $qb->andWhere('1 = 0')
+                    : $qb->andWhere('courseChoice.club = :choiceClub')->setParameter('choiceClub', $clubId);
+            });
+            $memberField->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $qb = $repository->createQueryBuilder('memberChoice');
+                return $clubId === null
+                    ? $qb->andWhere('1 = 0')
+                    : $qb->andWhere('memberChoice.club = :choiceClub')->setParameter('choiceClub', $clubId);
+            });
+            if ($pageName === Crud::PAGE_EDIT) {
+                // Bestehende Zuordnungen duerfen nicht durch Formularmanipulation
+                // umgehaengt werden; updateEntity() prueft Original und Ziel.
+                $courseField->setFormTypeOption('disabled', true);
+                $memberField->setFormTypeOption('disabled', true);
+            }
+        }
+        yield $courseField;
+        yield $memberField;
 
         /*
          * In der Übersicht zeigen wir die deutsche
@@ -381,7 +406,6 @@ class CourseParticipantCrudController extends AbstractCrudController
          * Bestandene Teilnehmer werden ebenfalls nicht mehr über
          * das normale Formular verändert.
          */
-        $this->assertParticipantAccess($entityInstance);
         if ($entityInstance->hasPassed()) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht mehr '
@@ -458,7 +482,10 @@ class CourseParticipantCrudController extends AbstractCrudController
             return;
         }
 
+        // Objektberechtigung auch beim direkten POST mit gueltigem CSRF-Token
+        // erzwingen. UI-Filter und ausgeblendete Aktionen genuegen nicht.
         $this->assertParticipantAccess($entityInstance);
+
         if ($entityInstance->hasPassed()) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht gelöscht '

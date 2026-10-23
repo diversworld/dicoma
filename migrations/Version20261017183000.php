@@ -57,6 +57,7 @@ final class Version20261017183000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // Keine automatische Rücknahme der Metadaten- und Indexnamen-Angleichung.
+        $this->addSql('ALTER TABLE member_tank_check_result CHANGE inspected_at inspected_at DATE NOT NULL');
+        $this->renameIndexIfNeeded('member_tank_check_result', 'UNIQ_5F3E51EC3301C60', 'UNIQ_TUV_RESULT_BOOKING');
     }
 }

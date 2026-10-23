@@ -21,9 +21,42 @@ final class Version20261017173000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE member_tank_check_booking DROP FOREIGN KEY FK_TUV_BOOKING_CLUB_TANK');
-        $this->addSql('DROP INDEX UNIQ_TUV_CLUB_TANK_CHECK ON member_tank_check_booking');
-        $this->addSql('DROP INDEX IDX_TUV_BOOKING_CLUB_TANK ON member_tank_check_booking');
-        $this->addSql('ALTER TABLE member_tank_check_booking DROP club_tank_id, CHANGE member_id member_id INT NOT NULL, CHANGE member_tank_id member_tank_id INT NOT NULL');
+        $unsafeBookings = (int) $this->connection->fetchOne(
+            'SELECT COUNT(*)
+            FROM member_tank_check_booking
+            WHERE club_tank_id IS NOT NULL
+                OR member_id IS NULL
+                OR member_tank_id IS NULL'
+        );
+
+        $this->abortIf(
+            $unsafeBookings > 0,
+            sprintf(
+                'Rollback nicht möglich: %d TÜV-Buchungen enthalten Vereinsflaschenreferenzen oder NULL-Mitgliedsreferenzen. Daten müssen erhalten bleiben.',
+                $unsafeBookings
+            )
+        );
+
+        $this->addSql(
+            'ALTER TABLE member_tank_check_booking
+            DROP FOREIGN KEY FK_TUV_BOOKING_CLUB_TANK'
+        );
+
+        $this->addSql(
+            'DROP INDEX UNIQ_TUV_CLUB_TANK_CHECK
+            ON member_tank_check_booking'
+        );
+
+        $this->addSql(
+            'DROP INDEX IDX_TUV_BOOKING_CLUB_TANK
+            ON member_tank_check_booking'
+        );
+
+        $this->addSql(
+            'ALTER TABLE member_tank_check_booking
+            DROP club_tank_id,
+            CHANGE member_id member_id INT NOT NULL,
+            CHANGE member_tank_id member_tank_id INT NOT NULL'
+        );
     }
 }

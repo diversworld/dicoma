@@ -26,8 +26,22 @@ final class Version20261020151000 extends AbstractMigration
 		);
 	}
 	
-	public function down(Schema $schema):void 
+	public function down(Schema $schema): void
 	{
-		$this->addSql('ALTER TABLE compressor_fill_cylinder DROP volume_liters');
+		$schemaManager = $this->connection->createSchemaManager();
+
+		if (!$schemaManager->tablesExist(['compressor_fill_cylinder'])) {
+			return;
+		}
+
+		if (!$schemaManager
+			->introspectTable('compressor_fill_cylinder')
+			->hasColumn('volume_liters')) {
+			return;
+		}
+
+		$this->addSql(
+			'ALTER TABLE compressor_fill_cylinder DROP volume_liters'
+		);
 	}
 }

@@ -25,6 +25,12 @@ final class Version20261020143000 extends AbstractMigration
 	
 	public function down(Schema $schema):void 
 	{
+		$schemaManager = $this->connection->createSchemaManager();
+		if (!$schemaManager->tablesExist(['compressor_fill_session'])
+			|| !$schemaManager->introspectTable('compressor_fill_session')->hasColumn('closing_hours_tenths')) {
+			return;
+		}
+
 		$this->addSql('ALTER TABLE compressor_fill_session DROP closing_hours_tenths');
 	}
  }

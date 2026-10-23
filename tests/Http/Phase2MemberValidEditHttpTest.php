@@ -23,7 +23,7 @@ final class Phase2MemberValidEditHttpTest extends WebTestCase
         $config = $this->configuration();
         $client = static::createClient();
         $em = static::getContainer()->get(EntityManagerInterface::class);
-        self::assertSame('h20292_dicoma_test', (string) $em->getConnection()->fetchOne('SELECT DATABASE()'));
+        self::assertSame('db_test', (string) $em->getConnection()->fetchOne('SELECT DATABASE()'));
         self::assertSame($config['DICOMA_TEST_EXPECTED_DATABASE'], (string) $em->getConnection()->fetchOne('SELECT DATABASE()'));
 
         $users = [];
@@ -110,7 +110,7 @@ final class Phase2MemberValidEditHttpTest extends WebTestCase
                 self::markTestSkipped('Missing '.$key);
             }
         }
-        self::assertSame('h20292_dicoma_test', $config['DICOMA_TEST_EXPECTED_DATABASE']);
+        self::assertSame('db_test', $config['DICOMA_TEST_EXPECTED_DATABASE']);
         foreach (['DICOMA_TEST_DISPOSABLE_MEMBER_A_ID', 'DICOMA_TEST_DISPOSABLE_MEMBER_B_ID'] as $key) {
             self::assertTrue(ctype_digit($config[$key]) && (int) $config[$key] > 0, 'Invalid disposable ID: '.$key);
         }

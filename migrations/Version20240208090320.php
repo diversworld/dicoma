@@ -27,7 +27,6 @@ final class Version20240208090320 extends AbstractMigration
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE schedule DROP image, CHANGE price price NUMERIC(8, 2) NOT NULL');
-        $this->addSql('ALTER TABLE user CHANGE password password VARCHAR(255) NOT NULL');
+        $this->addSql('ALTER TABLE schedule DROP image, CHANGE price price NUMERIC(6, 2) NOT NULL');
     }
 }

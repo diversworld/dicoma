@@ -18,7 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:phase2:seed-club-isolation', description: 'Create isolated Phase 2 HTTP test fixtures in the designated test database.')]
 final class SeedClubIsolationCommand extends Command
 {
-    private const DATABASE = 'h20292_dicoma_test';
+    //private const DATABASE = 'h20292_dicoma_test';
+    private const DATABASE = 'db_test';
     private const PREFIX = 'phase2-isolation-';
 
     public function __construct(private readonly EntityManagerInterface $em)

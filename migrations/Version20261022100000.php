@@ -46,7 +46,7 @@ final class Version20261022100000 extends AbstractMigration
             'This migration is intended only for MySQL.'
         );
 
-        $this->addSql('ALTER TABLE tuv_invoice MODIFY COLUMN `lines` LONGTEXT NOT NULL');
+        $this->addSql("ALTER TABLE tuv_invoice MODIFY COLUMN `lines` LONGTEXT NOT NULL COMMENT '(DC2Type:json)'");
         $this->addSql('ALTER TABLE tuv_booking_group MODIFY COLUMN agency_confirmed_at DATETIME DEFAULT NULL');
     }
 }

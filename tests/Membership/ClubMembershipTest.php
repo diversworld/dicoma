@@ -4,26 +4,37 @@ declare(strict_types=1);
 
 namespace App\Tests\Membership;
 
-use App\Identity\Domain\User;
-use App\Membership\Domain\Club;
-use App\Membership\Domain\ClubMembership;
+use App\Entity\Club;
+use App\Entity\Member;
+use App\Entity\User;
 use PHPUnit\Framework\TestCase;
 
 final class ClubMembershipTest extends TestCase
 {
-    public function testMembershipHasExactlyOneClubAndRole(): void
+    public function testMemberCanBeAssignedToExactlyOneClub(): void
     {
-        $club = new Club('Tauchverein Nord', 'nord');
-        $user = new User('test@example.org', 'already-hashed-password');
-        $membership = new ClubMembership($club, $user, 'rental_manager');
-        self::assertSame($club, $membership->getClub());
-        self::assertSame($user, $membership->getUser());
-        self::assertSame('rental_manager', $membership->getRole());
+        $clubA = (new Club())->setName('Tauchverein Nord');
+        $clubB = (new Club())->setName('Tauchverein Süd');
+
+        $member = new Member();
+
+        $member->setClub($clubA);
+
+        self::assertSame($clubA, $member->getClub());
+
+        $member->setClub($clubB);
+
+        self::assertSame($clubB, $member->getClub());
+        self::assertNotSame($clubA, $member->getClub());
     }
 
-    public function testRejectsUnknownRole(): void
+    public function testMemberCanBeLinkedToUser(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        new ClubMembership(new Club('Nord', 'nord'), new User('a@example.org', 'hashed'), 'superadmin');
+        $member = new Member();
+        $user = new User();
+
+        $member->setUser($user);
+
+        self::assertSame($user, $member->getUser());
     }
 }

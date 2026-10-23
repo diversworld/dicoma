@@ -88,7 +88,7 @@ final class Phase2MemberWriteGuardHttpTest extends WebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $db = (string) $em->getConnection()->fetchOne('SELECT DATABASE()');
         self::assertSame($config['DICOMA_TEST_EXPECTED_DATABASE'], $db);
-        self::assertSame('h20292_dicoma_test', $db, 'This probe is restricted to the named test DB.');
+        self::assertSame('db_test', $db, 'This probe is restricted to the named test DB.');
         $users = [];
         $members = [];
         foreach (['a' => 'DICOMA_TEST_CLUB_A_ADMIN_EMAIL', 'b' => 'DICOMA_TEST_CLUB_B_ADMIN_EMAIL'] as $key => $env) {

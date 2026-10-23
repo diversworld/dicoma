@@ -13,7 +13,8 @@ vendor/*
 .env.local
 .vscode/
 .idea/
-.ddev/
+/.ddev/*
+!/.ddev/docker-compose.db-test.yaml
 ex.sh
 ###> phpunit/phpunit ###
 /phpunit.xml

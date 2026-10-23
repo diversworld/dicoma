@@ -51,8 +51,8 @@
             {% if is_granted('ROLE_ADMIN') %}
                 <select name="{{ field_name(form.member) }}" class="form-select form-control">
                     <option value="">{{ 'Schüler auswählen'|trans }}</option>
-                    {% for label, value in field_choices(form.students) %}
-                        {% if booking.students is not null %}
+                    {% for label, value in field_choices(form.member) %}
+                        {% if booking.member is not null %}
                             <option value="{{ value }}" {% if value == booking.member.id %}selected{% endif %}>{{ label }}</option>
                         {% else %}
                             <option value="{{ value }}">{{ label }}</option>

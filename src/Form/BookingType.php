@@ -5,6 +5,8 @@ namespace App\Form;
 use App\Entity\Booking;
 use App\Entity\Schedule;
 use App\Entity\User;
+use App\Entity\Member;
+use App\Enum\BookingAttendanceStatus;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\AbstractType;
@@ -12,18 +14,19 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use App\Entity\Member;
-use App\Enum\BookingAttendanceStatus;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+
 
 class BookingType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('bookingnumber', IntegerType::class,[
-                'attr' => ['class' => 'form-control'],
+            ->add('bookingnumber', TextType::class, [
+                'label' => 'Buchungsnummer',
+                'required' => false,
             ])
             ->add('bookingdate', DateType::class, [
                 'required' => false,
@@ -58,6 +61,7 @@ class BookingType extends AbstractType
             ])
             ->add('member', EntityType::class, [
 				'class' => Member::class,
+                'choices' => $options['available_students'],
 				'label' => 'Mitglied',
 				'placeholder' => 'Mitglied auswählen',
 				'choice_label' => static function (Member $member): string {

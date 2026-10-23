@@ -25,7 +25,8 @@ final class Version20240210143454 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // this down() migration is auto-generated, please modify it to your needs
-        //$this->addSql('DROP TABLE brevets');
+        $this->throwIrreversibleMigrationException(
+            'Rollback würde die Tabelle brevets und ihre Daten löschen.'
+        );
     }
 }

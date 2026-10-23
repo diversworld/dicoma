@@ -22,6 +22,65 @@
 - Copy the content of `.env.example` into `.env`
 - Run `php artisan
 
+#### Separate DDEV test database
+
+`ddev start` (or `ddev restart` for an already running project) also starts the
+`db_test` service from `.ddev/docker-compose.db-test.yaml`. It uses MariaDB 11.8,
+like the main `db` service, but stores its data in a separate persistent volume.
+Do not edit the generated `.ddev/.ddev-docker-compose-base.yaml`.
+
+From the web container, connect to host `db_test`, port `3306`, database
+`db_test`, user `db`, password `db`. No additional database port is published
+on the host. The existing `db` service and application connection are unchanged.
+These credentials are for local development only.
+
+To opt Symfony tests into this separate server, create `.env.test.local`:
+
+```dotenv
+DATABASE_URL="mysql://db:db@db_test:3306/db?serverVersion=11.8.0-MariaDB&charset=utf8mb4"
+```
+
+The URL intentionally uses `/db`: Doctrine's existing test configuration appends
+`_test`, resulting in `db_test`. Without this local override, tests keep using
+their existing database connection. Parallel tests with `TEST_TOKEN` need their
+own databases and corresponding grants.
+
+Start the containers, check the connection and initialize the test schema:
+
+```sh
+ddev start
+ddev exec -s db_test mariadb -udb -pdb db_test -e "SELECT DATABASE(), VERSION();"
+ddev exec php bin/console doctrine:migrations:migrate --env=test --no-interaction
+```
+
+The new database starts empty; main database data is not copied. Its volume
+persists across container restarts. DDEV's standard database import, export and
+snapshot commands still target the main `db` service, not `db_test`.
+
+#### Migration chain tests
+
+`MigrationChainTest` checks all migrations on temporary MySQL/MariaDB databases:
+fresh installation against the ORM mapping, upgrades preserving existing data,
+duplicate-constraint preflight checks, and historical rollback/reapply cycles.
+Reversible migrations must restore the schema in both directions; explicitly
+irreversible migrations are excluded from those cycles.
+
+Set `MIGRATION_TEST_DATABASE_URL` in the process environment or in
+`.env.test.local`. The account needs permission to create and drop databases
+named `dicoma_migration_test_*`. Only these randomly named temporary databases
+are migrated and dropped; the database named in the URL is not migrated.
+Without the variable, the tests are skipped, which does not validate the chain.
+
+For DDEV, use the separate `db_test` server and a suitable administrative test
+account. Inside the web container the hostname is `db_test`; when running PHP
+on the host, use a host-reachable address instead. Container IP addresses can
+change after a restart. Never use production database credentials.
+The PHP runtime must satisfy the installed PHPUnit version.
+
+```sh
+APP_ENV=test php vendor/bin/phpunit --no-progress --filter 'MigrationChain' --display-errors --display-skipped --display-deprecations
+```
+
 #### Form and dialog translations
 
 Forms, confirmation dialogs and their planning/attendance interactions support

@@ -60,7 +60,7 @@ final class Phase2MemberWriteAuthorizationTest extends WebTestCase
             }
         }
         $expectedDb = trim((string) getenv('DICOMA_TEST_EXPECTED_DATABASE'));
-        if ($expectedDb !== 'h20292_dicoma_test') {
+        if ($expectedDb !== 'db_test') {
             self::markTestSkipped('Explicit named test database required.');
         }
         $client = static::createClient();

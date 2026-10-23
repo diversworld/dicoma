@@ -113,10 +113,7 @@ final class Version20261008095454 extends AbstractMigration
              ON schedule'
         );
 
-        /*
-         * Die Spalte gehörte ursprünglich nicht zu dieser
-         * Migration und wird deshalb hier bewusst nicht gelöscht.
-         */
+        $this->addSql('ALTER TABLE schedule DROP training_unit_type_id');
 
         $this->addSql(
             'ALTER TABLE training_unit_type
