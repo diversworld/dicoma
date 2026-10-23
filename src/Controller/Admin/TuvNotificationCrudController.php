@@ -19,7 +19,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class TuvNotificationCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string { return TuvNotification::class; }

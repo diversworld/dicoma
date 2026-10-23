@@ -138,7 +138,7 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/settings/tuv-notifications', name: 'settings_tuv_notifications', options: ['methods' => ['GET']])]
     public function tuvNotificationSettings(Request $request, TuvMessageRenderer $renderer): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $kind = (string) $request->query->get('kind', 'confirmation');
         if (!isset(TuvMessageRenderer::LABELS[$kind])) {
             throw $this->createNotFoundException();
@@ -153,7 +153,7 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/settings/tuv-notifications/save', name: 'settings_tuv_notifications_save', options: ['methods' => ['POST']])]
     public function saveTuvNotificationSettings(Request $request, TuvMessageRenderer $renderer): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         if (!$this->isCsrfTokenValid('tuv_message_template', (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException();
         }
@@ -262,7 +262,7 @@ class DashboardController extends AbstractDashboardController
         \App\Service\ScheduleConflictService $conflictService,
         \App\Repository\ScheduleTemplateRepository $templateRepository
     ): Response {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $course = $em->getRepository(\App\Entity\Courses::class)->find($id);
         if (!$course) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
@@ -287,7 +287,7 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/training-overview', name: 'training_overview')]
     public function trainingOverview(EntityManagerInterface $em): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $courses = $em->getRepository(Courses::class)->findAll();
         $rows = [];
         $statuses = [];
