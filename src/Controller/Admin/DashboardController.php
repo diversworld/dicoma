@@ -427,7 +427,8 @@ class DashboardController extends AbstractDashboardController
             ]),
 
             MenuItem::subMenu('Partner', 'fa fa-handshake')->setSubItems([
-                MenuItem::linkTo(VendorCrudController::class, 'Lieferanten', 'fa fa-truck'),
+                MenuItem::linkTo(VendorCrudController::class, 'Lieferanten', 'fa fa-truck')
+                    ->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 			
 			MenuItem::subMenu('Administration','fa fa-gear')->setSubItems([

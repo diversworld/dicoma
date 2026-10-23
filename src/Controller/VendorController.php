@@ -14,10 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/vendor')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class VendorController extends AbstractController
 {
     #[Route('/', name: 'app_vendor_index', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function index(VendorRepository $vendorRepository): Response
     {
         return $this->render('vendor/index.html.twig', [
@@ -26,7 +26,6 @@ class VendorController extends AbstractController
     }
 
     #[Route('/new', name: 'app_vendor_new', methods: ['GET', 'POST'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $vendor = new Vendor();
@@ -47,7 +46,6 @@ class VendorController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_vendor_show', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function show(Vendor $vendor): Response
     {
         return $this->render('vendor/show.html.twig', [
@@ -56,7 +54,6 @@ class VendorController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_vendor_edit', methods: ['GET', 'POST'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Vendor $vendor, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(VendorType::class, $vendor);
@@ -75,7 +72,6 @@ class VendorController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_vendor_delete', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Vendor $vendor, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$vendor->getId(), $request->request->get('_token'))) {
