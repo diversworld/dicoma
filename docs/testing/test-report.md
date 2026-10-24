@@ -1,5 +1,15 @@
 # Phase-2-Prüfbericht
 
+## Korrektur: EasyAdmin-Mitgliederverwaltung vom 24.10.2026
+
+Der Menüeintrag „Mitgliedschaften und Beiträge“ führte zunächst zwar auf eine geschützte Verwaltungsroute, deren Templates erbten jedoch vom öffentlichen Frontend. Direkte Folgelinks hatten außerdem keinen EasyAdmin-Dashboard-Kontext. Diese Darstellung wurde durch die bisherigen reinen Formular-/Statusprüfungen nicht erkannt.
+
+Die Verwaltungsrouten behalten ihre URLs und erhalten explizit den Dashboard-Kontext. Ein eigenes Backend-Layout verwendet die EasyAdmin-Sidebar, native Flashmeldungen und administrativ formatierte Formulare. Vereinsübersicht, Regeln, Beitragsklassen, Antragsentscheidungen, Mitgliedschaftsvorgänge und Zahlungen bleiben im Backend. Öffentliche Anträge und eigener Self-Service bleiben auch für angemeldete Admins im Frontend.
+
+Erneut ausgeführt: **18 Phase-3-HTTP-/Integrationstests, 193 Assertions**, erfolgreich ohne übersprungene/unvollständige Tests. Der zusätzliche Ende-zu-Ende-Test beginnt beim echten EasyAdmin-Dashboard-Menü, öffnet die Vereinskonfiguration, legt eine Beitragsklasse an, bearbeitet ihren Betrag und prüft die Sidebar sowie die Abwesenheit der Frontend-Navigation auf jedem Schritt einschließlich Redirects. Öffentliche Seiten und Self-Service werden im selben angemeldeten Admin-Kontext ausdrücklich auf ihr Frontend-Layout geprüft. Bestehende Vereinsgrenzen, Zahlungen, SEPA und Mitgliedschaftsvorgänge bleiben mit abgedeckt.
+
+Alle acht betroffenen Twig-Templates, Test-/Prod-Container und `git diff --check` sind erfolgreich geprüft. Der lokale Prod-Cache wurde erneuert und die Dashboard-Metadaten der tatsächlichen Prod-Route kontrolliert. Keine Datenbankmigration und keine produktiven Beitragssätze wurden für diese Korrektur angelegt oder geändert.
+
 ## Phase-3-Erweiterung und lokale Regression vom 24.10.2026
 
 Phase 2 war vor Entwicklungsbeginn lokal technisch abgenommen; die vollständige Phase-3-Entwicklung einschließlich Beiträgen/SEPA sowie die lokale Aktivierung nach erfolgreichen Tests wurden ausdrücklich freigegeben. Die früheren Phase-2-Abschnitte unten sind historische Nachweise, keine aktuellen Blocker.

@@ -5,6 +5,7 @@ namespace App\Enum;
 enum CourseParticipantStatus: string
 {
     case REGISTERED = 'registered';
+    case WAITLISTED = 'waitlisted';
     case ACTIVE = 'active';
     case PASSED = 'passed';
     case FAILED = 'failed';
@@ -14,6 +15,7 @@ enum CourseParticipantStatus: string
     {
         return match ($this) {
             self::REGISTERED => 'Angemeldet',
+            self::WAITLISTED => 'Warteliste',
             self::ACTIVE => 'In Ausbildung',
             self::PASSED => 'Bestanden',
             self::FAILED => 'Nicht bestanden',

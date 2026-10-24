@@ -30,9 +30,11 @@ class CoursesController extends AbstractController
     }
 
     #[Route('/', name: 'app_courses_index', methods: ['GET'])]
-    #[IsGranted("ROLE_MEMBER")]
     public function index(CoursesRepository $coursesRepository): Response
     {
+        if (!$this->isGranted('ROLE_MEMBER')) {
+            return $this->redirectToRoute('frontend_course_registration_index');
+        }
         return $this->render('courses/index.html.twig', [
             'courses' => $coursesRepository->findBy(['club' => $this->currentClub(), 'status' => CourseStatus::OPEN], ['id' => 'DESC']),
         ]);

@@ -5,7 +5,8 @@
 <main class="container py-4">
   <h1>Für einen Kurs anmelden</h1>
   <p><a class="btn btn-outline-primary" href="{{ path('frontend_course_registrations') }}">Meine Kursanmeldungen ansehen</a></p>
-  <p>Hier findest du die zur Anmeldung geöffneten Kurse deines Vereins.</p>
+  <p>Hier findest du offene Tauchkurse für Mitglieder und Gäste. Eine Vereinsmitgliedschaft ist nicht erforderlich.</p>
+  {% if not app.user %}<p><a href="{{ path('app_register') }}">Gastkonto registrieren</a> und E-Mail bestätigen oder <a href="{{ path('app_login') }}">mit vorhandenem Konto anmelden</a>.</p>{% endif %}
   {% for type, messages in app.flashes %}
     {% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : (type == 'success' ? 'success' : 'warning') }}" role="alert">{{ message }}</div>{% endfor %}
   {% endfor %}
@@ -14,16 +15,22 @@
   {% for course in courses %}
     <div class="col-md-6"><article class="card h-100"><div class="card-body">
       <h2 class="h5">{{ course.title }}</h2>
+      <p>{{ course.club }} · Kursart: {{ course.category }}</p>
+      <p>{{ course.description|striptags }}</p>
+      <p>Voraussetzungen: {{ course.requirements|striptags }}</p>
+      <p>Benötigte Ausrüstung: {{ course.requiredEquipment }}</p>
+      <p>Kursgebühr: {{ course.courseFee|number_format(2, ',', '.') }} EUR · Ausbilder: {{ course.leadInstructor|default('Noch nicht zugeordnet') }}</p>
+      <ul>{% for session in course.schedule %}<li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }} – {{ session.location }}</li>{% endfor %}</ul>
       {% if course.registrationDeadline %}<p>Anmeldeschluss: {{ course.registrationDeadline|date('d.m.Y') }}</p>{% endif %}
       {% if course.maxParticipants is not null %}<p>Maximale Teilnehmerzahl: {{ course.maxParticipants }}</p>{% endif %}
       {% if registered[course.id] is defined %}
         <p><strong>Bereits angemeldet</strong></p>
       {% elseif not course.registrationOpen %}
         <p>Derzeit keine Anmeldung möglich.</p>
-      {% else %}
+      {% elseif app.user %}
         <form method="post" action="{{ path('frontend_course_register', {id: course.id}) }}">
           <input type="hidden" name="_token" value="{{ csrf_token('course_registration_' ~ course.id) }}">
-          <button type="submit" class="btn btn-primary">Verbindlich anmelden</button>
+          <button type="submit" class="btn btn-primary">{{ course.freePlaces is same as(0) ? 'Auf die Warteliste setzen' : 'Verbindlich anmelden' }}</button>
         </form>
       {% endif %}
     </div></article></div>

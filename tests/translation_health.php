@@ -153,7 +153,9 @@ $inspect = function (FormView $view, string $file) use (&$inspect, &$checks, $in
 };
 foreach (glob('src/Form/*.php') as $file) {
     $class = 'App\\Form\\'.basename($file, '.php');
-    $form = $factory->create($class, null, ['data_class' => null]);
+    $options = ['data_class' => null];
+    if ($class === App\Form\TrainingCourseType::class) { $options['club'] = new App\Entity\Club(); }
+    $form = $factory->create($class, null, $options);
     $inspect($form->createView(), $file);
 }
 $parser = (new PhpParser\ParserFactory())->createForHostVersion();

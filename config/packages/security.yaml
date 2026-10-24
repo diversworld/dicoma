@@ -3,6 +3,8 @@ security:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     role_hierarchy:
+        ROLE_TRAINING_MANAGER:
+            - ROLE_INSTRUCTOR
         ROLE_BOARD:
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
@@ -67,6 +69,10 @@ security:
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/verify/email$, roles: PUBLIC_ACCESS }
         - { path: ^/membership/apply(?:/|$), roles: PUBLIC_ACCESS }
+        - { path: ^/my-training/courses$, roles: PUBLIC_ACCESS }
+        - { path: ^/my-training/(?:assess|tasks)(?:/|$), roles: ROLE_INSTRUCTOR }
+        - { path: ^/my-training(?:/|$), roles: ROLE_USER }
+        - { path: ^/training(?:/|$), roles: ROLE_USER }
 
         # Installation muss ohne Login möglich sein.
         # Der InstallController muss später zusätzlich abgesichert
@@ -94,7 +100,6 @@ security:
         - { path: ^/student, roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor-portal(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor, roles: ROLE_ADMIN }
-        - { path: ^/my-training(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/equipment-manager(?:/|$), roles: ROLE_EQUIPMENT_MANAGER }
 
         # ---------------------------------------------------------

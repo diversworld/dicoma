@@ -4,7 +4,7 @@
 <main class="panel">
     <h1>Teilnehmerabschluss bestätigen</h1>
     <p>Kurs: {{ course }}</p>
-    <p>Teilnehmer: {{ participant.member ? participant.member.fullName : 'Ohne Mitglied' }}</p>
+    <p>Teilnehmer: {{ participant.fullName }}</p>
     <p>Diese Aktion prüft Pflichtnachweise und kann eine Qualifikation vergeben.</p>
     {% if allowed %}
         <form method="post" action="{{ path('admin_participant_pass_confirm', {id: participant.id}) }}">

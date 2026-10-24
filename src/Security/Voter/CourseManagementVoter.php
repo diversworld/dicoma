@@ -40,7 +40,9 @@ final class CourseManagementVoter extends Voter
             return true;
         }
 
-        if (!$this->authorizationChecker->isGranted('ROLE_ADMIN')) {
+        if (!$this->authorizationChecker->isGranted('ROLE_ADMIN')
+            && !$this->authorizationChecker->isGranted('ROLE_TRAINING_MANAGER')
+            && !$this->authorizationChecker->isGranted('ROLE_COURSE_ADMIN')) {
             return false;
         }
 

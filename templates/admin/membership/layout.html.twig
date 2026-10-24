@@ -1,0 +1,18 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}{{ block('title') }}{% endblock %}
+
+{% block main %}
+<div data-membership-area="backend">
+    <nav class="mb-3" aria-label="Mitgliederverwaltung">
+        <a class="btn btn-outline-secondary" href="{{ path('membership_admin') }}">Vereine und Beitragskonfiguration</a>
+    </nav>
+    {% if form is defined %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endif %}
+    {% if policyForm is defined %}{% form_theme policyForm 'bootstrap_5_layout.html.twig' %}{% endif %}
+    {% if classForm is defined %}{% form_theme classForm 'bootstrap_5_layout.html.twig' %}{% endif %}
+    {% if forms is defined %}
+        {% for form in forms %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endfor %}
+    {% endif %}
+    {% block membership_body %}{% endblock %}
+</div>
+{% endblock %}

@@ -29,7 +29,7 @@
 {% set old = existing[participant.id] ?? null %}
 {% set booking = bookings[participant.id] ?? null %}
 <tr>
-<td>{{ participant.member.fullName|default('Teilnehmer') }}</td>
+<td>{{ participant.fullName|default('Teilnehmer') }}</td>
 <td>{% if booking %}<select name="attendance[{{ participant.id }}]" aria-label="Anwesenheit {{ participant.id }}">
 <option value="">— unverändert ({{ booking.attendanceStatus.label() }}) —</option>
 {% for item in attendanceChoices %}<option value="{{ item.value }}">{{ item.label() }}</option>{% endfor %}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Controller\Admin\DashboardController;
 use App\Entity\Club;
 use App\Entity\ContributionClass;
 use App\Entity\Member;
@@ -22,6 +23,7 @@ use App\Security\Voter\MemberManagementVoter;
 use App\Service\MembershipFinanceService;
 use App\Service\MembershipService;
 use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type as F;
@@ -35,6 +37,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final class MembershipController extends AbstractController
 {
+    private const ADMIN_ROUTE_DEFAULTS = [
+        EA::ROUTE_CREATED_BY_EASYADMIN => true,
+        EA::DASHBOARD_CONTROLLER_FQCN => DashboardController::class,
+    ];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly MembershipService $memberships,
@@ -68,18 +75,18 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership', name: 'membership_admin', methods: ['GET'])]
+    #[Route('/admin/membership', name: 'membership_admin', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function administration(): Response
     {
         $user = $this->account();
         $clubs = $this->isGranted('ROLE_SUPER_ADMIN')
             ? $this->em->getRepository(Club::class)->findAll()
             : array_filter([$user->getMember()?->getClub()]);
-        return $this->privatePage('membership/admin_clubs.html.twig', ['clubs' => $clubs]);
+        return $this->adminPage('membership/admin_clubs.html.twig', ['clubs' => $clubs]);
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function club(Club $club, Request $request): Response
     {
         $this->assertClub($club);
@@ -107,7 +114,7 @@ final class MembershipController extends AbstractController
             $this->em->persist($class);
             $this->em->flush();
         }, 'membership_club', ['id' => $club->getId()])) { return $response; }
-        return $this->privatePage('membership/club.html.twig', [
+        return $this->adminPage('membership/club.html.twig', [
             'club' => $club, 'policyForm' => $policyForm->createView(), 'classForm' => $classForm->createView(),
             'classes' => $this->em->getRepository(ContributionClass::class)->findBy(['club' => $club]),
             'applications' => $this->em->getRepository(MembershipApplication::class)->findBy(['club' => $club], ['id' => 'DESC']),
@@ -116,7 +123,7 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/contribution/{id}', name: 'membership_contribution_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/membership/contribution/{id}', name: 'membership_contribution_edit', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function editContribution(ContributionClass $class, Request $request): Response
     {
         $this->assertClub($class->getClub());
@@ -138,11 +145,11 @@ final class MembershipController extends AbstractController
             if ((int) $excessDiscounts > 0) { throw new \DomainException('Zuerst Ermäßigungen anpassen, die den neuen Jahresbeitrag übersteigen.'); }
             $this->em->flush();
         }, 'membership_club', ['id' => $class->getClub()->getId()])) { return $response; }
-        return $this->privatePage('membership/form.html.twig', ['title' => 'Beitragsklasse bearbeiten', 'form' => $form->createView(), 'explanation' => 'Änderungen gelten nur für zukünftige Forderungen. Bereits erhobene Beiträge und Zahlungen bleiben unverändert. Deaktivierte Klassen dürfen nicht für neue Jahresforderungen verwendet werden.']);
+        return $this->adminPage('membership/form.html.twig', ['title' => 'Beitragsklasse bearbeiten', 'form' => $form->createView(), 'explanation' => 'Änderungen gelten nur für zukünftige Forderungen. Bereits erhobene Beiträge und Zahlungen bleiben unverändert. Deaktivierte Klassen dürfen nicht für neue Jahresforderungen verwendet werden.']);
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/application/{id}', name: 'membership_application_decide', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/membership/application/{id}', name: 'membership_application_decide', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function decide(MembershipApplication $application, Request $request): Response
     {
         $this->assertClub($application->getClub());
@@ -163,7 +170,7 @@ final class MembershipController extends AbstractController
                 $this->memberships->reject($application, $this->account()->getUserIdentifier(), $data['note']);
             }
         }, 'membership_club', ['id' => $application->getClub()->getId()])) { return $response; }
-        return $this->privatePage('membership/application.html.twig', ['application' => $application, 'form' => $form->createView()]);
+        return $this->adminPage('membership/application.html.twig', ['application' => $application, 'form' => $form->createView()]);
     }
 
     #[IsGranted('ROLE_MEMBER')]
@@ -188,7 +195,7 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/member/{id}', name: 'membership_member', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/membership/member/{id}', name: 'membership_member', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function member(Member $member, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
@@ -252,6 +259,7 @@ final class MembershipController extends AbstractController
         }
         return $this->privatePage('membership/member.html.twig', [
             'member' => $member, 'admin' => $admin,
+            'membership_layout' => $admin ? 'admin/membership/layout.html.twig' : 'membership/layout.html.twig',
             'forms' => array_map(static fn (FormInterface $form) => $form->createView(), $forms),
             'events' => $this->em->getRepository(MembershipEvent::class)->findBy(['member' => $member], ['id' => 'DESC']),
             'charges' => $this->em->getRepository(MembershipCharge::class)->findBy(['member' => $member], ['id' => 'DESC']),
@@ -260,7 +268,7 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/charge/{id}/payment', name: 'membership_payment', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/membership/charge/{id}/payment', name: 'membership_payment', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function payment(MembershipCharge $charge, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $charge->getMember());
@@ -272,7 +280,7 @@ final class MembershipController extends AbstractController
             $d = $form->getData();
             $this->finance->pay($charge, $d['amount'], $d['reference'], $this->account()->getUserIdentifier());
         }, 'membership_member', ['id' => $charge->getMember()->getId()])) { return $response; }
-        return $this->privatePage('membership/form.html.twig', [
+        return $this->adminPage('membership/form.html.twig', [
             'title' => 'Zahlung erfassen: ' . $charge->getDescription(), 'form' => $form->createView(),
             'explanation' => 'Offen: ' . number_format($charge->getOutstandingCents() / 100, 2, ',', '.') . ' EUR. Jede Zahlung wird mit Referenz und Bearbeiter unveränderlich protokolliert.',
             'payments' => $this->em->getRepository(MembershipPayment::class)->findBy(['charge' => $charge]),
@@ -280,7 +288,7 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/mandate/{id}/revoke', name: 'membership_mandate_revoke', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/admin/membership/mandate/{id}/revoke', name: 'membership_mandate_revoke', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['POST'])]
     public function revoke(SepaMandate $mandate, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $mandate->getMember());
@@ -347,6 +355,11 @@ final class MembershipController extends AbstractController
             ->add('family', F\CheckboxType::class, ['label' => 'Familienbeitrag', 'required' => false])
             ->add('active', F\CheckboxType::class, ['label' => 'Für neue Forderungen aktiv', 'required' => false])
             ->getForm();
+    }
+
+    private function adminPage(string $template, array $parameters): Response
+    {
+        return $this->privatePage($template, ['membership_layout' => 'admin/membership/layout.html.twig'] + $parameters);
     }
 
     private function privatePage(string $template, array $parameters): Response

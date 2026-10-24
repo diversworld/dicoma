@@ -13,7 +13,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /** Read-only frontend: no AdminContext and no user-controlled member identifier. */
-#[IsGranted('ROLE_MEMBER')]
+#[IsGranted('ROLE_USER')]
 final class StudentAttendanceController extends AbstractController
 {
     #[Route('/my-training/attendance', name: 'app_my_training_attendance', methods: ['GET'])]
@@ -22,12 +22,12 @@ final class StudentAttendanceController extends AbstractController
         BookingRepository $bookings
     ): Response {
         $user = $this->getUser();
-        if (!$user instanceof User || $user->getMember()?->getId() === null) {
-            throw $this->createAccessDeniedException('Kein Mitgliedskonto zugeordnet.');
+        if (!$user instanceof User || $user->getPerson()?->getId() === null) {
+            throw $this->createAccessDeniedException('Kein Personenkonto zugeordnet.');
         }
 
         $member = $user->getMember();
-        $enrollments = $participants->findBy(['member' => $member]);
+        $enrollments = $participants->findBy(['person' => $user->getPerson()]);
         $enrolledCourses = [];
         foreach ($enrollments as $enrollment) {
             $course = $enrollment->getCourse();
@@ -37,7 +37,14 @@ final class StudentAttendanceController extends AbstractController
         }
 
         $rows = [];
-        foreach ($bookings->findBy(['member' => $member]) as $booking) {
+        $ownBookings = [];
+        if ($member !== null) {
+            foreach ($bookings->findBy(['member' => $member]) as $booking) { $ownBookings[$booking->getId()] = $booking; }
+        }
+        foreach ($enrollments as $enrollment) {
+            foreach ($bookings->findBy(['courseParticipant' => $enrollment]) as $booking) { $ownBookings[$booking->getId()] = $booking; }
+        }
+        foreach ($ownBookings as $booking) {
             $schedule = $booking->getSchedule();
             $course = $schedule?->getCourses();
             if ($schedule === null || $course === null || !isset($enrolledCourses[$course->getId()])) {

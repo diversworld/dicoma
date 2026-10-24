@@ -59,9 +59,9 @@ class CourseParticipantCrudController extends AbstractCrudController
                 $qb->andWhere('1 = 0');
             } else {
                 $qb->join('entity.course', 'managedParticipantCourse')
-                    ->join('entity.member', 'managedParticipantMember')
+                    ->leftJoin('entity.member', 'managedParticipantMember')
                     ->andWhere('managedParticipantCourse.club = :participantManagedClub')
-                    ->andWhere('managedParticipantMember.club = :participantManagedClub')
+                    ->andWhere('(entity.member IS NULL OR managedParticipantMember.club = :participantManagedClub)')
                     ->setParameter('participantManagedClub', $clubId);
             }
         }
@@ -78,7 +78,10 @@ class CourseParticipantCrudController extends AbstractCrudController
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $member = $participant->getMember();
         if ($member === null) {
-            throw $this->createAccessDeniedException('Mitgliedszuordnung fehlt.');
+            if ($participant->getPerson() === null) {
+                throw $this->createAccessDeniedException('Personenzuordnung fehlt.');
+            }
+            return;
         }
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
     }
@@ -113,10 +116,10 @@ class CourseParticipantCrudController extends AbstractCrudController
                 'registeredAt' => 'DESC',
             ])
             ->setSearchFields([
-                'member.person.firstname',
-                'member.person.lastname',
+                'person.firstname',
+                'person.lastname',
                 'member.memberNumber',
-                'course.name',
+                'course.title',
             ]);
     }
 
@@ -159,7 +162,8 @@ class CourseParticipantCrudController extends AbstractCrudController
             }
         }
         yield $courseField;
-        yield $memberField;
+        yield $memberField->setRequired(false);
+        yield TextField::new('fullName', 'Teilnehmername')->hideOnForm();
 
         /*
          * In der Übersicht zeigen wir die deutsche
@@ -406,7 +410,7 @@ class CourseParticipantCrudController extends AbstractCrudController
          * Bestandene Teilnehmer werden ebenfalls nicht mehr über
          * das normale Formular verändert.
          */
-        if ($entityInstance->hasPassed()) {
+        if ($entityInstance->hasPassed() || $entityInstance->getArchivedAt() !== null) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht mehr '
                 . 'über das normale Formular geändert werden.'
@@ -429,6 +433,12 @@ class CourseParticipantCrudController extends AbstractCrudController
         if ($entityInstance instanceof CourseParticipant) {
             $this->assertParticipantAccess($entityInstance);
             $course = $entityInstance->getCourse();
+            if ($course !== null) {
+                $entityInstance->setFeeCents(\App\Service\FrontendCourseRegistrationService::moneyToCents($course->getCourseFee()));
+                if (!$course->hasFreePlaces() && $entityInstance->getStatus() === CourseParticipantStatus::REGISTERED) {
+                    $entityInstance->setStatus(CourseParticipantStatus::WAITLISTED);
+                }
+            }
 
             if (
                 $course !== null
@@ -486,7 +496,7 @@ class CourseParticipantCrudController extends AbstractCrudController
         // erzwingen. UI-Filter und ausgeblendete Aktionen genuegen nicht.
         $this->assertParticipantAccess($entityInstance);
 
-        if ($entityInstance->hasPassed()) {
+        if ($entityInstance->hasPassed() || $entityInstance->getArchivedAt() !== null) {
             throw new \LogicException(
                 'Ein bestandener Kursteilnehmer kann nicht gelöscht '
                 . 'werden, da der Abschluss zur Ausbildungshistorie gehört.'

@@ -78,6 +78,7 @@ class CoursesType extends AbstractType
                     'novalidate' => 'novalidate'
                 ]
             ])
+            ->add('requiredEquipment', TextareaType::class, ['required' => false, 'label' => 'Benötigte Ausrüstung'])
             ->add('submit', SubmitType::class,[
                 'label' => 'Speichern',
                 'attr' => [

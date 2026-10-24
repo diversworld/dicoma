@@ -19,6 +19,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_USER = 'ROLE_USER';
     public const ROLE_MEMBER = 'ROLE_MEMBER';
     public const ROLE_INSTRUCTOR = 'ROLE_INSTRUCTOR';
+    public const ROLE_TRAINING_MANAGER = 'ROLE_TRAINING_MANAGER';
+    public const ROLE_COURSE_ADMIN = 'ROLE_COURSE_ADMIN';
     public const ROLE_EQUIPMENT_MANAGER = 'ROLE_EQUIPMENT_MANAGER';
     public const ROLE_COMPRESSOR_OPERATOR = 'ROLE_COMPRESSOR_OPERATOR';
     public const ROLE_TREASURER = 'ROLE_TREASURER';
@@ -301,6 +303,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             'Benutzer' => self::ROLE_USER,
             'Mitglied' => self::ROLE_MEMBER,
             'Ausbilder / Trainer' => self::ROLE_INSTRUCTOR,
+            'Ausbildungsleiter' => self::ROLE_TRAINING_MANAGER,
+            'Kursverwaltung' => self::ROLE_COURSE_ADMIN,
             'Gerätewart' => self::ROLE_EQUIPMENT_MANAGER,
             'Kompressorbediener' => self::ROLE_COMPRESSOR_OPERATOR,
             'Kassenwart' => self::ROLE_TREASURER,

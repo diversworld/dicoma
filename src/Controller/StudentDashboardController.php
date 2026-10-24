@@ -12,19 +12,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_MEMBER')]
+#[IsGranted('ROLE_USER')]
 final class StudentDashboardController extends AbstractController
 {
     #[Route('/my-training/progress', name: 'app_my_training_progress', methods: ['GET'])]
     public function index(CourseParticipantRepository $participants, TrainingProgressService $progress): Response
     {
         $user = $this->getUser();
-        if (!$user instanceof User || $user->getMember()?->getId() === null) {
-            throw $this->createAccessDeniedException('Kein Mitgliedskonto zugeordnet.');
+        if (!$user instanceof User || $user->getPerson()?->getId() === null) {
+            throw $this->createAccessDeniedException('Kein Personenkonto zugeordnet.');
         }
 
-        $member = $user->getMember();
-        $enrollments = $participants->findBy(['member' => $member], ['id' => 'DESC']);
+        $enrollments = $participants->findBy(['person' => $user->getPerson()], ['id' => 'DESC']);
         $courses = [];
         foreach ($enrollments as $enrollment) {
             $course = $enrollment->getCourse();

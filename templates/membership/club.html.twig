@@ -1,8 +1,8 @@
-{% extends 'membership/layout.html.twig' %}
+{% extends 'admin/membership/layout.html.twig' %}
 {% block title %}Mitgliedschaften – {{ club.name }}{% endblock %}
 {% block membership_body %}
 <h1>Mitgliedschaften – {{ club.name }}</h1>
-<p><a href="{{ path('membership_apply', {id: club.id}) }}">Öffentlicher Antrag</a> (nur bei aktivierter Aufnahme erreichbar)</p>
+<p><a href="{{ path('membership_apply', {id: club.id}) }}" target="_blank" rel="noopener">Öffentlichen Antrag im Frontend öffnen</a> (nur bei aktivierter Aufnahme erreichbar)</p>
 <h2>Vereinsregeln</h2><p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Das Beispiel 09-30 / 12-31 muss ausdrücklich gespeichert werden. Beiträge sind Jahresbeträge in EUR, ohne automatische anteilige Berechnung.</p>
 {{ form_start(policyForm) }}{{ form_widget(policyForm) }}<button type="submit" class="btn btn-primary">Vereinsregeln speichern</button>{{ form_end(policyForm) }}
 <h2>Beitragsklassen</h2>

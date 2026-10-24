@@ -1,4 +1,4 @@
-{% extends 'membership/layout.html.twig' %}
+{% extends membership_layout|default('membership/layout.html.twig') %}
 {% block title %}Mitgliedschaft – {{ member.fullName }}{% endblock %}
 {% block membership_body %}
 <h1>Mitgliedschaft – {{ member.fullName }}</h1>

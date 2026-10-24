@@ -26,6 +26,7 @@ final class CourseStatusActionController extends AbstractController
         private readonly AdminUrlGenerator $urls,
         private readonly TrainingProgressService $trainingProgress,
         private readonly CourseAuditLogger $audit,
+        private readonly \App\Service\CourseArchiveService $archive,
     ) {}
 
     #[Route('/admin/course/{id}/complete', name: 'admin_course_complete_confirm', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -50,12 +51,10 @@ final class CourseStatusActionController extends AbstractController
             } elseif (!$course->canBeCompleted()) {
                 $this->addFlash('warning', 'Der Kurs kann erst abgeschlossen werden, wenn alle Teilnehmer einen abschliessenden Status besitzen.');
             } else {
-                $this->em->wrapInTransaction(function () use ($course, $id): void {
-                    $before = $course->getStatus()->value;
-                    $course->setStatus(CourseStatus::COMPLETED);
-                    $this->audit->record($id, null, 'course_completed', $before, CourseStatus::COMPLETED->value);
-                });
-                $this->addFlash('success', 'Der Kurs wurde abgeschlossen.');
+                try {
+                    $this->archive->close($course);
+                    $this->addFlash('success', 'Der Kurs wurde abgeschlossen.');
+                } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
             }
             return $this->redirect($this->courseUrl($id));
         }

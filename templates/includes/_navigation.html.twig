@@ -25,6 +25,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Anmelden</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
             {% else %}
+                <li class="nav-item"><a class="nav-link" href="{{ path('training_portal') }}">Ausbildungsportal</a></li>
                 {% if is_granted('ROLE_MEMBER') %}
                     
                     <li class="nav-item dropdown">

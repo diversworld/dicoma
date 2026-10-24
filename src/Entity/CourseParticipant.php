@@ -19,7 +19,9 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         )
     ]
 )]
+#[ORM\UniqueConstraint(name: 'uniq_course_person', columns: ['course_id', 'person_id'])]
 #[Assert\Callback('validateAssignment')]
+#[ORM\HasLifecycleCallbacks]
 class CourseParticipant
 {
     #[ORM\Id]
@@ -35,8 +37,25 @@ class CourseParticipant
     private ?Courses $course = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Member $member = null;
+
+    #[ORM\ManyToOne(cascade: ['persist'])]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Bitte eine Person oder ein Mitglied für die Teilnahme zuordnen.')]
+    private ?Person $person = null;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $feeCents = 0;
+
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $certificateNumber = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $trainingArchive = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
 
     #[ORM\Column(
         type: Types::STRING,
@@ -68,7 +87,7 @@ class CourseParticipant
     {
         return sprintf(
             '%s – %s',
-            $this->member?->getFullName() ?? '',
+            $this->getFullName(),
             $this->course?->__toString() ?? ''
         );
     }
@@ -98,8 +117,48 @@ class CourseParticipant
     public function setMember(?Member $member): static
     {
         $this->member = $member;
+        if ($member !== null) {
+            $this->person = $member->getPerson();
+        }
 
         return $this;
+    }
+
+    public function getPerson(): ?Person { return $this->person; }
+    public function setPerson(Person $person): static
+    {
+        if ($this->member !== null && $this->member->getPerson() !== $person) {
+            throw new \DomainException('Teilnehmer und Mitglied müssen dieselbe Person verwenden.');
+        }
+        $this->person = $person;
+        return $this;
+    }
+    public function getFullName(): string { return $this->person?->getFullName() ?? $this->member?->getFullName() ?? ''; }
+    public function getFeeCents(): int { return $this->feeCents; }
+    public function setFeeCents(int $value): static
+    {
+        if ($value < 0) { throw new \DomainException('Die Kursgebühr darf nicht negativ sein.'); }
+        $this->feeCents = $value;
+        return $this;
+    }
+    public function getCertificateNumber(): ?string { return $this->certificateNumber; }
+    public function getTrainingArchive(): ?array { return $this->trainingArchive; }
+    public function getArchivedAt(): ?\DateTimeImmutable { return $this->archivedAt; }
+    #[ORM\PreRemove]
+    public function protectArchive(): void
+    {
+        if ($this->archivedAt !== null || $this->hasPassed()) {
+            throw new \DomainException('Archivierte oder bestandene Ausbildungsteilnahmen dürfen nicht gelöscht werden.');
+        }
+    }
+    public function archiveTraining(array $snapshot, ?string $certificateNumber = null): void
+    {
+        if ($this->archivedAt !== null) {
+            throw new \DomainException('Der Ausbildungsnachweis ist bereits archiviert.');
+        }
+        $this->trainingArchive = $snapshot;
+        $this->certificateNumber = $certificateNumber;
+        $this->archivedAt = new \DateTimeImmutable();
     }
 
     public function getRegisteredAt(): \DateTimeImmutable

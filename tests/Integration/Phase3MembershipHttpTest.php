@@ -61,6 +61,8 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $this->policy();
         $crawler = $this->client->request('GET', '/membership/apply/' . $this->club->getId());
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-membership-area="frontend"]');
+        self::assertSelectorNotExists('aside.sidebar');
         $form = $crawler->filter('form[name="membership_application"]')->form();
         $this->client->submit($form, [
             'membership_application[firstname]' => 'Public', 'membership_application[lastname]' => 'Applicant',
@@ -104,6 +106,8 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $this->client->loginUser($user);
         $crawler = $this->client->request('GET', '/profile/contact');
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-membership-area="frontend"]');
+        self::assertSelectorNotExists('[data-membership-area="backend"]');
         $values = $crawler->filter('form[name="member_contact"]')->form()->getPhpValues();
         $values['member_contact']['membershipStatus'] = 'active';
         $values['member_contact']['clubFunctions'] = 'admin';
@@ -134,13 +138,13 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $foreign = $this->memberUser('foreign', ['ROLE_ADMIN'], $foreignClub);
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/membership/club/' . $this->club->getId());
-        self::assertResponseIsSuccessful();
+        $this->assertBackendPage();
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[cancellationCutoff]' => '09-30', 'membership_policy[membershipYearEnd]' => '12-31',
         ]);
         self::assertResponseRedirects('/admin/membership/club/' . $this->club->getId());
         $crawler = $this->client->request('GET', '/admin/membership/member/' . $admin->getMember()->getId());
-        self::assertResponseIsSuccessful();
+        $this->assertBackendPage();
         self::assertCount(1, $crawler->filter('form[name="billing_assignment"]'));
         foreach (['/admin/membership/club/' . $foreignClub->getId(), '/admin/membership/member/' . $foreign->getMember()->getId()] as $path) {
             $this->client->request('GET', $path);
@@ -298,7 +302,7 @@ final class Phase3MembershipHttpTest extends WebTestCase
         self::assertInstanceOf(MembershipCharge::class, $charge);
         self::assertSame(12000, $charge->getAmountCents());
         $crawler = $this->client->request('GET', '/admin/membership/charge/' . $charge->getId() . '/payment');
-        self::assertResponseIsSuccessful();
+        $this->assertBackendPage();
         $this->client->submit($crawler->filter('form[name="membership_payment"]')->form(), [
             'membership_payment[amount]' => '20.01', 'membership_payment[reference]' => 'Bank-Test',
         ]);
@@ -334,7 +338,7 @@ final class Phase3MembershipHttpTest extends WebTestCase
         static::getContainer()->get(MembershipService::class)->submit($application);
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/membership/application/' . $application->getId());
-        self::assertResponseIsSuccessful();
+        $this->assertBackendPage();
         self::assertCount(0, $crawler->filter('select[name="membership_decision[person]"]'), 'A club admin must not receive a global person selector.');
         $this->client->submit($crawler->filter('form[name="membership_decision"]')->form(), [
             'membership_decision[decision]' => 'approve',
@@ -465,6 +469,55 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $this->client->request('POST', '/member/' . $memberId, ['_token' => 'invalid']);
         self::assertResponseStatusCodeSame(403);
         self::assertSame(1, $this->em->getRepository(Member::class)->count([]));
+    }
+
+    public function testEasyAdminMenuAndContributionConfigurationStayInBackend(): void
+    {
+        $admin = $this->memberUser('backend-menu-admin', ['ROLE_ADMIN']);
+        $clubId = $this->club->getId();
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        $crawler = $this->client->click($crawler->selectLink('Mitgliedschaften und Beiträge')->link());
+        $this->assertBackendPage();
+        $crawler = $this->client->click($crawler->selectLink('Beiträge und Vereinsregeln konfigurieren')->link());
+        $this->assertBackendPage();
+        self::assertCount(1, $crawler->filter('form[name="membership_policy"]'));
+        $this->client->submit($crawler->filter('form[name="contribution_class"]')->form(), [
+            'contribution_class[name]' => 'Backend-Testbeitrag',
+            'contribution_class[annualCents]' => '87.65',
+        ]);
+        self::assertResponseRedirects('/admin/membership/club/' . $clubId);
+        $crawler = $this->client->followRedirect();
+        $this->assertBackendPage();
+        $crawler = $this->client->click($crawler->selectLink('Backend-Testbeitrag')->link());
+        $this->assertBackendPage();
+        $this->client->submit($crawler->filter('form[name="contribution_class"]')->form(), [
+            'contribution_class[annualCents]' => '100.01',
+        ]);
+        self::assertResponseRedirects('/admin/membership/club/' . $clubId);
+        $this->client->followRedirect();
+        $this->assertBackendPage();
+        $class = $this->em->getRepository(ContributionClass::class)->findOneBy(['name' => 'Backend-Testbeitrag']);
+        self::assertInstanceOf(ContributionClass::class, $class);
+        self::assertSame(10001, $class->getAnnualCents());
+        $this->client->request('GET', '/membership/apply');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('nav[aria-label="Hauptnavigation"]');
+        self::assertSelectorNotExists('aside.sidebar');
+        $this->client->request('GET', '/profile/membership');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-membership-area="frontend"]');
+        self::assertSelectorNotExists('[data-membership-area="backend"]');
+    }
+
+    private function assertBackendPage(): void
+    {
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('[data-membership-area="backend"]');
+        self::assertSelectorNotExists('[data-membership-area="frontend"]');
+        self::assertSelectorNotExists('nav[aria-label="Hauptnavigation"]');
     }
 
     private function memberUser(string $name, array $roles = [], ?Club $club = null): User

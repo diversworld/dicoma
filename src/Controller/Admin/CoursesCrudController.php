@@ -35,6 +35,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use App\Service\TrainingProgressService;
 use App\Service\CourseScheduleGenerator;
 use App\Service\CourseTemplateExportService;
@@ -59,6 +60,8 @@ class CoursesCrudController extends AbstractCrudController
 		private readonly TranslatorInterface $translator,
         private readonly TrainingProgressService $trainingProgress,
         private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly \App\Repository\MemberRepository $members,
+        private readonly \Symfony\Component\Security\Core\Role\RoleHierarchyInterface $roleHierarchy,
 	) {
 	}
 	
@@ -264,7 +267,7 @@ class CoursesCrudController extends AbstractCrudController
         if ($lead !== null && ($course->getClub() === null
             || $lead->getClub()?->getId() !== $course->getClub()->getId()
             || $lead->getUser() === null
-            || !in_array(\App\Entity\User::ROLE_INSTRUCTOR, $lead->getUser()->getRoles(), true))) {
+            || !in_array(\App\Entity\User::ROLE_INSTRUCTOR, $this->roleHierarchy->getReachableRoleNames($lead->getUser()->getRoles()), true))) {
             throw new \DomainException('Kursausbilder muss ein Ausbilder des Kursvereins sein.');
         }
     }
@@ -345,12 +348,9 @@ class CoursesCrudController extends AbstractCrudController
         yield AssociationField::new('leadInstructor', 'Verantwortlicher Kursausbilder')
             ->setColumns(4)
             ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
-            ->setFormTypeOption('query_builder', static function (\App\Repository\MemberRepository $repo) {
-                return $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
-                    ->innerJoin('m.person', 'person')
-                    ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
-                    ->orderBy('person.lastname', 'ASC');
-            });
+            ->setFormTypeOption('choices', $this->members->findInstructors(
+                $this->isGranted('ROLE_SUPER_ADMIN') ? null : $this->getUser()?->getMember()?->getClub()
+            ));
         yield AssociationField::new('qualification','Zielqualifikation')
             ->setRequired(false)
             ->setColumns(4)
@@ -412,6 +412,7 @@ class CoursesCrudController extends AbstractCrudController
         yield TextEditorField::new('description','Beschreibung')
             ->hideOnIndex()
             ->setColumns(8);
+        yield TextareaField::new('requiredEquipment', 'Benötigte Ausrüstung')->hideOnIndex()->setColumns(8);
         /*
          * Notizen
          */

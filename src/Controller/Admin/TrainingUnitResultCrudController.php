@@ -60,6 +60,26 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         return TrainingUnitResult::class;
     }
 
+    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof TrainingUnitResult) {
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            if (($original['courseParticipant'] ?? null)?->getArchivedAt() !== null
+                || $entityInstance->getCourseParticipant()?->getArchivedAt() !== null) {
+                throw $this->createAccessDeniedException('Archivierte Ausbildungsnachweise sind gesperrt.');
+            }
+        }
+        parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof TrainingUnitResult && $entityInstance->getCourseParticipant()?->getArchivedAt() !== null) {
+            throw $this->createAccessDeniedException('Archivierte Ausbildungsnachweise dürfen nicht gelöscht werden.');
+        }
+        parent::deleteEntity($entityManager, $entityInstance);
+    }
+
     public function configureCrud(Crud $crud): Crud
     {
         return $crud

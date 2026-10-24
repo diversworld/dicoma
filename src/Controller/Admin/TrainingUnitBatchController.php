@@ -26,6 +26,7 @@ final class TrainingUnitBatchController extends AbstractController
 {
     #[Route('/admin/training-results/batch/{id}', name: 'admin_training_results_batch', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     #[Route('/my-training/assess/{id}', name: 'instructor_training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
+    #[Route('/training/assess/{id}', name: 'training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function edit(
         int $id,
         Request $request,
@@ -58,7 +59,8 @@ final class TrainingUnitBatchController extends AbstractController
             }
             return $this->redirectToRoute($returnRoute, ['id' => $id]);
         }
-        $attendees = $participants->findBy(['course' => $course], ['id' => 'ASC']);
+        $attendees = array_values(array_filter($participants->findBy(['course' => $course], ['id' => 'ASC']),
+            static fn ($participant): bool => in_array($participant->getStatus(), [\App\Enum\CourseParticipantStatus::REGISTERED, \App\Enum\CourseParticipantStatus::ACTIVE], true)));
         $existing = [];
         foreach ($results->findBy(['schedule' => $schedule]) as $result) {
             if ($result instanceof TrainingUnitResult && $result->getCourseParticipant()?->getId() !== null) {
@@ -66,9 +68,13 @@ final class TrainingUnitBatchController extends AbstractController
             }
         }
         $bookings = [];
+        $participantBookingsById = [];
         foreach ($em->getRepository(Booking::class)->findBy(['schedule' => $schedule]) as $booking) {
             $memberId = $booking->getMember()?->getId();
             if ($memberId !== null) { $bookings[$memberId] = $booking; }
+            if ($booking->getCourseParticipant()?->getId() !== null) {
+                $participantBookingsById[$booking->getCourseParticipant()->getId()] = $booking;
+            }
         }
         $participantBookings = [];
         foreach ($attendees as $participant) {
@@ -76,6 +82,8 @@ final class TrainingUnitBatchController extends AbstractController
             $mid = $participant->getMember()?->getId();
             if ($pid !== null && $mid !== null && isset($bookings[$mid])) {
                 $participantBookings[$pid] = $bookings[$mid];
+            } elseif ($pid !== null && isset($participantBookingsById[$pid])) {
+                $participantBookings[$pid] = $participantBookingsById[$pid];
             }
         }
         $errors = [];
@@ -107,7 +115,9 @@ final class TrainingUnitBatchController extends AbstractController
             }
             if ($errors === []) {
                 try {
-                    $count = $assessmentService->save($schedule, $attendees, $changes, $existing, $participantBookings);
+                    $actor = $this->getUser();
+                    $count = $assessmentService->save($schedule, $attendees, $changes, $existing, $participantBookings,
+                        $actor instanceof \App\Entity\User ? $actor->getMember() : null);
                     $this->addFlash('success', sprintf('%d Teilnehmer aktualisiert.', $count));
                     return $this->redirectToRoute($returnRoute, ['id' => $id]);
                 } catch (\DomainException $e) {

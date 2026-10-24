@@ -78,6 +78,9 @@ class TrainingUnitResult
             return;
         }
         $course = $this->courseParticipant->getCourse();
+        if ($this->courseParticipant->getArchivedAt() !== null) {
+            $context->buildViolation('Archivierte Ausbildungsnachweise dürfen nicht verändert werden.')->atPath('courseParticipant')->addViolation();
+        }
         if ($course === null || $this->schedule->getCourses()?->getId() !== $course->getId()) {
             $context->buildViolation('Der Termin muss zum Kurs des Teilnehmers gehören.')
                 ->atPath('schedule')->addViolation();

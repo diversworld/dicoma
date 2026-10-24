@@ -1,0 +1,45 @@
+{% extends 'training/layout.html.twig' %}
+{% block title %}{{ course.title }} – Ausbildung{% endblock %}
+{% block training_body %}
+<h1>{{ course.title }}</h1>
+<p>{{ course.status.label() }} · Kursart: {{ course.category }} · Kursgebühr: {{ course.courseFee|number_format(2, ',', '.') }} EUR</p>
+<p>{{ course.description|striptags }}</p>
+<p>Voraussetzungen: {{ course.requirements|striptags }}</p>
+<p>Benötigte Ausrüstung: {{ course.requiredEquipment }}</p>
+<p>Verantwortlicher Ausbilder: {{ course.leadInstructor|default('Noch nicht zugeordnet') }}</p>
+{% set manage = is_granted('COURSE_MANAGE', course) %}
+{% if manage and course.status.value not in ['completed', 'cancelled'] %}
+<p>
+    <a href="{{ path('training_course_edit', {id: course.id}) }}">Kurs bearbeiten</a> ·
+    <a href="{{ path('training_unit_type_new', {id: course.id}) }}">Einheitenart definieren</a> ·
+    <a href="{{ path('training_course_unit', {id: course.id}) }}">Lernziel / Einheit hinzufügen</a> ·
+    <a href="{{ path('training_course_session', {id: course.id}) }}">Ausbildungs- oder Nachholtermin anlegen</a>
+</p>
+{% endif %}
+<h2>Ausbildungsplan und Lernziele</h2>
+<ul>{% for unit in course.trainingUnits %}
+    <li>{{ unit.trainingUnitType }}{% if unit.trainingUnitType.examination %} (Prüfung){% endif %}:
+        {{ unit.requiredSessions }} Termin(e), {{ unit.required ? 'Pflicht' : 'Optional' }} – {{ unit.notes }}</li>
+{% else %}<li>Noch keine Einheiten definiert. Ohne Pflichtanforderungen ist kein erfolgreicher Abschluss möglich.</li>{% endfor %}</ul>
+<h2>Termine, Orte und Ausbilder</h2>
+<ul>{% for session in course.schedule %}
+    <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
+        – {{ session.title }} – {{ session.location }} – {{ session.instructor }}
+        {% if is_granted('TRAINING_ASSESS', session) %}<a href="{{ path('training_assess', {id: session.id}) }}">Anwesenheit und Prüfungsergebnisse erfassen</a>{% endif %}</li>
+{% else %}<li>Noch keine Termine vorhanden.</li>{% endfor %}</ul>
+<h2>Teilnehmer und Warteliste</h2>
+<div class="table-responsive"><table class="table">
+<thead><tr><th>Teilnehmer</th><th>Status</th><th>Fortschritt</th>{% if manage %}<th>Gebühr / Zahlung</th>{% endif %}</tr></thead>
+<tbody>{% for row in rows %}
+    <tr><td><a href="{{ path('training_participant', {id: row.participant.id}) }}">{{ row.participant.fullName }}</a>
+        {% if not row.participant.member %}(Gast){% endif %}</td>
+        <td>{{ row.participant.statusLabel }}</td><td>{{ row.progress.percent }} %</td>
+        {% if manage %}<td>{{ (row.participant.feeCents / 100)|number_format(2, ',', '.') }} / {{ (row.paid / 100)|number_format(2, ',', '.') }} EUR</td>{% endif %}</tr>
+{% else %}<tr><td>Keine Teilnehmer.</td></tr>{% endfor %}</tbody></table></div>
+{% if manage and course.status.value != 'completed' %}
+<form method="post" action="{{ path('training_complete_course', {id: course.id}) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('training_close_' ~ course.id) }}">
+    <button type="submit" class="btn btn-primary">Kurs abschließen und Nachweise archivieren</button>
+</form>
+{% endif %}
+{% endblock %}

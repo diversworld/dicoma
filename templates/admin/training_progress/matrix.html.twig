@@ -38,7 +38,7 @@
 <thead><tr><th>Teilnehmer</th>{% for req in requirements %}<th>{{ req.name }}{% if not req.required %}<span class="muted"> (optional)</span>{% endif %}<div class="small muted">Soll: {{ req.target }}</div></th>{% endfor %}<th>Fortschritt</th><th>Aktionen</th></tr></thead>
 <tbody>
 {% for row in rows %}
-<tr><td>{{ row.participant.member.fullName|default('Teilnehmer') }}<div class="small muted">{{ row.participant.statusLabel }}</div></td>
+<tr><td>{{ row.participant.fullName|default('Teilnehmer') }}<div class="small muted">{{ row.participant.statusLabel }}</div></td>
 {% for cell in row.cells %}<td><span class="{{ cell.missing == 0 ? 'ok' : 'warn' }}">{{ cell.credited }}/{{ cell.target }}</span>{% if cell.passed is defined and cell.passed > cell.credited %}<div class="small muted">{{ cell.passed }} tatsächlich bestanden</div>{% endif %}{% if cell.newUrl %}<div class="small"><a href="{{ cell.newUrl }}">Nachweis erfassen</a></div>{% endif %}</td>{% endfor %}
 <td><strong>Pflicht: {{ row.progress.percent }} %</strong>{% if row.progress.optionalTarget > 0 %}<div class="small muted">Optional: {{ row.progress.optionalCredited }}/{{ row.progress.optionalTarget }} ({{ row.progress.optionalPercent }} %)</div>{% endif %}<div class="bar"><div class="fill" style="width:{{ row.progress.percent }}%"></div></div><div class="small {{ row.progress.complete ? 'ok' : 'warn' }}">{{ row.progress.complete ? 'Pflichtnachweise vollständig' : 'Noch nicht vollständig' }}</div></td>
 <td><a href="{{ row.detailUrl }}">Details</a></td></tr>
@@ -53,7 +53,7 @@
     {% if row.missingRequired is not empty %}
         {% set hasMissing = true %}
         <details class="group" {% if loop.first %}open{% endif %}>
-            <summary>{{ row.participant.member.fullName|default('Teilnehmer') }} – {{ row.missingRequired|length }} offene Pflichtart(en)</summary>
+            <summary>{{ row.participant.fullName|default('Teilnehmer') }} – {{ row.missingRequired|length }} offene Pflichtart(en)</summary>
             <div class="table-wrap"><table>
                 <thead><tr><th>Ausbildungseinheit</th><th>Fehlend</th><th>Passende Kurstermine</th></tr></thead>
                 <tbody>

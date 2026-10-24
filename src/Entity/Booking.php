@@ -45,6 +45,13 @@ class Booking
 	#[ORM\JoinColumn(name: 'students_id',referencedColumnName: 'id',nullable: true,onDelete: 'SET NULL')]
 	private ?Member $member = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?CourseParticipant $courseParticipant = null;
+
+    public function getCourseParticipant(): ?CourseParticipant { return $this->courseParticipant; }
+    public function setCourseParticipant(?CourseParticipant $value): static { $this->courseParticipant = $value; return $this; }
+
 	#[ORM\Column(type: Types::STRING,length: 30,enumType: BookingAttendanceStatus::class,options: ['default' => 'planned'])]
 	private BookingAttendanceStatus $attendanceStatus =	BookingAttendanceStatus::PLANNED;
 

@@ -318,6 +318,34 @@ final class MigrationChainTest extends TestCase
         $this->assertSchemaMatchesMapping();
     }
 
+    public function testTrainingUpgradePreservesEnrollmentAndBackfillsPersonFeeAndBooking(): void
+    {
+        $this->migrate('20261024102048');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Student']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club]);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('courses', ['title' => 'Existing course', 'category' => 'beginner', 'club_id' => $club, 'status' => 'open', 'course_fee' => '125.50']);
+        $course = (int) $this->connection->lastInsertId();
+        $this->connection->insert('course_participant', ['course_id' => $course, 'member_id' => $member, 'registered_at' => '2026-10-24 12:00:00', 'status' => 'active', 'notes' => 'Keep training notes']);
+        $participant = (int) $this->connection->lastInsertId();
+        $this->connection->insert('schedule', ['title' => 'Keep session', 'courses_id' => $course]);
+        $schedule = (int) $this->connection->lastInsertId();
+        $this->connection->insert('booking', ['schedule_id' => $schedule, 'students_id' => $member, 'bookingdate' => '2026-10-24', 'attendance_status' => 'present']);
+        $booking = (int) $this->connection->lastInsertId();
+        $this->migrate('latest');
+        $row = $this->connection->fetchAssociative('SELECT * FROM course_participant WHERE id = ?', [$participant]);
+        self::assertSame($person, (int) $row['person_id']);
+        self::assertSame($member, (int) $row['member_id']);
+        self::assertSame(12550, (int) $row['fee_cents']);
+        self::assertSame('Keep training notes', $row['notes']);
+        self::assertSame('active', $row['status']);
+        self::assertSame($participant, (int) $this->connection->fetchOne('SELECT course_participant_id FROM booking WHERE id = ?', [$booking]));
+        self::assertSame('present', $this->connection->fetchOne('SELECT attendance_status FROM booking WHERE id = ?', [$booking]));
+        $this->assertSchemaMatchesMapping();
+    }
+
     public function testMembershipUpgradeAbortsBeforeChangesForDuplicateMemberNumbers(): void
     {
         $this->migrate('20261024100000');
@@ -353,6 +381,7 @@ final class MigrationChainTest extends TestCase
             '20261023110000',
             '20261024100000',
             '20261024102048',
+            '20261024130000',
         ];
 
         $migrations = $this->factory()

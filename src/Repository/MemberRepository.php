@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Member;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 
 /**
  * @extends ServiceEntityRepository<Member>
@@ -16,9 +17,18 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class MemberRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly RoleHierarchyInterface $roleHierarchy)
     {
         parent::__construct($registry, Member::class);
+    }
+
+    /** @return list<Member> */
+    public function findInstructors(?\App\Entity\Club $club = null): array
+    {
+        return array_values(array_filter($this->findOrderedByName($club), fn (Member $member): bool =>
+            $member->getUser() !== null && in_array(\App\Entity\User::ROLE_INSTRUCTOR,
+                $this->roleHierarchy->getReachableRoleNames($member->getUser()->getRoles()), true)
+        ));
     }
 
     /**
@@ -77,12 +87,12 @@ class MemberRepository extends ServiceEntityRepository
     /** @return list<Member> */
     public function findOrderedByName(?\App\Entity\Club $club = null): array
     {
-        $qb = $this->createQueryBuilder('member')
-            ->join('member.person', 'person')->addSelect('person')
+        $qb = $this->createQueryBuilder('m')
+            ->join('m.person', 'person')->addSelect('person')
             ->orderBy('person.lastname', 'ASC')
             ->addOrderBy('person.firstname', 'ASC');
         if ($club !== null) {
-            $qb->andWhere('member.club = :club')->setParameter('club', $club);
+            $qb->andWhere('m.club = :club')->setParameter('club', $club);
         }
         return $qb->getQuery()->getResult();
     }

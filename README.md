@@ -81,6 +81,14 @@ The PHP runtime must satisfy the installed PHPUnit version.
 APP_ENV=test php vendor/bin/phpunit --no-progress --filter 'MigrationChain' --display-errors --display-skipped --display-deprecations
 ```
 
+#### Diving training (Phase 4)
+
+The public course catalog supports members and verified guest accounts.
+The role-aware training portal at `/training` includes waitlists, attendance,
+assessment, manual payment/refund records and archived certificates without
+creating artificial memberships. See [Phase 4 training](docs/phase4-training.md)
+for roles, workflows, payment scope and deployment of the additive migration.
+
 #### Form and dialog translations
 
 Forms, confirmation dialogs and their planning/attendance interactions support

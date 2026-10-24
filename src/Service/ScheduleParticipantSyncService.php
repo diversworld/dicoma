@@ -41,17 +41,12 @@ class ScheduleParticipantSyncService
         foreach ($course->getParticipants() as $participant) {
             $member = $participant->getMember();
 
-            if ($member === null) {
-                continue;
-            }
-
             /*
              * Abgebrochene Kursteilnehmer werden nicht mehr
              * für neue Termine übernommen.
              */
             if (
-                $participant->getStatus()
-                === CourseParticipantStatus::CANCELLED
+                !in_array($participant->getStatus(), [CourseParticipantStatus::REGISTERED, CourseParticipantStatus::ACTIVE], true)
             ) {
                 continue;
             }
@@ -60,11 +55,12 @@ class ScheduleParticipantSyncService
              * Keine Doppelbuchungen.
              */
             if (
-                $this->bookingRepository
+                $this->bookingRepository->findOneBy(['schedule' => $schedule, 'courseParticipant' => $participant]) !== null
+                || ($member !== null && $this->bookingRepository
                     ->existsForScheduleAndMember(
                         $schedule,
                         $member
-                    )
+                    ))
             ) {
                 continue;
             }
@@ -74,6 +70,7 @@ class ScheduleParticipantSyncService
             $booking
                 ->setSchedule($schedule)
                 ->setMember($member)
+                ->setCourseParticipant($participant)
                 ->setBookingdate(
                     new \DateTimeImmutable('today')
                 )

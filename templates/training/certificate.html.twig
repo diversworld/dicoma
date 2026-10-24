@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Ausbildungsbescheinigung {{ participant.certificateNumber }}</title>
+<style>body{font:18px sans-serif;max-width:900px;margin:3rem auto;padding:1rem}dt{font-weight:bold}dd{margin-bottom:1rem}@media print{button{display:none}}</style></head>
+<body>
+<h1>Ausbildungsbescheinigung</h1>
+<p>{{ archive.participant }} hat den Kurs <strong>{{ archive.course }}</strong> erfolgreich abgeschlossen.</p>
+<dl>
+    <dt>Verein</dt><dd>{{ archive.club }}</dd>
+    <dt>Qualifikation / Brevet</dt><dd>{{ archive.qualification }}</dd>
+    <dt>Ausstellende Organisation</dt><dd>{{ archive.issuer|default('Kursverein') }}</dd>
+    <dt>Abschlussdatum</dt><dd>{{ archive.completedAt|date('d.m.Y') }}</dd>
+    <dt>Bescheinigungsnummer</dt><dd>{{ participant.certificateNumber }}</dd>
+    {% if archive.brevetNumber|default(null) %}<dt>Offizielle Brevetnummer</dt><dd>{{ archive.brevetNumber }}</dd>{% endif %}
+</dl>
+<h2>Archivierte Ausbildungsnachweise</h2>
+<ul>{% for requirement in archive.requirements %}
+    <li>{{ requirement.name }}: {{ requirement.passed }} bestandene Termine (Soll {{ requirement.target }})</li>
+{% endfor %}</ul>
+<button type="button" onclick="window.print()">Drucken / als PDF speichern</button>
+</body></html>

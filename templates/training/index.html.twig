@@ -1,0 +1,20 @@
+{% extends 'training/layout.html.twig' %}
+{% block title %}Ausbildungsportal{% endblock %}
+{% block training_body %}
+<h1>Ausbildungsportal</h1>
+<h2>Tauchschüler: Meine Kurse</h2>
+<ul>
+{% for enrollment in enrollments %}
+    <li><a href="{{ path('training_participant', {id: enrollment.id}) }}">{{ enrollment.course.title }}</a> – {{ enrollment.statusLabel }}</li>
+{% else %}<li>Noch keine Kursanmeldung vorhanden. Die Teilnahme ist auch ohne Vereinsmitgliedschaft möglich.</li>{% endfor %}
+</ul>
+{% if is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
+    <h2>{% if is_granted('ROLE_TRAINING_MANAGER') %}Ausbildungsleitung{% elseif is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}Kursverwaltung{% else %}Ausbilder: Meine Kurse{% endif %}</h2>
+    {% if is_granted('ROLE_TRAINING_MANAGER') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
+        <p><a class="btn btn-primary" href="{{ path('training_course_new') }}">Kurs anlegen</a></p>
+    {% endif %}
+    <ul>{% for course in courses %}
+        <li><a href="{{ path('training_course', {id: course.id}) }}">{{ course.title }}</a> – {{ course.status.label() }}</li>
+    {% else %}<li>Keine zugeordneten Kurse.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

@@ -14,6 +14,7 @@ use App\Enum\CourseParticipantStatus;
 
 #[Assert\Callback('validateQualification')]
 #[ORM\Entity(repositoryClass: CoursesRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Courses
 {
     #[ORM\Id]
@@ -32,6 +33,9 @@ class Courses
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $requirements = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $requiredEquipment = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
@@ -65,6 +69,7 @@ class Courses
 	private CourseStatus $status = CourseStatus::DRAFT;
 
 	#[ORM\Column(nullable: true)]
+    #[Assert\Positive]
 	private ?int $maxParticipants = null;
 
 	#[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
@@ -143,6 +148,9 @@ class Courses
     {
         return $this->requirements;
     }
+
+    public function getRequiredEquipment(): ?string { return $this->requiredEquipment; }
+    public function setRequiredEquipment(?string $value): static { $this->requiredEquipment = $value; return $this; }
 
     public function setRequirements(?string $requirements): static
     {
@@ -319,10 +327,6 @@ class Courses
 			return false;
 		}
 
-		if (!$this->hasFreePlaces()) {
-			return false;
-		}
-
 		if (
 			$this->registrationDeadline !== null
 			&& $this->registrationDeadline < new \DateTimeImmutable('today')
@@ -378,7 +382,9 @@ class Courses
 	
 	public function getParticipantCount(): int
 	{
-		return $this->participants->count();
+        return $this->participants->filter(static fn (CourseParticipant $participant): bool =>
+            !in_array($participant->getStatus(), [CourseParticipantStatus::CANCELLED, CourseParticipantStatus::WAITLISTED], true)
+        )->count();
 	}
 	
 	/**
@@ -403,7 +409,7 @@ class Courses
 	public function removeParticipant(
 		CourseParticipant $participant
 	): static {
-		if ($participant->hasPassed()) {
+		if ($participant->hasPassed() || $participant->getArchivedAt() !== null) {
 			throw new \LogicException(
 				'Ein bestandener Kursteilnehmer kann nicht aus dem Kurs entfernt werden.'
 			);
@@ -417,6 +423,12 @@ class Courses
 
 		return $this;
 	}
+
+    #[ORM\PreRemove]
+    public function protectTrainingArchives(): void
+    {
+        foreach ($this->participants as $participant) { $participant->protectArchive(); }
+    }
 	
 	/**
 	 * @return Collection<int, CourseTrainingUnit>
