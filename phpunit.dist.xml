@@ -19,8 +19,22 @@
     </php>
 
     <testsuites>
-        <testsuite name="Project Test Suite">
-            <directory>tests</directory>
+        <testsuite name="unit">
+            <directory>tests/Unit</directory>
+            <directory>tests/Membership</directory>
+            <directory>tests/Command</directory>
+            <directory>tests/Security/Voter</directory>
+        </testsuite>
+        <testsuite name="isolated">
+            <file>tests/Integration/PersonModelTest.php</file>
+            <file>tests/Integration/TeamMemberPersistenceTest.php</file>
+            <file>tests/Integration/Phase2FoundationHttpTest.php</file>
+        </testsuite>
+        <testsuite name="staging">
+            <directory>tests/Http</directory>
+        </testsuite>
+        <testsuite name="migrations">
+            <file>tests/Integration/MigrationChainTest.php</file>
         </testsuite>
     </testsuites>
 

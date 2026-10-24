@@ -8,10 +8,12 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[Assert\Callback('validateSportClubs')]
+#[UniqueEntity(fields: ['person', 'club'], errorPath: 'club', message: 'Diese Person hat bereits eine Mitgliedschaft in diesem Verein.')]
 #[ORM\Table(
     name: 'member',
     uniqueConstraints: [
@@ -21,6 +23,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         )
     ]
 )]
+#[ORM\UniqueConstraint(name: 'uniq_member_person_club', columns: ['person_id', 'club_id'])]
 #[ORM\Entity(repositoryClass: MemberRepository::class)]
 class Member
 {
@@ -60,23 +63,10 @@ class Member
     private MembershipStatus $membershipStatus =
         MembershipStatus::ACTIVE;
 
-    #[ORM\Column(length: 100)]
-    private ?string $firstname = null;
-
-    #[ORM\Column(length: 100)]
-    private ?string $lastname = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTimeInterface $birthday = null;
-
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $email = null;
-
-    #[ORM\Column(length: 25, nullable: true)]
-    private ?string $mobile = null;
-
-    #[ORM\Column(length: 25, nullable: true)]
-    private ?string $phone = null;
+    #[ORM\ManyToOne(cascade: ['persist'])]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\Valid]
+    private Person $person;
 
     /**
      * @var Collection<int, MemberSport>
@@ -89,15 +79,6 @@ class Member
     )]
     private Collection $sports;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $street = null;
-
-    #[ORM\Column(length: 20, nullable: true)]
-    private ?string $postalCode = null;
-
-    #[ORM\Column(length: 120, nullable: true)]
-    private ?string $city = null;
-
     #[ORM\Column(
         type: Types::TEXT,
         nullable: true
@@ -106,8 +87,9 @@ class Member
 
     #[ORM\OneToOne(
         inversedBy: 'member',
-        cascade: ['persist', 'remove']
+        cascade: ['persist']
     )]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
     /**
@@ -188,6 +170,7 @@ class Member
 
     public function __construct()
     {
+        $this->person = new Person();
         $this->schedules = new ArrayCollection();
         $this->bookings = new ArrayCollection();
         $this->sports = new ArrayCollection();
@@ -272,125 +255,118 @@ class Member
 
     public function getFirstname(): ?string
     {
-        return $this->firstname;
+        return $this->person->getFirstname();
     }
 
     public function setFirstname(
         string $firstname
     ): static {
-        $this->firstname = $firstname;
+        $this->person->setFirstname($firstname);
 
         return $this;
     }
 
     public function getLastname(): ?string
     {
-        return $this->lastname;
+        return $this->person->getLastname();
     }
 
     public function setLastname(
         string $lastname
     ): static {
-        $this->lastname = $lastname;
+        $this->person->setLastname($lastname);
 
         return $this;
     }
 
     public function getFullName(): string
     {
-        return trim(
-            sprintf(
-                '%s %s',
-                $this->firstname ?? '',
-                $this->lastname ?? ''
-            )
-        );
+        return $this->person->getFullName();
     }
 
+    #[Assert\NotNull]
     public function getBirthday(): ?\DateTimeInterface
     {
-        return $this->birthday;
+        return $this->person->getBirthday();
     }
 
     public function setBirthday(
         \DateTimeInterface $birthday
     ): static {
-        $this->birthday = $birthday;
+        $this->person->setBirthday($birthday);
 
         return $this;
     }
 
     public function getEmail(): ?string
     {
-        return $this->email;
+        return $this->person->getEmail();
     }
 
     public function setEmail(?string $email): static
     {
-        $this->email = $email;
+        $this->person->setEmail($email);
 
         return $this;
     }
 
     public function getMobile(): ?string
     {
-        return $this->mobile;
+        return $this->person->getMobile();
     }
 
     public function setMobile(?string $mobile): static
     {
-        $this->mobile = $mobile;
+        $this->person->setMobile($mobile);
 
         return $this;
     }
 
     public function getPhone(): ?string
     {
-        return $this->phone;
+        return $this->person->getPhone();
     }
 
     public function setPhone(?string $phone): static
     {
-        $this->phone = $phone;
+        $this->person->setPhone($phone);
 
         return $this;
     }
 
     public function getStreet(): ?string
     {
-        return $this->street;
+        return $this->person->getStreet();
     }
 
     public function setStreet(?string $street): static
     {
-        $this->street = $street;
+        $this->person->setStreet($street);
 
         return $this;
     }
 
     public function getPostalCode(): ?string
     {
-        return $this->postalCode;
+        return $this->person->getPostalCode();
     }
 
     public function setPostalCode(
         ?string $postalCode
     ): static {
-        $this->postalCode = $postalCode !== null
-            ? trim($postalCode)
-            : null;
+        $this->person->setPostalCode($postalCode);
 
         return $this;
     }
 
     public function getCity(): ?string
     {
-        return $this->city;
+        return $this->person->getCity();
     }
 
     public function setCity(?string $city): static
     {
-        $this->city = $city;
+        $this->person->setCity($city);
 
         return $this;
     }
@@ -414,8 +390,29 @@ class Member
 
     public function setUser(?User $user): static
     {
+        if ($this->user === $user) {
+            return $this;
+        }
+        $previous = $this->user;
         $this->user = $user;
+        if ($previous !== null && $previous->getMember() === $this) {
+            $previous->setMember(null);
+        }
+        if ($user !== null && $user->getMember() !== $this) {
+            $user->setMember($this);
+        }
+        return $this;
+    }
 
+    public function getPerson(): Person
+    {
+        return $this->person;
+    }
+
+    public function setPerson(Person $person): static
+    {
+        $this->person = $person;
+        $this->user?->setPerson($person);
         return $this;
     }
 

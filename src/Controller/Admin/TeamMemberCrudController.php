@@ -190,8 +190,8 @@ class TeamMemberCrudController extends AbstractCrudController
                 'id' => 'DESC',
             ])
             ->setSearchFields([
-                'member.firstname',
-                'member.lastname',
+                'member.person.firstname',
+                'member.person.lastname',
                 'member.memberNumber',
                 'team.name',
                 'team.sport.name',

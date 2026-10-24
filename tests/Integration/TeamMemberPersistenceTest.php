@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use App\Controller\Admin\TeamMemberCrudController;
 use App\Entity\Club;
 use App\Entity\Member;
+use App\Entity\Person;
 use App\Entity\MemberSport;
 use App\Entity\Sport;
 use App\Entity\Team;
@@ -16,11 +17,15 @@ use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Integration tests for the real CRUD persistence path, never production DB.
  * Requires pdo_sqlite and Symfony's test kernel.
  */
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
 final class TeamMemberPersistenceTest extends KernelTestCase
 {
     private EntityManagerInterface $em;
@@ -54,7 +59,7 @@ final class TeamMemberPersistenceTest extends KernelTestCase
         
 		$this->em->getConnection()->executeStatement('PRAGMA foreign_keys = OFF');
 
-        $classes = [Club::class, Member::class, Sport::class, Team::class, MemberSport::class, TeamMember::class];
+        $classes = [Club::class, Person::class, Member::class, Sport::class, Team::class, MemberSport::class, TeamMember::class];
         
 		$metadata = array_map(fn (string $class) => $this->em->getClassMetadata($class), $classes);
 		

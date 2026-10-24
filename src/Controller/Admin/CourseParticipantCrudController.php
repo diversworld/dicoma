@@ -113,8 +113,8 @@ class CourseParticipantCrudController extends AbstractCrudController
                 'registeredAt' => 'DESC',
             ])
             ->setSearchFields([
-                'member.firstname',
-                'member.lastname',
+                'member.person.firstname',
+                'member.person.lastname',
                 'member.memberNumber',
                 'course.name',
             ]);

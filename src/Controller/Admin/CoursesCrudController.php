@@ -347,8 +347,9 @@ class CoursesCrudController extends AbstractCrudController
             ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
             ->setFormTypeOption('query_builder', static function (\App\Repository\MemberRepository $repo) {
                 return $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
+                    ->innerJoin('m.person', 'person')
                     ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
-                    ->orderBy('m.lastname', 'ASC');
+                    ->orderBy('person.lastname', 'ASC');
             });
         yield AssociationField::new('qualification','Zielqualifikation')
             ->setRequired(false)

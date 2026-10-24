@@ -5,7 +5,6 @@ namespace App\Form;
 use App\Entity\User;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -27,6 +26,7 @@ class RegistrationFormType extends AbstractType
             ])
             ->add('email', EmailType::class, [
                 'label' => 'E-Mail Adresse',
+                'constraints' => [new NotBlank(), new Length(max: 100)],
                 'attr' => ['class' => 'form-control'],
             ])
             ->add('plainPassword', PasswordType::class, [
@@ -38,40 +38,37 @@ class RegistrationFormType extends AbstractType
                     'class' => 'form-control'
                 ],
                 'constraints' => [
-                    new NotBlank([
-                        'message' => 'Please enter a password',
-                    ]),
-                    new Length([
-                        'min' => 6,
-                        'minMessage' => 'Your password should be at least {{ limit }} characters',
-                        // max length allowed by Symfony for security reasons
-                        'max' => 4096,
-                    ]),
+                    new NotBlank(message: 'Please enter a password'),
+                    new Length(
+                        min: 6,
+                        minMessage: 'Your password should be at least {{ limit }} characters',
+                        max: 4096,
+                    ),
                 ],
             ])
             ->add('agreeTerms', CheckboxType::class, [
                 'attr' => ['class' => 'form-control'],
                 'mapped' => false,
                 'constraints' => [
-                    new IsTrue([
-                        'message' => 'You should agree to our terms.',
-                    ]),
+                    new IsTrue(message: 'You should agree to our terms.'),
                 ],
             ]);
 
-        // Member fields
+        // Personal data does not imply club membership or a functional role.
         $builder
             ->add('firstname', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'First Name',
+                'constraints' => [new NotBlank(), new Length(max: 100)],
             ])
             ->add('lastname', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'Last Name',
+                'constraints' => [new NotBlank(), new Length(max: 100)],
             ])
             ->add('birthday', DateType::class, [
                 'attr' => [
@@ -85,50 +82,35 @@ class RegistrationFormType extends AbstractType
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'Mobile Number',
+                'constraints' => [new Length(max: 25)],
             ])
             ->add('phone', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'Phone Number',
+                'constraints' => [new Length(max: 25)],
             ])
             ->add('street', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'Street',
+                'constraints' => [new Length(max: 100)],
             ])
             ->add('postal', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'Postal Code',
+                'constraints' => [new Length(max: 20)],
             ])
             ->add('city', TextType::class, [
                 'attr' => [
                     'class' => 'form-control'],
                 'mapped' => false,
                 'label' => 'City',
-            ])
-            ->add('category', ChoiceType::class, [
-                'attr' => [
-                    'class' => 'form-control'],
-                'mapped' => false,
-                'choices' => [
-                    'Student' => 'student',
-                    'Mitglied' => 'member',
-                    'Instructor' => 'instructor',
-                ],
-            ])
-            ->add('status', ChoiceType::class, [
-                'attr' => [
-                    'class' => 'form-control'],
-                'mapped' => false,
-                'choices' => [
-                    'Active' => 'active',
-                    'Inactive' => 'inactive',
-                    // any other statuses
-                ],
+                'constraints' => [new Length(max: 120)],
             ]);
     }
 

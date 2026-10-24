@@ -84,7 +84,7 @@ final class EquipmentManagerWalkInLoanController extends AbstractController
             }
         }
 
-        $members = $em->getRepository(Member::class)->findBy(['club' => $club], ['lastname'=>'ASC','firstname'=>'ASC']);
+        $members = $em->getRepository(Member::class)->findOrderedByName($club);
         $items = $em->getRepository(EquipmentItem::class)->findBy(['club'=>$club,'lendable'=>true,'conditionStatus'=>'ready'], ['name'=>'ASC']);
         $regulators = $em->getRepository(Regulator::class)->findBy(['club'=>$club,'lendable'=>true,'conditionStatus'=>'ready'], ['id'=>'ASC']);
         $tanks = $em->getRepository(Tank::class)->findBy(['club'=>$club,'lendable'=>true,'conditionStatus'=>'ready'], ['id'=>'ASC']);

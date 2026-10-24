@@ -64,13 +64,27 @@ class MemberRepository extends ServiceEntityRepository
     public function findByCategory($value): array
     {
         return $this->createQueryBuilder('i')
+            ->join('i.person', 'person')
             ->andWhere('i.category = :val')
             ->setParameter('val', $value)
-            ->orderBy('i.lastname', 'ASC')
+            ->orderBy('person.lastname', 'ASC')
             ->setMaxResults(100)
             ->getQuery()
             ->getResult()
         ;
+    }
+
+    /** @return list<Member> */
+    public function findOrderedByName(?\App\Entity\Club $club = null): array
+    {
+        $qb = $this->createQueryBuilder('member')
+            ->join('member.person', 'person')->addSelect('person')
+            ->orderBy('person.lastname', 'ASC')
+            ->addOrderBy('person.firstname', 'ASC');
+        if ($club !== null) {
+            $qb->andWhere('member.club = :club')->setParameter('club', $club);
+        }
+        return $qb->getQuery()->getResult();
     }
 
 //    public function findOneBySomeField($value): ?Instructor

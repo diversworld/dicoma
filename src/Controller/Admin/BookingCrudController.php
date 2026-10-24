@@ -65,8 +65,8 @@ class BookingCrudController extends AbstractCrudController
             ])
             ->setSearchFields([
                 'bookingnumber',
-                'member.firstname',
-                'member.lastname',
+                'member.person.firstname',
+                'member.person.lastname',
                 'member.memberNumber',
                 'status',
             ]);

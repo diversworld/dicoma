@@ -155,8 +155,8 @@ class MemberQualificationCrudController extends AbstractCrudController
                 'validUntil' => 'ASC',
             ])
             ->setSearchFields([
-                'member.firstname',
-                'member.lastname',
+                'member.person.firstname',
+                'member.person.lastname',
                 'member.memberNumber',
                 'qualification.name',
                 'qualification.shortName',

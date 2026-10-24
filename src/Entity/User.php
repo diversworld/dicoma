@@ -46,8 +46,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
-    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'])]
     private ?Member $member = null;
+
+    #[ORM\OneToOne(cascade: ['persist'])]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Person $person = null;
 
     #[ORM\Column(length: 150)]
     private ?string $email = null;
@@ -107,9 +111,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	 */
 	public function getRoles(): array
 	{
-		$roles = $this->roles;
-
-		$roles[] = self::ROLE_MEMBER;
+		$roles = array_values(array_filter(
+            $this->roles,
+            static fn (string $role): bool => $role !== self::ROLE_MEMBER
+        ));
+        $roles[] = self::ROLE_USER;
+        if ($this->member !== null && $this->member->getClub() !== null && $this->member->isActiveMember()) {
+            $roles[] = self::ROLE_MEMBER;
+        }
 
 		return array_values(
 			array_unique($roles)
@@ -211,16 +220,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setMember(?Member $member): static
     {
-        if ($member === null && $this->member !== null) {
-            $this->member->setUser(null);
+        if ($this->member === $member) {
+            return $this;
         }
-
+        $previous = $this->member;
+        $this->member = $member;
+        if ($previous !== null && $previous->getUser() === $this) {
+            $previous->setUser(null);
+        }
+        if ($member !== null) {
+            $this->person = $member->getPerson();
+        }
         if ($member !== null && $member->getUser() !== $this) {
             $member->setUser($this);
         }
+        return $this;
+    }
 
-        $this->member = $member;
+    public function getPerson(): ?Person
+    {
+        return $this->person;
+    }
 
+    public function setPerson(?Person $person): static
+    {
+        if ($this->member !== null && $this->member->getPerson() !== $person) {
+            throw new \InvalidArgumentException('Benutzerkonto und Mitgliedschaft müssen dieselbe Person verwenden.');
+        }
+        $this->person = $person;
         return $this;
     }
 
@@ -271,6 +298,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public static function getAvailableRoles(): array
     {
         return [
+            'Benutzer' => self::ROLE_USER,
             'Mitglied' => self::ROLE_MEMBER,
             'Ausbilder / Trainer' => self::ROLE_INSTRUCTOR,
             'Gerätewart' => self::ROLE_EQUIPMENT_MANAGER,

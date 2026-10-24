@@ -46,8 +46,9 @@ class SchedulePlanningRowType extends AbstractType
 				EntityType::class, ['class' => Member::class, 'label' => false, 'required' => false,  'placeholder' => '—',
                     'query_builder' => static function (MemberRepository $repo) use ($options) {
                         $qb = $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
+                            ->innerJoin('m.person', 'person')
                             ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
-                            ->orderBy('m.lastname', 'ASC');
+                            ->orderBy('person.lastname', 'ASC');
                         if ($options['club'] instanceof Club) {
                             $qb->andWhere('m.club = :club')->setParameter('club', $options['club']);
                         }

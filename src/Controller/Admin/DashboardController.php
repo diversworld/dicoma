@@ -68,6 +68,7 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/equipment-center', name: 'equipment_center')]
     public function equipmentCenter(TankInspectionOverview $overview): Response
     {
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $tankUrl = (clone $this->adminUrlGenerator)
             ->unsetAll()->setController(TankCrudController::class)
             ->setAction(Crud::PAGE_INDEX)->generateUrl();
@@ -90,6 +91,14 @@ class DashboardController extends AbstractDashboardController
 	
 	public function index(): Response
 	{
+        $club = null;
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $user = $this->getUser();
+            $club = $user instanceof User ? $user->getMember()?->getClub() : null;
+            if ($club === null || $club->getId() === null) {
+                throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+            }
+        }
 		$expiredUrl = $this->adminUrlGenerator
 			->setController(MemberQualificationCrudController::class)
 			->setAction(Crud::PAGE_INDEX)
@@ -110,19 +119,19 @@ class DashboardController extends AbstractDashboardController
 		return $this->render('admin/dashboard/dashboard.html.twig', [
 			'expiredQualifications' =>
 				$this->memberQualificationRepository
-					->findExpired(),
+					->findExpired($club),
 
 			'expiringQualifications' =>
 				$this->memberQualificationRepository
-					->findExpiringWithinDays(30),
+					->findExpiringWithinDays(30, $club),
 
 			'expiredQualificationCount' =>
 				$this->memberQualificationRepository
-					->countExpired(),
+					->countExpired($club),
 
 			'expiringQualificationCount' =>
 				$this->memberQualificationRepository
-					->countExpiringWithinDays(30),
+					->countExpiringWithinDays(30, $club),
 			
 			'expiredQualificationsUrl' =>
 				$expiredUrl,
@@ -363,6 +372,8 @@ class DashboardController extends AbstractDashboardController
             ]),
 
             MenuItem::subMenu('Vereinsverwaltung', 'fa fa-building')->setSubItems([
+                MenuItem::linkTo(PersonCrudController::class, 'Personen und Gäste', 'fa fa-address-book')
+                    ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building')
                     ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),

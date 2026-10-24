@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/member')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 class MemberController extends AbstractController
 {
     #[Route('/', name: 'app_member_index', methods: ['GET'])]

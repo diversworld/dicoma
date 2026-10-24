@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Member;
+use App\Entity\Person;
 use App\Entity\User;
 use App\Security\Voter\MemberManagementVoter;
 use Doctrine\ORM\QueryBuilder;
@@ -103,6 +104,22 @@ class MemberCrudController extends AbstractCrudController
     public function createEntity(string $entityFqcn): Member
     {
         $member = new Member();
+        $personId = $this->getContext()?->getRequest()->query->get('personId');
+        if ($personId !== null) {
+            $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
+            if (!is_string($personId) || !ctype_digit($personId) || (int) $personId < 1) {
+                throw $this->createNotFoundException('Ungültige Personen-ID.');
+            }
+            $person = $this->entityManager->find(Person::class, (int) $personId);
+            if ($person === null) {
+                throw $this->createNotFoundException('Person nicht gefunden.');
+            }
+            $member->setPerson($person);
+            $account = $this->entityManager->getRepository(User::class)->findOneBy(['person' => $person]);
+            if ($account !== null && $account->getMember() === null) {
+                $member->setUser($account);
+            }
+        }
         if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
             $user = $this->getUser();
             $club = $user instanceof User ? $user->getMember()?->getClub() : null;
@@ -264,15 +281,15 @@ class MemberCrudController extends AbstractCrudController
 			->setPageTitle(Crud::PAGE_EDIT, 'Mitglied bearbeiten')
 			->setPageTitle(Crud::PAGE_DETAIL, 'Mitglied')
 			->setDefaultSort([
-				'lastname' => 'ASC',
-				'firstname' => 'ASC',
+				'person.lastname' => 'ASC',
+				'person.firstname' => 'ASC',
 			])
 			->setSearchFields([
 				'memberNumber',
-				'firstname',
-				'lastname',
-				'email',
-				'city',
+				'person.firstname',
+				'person.lastname',
+				'person.email',
+				'person.city',
 			]);
 	}
 
@@ -349,14 +366,17 @@ class MemberCrudController extends AbstractCrudController
             ->collapsible();
 
         yield TextField::new('firstname', 'Vorname')
+            ->setSortable(false)
             ->setRequired(true)
             ->setColumns(4);
 
         yield TextField::new('lastname', 'Nachname')
+            ->setSortable(false)
             ->setRequired(true)
             ->setColumns(4);
 
         yield DateField::new('birthday', 'Geburtsdatum')
+            ->setRequired(true)
             ->setColumns(3)
             ->setFormat('dd.MM.yyyy')
             ->setHelp('Format: TT.MM.JJJJ')
@@ -394,9 +414,11 @@ class MemberCrudController extends AbstractCrudController
             ->collapsible();
 
         yield EmailField::new('email', 'E-Mail')
+            ->setSortable(false)
             ->setColumns(4);
 
         yield TelephoneField::new('mobile', 'Mobil')
+            ->setSortable(false)
             ->setColumns(3);
 
         yield TelephoneField::new('phone', 'Telefon')

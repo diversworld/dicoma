@@ -1,5 +1,15 @@
 # DICOMA – Phase 2: HTTP-Mandantentrennung (Abnahmepatch)
 
+## Aktualisierung vom 23.10.2026
+
+Die nachstehenden drei Kurs-Historientests sind ein älterer, enger Teilnachweis. Zusätzlich existieren jetzt datenbankunabhängig provisionierte HTTP-Regressionsfälle in `tests/Integration/Phase2FoundationHttpTest.php`: Sie verwenden ausschließlich SQLite im Speicher und einen Null-Mailer, nicht die unten beschriebenen Staging-Fixtures.
+
+```bash
+ddev exec php vendor/bin/phpunit --testsuite unit,isolated --fail-on-skipped
+```
+
+Diese Fälle prüfen unter anderem Gastregistrierung/-aufnahme, Verifizierung, Login, Mitgliedsrollen, vereinsbezogene Listen und Suche, Dashboard-Daten sowie Passwort-Reset und Logout. Sie ersetzen die vollständige vorhandene Staging-Suite nicht. Für deren kontrollierte Ausführung siehe [aktuelle Abnahme-Gates](../PHASE2-ABSCHLUSS-GATES.md) und [Prüfbericht](testing/test-report.md).
+
 ## Umfang
 
 Drei echte Symfony-WebTestCase-Tests mit HTTP-Requests an `GET /admin/course/{id}/history`:
@@ -48,7 +58,7 @@ Wenn eine Variable fehlt, werden die Tests **übersprungen** (nicht als bestande
 
 - Mitgliederdetails, Bearbeiten, Löschen und Dokumentdownloads mit zwei Vereinen.
 - EasyAdmin-Listenfilter und manipulierte POST-Requests auf Staging.
-- Die beiden zuvor ausgelagerten `ClubMembershipTest`-Fälle fachlich entscheiden.
+- Die beiden `ClubMembershipTest`-Basisfälle sind im Unit-Gate enthalten und bestanden; die vollständige fachliche Aufnahmematrix bleibt gesondert abzunehmen.
 - Fachliche Freigabe der Superadmin-only-Übergangssperren; Backup-/Restore-Test.
 
 Referenz: https://symfony.com/doc/current/testing.html

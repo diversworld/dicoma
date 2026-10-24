@@ -88,8 +88,8 @@ class ScheduleCrudController extends AbstractCrudController
                 'location',
                 'locationCity',
                 'courses.title',
-                'instructor.firstname',
-                'instructor.lastname',
+                'instructor.person.firstname',
+                'instructor.person.lastname',
             ]);
     }
 

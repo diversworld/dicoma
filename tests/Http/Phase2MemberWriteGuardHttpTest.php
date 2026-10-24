@@ -54,7 +54,10 @@ final class Phase2MemberWriteGuardHttpTest extends WebTestCase
 
     private function snapshot(EntityManagerInterface $em, int $id): array
     {
-        $row = $em->getConnection()->fetchAssociative('SELECT * FROM member WHERE id = :id', ['id' => $id]);
+        $row = $em->getConnection()->fetchAssociative(
+            'SELECT m.*, p.firstname, p.lastname, p.birthday, p.email, p.mobile, p.phone, p.street, p.postal_code, p.city FROM member m JOIN person p ON p.id = m.person_id WHERE m.id = :id',
+            ['id' => $id]
+        );
         self::assertIsArray($row, 'Fixture member unexpectedly missing.');
         return $row;
     }

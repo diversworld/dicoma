@@ -24,11 +24,12 @@ trait EquipmentBookingBasketTrait
     #[AdminRoute(path: '/equipment-booking-basket', name: 'equipment_booking_basket')]
     public function equipmentBookingBasket(Request $request, EntityManagerInterface $em, EquipmentBookingService $bookingService, AdminUrlGenerator $adminUrlGenerator): Response
     {
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $items = $em->getRepository(EquipmentItem::class)->findBy(['lendable' => true, 'conditionStatus' => 'ready'], ['name' => 'ASC']);
         $regulators = $em->getRepository(Regulator::class)->findBy(['lendable' => true, 'conditionStatus' => 'ready'], ['id' => 'ASC']);
         $tanks = $em->getRepository(Tank::class)->findBy([], ['id' => 'ASC']);
         $categories = $em->getRepository(EquipmentCategory::class)->findBy(['active' => true], ['name' => 'ASC']);
-        $members = $em->getRepository(Member::class)->findBy([], ['lastname' => 'ASC', 'firstname' => 'ASC']);
+        $members = $em->getRepository(Member::class)->findOrderedByName();
         $errors = [];
         $submitted = [];
         if ($request->isMethod('POST')) {

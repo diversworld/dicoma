@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Member;
+use App\Entity\Person;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Form\RegistrationFormType;
@@ -13,6 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
@@ -48,21 +50,8 @@ class RegistrationController extends AbstractController
 
             $entityManager->persist($user);
 
-            // Create Member entity and link with User entity
-            $member = new Member();
-            $member->setUser($user);
-            $member->setFirstname($form->get('firstname')->getData());
-            $member->setLastname($form->get('lastname')->getData());
-            $member->setBirthday($form->get('birthday')->getData());
-            $member->setMobile($form->get('mobile')->getData());
-            $member->setPhone($form->get('phone')->getData());
-            $member->setStreet($form->get('street')->getData());
-            $member->setPostalCode($form->get('postal')->getData());
-            $member->setCity($form->get('city')->getData());
-            $member->setCategory($form->get('category')->getData());
-            $member->setStatus('active'); // Example status
-
-            $entityManager->persist($member);
+            // Registration creates an account, not an approved club membership.
+            $user->setPerson($this->registrationPerson($form, $user));
             $entityManager->flush();
 
             // Generate a signed URL and email it to the user
@@ -121,16 +110,8 @@ class RegistrationController extends AbstractController
                 $entityManager->persist($user);
 
                 $member = new Member();
+                $member->setPerson($this->registrationPerson($form, $user));
                 $member->setUser($user);
-                $member->setFirstname($form->get('firstname')->getData());
-                $member->setLastname($form->get('lastname')->getData());
-                $member->setBirthday($form->get('birthday')->getData());
-                $member->setMobile($form->get('mobile')->getData());
-                $member->setPhone($form->get('phone')->getData());
-                $member->setStreet($form->get('street')->getData());
-                $member->setPostalCode($form->get('postal')->getData());
-                $member->setCity($form->get('city')->getData());
-                $member->setCategory($form->get('category')->getData());
                 $member->setStatus('active');
                 $entityManager->persist($member);
                 $entityManager->flush();
@@ -162,6 +143,20 @@ class RegistrationController extends AbstractController
         return $this->render('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
+    }
+
+    private function registrationPerson(FormInterface $form, User $user): Person
+    {
+        return (new Person())
+            ->setFirstname($form->get('firstname')->getData())
+            ->setLastname($form->get('lastname')->getData())
+            ->setBirthday($form->get('birthday')->getData())
+            ->setEmail($user->getEmail())
+            ->setMobile($form->get('mobile')->getData())
+            ->setPhone($form->get('phone')->getData())
+            ->setStreet($form->get('street')->getData())
+            ->setPostalCode($form->get('postal')->getData())
+            ->setCity($form->get('city')->getData());
     }
 
     #[Route('/verify/email', name: 'app_verify_email')]

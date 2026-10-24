@@ -48,7 +48,7 @@ foreach ($spec as $class => $routes) {
 }
 if ($count !== 30) $failures[] = "Erwartet 30 Routen, gefunden: $count";
 if ($failures) {
-    fwrite(STDERR, "PHASE-2-ROUTENPRÜFUNG: FEHLER\\n" . implode("\\n", $failures) . "\\n");
+    fwrite(STDERR, "PHASE-2-ROUTENPRÜFUNG: FEHLER\n" . implode("\n", $failures) . "\n");
     exit(1);
 }
-echo "PHASE-2-ROUTENPRÜFUNG: OK ($count Routen, " . count($spec) . " Controller; nur Quellcodeprüfung)\\n";
+echo "PHASE-2-ROUTENPRÜFUNG: OK ($count Routen, " . count($spec) . " Controller; nur Quellcodeprüfung)\n";

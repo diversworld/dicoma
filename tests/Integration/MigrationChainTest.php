@@ -70,6 +70,68 @@ final class MigrationChainTest extends TestCase
         $this->migrate('20261016194500');
     }
 
+    public function testPersonNormalizationPreservesAllFieldsIdsAndAccountLinks(): void
+    {
+        $this->migrate('20261022130000');
+        $club = $this->createClub();
+        $this->connection->insert('user', [
+            'user' => 'person-migration', 'email' => 'account@example.invalid',
+            'roles' => '["ROLE_MEMBER"]', 'password' => 'test', 'is_verified' => 1,
+        ]);
+        $user = (int) $this->connection->lastInsertId();
+        $fields = [
+            'firstname' => 'Jörg ', 'lastname' => ' D\'Ávila', 'birthday' => '1980-02-29',
+            'email' => 'contact@example.invalid', 'mobile' => '+49 123', 'phone' => null,
+            'street' => 'Straße 1', 'postal_code' => '00123', 'city' => 'Köln',
+        ];
+        $this->connection->insert('member', $fields + [
+            'club_id' => $club, 'user_id' => $user, 'member_number' => 'KEEP-001', 'membership_status' => 'active',
+        ]);
+        $member = (int) $this->connection->lastInsertId();
+        // Equal names do not establish equal identity.
+        $this->connection->insert('member', $fields + [
+            'club_id' => $club, 'member_number' => 'KEEP-002', 'membership_status' => 'prospect',
+        ]);
+
+        $this->migrate('latest');
+
+        self::assertSame($fields, $this->connection->fetchAssociative(
+            'SELECT firstname, lastname, birthday, email, mobile, phone, street, postal_code, city FROM person WHERE id = ?',
+            [$member]
+        ));
+        $row = $this->connection->fetchAssociative('SELECT * FROM member WHERE id = ?', [$member]);
+        self::assertSame($member, (int) $row['person_id']);
+        self::assertSame('KEEP-001', $row['member_number']);
+        self::assertSame($club, (int) $row['club_id']);
+        self::assertSame($user, (int) $row['user_id']);
+        self::assertSame($member, (int) $this->connection->fetchOne('SELECT person_id FROM user WHERE id = ?', [$user]));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM person'));
+        self::assertFalse($this->connection->createSchemaManager()->introspectTable('member')->hasColumn('firstname'));
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testPersonContractAbortsBeforeDroppingAnyUnverifiedData(): void
+    {
+        $this->migrate('20261022130000');
+        $this->connection->insert('member', [
+            'firstname' => 'Original', 'lastname' => 'Diver', 'birthday' => '2000-01-01',
+            'membership_status' => 'active',
+        ]);
+        $member = (int) $this->connection->lastInsertId();
+        $this->migrate('20261023100000');
+        $this->connection->update('person', ['firstname' => 'original'], ['id' => $member]);
+        try {
+            $this->migrate('latest');
+            self::fail('Case-insensitive collation must not hide changed identity data.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('No legacy columns were removed', $exception->getMessage());
+        }
+        self::assertSame('Original', $this->connection->fetchOne('SELECT firstname FROM member WHERE id = ?', [$member]));
+        $this->connection->update('person', ['firstname' => 'Original'], ['id' => $member]);
+        $this->migrate('latest');
+        $this->assertSchemaMatchesMapping();
+    }
+
     public function testUpgradeFromReportedFailurePreservesInventoryAndIndexes(): void
     {
         $this->migrate('20261014100000');
@@ -168,6 +230,8 @@ final class MigrationChainTest extends TestCase
             '20261016200000',
             '20261017180000',
             '20261017181500',
+            '20261023100000',
+            '20261023110000',
         ];
 
         $migrations = $this->factory()

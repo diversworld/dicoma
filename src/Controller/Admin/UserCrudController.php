@@ -49,8 +49,8 @@ class UserCrudController extends AbstractCrudController
             ->setSearchFields([
                 'user',
                 'email',
-                'member.firstname',
-                'member.lastname',
+                'person.firstname',
+                'person.lastname',
             ]);
     }
 
@@ -112,11 +112,14 @@ class UserCrudController extends AbstractCrudController
             ->setColumns(6)
             ->setHelp(
                 'Ein Benutzer kann mehrere Funktionen im Verein besitzen. '
-                . 'Die Rolle „Mitglied“ wird während der Übergangsphase '
-                . 'automatisch berücksichtigt.'
+                . 'Die Rolle „Mitglied“ gilt nur mit aktivem Mitgliedsprofil und Vereinszuordnung. '
+                . 'Funktionsrollen werden davon unabhängig vergeben.'
             );
 
         yield FormField::addFieldset('Mitglied');
+
+        yield AssociationField::new('person', 'Zentrale Person')
+            ->onlyOnDetail();
 
         yield AssociationField::new('member', 'Verknüpftes Mitglied')
             ->setColumns(6)

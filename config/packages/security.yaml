@@ -3,13 +3,7 @@ security:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     role_hierarchy:
-        ROLE_INSTRUCTOR: ROLE_MEMBER
-        ROLE_EQUIPMENT_MANAGER: ROLE_MEMBER
-        ROLE_COMPRESSOR_OPERATOR: ROLE_MEMBER
-        ROLE_TREASURER: ROLE_MEMBER
-
         ROLE_BOARD:
-            - ROLE_MEMBER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
             - ROLE_COMPRESSOR_OPERATOR
@@ -71,6 +65,7 @@ security:
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
+        - { path: ^/verify/email$, roles: PUBLIC_ACCESS }
 
         # Installation muss ohne Login möglich sein.
         # Der InstallController muss später zusätzlich abgesichert
@@ -96,7 +91,10 @@ security:
 
         - { path: ^/member, roles: ROLE_ADMIN }
         - { path: ^/student, roles: ROLE_INSTRUCTOR }
+        - { path: ^/instructor-portal(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor, roles: ROLE_ADMIN }
+        - { path: ^/my-training(?:/|$), roles: ROLE_INSTRUCTOR }
+        - { path: ^/equipment-manager(?:/|$), roles: ROLE_EQUIPMENT_MANAGER }
 
         # ---------------------------------------------------------
         # Ausbildungsverwaltung
@@ -136,7 +134,7 @@ security:
         # Logout
         # ---------------------------------------------------------
 
-        - { path: ^/logout, roles: ROLE_MEMBER }
+        - { path: ^/logout, roles: ROLE_USER }
 
         # ---------------------------------------------------------
         # Alles Weitere erfordert zumindest Vereinsmitgliedschaft.

@@ -53,4 +53,4 @@ echo "Verein B Kurs: ${DICOMA_TEST_CLUB_B_COURSE_ID:-NICHT_GESETZT}"
 #php vendor/bin/phpunit --no-progress --testdox --display-skipped --display-errors tests/Http/Phase2CourseParticipantIsolationHttpTest.php
 #php vendor/bin/phpunit --no-progress --filter 'MigrationChain' --display-errors --display-skipped --display-deprecations
 #php vendor/bin/phpunit --no-progress --filter testClubBookingRollbackAbortsBeforeRemovingReferences --display-errors
-php vendor/bin/phpunit   --no-progress   --display-skipped   --filter 'Phase2'   tests/Http/
+php vendor/bin/phpunit   --no-progress  --testdox --display-skipped  --display-errors --filter 'Phase2'   tests/Http/

@@ -17,27 +17,29 @@ permissions:
 jobs:
   symfony-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
     steps:
     #  To automatically get bug fixes and new Php versions for shivammathur/setup-php,
     # change this to (see https://github.com/shivammathur/setup-php#bookmark-versioning):
     # uses: shivammathur/setup-php@v2
     - uses: shivammathur/setup-php@2cb9b829437ee246e9b3cac53555a39208ca6d28
       with:
-        php-version: '8.2'
+        php-version: ${{ matrix.php }}
+        extensions: intl, mbstring, pdo_mysql, pdo_sqlite
     - uses: actions/checkout@v4
     - name: Cache Composer packages
       id: composer-cache
       uses: actions/cache@v3
       with:
         path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        key: ${{ runner.os }}-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
-          ${{ runner.os }}-php-
+          ${{ runner.os }}-php-${{ matrix.php }}-
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-plugins --no-scripts --no-progress --prefer-dist
-    - name: Validate Symfony configuration
+    - name: Validate Phase 2 foundations
       env:
         DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/test.db'
-      run: |
-        php bin/console lint:yaml config --env=test --no-interaction
-        php bin/console lint:container --env=test --no-interaction
+      run: bash scripts/phase2_acceptance_gate.sh
