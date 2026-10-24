@@ -1,4 +1,30 @@
-# Betrieb und Wiederherstellung – Phase 2 und 3
+# Betrieb und Wiederherstellung – Phase 2 bis 4
+
+## Phase 4: lokale Prod-Aktivierung
+
+Am 24.10.2026 wurde der aktuelle Phase-4-Stand nach ausdrücklicher Freigabe
+lokal aktiviert. Bei der direkten Prüfung von Dienst `db`/Datenbank `db`
+war `Version20261024130000` bereits ausgeführt; Schema und Mapping waren
+synchron. Es wurde kein erneutes DDL und keine manuelle Historienänderung
+vorgenommen.
+
+Ein geschützter aktueller Snapshot wurde erstellt und auf isolierten Zielen
+tatsächlich wiederhergestellt. Alle Originalzeilen in 78 Anwendungstabellen
+blieben erhalten. Das Backup des bereits migrierten Bestands liegt unter:
+
+```text
+/home/diversworld/.copilot/session-state/fdbd0085-c4f6-44cd-9a89-fff49c0f31f4/files/phase4-local-prod-20261024-1411/
+```
+
+Verzeichnisrechte 0700, Backupdateien 0600; enthält Secrets und
+personenbezogene Daten, daher nicht veröffentlichen oder committen.
+Prüfsummenprüfung: `sha256sum --check SHA256SUMS`.
+
+Prod-Cache mit der Weblaufzeit PHP 8.4 erneuert, PHP-FPM gezielt sanft neu
+geladen, anschließend Prod-Container, Schema, Migrationsstand und tatsächliche
+HTTPS-Endpunkte geprüft. Die lokale Anwendung läuft mit `APP_ENV=prod`,
+`APP_DEBUG=0`; Installationsschutz und vorhandene Daten sind unverändert.
+Einzelheiten stehen in [Phase 4: lokale Prod-Aktivierung](../phase4-training.md#lokale-prod-aktivierung-am-24102026).
 
 ## Phase 3: lokale Aktivierung und aktueller Snapshot
 

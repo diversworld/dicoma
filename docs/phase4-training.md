@@ -125,10 +125,55 @@ datenlöschend. Sie:
 5. verknüpft bestehende Terminbuchungen mit ihren Kursteilnahmen.
 
 Vor Anwendung auf einem bestehenden Zielsystem sind Backup und eine
-kontrollierte Migration notwendig. In dieser Umsetzung wurden ausschließlich
-SQLite-In-Memory- und zufällig benannte Wegwerf-Datenbanken auf dem separaten
-MariaDB-Testdienst verwendet. **Die vorhandenen Anwendungsdatenbanken und
-Produktiv-Caches wurden nicht migriert oder aktiviert.**
+kontrollierte Migration notwendig. Während der Entwicklung wurden
+ausschließlich SQLite-In-Memory- und zufällig benannte Wegwerf-Datenbanken
+auf dem separaten MariaDB-Testdienst verwendet. Die anschließende,
+ausdrücklich freigegebene lokale Aktivierung ist nachstehend dokumentiert.
+
+## Lokale Prod-Aktivierung am 24.10.2026
+
+Der aktuelle Stand `d248f10` wurde mit ausdrücklicher Freigabe in der lokalen
+Prod-Laufzeit aktiviert. Das tatsächliche Ziel ist DDEV-Dienst `db`,
+Datenbank `db`, Server `dicoma-db`. Bei der Zielprüfung war
+`Version20261024130000` bereits verbucht und das Schema vollständig synchron.
+Es wurde deshalb kein erneutes DDL ausgeführt und keine Migrationshistorie
+manuell verändert.
+
+Vor der Cache-Aktivierung wurden Anwendung einschließlich Abhängigkeiten,
+Konfiguration, Uploads, privaten Dateien und Installationsmarker sowie die
+Datenbank gesichert. Das geschützte Backup liegt außerhalb Git unter:
+
+```text
+/home/diversworld/.copilot/session-state/fdbd0085-c4f6-44cd-9a89-fff49c0f31f4/files/phase4-local-prod-20261024-1411/
+```
+
+Dies ist ein Snapshot des bereits migrierten lokalen Bestands, kein
+Vorher-Abbild vor der Phase-4-Migration. Er enthält `database.sql`,
+`application.tar` und `SHA256SUMS`; Verzeichnisrechte 0700,
+Dateirechte 0600. Die tatsächliche Wiederherstellung in eine neue isolierte
+Datenbank und private Anwendungskopie war erfolgreich. Sämtliche
+ursprünglichen Daten in 78 Anwendungstabellen blieben unverändert.
+Archiv-/Datenbankprüfsummen und referenzierte private Dokumente wurden geprüft.
+
+Der Prod-Cache wurde mit PHP 8.4, entsprechend der tatsächlichen
+PHP-FPM-Weblaufzeit, gelöscht und neu aufgebaut. PHP-FPM wurde anschließend
+gezielt sanft neu geladen. Die Laufzeit verwendet `APP_ENV=prod` und
+`APP_DEBUG=0`; der Installationsabschlussmarker bleibt vorhanden.
+
+Abschließend sind Prod-Container, Mapping und Datenbankschema erfolgreich
+geprüft; es bestehen keine offenen Migrationen. Der lokale Bestand blieb bei
+vier Personen, drei Mitgliedern und einem Kurs; es wurden keine Teilnahmen
+oder Zahlungen angelegt. HTTPS-Prüfungen ergaben:
+
+- `/login`, `/register`, `/my-training/courses`: 200;
+- `/training`, `/my-training/progress`, `/admin/de`: anonym 302 zur Anmeldung;
+- `/install`: 404.
+
+Das öffentliche Kursangebot wurde zusätzlich im integrierten Browser
+geprüft. Aktuell ist kein vorhandener Kurs zur öffentlichen Anmeldung
+geöffnet; Kursstatus und Benutzerrollen wurden bei der Aktivierung nicht
+verändert. Es wurden keine externen Systeme, Mailversände, Bankeinzüge oder
+Cronjobs aktiviert.
 
 ## Prüfung
 

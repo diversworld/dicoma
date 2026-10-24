@@ -344,6 +344,66 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertSelectorExists('textarea[id$="_requiredEquipment"]');
     }
 
+    public function testCourseTemplateExportAndDuplicateStayInBackendAndAcceptPost(): void
+    {
+        $admin = $this->staff('template-admin', User::ROLE_SUPER_ADMIN);
+        $course = $this->course();
+        [$schedule] = $this->plan($course, $admin->getMember());
+        $schedule->setTrainingUnitSequence(1)->setStartTime(new \DateTimeImmutable('18:00'))->setDuration(60);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $urls = static::getContainer()->get(\EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator::class);
+        $url = (clone $urls)->unsetAll()->setDashboard(\App\Controller\Admin\DashboardController::class)
+            ->setController(\App\Controller\Admin\CoursesCrudController::class)->setAction('createTemplateFromCourse')
+            ->setEntityId($course->getId())->generateUrl();
+        $crawler = $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Vorlage jetzt speichern')->form(), [
+            'name' => 'Saved HTTP template', 'description' => 'Created through the actual form',
+        ]);
+        self::assertResponseRedirects();
+        $template = $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->findOneBy(['name' => 'Saved HTTP template']);
+        self::assertNotNull($template);
+        self::assertCount(1, $template->getEntries());
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorNotExists('nav[aria-label="Hauptnavigation"]');
+        $url = (clone $urls)->unsetAll()->setDashboard(\App\Controller\Admin\DashboardController::class)
+            ->setController(\App\Controller\Admin\ScheduleTemplateCrudController::class)->setAction('duplicateTemplate')
+            ->setEntityId($template->getId())->generateUrl();
+        $crawler = $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Vorlage duplizieren')->form(), ['name' => 'Copied HTTP template']);
+        self::assertResponseRedirects();
+        self::assertNotNull($this->em->getRepository(\App\Entity\ScheduleTemplate::class)->findOneBy(['name' => 'Copied HTTP template']));
+    }
+
+    public function testAllAdministrativeIndexAndCreationRoutesRenderWithoutServerErrors(): void
+    {
+        $admin = $this->staff('route-admin', User::ROLE_SUPER_ADMIN);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $router = static::getContainer()->get('router');
+        $failures = [];
+        $checked = 0;
+        foreach ($router->getRouteCollection() as $name => $route) {
+            if (!str_starts_with($name, 'admin_') || !preg_match('/_(index|new)$/D', $name)
+                || !in_array('GET', $route->getMethods(), true)) { continue; }
+            $parameters = $route->compile()->getPathVariables();
+            if (array_diff($parameters, ['_locale']) !== []) { continue; }
+            $url = $router->generate($name, ['_locale' => 'de']);
+            $this->client->request('GET', $url);
+            $status = $this->client->getResponse()->getStatusCode();
+            ++$checked;
+            if ($status >= 400) {
+                $failures[] = $name . ' ' . $status . ' ' . rawurldecode($this->client->getResponse()->headers->get('X-Debug-Exception', ''));
+            }
+        }
+        self::assertGreaterThan(40, $checked);
+        self::assertSame([], $failures);
+    }
+
     private function payment(CourseParticipant $participant, string $amount, string $reference): void
     {
         $crawler = $this->client->request('GET', '/training/participant/' . $participant->getId());
