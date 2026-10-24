@@ -262,42 +262,24 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/training-workflow/{id}/{step}', name: 'training_workflow', options: ['methods' => ['GET']])]
     public function trainingWorkflow(
         int $id,
-        string $step,
-        \Doctrine\ORM\EntityManagerInterface $em,
-        \Symfony\Component\HttpFoundation\Request $request,
-        CoursePlanActionController $planActions,
-        CoursesCrudController $coursesCrud,
-        \App\Repository\ScheduleRepository $scheduleRepository,
-        \App\Service\ScheduleConflictService $conflictService,
-        \App\Repository\ScheduleTemplateRepository $templateRepository
+        string $step
     ): Response {
-        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
-        $course = $em->getRepository(\App\Entity\Courses::class)->find($id);
-        if (!$course) {
-            throw $this->createNotFoundException('Kurs nicht gefunden.');
-        }
-
-        // Kein Symfony forward(): Subrequests verlieren EasyAdmin-Requestdaten.
-        // Den bestehenden Controller direkt im urspruenglichen Admin-Request
-        // ausfuehren, damit ea und die URL-Parameter erhalten bleiben.
-        $request->attributes->set('ea_workflow_embedded', true);
-        $request->attributes->set('id', $id);
-
-        return match ($step) {
-            'import' => $planActions->import($id, $request),
-            'generate' => $planActions->generate($id, $request),
-            'plan' => $coursesCrud->planSchedules(
-                $request, $scheduleRepository, $em, $conflictService, $templateRepository
-            ),
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $route = match ($step) {
+            'import' => 'admin_course_import_confirm',
+            'generate' => 'admin_course_generate_confirm',
+            'plan' => 'admin_course_plan',
             default => throw $this->createNotFoundException('Unbekannte Kursaktion.'),
         };
+        return $this->redirectToRoute($route, ['id' => $id], Response::HTTP_SEE_OTHER);
     }
 
     #[AdminRoute(path: '/training-overview', name: 'training_overview')]
     public function trainingOverview(EntityManagerInterface $em): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
-        $courses = $em->getRepository(Courses::class)->findAll();
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $courses = array_filter($em->getRepository(Courses::class)->findAll(),
+            fn (Courses $course): bool => $this->isGranted(\App\Security\Voter\CourseManagementVoter::MANAGE, $course));
         $rows = [];
         $statuses = [];
         $instructorLoad = [];
@@ -349,6 +331,7 @@ class DashboardController extends AbstractDashboardController
                 ->setSubItems([
                 MenuItem::linkToRoute('Ausbildungsdashboard', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkTo(CoursesCrudController::class, 'Kurse verwalten', 'fa fa-book-open'),
+                MenuItem::linkToRoute('Ausbildungsportal verwalten', 'fa fa-graduation-cap', 'admin_portal_training_portal'),
                 MenuItem::linkTo(CourseParticipantCrudController::class, 'Kursteilnehmer', 'fa fa-users'),
                 MenuItem::linkTo(ScheduleCrudController::class, 'Kurstermine', 'fa fa-calendar-days')
                     ->setPermission('ROLE_SUPER_ADMIN'),
@@ -361,7 +344,8 @@ class DashboardController extends AbstractDashboardController
                     ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(TrainingUnitTypeCrudController::class, 'Ausbildungseinheiten', 'fa fa-list-check')
                     ->setPermission('ROLE_SUPER_ADMIN'),
-				MenuItem::linkToRoute('Ausbildungsaufgaben', 'fa fa-list-check', 'admin_instructor_tasks'),
+				MenuItem::linkToRoute('Ausbildungsaufgaben', 'fa fa-list-check', 'admin_instructor_tasks')
+                    ->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 
             MenuItem::subMenu('Qualifikationen', 'fa fa-award')->setSubItems([

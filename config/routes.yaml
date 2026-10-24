@@ -3,6 +3,36 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+    exclude: ../src/Controller/Admin/
+
+admin_controllers:
+    resource:
+        path: ../src/Controller/Admin/
+        namespace: App\Controller\Admin
+    type: attribute
+    exclude:
+        - ../src/Controller/Admin/TrainingUnitBatchController.php
+        - ../src/Controller/Admin/InstructorTaskController.php
+    defaults:
+        routeCreatedByEasyAdmin: true
+        dashboardControllerFqcn: App\Controller\Admin\DashboardController
+
+training_assessment_controllers:
+    resource: ../src/Controller/Admin/TrainingUnitBatchController.php
+    type: attribute
+
+instructor_task_controllers:
+    resource: ../src/Controller/Admin/InstructorTaskController.php
+    type: attribute
+
+training_administration:
+    resource: ../src/Controller/TrainingPortalController.php
+    type: attribute
+    prefix: /admin
+    name_prefix: admin_portal_
+    defaults:
+        routeCreatedByEasyAdmin: true
+        dashboardControllerFqcn: App\Controller\Admin\DashboardController
 
 easyadmin:
     resource: .

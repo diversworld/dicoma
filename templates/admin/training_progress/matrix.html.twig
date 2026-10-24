@@ -1,6 +1,6 @@
 {% extends 'admin/standalone_base.html.twig' %}
 {% block title %}Ausbildungsübersicht – {{ course }}{% endblock %}
-{% block body %}
+{% block admin_body %}
 {% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Ausbildungsübersicht'} only %}
 
 <p><a href="{{ path('admin') }}">← Zur Verwaltung</a></p>

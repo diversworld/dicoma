@@ -162,7 +162,7 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertSame($instructor->getMember()->getId(), $result->getAssessor()->getId());
 
         $this->client->loginUser($manager);
-        $crawler = $this->client->request('GET', '/training/participant/' . $participant->getId());
+        $crawler = $this->client->request('GET', '/admin/training/participant/' . $participant->getId());
         $this->client->submit($crawler->selectButton('Bestanden und Nachweis ausstellen')->form(), ['brevetNumber' => 'BREVET-GUEST-2026']);
         self::assertResponseRedirects();
         $participant = $this->em->find(CourseParticipant::class, $participant->getId());
@@ -172,7 +172,7 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertCount(1, $participant->getTrainingArchive()['evidence']);
         self::assertSame(0, $this->em->getRepository(MemberQualification::class)->count([]));
 
-        $crawler = $this->client->request('GET', '/training/course/' . $course->getId());
+        $crawler = $this->client->request('GET', '/admin/training/course/' . $course->getId());
         $this->client->submit($crawler->selectButton('Kurs abschließen und Nachweise archivieren')->form());
         $course = $this->em->find(Courses::class, $course->getId());
         self::assertSame(CourseStatus::COMPLETED, $course->getStatus());
@@ -216,8 +216,10 @@ final class Phase4TrainingHttpTest extends WebTestCase
         foreach ([$other, $foreignAdmin, $instructor] as $actor) {
             $this->client->loginUser($actor);
             foreach (['/training/participant/' . $participant->getId(), '/training/course/' . $course->getId(), '/training/course/' . $course->getId() . '/edit'] as $path) {
-                $this->client->request('GET', $path);
-                self::assertResponseStatusCodeSame(403);
+                foreach ([$path, '/admin' . $path] as $url) {
+                    $this->client->request('GET', $url);
+                    self::assertResponseStatusCodeSame(403);
+                }
             }
         }
         $this->client->loginUser($foreignAdmin);
@@ -246,11 +248,13 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $participant = $this->service()->register($course->getId(), $guest->getPerson());
         static::getContainer()->get(ScheduleParticipantSyncService::class)->sync($schedule);
         $this->client->loginUser($manager);
-        foreach (['/training', '/training/course/new', '/training/course/' . $course->getId() . '/edit', '/training/course/' . $course->getId() . '/unit', '/training/course/' . $course->getId() . '/unit-type'] as $path) {
+        foreach (['/admin/training', '/admin/training/course/new', '/admin/training/course/' . $course->getId() . '/edit', '/admin/training/course/' . $course->getId() . '/unit', '/admin/training/course/' . $course->getId() . '/unit-type'] as $path) {
             $this->client->request('GET', $path);
             self::assertResponseIsSuccessful();
+            self::assertSelectorExists('aside.sidebar');
+            self::assertSelectorExists('[data-training-staff-navigation]');
         }
-        $crawler = $this->client->request('GET', '/training/course/' . $course->getId() . '/session');
+        $crawler = $this->client->request('GET', '/admin/training/course/' . $course->getId() . '/session');
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->selectButton('Speichern')->form(), [
             'form[title]' => 'Makeup exam', 'form[trainingUnitType]' => (string) $type->getId(),
@@ -310,7 +314,7 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $this->em->persist($qualification);
         $this->em->flush();
         $this->client->loginUser($manager);
-        $crawler = $this->client->request('GET', '/training/course/new');
+        $crawler = $this->client->request('GET', '/admin/training/course/new');
         $this->client->submit($crawler->selectButton('Speichern')->form(), [
             'training_course[title]' => 'New full course', 'training_course[category]' => 'sonder',
             'training_course[description]' => 'Theory and practice', 'training_course[requirements]' => 'Medical clearance',
@@ -357,6 +361,8 @@ final class Phase4TrainingHttpTest extends WebTestCase
             ->setController(\App\Controller\Admin\CoursesCrudController::class)->setAction('createTemplateFromCourse')
             ->setEntityId($course->getId())->generateUrl();
         $crawler = $this->client->request('GET', $url);
+        self::assertResponseRedirects();
+        $crawler = $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->selectButton('Vorlage jetzt speichern')->form(), [
             'name' => 'Saved HTTP template', 'description' => 'Created through the actual form',
@@ -369,14 +375,38 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorNotExists('nav[aria-label="Hauptnavigation"]');
+        $crawler = $this->client->request('GET', '/admin/course/' . $course->getId() . '/export-template');
+        $this->client->submit($crawler->selectButton('Vorlage jetzt speichern')->form(), ['name' => 'x']);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorTextContains('.alert-danger', '3 bis 150 Zeichen');
+        self::assertSame(1, $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->count([]));
+        $this->client->request('POST', '/admin/course/' . $course->getId() . '/export-template', ['name' => 'Forged', '_token' => 'forged']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(1, $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->count([]));
         $url = (clone $urls)->unsetAll()->setDashboard(\App\Controller\Admin\DashboardController::class)
             ->setController(\App\Controller\Admin\ScheduleTemplateCrudController::class)->setAction('duplicateTemplate')
             ->setEntityId($template->getId())->generateUrl();
         $crawler = $this->client->request('GET', $url);
+        self::assertResponseRedirects();
+        $crawler = $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->selectButton('Vorlage duplizieren')->form(), ['name' => 'Copied HTTP template']);
         self::assertResponseRedirects();
-        self::assertNotNull($this->em->getRepository(\App\Entity\ScheduleTemplate::class)->findOneBy(['name' => 'Copied HTTP template']));
+        $copy = $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->findOneBy(['name' => 'Copied HTTP template']);
+        self::assertNotNull($copy);
+        self::assertCount(1, $copy->getEntries());
+        self::assertNotSame($template->getEntries()->first()->getId(), $copy->getEntries()->first()->getId());
+        self::assertSame(0, $copy->getEntries()->first()->getDayOffset());
+        self::assertSame('18:00', $copy->getEntries()->first()->getStartTime()->format('H:i'));
+        $crawler = $this->client->request('GET', '/admin/schedule-template/' . $template->getId() . '/duplicate');
+        $this->client->submit($crawler->selectButton('Vorlage duplizieren')->form(), ['name' => '']);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSame(2, $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->count([]));
+        $this->client->request('POST', '/admin/schedule-template/' . $template->getId() . '/duplicate', ['name' => 'Forged', '_token' => 'forged']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(2, $this->em->getRepository(\App\Entity\ScheduleTemplate::class)->count([]));
     }
 
     public function testAllAdministrativeIndexAndCreationRoutesRenderWithoutServerErrors(): void
@@ -388,25 +418,267 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $failures = [];
         $checked = 0;
         foreach ($router->getRouteCollection() as $name => $route) {
-            if (!str_starts_with($name, 'admin_') || !preg_match('/_(index|new)$/D', $name)
-                || !in_array('GET', $route->getMethods(), true)) { continue; }
+            if (!str_starts_with($route->getPath(), '/admin')
+                || ($route->getMethods() !== [] && !in_array('GET', $route->getMethods(), true))) { continue; }
+            if (!in_array($route->getDefault('crudAction'), [null, 'index', 'new'], true)
+                || $name === 'admin_equipment_attribute_schema') { continue; }
             $parameters = $route->compile()->getPathVariables();
             if (array_diff($parameters, ['_locale']) !== []) { continue; }
             $url = $router->generate($name, ['_locale' => 'de']);
             $this->client->request('GET', $url);
             $status = $this->client->getResponse()->getStatusCode();
             ++$checked;
-            if ($status >= 400) {
+            if (in_array($name, ['admin_member_tank_check_booking_new', 'admin_tuv_notification_new'], true)) {
+                self::assertResponseStatusCodeSame(403);
+            } elseif ($status >= 400) {
                 $failures[] = $name . ' ' . $status . ' ' . rawurldecode($this->client->getResponse()->headers->get('X-Debug-Exception', ''));
+            } elseif ($status === 200 && str_contains($this->client->getResponse()->headers->get('Content-Type', ''), 'text/html')) {
+                if ($this->client->getCrawler()->filter('aside.sidebar')->count() !== 1) {
+                    $failures[] = $name . ' does not use the backend layout';
+                }
+                $this->assertFormRoutes($this->client->getCrawler());
             }
         }
         self::assertGreaterThan(40, $checked);
         self::assertSame([], $failures);
     }
 
+    public function testAdministrativeTrainingPagesAndTheirFormsUseBackendRoutes(): void
+    {
+        $admin = $this->staff('workflow-admin', User::ROLE_SUPER_ADMIN);
+        $course = $this->course()->setLeadInstructor($admin->getMember());
+        [$schedule] = $this->plan($course, $admin->getMember());
+        $schedule->setTrainingUnitSequence(1)->setStartTime(new \DateTimeImmutable('18:00'))->setDuration(60);
+        $guest = $this->user('workflow-guest');
+        $this->em->flush();
+        $participant = $this->service()->register($course->getId(), $guest->getPerson());
+        static::getContainer()->get(ScheduleParticipantSyncService::class)->sync($schedule);
+        $this->client->loginUser($admin);
+        $router = static::getContainer()->get('router');
+        $routes = [
+            'admin_course_history' => $course->getId(),
+            'admin_course_completion_wizard' => $course->getId(),
+            'admin_course_complete_confirm' => $course->getId(),
+            'admin_course_import_confirm' => $course->getId(),
+            'admin_course_generate_confirm' => $course->getId(),
+            'admin_course_training_matrix' => $course->getId(),
+            'admin_course_plan' => $course->getId(),
+            'admin_course_export_template' => $course->getId(),
+            'admin_training_timetable' => $course->getId(),
+            'admin_training_progress' => $participant->getId(),
+            'admin_participant_pass_confirm' => $participant->getId(),
+            'admin_training_results_batch' => $schedule->getId(),
+            'admin_schedule_attendance' => $schedule->getId(),
+            'admin_schedule_sync_participants' => $schedule->getId(),
+            'admin_portal_training_course' => $course->getId(),
+            'admin_portal_training_participant' => $participant->getId(),
+            'admin_portal_training_assess' => $schedule->getId(),
+        ];
+        foreach ($routes as $name => $id) {
+            $crawler = $this->client->request('GET', $router->generate($name, ['id' => $id]));
+            self::assertSame(200, $this->client->getResponse()->getStatusCode(),
+                $name . ': ' . rawurldecode($this->client->getResponse()->headers->get('X-Debug-Exception', '')));
+            self::assertSelectorExists('aside.sidebar');
+            self::assertSelectorNotExists('nav[aria-label="Hauptnavigation"]');
+            $this->assertFormRoutes($crawler);
+            if ($name === 'admin_course_plan') {
+                self::assertStringContainsString('function initializeSchedulePlanning()', $this->client->getResponse()->getContent());
+                self::assertStringContainsString('.schedule-page .form-control', $crawler->filter('head style')->text());
+            }
+        }
+        $booking = $this->em->getRepository(Booking::class)->findOneBy(['courseParticipant' => $participant]);
+        foreach ([
+            'admin_courses_detail' => $course->getId(),
+            'admin_course_participant_index' => null,
+            'admin_course_participant_detail' => $participant->getId(),
+            'admin_schedule_detail' => $schedule->getId(),
+            'admin_booking_index' => null,
+            'admin_booking_detail' => $booking->getId(),
+        ] as $name => $id) {
+            $crawler = $this->client->request('GET', $router->generate($name, ['_locale' => 'de'] + ($id === null ? [] : ['entityId' => $id])));
+            self::assertSame(200, $this->client->getResponse()->getStatusCode(),
+                $name . ': ' . rawurldecode($this->client->getResponse()->headers->get('X-Debug-Exception', '')));
+            self::assertSelectorExists('aside.sidebar');
+            $this->assertFormRoutes($crawler);
+        }
+        $this->client->request('GET', '/training/course/' . $course->getId());
+        self::assertResponseRedirects('/admin/training/course/' . $course->getId(), 303);
+        $this->client->request('GET', '/training/participant/' . $participant->getId());
+        self::assertResponseRedirects('/admin/training/participant/' . $participant->getId(), 303);
+        $this->client->request('POST', '/training/course/new', ['training_course' => ['title' => '']]);
+        self::assertResponseRedirects('/admin/training/course/new', 307);
+        $this->client->followRedirect();
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSame(1, $this->em->getRepository(Courses::class)->count([]));
+        $this->client->request('GET', '/my-training/assess/' . $schedule->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('aside.sidebar');
+        $this->assertFormRoutes($this->client->getCrawler(), false);
+    }
+
+    public function testGuestTimetableIsPersonOwnedPublishedAndFrontendEvenForAdministrators(): void
+    {
+        $admin = $this->staff('student-admin', User::ROLE_SUPER_ADMIN);
+        $guest = $this->user('timetable-guest');
+        $stranger = $this->user('timetable-stranger');
+        $course = $this->course();
+        [$schedule] = $this->plan($course, $admin->getMember());
+        $this->em->flush();
+        $registration = $this->service()->register($course->getId(), $guest->getPerson());
+        $own = $this->service()->register($course->getId(), $admin->getPerson());
+        $path = '/my-training/registrations/' . $registration->getId() . '/timetable';
+        $this->client->loginUser($guest);
+        $this->client->request('GET', $path);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/training/participant/' . $registration->getId());
+        self::assertSelectorTextContains('body', 'Terminplan ist noch nicht freigegeben');
+        self::assertSelectorTextNotContains('body', 'Classroom and pool');
+        $course = $this->em->find(Courses::class, $course->getId());
+        $course->publishSchedule();
+        $this->em->flush();
+        $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('a[href="' . $path . '.csv"]');
+        self::assertSelectorNotExists('aside.sidebar');
+        self::assertSelectorTextContains('body', 'Classroom and pool');
+        $this->client->request('GET', $path . '.csv');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'text/csv; charset=UTF-8');
+        self::assertStringContainsString('Classroom and pool', $this->client->getResponse()->getContent());
+        $this->client->loginUser($stranger);
+        foreach ([$path, $path . '.csv'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->loginUser($admin);
+        foreach (['/training', '/training/participant/' . $own->getId(), '/my-training/registrations/' . $own->getId() . '/timetable'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorNotExists('aside.sidebar');
+            self::assertSelectorNotExists('form[action$="/payment"]');
+        }
+        $this->client->loginUser($guest);
+        $this->client->request('GET', '/admin/training');
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(1, $this->em->getRepository(Member::class)->count([]));
+    }
+
+    public function testCourseAdministrationPublishesAndEmailsTimetablesToGuestsWithoutContactingAMailServer(): void
+    {
+        $manager = $this->staff('timetable-manager', User::ROLE_COURSE_ADMIN);
+        $member = $this->staff('email-member', User::ROLE_MEMBER);
+        $guest = $this->user('email-guest');
+        $waiting = $this->user('email-waiting');
+        $course = $this->course()->setMaxParticipants(2);
+        $this->plan($course, $manager->getMember());
+        $this->em->flush();
+        $this->service()->register($course->getId(), $guest->getPerson());
+        $this->service()->register($course->getId(), $member->getPerson());
+        $this->service()->register($course->getId(), $waiting->getPerson());
+        $recipients = [];
+        $fail = false;
+        $mailer = $this->createMock(\Symfony\Component\Mailer\MailerInterface::class);
+        $mailer->expects(self::exactly(4))->method('send')->willReturnCallback(
+            static function (\Symfony\Component\Mime\Email $email) use (&$recipients, &$fail): void {
+                if ($fail) { throw new \Symfony\Component\Mailer\Exception\TransportException('Test mail transport failure.'); }
+                $recipients[] = $email->getTo()[0]->getAddress();
+            }
+        );
+        static::getContainer()->set(\Symfony\Component\Mailer\MailerInterface::class, $mailer);
+        $this->client->loginUser($manager);
+        $path = '/admin/training/timetable/' . $course->getId();
+        $crawler = $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-training-staff-navigation]');
+        $this->client->submit($crawler->selectButton('Terminplan freigeben / aktualisieren')->form());
+        self::assertResponseRedirects($path, 303);
+        self::assertNotNull($this->em->find(Courses::class, $course->getId())->getSchedulePublishedAt());
+        $crawler = $this->client->followRedirect();
+        $this->client->submit($crawler->selectButton('Terminplan per E-Mail senden')->form());
+        self::assertResponseRedirects($path, 303);
+        sort($recipients);
+        self::assertSame(['email-guest@example.invalid', 'email-member@example.invalid'], $recipients);
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('body', '2 Empfänger; 1 übersprungen; 0 fehlgeschlagen');
+        $fail = true;
+        $this->client->submit($crawler->selectButton('Terminplan per E-Mail senden')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('body', '0 Empfänger; 1 übersprungen; 2 fehlgeschlagen');
+    }
+
+    public function testClubAdministratorCanPlanOwnCoursesButCannotAccessAnotherClub(): void
+    {
+        $admin = $this->staff('club-planner', User::ROLE_ADMIN);
+        $course = $this->course();
+        [$schedule] = $this->plan($course, $admin->getMember());
+        $foreignClub = (new Club())->setName('Other training club');
+        $this->em->persist($foreignClub);
+        $foreign = $this->course()->setClub($foreignClub)->setTitle('Foreign private training');
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        foreach (['plan', 'import-training-plan', 'generate-schedules', 'export-template'] as $action) {
+            $this->client->request('GET', '/admin/course/' . $course->getId() . '/' . $action);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorExists('aside.sidebar');
+            $this->client->request('GET', '/admin/course/' . $foreign->getId() . '/' . $action);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $crawler = $this->client->request('GET', '/admin/course/' . $course->getId() . '/plan');
+        $form = $crawler->filter('form[name="course_schedule_planning"]')->form();
+        $values = $form->getPhpValues();
+        $values['course_schedule_planning']['_token'] = 'forged';
+        $this->client->request('POST', $form->getUri(), $values, [], ['HTTP_REFERER' => 'https://other.invalid/']);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorTextContains('#course_schedule_planning_error1', 'CSRF');
+        $crawler = $this->client->request('GET', '/admin/course/' . $course->getId() . '/plan');
+        self::assertSelectorExists('select[name$="[instructor]"] option[value="' . $admin->getMember()->getId() . '"]');
+        $this->client->submit($crawler->filter('form[name="course_schedule_planning"]')->form(), [
+            'course_schedule_planning[schedules][0][location]' => 'Saved planning location',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame('Saved planning location', $this->em->find(Schedule::class, $schedule->getId())->getLocation());
+        self::assertSame($admin->getMember()->getId(), $this->em->find(Schedule::class, $schedule->getId())->getInstructor()->getId());
+        foreach (['0', '24.25'] as $invalidDuration) {
+            $crawler = $this->client->request('GET', '/admin/course/' . $course->getId() . '/plan');
+            $this->client->submit($crawler->filter('form[name="course_schedule_planning"]')->form(), [
+                'course_schedule_planning[schedules][0][durationHours]' => $invalidDuration,
+            ]);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorExists('.invalid-feedback');
+            self::assertNull($this->em->getConnection()->fetchOne('SELECT duration FROM schedule WHERE id = ?', [$schedule->getId()]));
+        }
+        $this->client->request('POST', '/admin/course/' . $foreign->getId() . '/plan', $values);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/de/training-overview');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Foreign private training');
+    }
+
+    private function assertFormRoutes(\Symfony\Component\DomCrawler\Crawler $crawler, bool $backend = true): void
+    {
+        $router = static::getContainer()->get('router');
+        foreach ($crawler->filter('form') as $node) {
+            if ($node->getAttribute('method') === 'dialog'
+                || in_array($node->getAttribute('id'), ['detail-duplicate', 'action-confirmation-form'], true)) { continue; }
+            $form = (new \Symfony\Component\DomCrawler\Crawler($node, $crawler->getUri()))->form();
+            $request = \Symfony\Component\HttpFoundation\Request::create($form->getUri(), $form->getMethod());
+            try {
+                $match = $router->matchRequest($request);
+            } catch (\Symfony\Component\Routing\Exception\ExceptionInterface $exception) {
+                self::fail($form->getMethod() . ' ' . $form->getUri() . ': ' . $exception->getMessage());
+            }
+            self::assertArrayHasKey('_route', $match);
+            if ($backend && $match['_route'] !== 'app_logout') {
+                self::assertStringStartsWith('/admin', $request->getPathInfo());
+            }
+        }
+    }
+
     private function payment(CourseParticipant $participant, string $amount, string $reference): void
     {
-        $crawler = $this->client->request('GET', '/training/participant/' . $participant->getId());
+        $crawler = $this->client->request('GET', '/admin/training/participant/' . $participant->getId());
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->selectButton('Zahlung / Erstattung buchen')->form(), [
             'amount' => $amount, 'method' => 'transfer', 'reference' => $reference,

@@ -34,12 +34,6 @@ final class CoursePlanActionController extends AbstractController
     #[Route('/admin/course/{id}/import-training-plan', name: 'admin_course_import_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function import(int $id, Request $request): Response
     {
-        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
-            return $this->redirectToRoute('admin_training_workflow', [
-                'id' => $id, 'step' => 'import',
-            ], Response::HTTP_SEE_OTHER);
-        }
-
         $course = $this->loadEditableCourse($id);
         $qualification = $course->getQualification();
         $entries = [];
@@ -84,12 +78,6 @@ final class CoursePlanActionController extends AbstractController
     #[Route('/admin/course/{id}/generate-schedules', name: 'admin_course_generate_confirm', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function generate(int $id, Request $request): Response
     {
-        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
-            return $this->redirectToRoute('admin_training_workflow', [
-                'id' => $id, 'step' => 'generate',
-            ], Response::HTTP_SEE_OTHER);
-        }
-
         $course = $this->loadEditableCourse($id);
         $rows = [];
         $missing = 0;

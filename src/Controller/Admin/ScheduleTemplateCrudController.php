@@ -23,6 +23,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
@@ -62,13 +63,14 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
             'duplicateTemplate',
             'Duplizieren',
             'fa fa-copy'
-        )->linkToCrudAction('duplicateTemplate');
+        )->linkToUrl(fn (ScheduleTemplate $template): string => $this->generateUrl('admin_schedule_template_duplicate', ['id' => $template->getId()]));
 
         return $actions
             ->add(Crud::PAGE_INDEX, $duplicate)
             ->add(Crud::PAGE_DETAIL, $duplicate);
     }
 
+    #[Route('/admin/schedule-template/{id}/duplicate', name: 'admin_schedule_template_duplicate', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function duplicateTemplate(
         AdminContext $context,
         Request $request,
@@ -76,9 +78,16 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
         AdminUrlGenerator $adminUrlGenerator,
         TranslatorInterface $translator,
     ): Response {
-        $original = $context->getEntity()?->getInstance();
+        $rawId = $request->attributes->get('id') ?? $request->query->get('entityId');
+        if (!is_scalar($rawId) || !ctype_digit((string) $rawId) || (int) $rawId < 1) {
+            throw $this->createNotFoundException('Planungsvorlage nicht gefunden.');
+        }
+        $original = $entityManager->find(ScheduleTemplate::class, (int) $rawId);
         if (!$original instanceof ScheduleTemplate || $original->getId() === null) {
             throw $this->createNotFoundException('Planungsvorlage nicht gefunden.');
+        }
+        if ($request->attributes->get('_route') !== 'admin_schedule_template_duplicate') {
+            return $this->redirectToRoute('admin_schedule_template_duplicate', ['id' => $original->getId()], Response::HTTP_SEE_OTHER);
         }
 
         $backUrl = $adminUrlGenerator
@@ -133,7 +142,9 @@ final class ScheduleTemplateCrudController extends AbstractCrudController
 
         return $this->render('admin/schedule_template/duplicate.html.twig', [
             'original' => $original,
-            'suggestedName' => (string) ($request->request->get('name') ?: $translator->trans('template.copy_name', ['%name%' => $original->getName()])),
+            'suggestedName' => $request->isMethod('POST')
+                ? $request->request->getString('name')
+                : $translator->trans('template.copy_name', ['%name%' => $original->getName()]),
             'backUrl' => $backUrl,
         ]);
     }

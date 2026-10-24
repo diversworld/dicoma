@@ -89,6 +89,7 @@ security:
         # Administration
         # ---------------------------------------------------------
 
+        - { path: ^/admin/training(?:/|$), roles: [ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_COURSE_ADMIN] }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }
 

@@ -465,7 +465,7 @@ class CoursesCrudController extends AbstractCrudController
 			->linkToRoute('admin_course_generate_confirm', static fn (Courses $course): array => ['id' => $course->getId()])
 			->displayIf(static fn (Courses $course): bool =>!$course->getTrainingUnits()->isEmpty());
         $exportTemplate = Action::new('createTemplateFromCourse','Als Planungsvorlage speichern','fa fa-copy')
-            ->linkToCrudAction('createTemplateFromCourse')
+            ->linkToUrl(fn (Courses $course): string => $this->generateUrl('admin_course_export_template', ['id' => $course->getId()]))
             ->displayIf(static fn (Courses $course): bool => $course->getClub() !== null);
         $trainingMatrix = Action::new('trainingMatrix', 'Ausbildungsübersicht', 'fa fa-table')
             ->linkToRoute('admin_course_training_matrix',static fn (Courses $course): array => ['id' => $course->getId()]);
@@ -806,12 +806,6 @@ class CoursesCrudController extends AbstractCrudController
 		ScheduleTemplateRepository $templateRepository
 	): Response {
 
-        if ($request->isMethod('GET') && !$request->attributes->get('ea_workflow_embedded')) {
-            return $this->redirectToRoute('admin_training_workflow', [
-                'id' => $request->attributes->get('id'), 'step' => 'plan',
-            ], Response::HTTP_SEE_OTHER);
-        }
-
 		/* Kurs-ID aus der eigenstaendigen GET/POST-Route ermitteln. */
 		$courseId = $request->attributes->get('id');
 
@@ -834,6 +828,7 @@ class CoursesCrudController extends AbstractCrudController
 				'Der angeforderte Kurs wurde nicht gefunden.'
 			);
 		}
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
 
         if ($course->getStatus() === CourseStatus::COMPLETED) {
             throw $this->createAccessDeniedException(
@@ -970,6 +965,7 @@ class CoursesCrudController extends AbstractCrudController
      * Erstellt aus bereits geplanten Kursterminen eine wiederverwendbare
      * Vereinsvorlage. GET zeigt Vorschau, POST erstellt nach CSRF-Pruefung.
      */
+    #[Route('/admin/course/{id}/export-template', name: 'admin_course_export_template', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function createTemplateFromCourse(
         ?AdminContext $context,
         Request $request,
@@ -978,6 +974,9 @@ class CoursesCrudController extends AbstractCrudController
         EntityManagerInterface $entityManager
     ): Response {
         $course = $this->resolveActionCourse($context, $request, $entityManager);
+        if ($request->attributes->get('_route') !== 'admin_course_export_template') {
+            return $this->redirectToRoute('admin_course_export_template', ['id' => $course->getId()], Response::HTTP_SEE_OTHER);
+        }
         $club = $course->getClub();
         if ($club === null) {
             throw new \LogicException('Der Kurs ist keinem Verein zugeordnet.');
@@ -1026,7 +1025,9 @@ class CoursesCrudController extends AbstractCrudController
                 $this->addFlash('success', new TranslatableMessage('template.saved', [
                     '%name%' => $name, '%count%' => count($export['entries']),
                 ]));
-                return $this->redirectToReferrer($context);
+                return $this->redirect((clone $this->adminUrlGenerator)->unsetAll()
+                    ->setController(self::class)->setAction(Crud::PAGE_DETAIL)
+                    ->setEntityId($course->getId())->generateUrl(), Response::HTTP_SEE_OTHER);
             }
         }
 

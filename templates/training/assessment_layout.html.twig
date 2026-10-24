@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}DiCoMa – Verwaltung{% endblock %}</title>
+<style>
+:root{color-scheme:light;--bg:#f4f6fa;--ink:#152238;--line:#dce2ea;--muted:#667085;--accent:#1556ae}
+*{box-sizing:border-box}body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+.site-header{background:#fff;border-bottom:1px solid var(--line);padding:1rem max(1.25rem,calc((100vw - 1450px)/2));display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.site-header a{color:var(--accent);text-decoration:none}.brand{font-weight:750;font-size:1.2rem;color:var(--ink)!important}.nav{display:flex;gap:1rem;flex-wrap:wrap}
+main{max-width:1450px;margin:auto;padding:1.5rem}h1{font-size:1.6rem}.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:1rem;margin:1rem 0}
+.group{border:1px solid var(--line);border-radius:9px;margin:.6rem 0;overflow:hidden}.group summary{cursor:pointer;padding:.9rem 1rem;font-weight:650;background:#f0f3f8}.group summary:hover{background:#e6edf8}
+.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:.7rem;border-bottom:1px solid #e3e8f0;text-align:left}th{background:#eef2f8}a{color:var(--accent)}
+.ok{color:#167446;font-weight:600}.warn{color:#a45309}.muted{color:var(--muted)}.bar{width:120px;height:8px;background:#e3e8ef;border-radius:6px;overflow:hidden}.fill{height:100%;background:#238557}
+.small{font-size:.85rem}.tag{display:inline-block;padding:.15rem .5rem;border-radius:5px;background:#f3f4f6;color:#5b6474;font-size:.85rem}.btn{display:inline-block;padding:.4rem .7rem;border:1px solid #c9d5e7;border-radius:6px;text-decoration:none;white-space:nowrap}.btn:hover{background:#eef4ff}
+.matrix td,.matrix th{white-space:nowrap}.matrix td:first-child{position:sticky;left:0;background:white}.heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.flash{border-radius:8px;padding:.8rem 1rem;margin:1rem 0;background:#e8f1ff;border:1px solid #bdd4f7}.flash-success{background:#e9f7ef;border-color:#a8dbc0}.flash-warning{background:#fff4df;border-color:#e6c98a}.flash-danger,.flash-error{background:#fff0f0;border-color:#e5a8a8}
+@media(max-width:700px){main{padding:1rem}th,td{padding:.5rem}.site-header{padding:1rem}}
+</style>
+{% block stylesheets %}{% endblock %}
+</head>
+<body>
+<header class="site-header">
+<a class="brand" href="{{ path('instructor_portal_tasks') }}">DiCoMa</a>
+<nav class="nav" aria-label="Verwaltung">
+<a href="{{ path('instructor_portal_tasks') }}">Ausbildungsaufgaben</a>
+{% block navigation %}{% endblock %}
+{% if app.user %}
+<form action="{{ path('app_logout') }}" method="post" class="logout-form">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+<button type="submit" class="btn">Abmelden</button>
+</form>
+{% endif %}
+</nav>
+</header>
+<main>
+{% for type, messages in app.flashes %}
+{% for message in messages %}<div class="flash flash-{{ type|e('html_attr') }}" role="status">{{ message }}</div>{% endfor %}
+{% endfor %}
+{% block admin_body %}{% endblock %}
+</main>
+{% block javascripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block sidebar %}
+    {% if is_granted('ROLE_ADMIN') %}
+        {{ parent() }}
+    {% else %}
+        <aside class="sidebar" data-training-staff-navigation>
+            <nav aria-label="Ausbildungsverwaltung" class="p-3">
+                <h2>Ausbildung</h2>
+                <p><a href="{{ path('admin_portal_training_portal') }}">Zugeordnete Kurse</a></p>
+                <p><a href="{{ path('training_portal') }}">Meine Ausbildung</a></p>
+                <p><a href="{{ path('frontend_course_registration_index') }}">Kursangebot</a></p>
+            </nav>
+        </aside>
+    {% endif %}
+{% endblock %}

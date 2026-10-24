@@ -1,6 +1,6 @@
 {% extends 'admin/standalone_base.html.twig' %}
 {% block title %}Mitgliederzentrale – {{ member.fullName }}{% endblock %}
-{% block body %}
+{% block admin_body %}
 <p><a href="{{ path('admin') }}">← Verwaltung</a></p>
 <div class="heading"><div><h1>Mitgliederzentrale: {{ member.fullName }}</h1><p class="muted">{{ member.club|default('Kein Verein') }} · Mitgliedsnummer: {{ member.memberNumber|default('—') }}</p></div></div>
 <div class="panel"><h2>Überblick</h2><p><strong>{{ qualifications|length }}</strong> Qualifikationen · <strong>{{ courses|length }}</strong> Kursanmeldungen · <strong>{{ teams|length }}</strong> Gruppenzuordnungen · <strong>{{ documents|length }}</strong> Dokumente</p></div>

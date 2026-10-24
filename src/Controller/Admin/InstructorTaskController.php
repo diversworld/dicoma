@@ -14,7 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class InstructorTaskController extends AbstractController
 {
-    #[Route('/admin/instructor/tasks', name: 'admin_instructor_tasks', methods: ['GET'])]
+    #[Route('/admin/instructor/tasks', name: 'admin_instructor_tasks', methods: ['GET'], defaults: ['routeCreatedByEasyAdmin' => true, 'dashboardControllerFqcn' => DashboardController::class])]
     #[IsGranted('ROLE_SUPER_ADMIN')]
     public function index(Request $request, InstructorTaskService $tasks): Response
     {

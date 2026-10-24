@@ -301,6 +301,7 @@ class ScheduleCrudController extends AbstractCrudController
 		if (
 			$form->isSubmitted()
 			&& $form->get('markAllPresent')->isClicked()
+            && $form->isValid()
 		) {
 			foreach ($schedule->getBookings() as $booking) {
 				$booking->setAttendanceStatus(
@@ -379,11 +380,12 @@ class ScheduleCrudController extends AbstractCrudController
             return $this->redirectToSchedule($schedule);
         }
 
-        // Vorschau anhand derselben Regeln wie ScheduleParticipantSyncService:
-        // Teilnehmer ohne Mitglied und stornierte Anmeldungen ausschliessen.
-        // Vorhandene Buchungen bleiben unveraendert.
         $bookedMemberIds = [];
+        $bookedParticipantIds = [];
         foreach ($schedule->getBookings() as $booking) {
+            if ($booking->getCourseParticipant()?->getId() !== null) {
+                $bookedParticipantIds[$booking->getCourseParticipant()->getId()] = true;
+            }
             $memberId = $booking->getMember()?->getId();
             if ($memberId !== null) {
                 $bookedMemberIds[$memberId] = true;
@@ -400,19 +402,20 @@ class ScheduleCrudController extends AbstractCrudController
         $missingParticipants = [];
         foreach ($course->getParticipants() as $participant) {
             $member = $participant->getMember();
-            if ($member === null || $participant->getStatus() === CourseParticipantStatus::CANCELLED) {
+            if (!in_array($participant->getStatus(), [CourseParticipantStatus::REGISTERED, CourseParticipantStatus::ACTIVE], true)) {
                 ++$preview['excluded'];
                 continue;
             }
 
             ++$preview['eligible'];
-            if ($member->getId() !== null && isset($bookedMemberIds[$member->getId()])) {
+            if (isset($bookedParticipantIds[$participant->getId()])
+                || ($member?->getId() !== null && isset($bookedMemberIds[$member->getId()]))) {
                 ++$preview['existing'];
                 continue;
             }
 
             ++$preview['missing'];
-            $missingParticipants[] = (string) $member;
+            $missingParticipants[] = $participant->getFullName();
         }
 
         natcasesort($missingParticipants);
@@ -434,6 +437,12 @@ class ScheduleCrudController extends AbstractCrudController
         $schedule = $em->getRepository(Schedule::class)->find((int) $raw);
         if (!$schedule instanceof Schedule) {
             throw $this->createNotFoundException('Kurstermin nicht gefunden.');
+        }
+        if ($schedule->getCourses() !== null) {
+            $this->denyAccessUnlessGranted(\App\Security\Voter\CourseManagementVoter::MANAGE, $schedule->getCourses());
+            if ($schedule->getCourses()->getStatus() === CourseStatus::COMPLETED) {
+                throw $this->createAccessDeniedException('Abgeschlossene Kurse duerfen nicht veraendert werden.');
+            }
         }
         return $schedule;
     }

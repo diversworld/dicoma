@@ -1,8 +1,8 @@
-{% extends 'base.html.twig' %}
+{% extends 'admin/standalone_base.html.twig' %}
 
 {% block title %}{{ 'Planungsvorlage duplizieren'|trans }}{% endblock %}
 
-{% block body %}
+{% block admin_body %}
 <main class="container py-4">
 <h1 class="h3 mb-4">{{ 'Planungsvorlage duplizieren'|trans }}</h1>
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'error' ? 'danger' : type }}" role="alert">{{ message }}</div>{% endfor %}{% endfor %}
@@ -10,7 +10,7 @@
     <p><strong>{{ 'Verein'|trans }}:</strong> {{ original.club }}<br>
        <strong>{{ 'Ausbildungstermine'|trans }}:</strong> {{ original.entries|length }}</p>
 
-    <form method="post">
+    <form method="post" action="{{ path('admin_schedule_template_duplicate', {id: original.id}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('duplicate_schedule_template_' ~ original.id) }}">
         <div class="mb-3">
             <label for="duplicate-template-name" class="form-label">{{ 'Name der neuen Vorlage'|trans }}</label>

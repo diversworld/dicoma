@@ -76,6 +76,7 @@ final class TrainingPortalController extends AbstractController
         }
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $this->assertEditable($course);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         $form = $this->createForm(TrainingCourseType::class, $course, [
             'club' => $course->getClub(),
             'instructors' => $this->em->getRepository(Member::class)->findInstructors($course->getClub()),
@@ -84,16 +85,17 @@ final class TrainingPortalController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($course);
             $this->em->flush();
-            return $this->redirectToRoute('training_course', ['id' => $course->getId()]);
+            return $this->redirectToRoute('admin_portal_training_course', ['id' => $course->getId()]);
         }
         return $this->render('training/form.html.twig', ['form' => $form, 'title' => 'Kursverwaltung']);
     }
 
     #[Route('/training/course/{id}', name: 'training_course', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function show(int $id): Response
+    public function show(int $id, Request $request): Response
     {
         $course = $this->course($id);
         if (!$this->canViewCourse($course)) { throw $this->createAccessDeniedException(); }
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         $rows = [];
         foreach ($course->getParticipants() as $participant) {
             $rows[] = ['participant' => $participant, 'progress' => $this->progress->calculate($participant), 'paid' => $this->registration->paidCents($participant)];
@@ -107,6 +109,7 @@ final class TrainingPortalController extends AbstractController
         $course = $this->course($id);
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $this->assertEditable($course);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         $types = $this->em->getRepository(TrainingUnitType::class)->createQueryBuilder('t')
             ->where('t.club IS NULL OR t.club = :club')->setParameter('club', $course->getClub())->getQuery()->getResult();
         $unit = (new CourseTrainingUnit())->setCourse($course);
@@ -122,7 +125,7 @@ final class TrainingPortalController extends AbstractController
             } else {
                 $course->addTrainingUnit($unit);
                 $this->em->flush();
-                return $this->redirectToRoute('training_course', ['id' => $id]);
+                return $this->redirectToRoute('admin_portal_training_course', ['id' => $id]);
             }
         }
         return $this->render('training/form.html.twig', ['form' => $form, 'title' => 'Ausbildungsplan und Lernziele']);
@@ -134,6 +137,7 @@ final class TrainingPortalController extends AbstractController
         $course = $this->course($id);
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $this->assertEditable($course);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         $type = (new TrainingUnitType())->setClub($course->getClub());
         $form = $this->createFormBuilder($type)
             ->add('code', TextType::class, ['label' => 'Eindeutiger Code', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 50)]])
@@ -147,7 +151,7 @@ final class TrainingPortalController extends AbstractController
             } else {
                 $this->em->persist($type);
                 $this->em->flush();
-                return $this->redirectToRoute('training_course_unit', ['id' => $id]);
+                return $this->redirectToRoute('admin_portal_training_course_unit', ['id' => $id]);
             }
         }
         return $this->render('training/form.html.twig', ['form' => $form, 'title' => 'Theorie-, Praxis- oder Prüfungseinheit definieren']);
@@ -159,6 +163,7 @@ final class TrainingPortalController extends AbstractController
         $course = $this->course($id);
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $this->assertEditable($course);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         $types = [];
         foreach ($course->getTrainingUnits() as $unit) { $types[] = $unit->getTrainingUnitType(); }
         $instructors = $this->em->getRepository(Member::class)->findInstructors($course->getClub());
@@ -192,16 +197,18 @@ final class TrainingPortalController extends AbstractController
                         $this->em->flush();
                     }
                 });
-                return $this->redirectToRoute('training_course', ['id' => $id]);
+                return $this->redirectToRoute('admin_portal_training_course', ['id' => $id]);
             }
         }
         return $this->render('training/form.html.twig', ['form' => $form, 'title' => 'Ausbildungs- oder Nachholtermin']);
     }
 
     #[Route('/training/participant/{id}', name: 'training_participant', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function participant(int $id): Response
+    public function participant(int $id, Request $request): Response
     {
         $participant = $this->participantForViewer($id);
+        if ($participant->getPerson() !== $this->account()->getPerson()
+            && ($redirect = $this->legacyStaffRedirect($request))) { return $redirect; }
         return $this->render('training/participant.html.twig', [
             'participant' => $participant, 'progress' => $this->progress->calculate($participant),
             'paid' => $this->registration->paidCents($participant),
@@ -221,7 +228,10 @@ final class TrainingPortalController extends AbstractController
             $this->registration->cancel($participant);
             $this->addFlash('success', 'Anmeldung storniert. Bereits gezahlte Beträge werden durch die Kursverwaltung erstattet.');
         } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
-        return $this->redirectToRoute('training_participant', ['id' => $id]);
+        return $this->redirectToRoute(
+            $request->attributes->get('routeCreatedByEasyAdmin') ? 'admin_portal_training_participant' : 'training_participant',
+            ['id' => $id]
+        );
     }
 
     #[Route('/training/participant/{id}/payment', name: 'training_payment', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -237,7 +247,7 @@ final class TrainingPortalController extends AbstractController
                 $this->account()->getUserIdentifier());
             $this->addFlash('success', 'Zahlung oder Erstattung wurde gebucht.');
         } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
-        return $this->redirectToRoute('training_participant', ['id' => $id]);
+        return $this->redirectToRoute('admin_portal_training_participant', ['id' => $id]);
     }
 
     #[Route('/training/participant/{id}/complete', name: 'training_complete_participant', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -259,7 +269,7 @@ final class TrainingPortalController extends AbstractController
             } else { throw new \DomainException('Ungültige Abschlussentscheidung.'); }
             $this->addFlash('success', 'Abschlussentscheidung gespeichert.');
         } catch (\LogicException $e) { $this->addFlash('warning', $e->getMessage()); }
-        return $this->redirectToRoute('training_participant', ['id' => $id]);
+        return $this->redirectToRoute('admin_portal_training_participant', ['id' => $id]);
     }
 
     #[Route('/training/course/{id}/complete', name: 'training_complete_course', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -276,7 +286,7 @@ final class TrainingPortalController extends AbstractController
                 $this->addFlash('success', 'Kurs abgeschlossen und Ausbildungsnachweise archiviert.');
             } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
         }
-        return $this->redirectToRoute('training_course', ['id' => $id]);
+        return $this->redirectToRoute('admin_portal_training_course', ['id' => $id]);
     }
 
     #[Route('/training/participant/{id}/certificate', name: 'training_certificate', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -289,6 +299,16 @@ final class TrainingPortalController extends AbstractController
         $response = $this->render('training/certificate.html.twig', ['participant' => $participant, 'archive' => $participant->getTrainingArchive()]);
         $response->headers->set('Cache-Control', 'private, no-store');
         return $response;
+    }
+
+    private function legacyStaffRedirect(Request $request): ?Response
+    {
+        if ($request->attributes->get('routeCreatedByEasyAdmin')) { return null; }
+        return $this->redirectToRoute(
+            'admin_portal_' . $request->attributes->getString('_route'),
+            $request->attributes->has('id') ? ['id' => $request->attributes->get('id')] : [],
+            $request->isMethod('GET') ? Response::HTTP_SEE_OTHER : Response::HTTP_TEMPORARY_REDIRECT
+        );
     }
 
     private function account(): User

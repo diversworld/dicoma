@@ -24,7 +24,8 @@ use App\Security\Voter\TrainingAssessmentVoter;
 #[IsGranted('ROLE_INSTRUCTOR')]
 final class TrainingUnitBatchController extends AbstractController
 {
-    #[Route('/admin/training-results/batch/{id}', name: 'admin_training_results_batch', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/training-results/batch/{id}', name: 'admin_training_results_batch', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'], defaults: ['routeCreatedByEasyAdmin' => true, 'dashboardControllerFqcn' => DashboardController::class])]
+    #[Route('/admin/training/assess/{id}', name: 'admin_portal_training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'], defaults: ['routeCreatedByEasyAdmin' => true, 'dashboardControllerFqcn' => DashboardController::class])]
     #[Route('/my-training/assess/{id}', name: 'instructor_training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     #[Route('/training/assess/{id}', name: 'training_assess', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
     public function edit(
@@ -43,8 +44,8 @@ final class TrainingUnitBatchController extends AbstractController
         $course = $schedule->getCourses();
         // Authorization applies equally to GET, assessment POST and booking sync POST.
         $this->denyAccessUnlessGranted(TrainingAssessmentVoter::ASSESS, $schedule);
-        $isAdmin = $this->isGranted('ROLE_ADMIN');
-        $returnRoute = $isAdmin ? 'admin_training_results_batch' : 'instructor_training_assess';
+        $isAdmin = $request->attributes->get('_route') === 'admin_training_results_batch';
+        $returnRoute = (string) $request->attributes->get('_route');
 
         // Explizite, CSRF-geschuetzte Synchronisierung ohne Aenderung vorhandener Buchungen.
         if ($request->isMethod('POST') && $request->request->get('operation') === 'sync_bookings') {

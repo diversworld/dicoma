@@ -16,9 +16,9 @@
     <li>{{ payment.recordedAt|date('d.m.Y H:i') }}: {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR
         ({{ payment.method == 'cash' ? 'Barzahlung' : 'Überweisung' }}) – Beleg {{ payment.reference }}</li>
 {% else %}<li>Noch keine Zahlungen gebucht.</li>{% endfor %}</ul>
-{% set manage = is_granted('COURSE_MANAGE', participant.course) %}
+{% set manage = training_route_prefix and is_granted('COURSE_MANAGE', participant.course) %}
 {% if manage %}
-<form method="post" action="{{ path('training_payment', {id: participant.id}) }}">
+<form method="post" action="{{ path('admin_portal_training_payment', {id: participant.id}) }}">
     <input type="hidden" name="_token" value="{{ csrf_token('training_payment_' ~ participant.id) }}">
     <label>Betrag in EUR (Erstattungen negativ) <input name="amount" required inputmode="decimal"></label>
     <label>Zahlungsart <select name="method"><option value="transfer">Überweisung</option><option value="cash">Barzahlung</option></select></label>
@@ -33,10 +33,17 @@
         <ul>{% for session in requirement.sessions %}<li>{{ session.date }} – {{ session.title }}: {{ session.status }}</li>{% endfor %}</ul></li>
 {% else %}<li>Ausbildungsplan noch nicht hinterlegt.</li>{% endfor %}</ul>
 <h2>Ausbildungstermine</h2>
+{% if training_route_prefix or participant.course.schedulePublishedAt %}
 <ul>{% for session in participant.course.schedule %}
     <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
         – {{ session.title }} – {{ session.location }} – {{ session.instructor }}</li>
 {% else %}<li>Noch keine Termine geplant.</li>{% endfor %}</ul>
+{% if participant.course.schedulePublishedAt and (not training_route_prefix or manage) %}
+<p><a href="{{ training_route_prefix ? path('admin_training_timetable', {id: participant.course.id}) : path('student_course_timetable', {id: participant.id}) }}">Freigegebenen Terminplan anzeigen / herunterladen</a></p>
+{% endif %}
+{% else %}
+<p>Der Terminplan ist noch nicht freigegeben.</p>
+{% endif %}
 {% if participant.certificateNumber %}
     <p><a href="{{ path('training_certificate', {id: participant.id}) }}">Bescheinigung / Brevetierungsdaten drucken</a></p>
 {% endif %}
@@ -45,13 +52,13 @@
 {% endif %}
 {% if participant.status.value in ['registered', 'active', 'waitlisted'] and participant.course.status.value != 'completed' %}
     {% if manage or participant.person == app.user.person %}
-    <form method="post" action="{{ path('training_cancel', {id: participant.id}) }}">
+    <form method="post" action="{{ path(training_route_prefix ~ 'training_cancel', {id: participant.id}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('training_cancel_' ~ participant.id) }}">
         <button type="submit">Teilnahme stornieren</button>
     </form>
     {% endif %}
     {% if manage and (is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_ADMIN')) %}
-    <form method="post" action="{{ path('training_complete_participant', {id: participant.id}) }}">
+    <form method="post" action="{{ path('admin_portal_training_complete_participant', {id: participant.id}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('training_complete_' ~ participant.id) }}">
         <label>Offizielle Brevetnummer (optional) <input name="brevetNumber" maxlength="120"></label>
         <button type="submit" name="decision" value="passed">Bestanden und Nachweis ausstellen</button>

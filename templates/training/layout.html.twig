@@ -1,13 +1,24 @@
-{% extends 'base.html.twig' %}
+{% extends app.request.attributes.get('routeCreatedByEasyAdmin') ? 'admin/portal_layout.html.twig' : 'base.html.twig' %}
+{% set training_route_prefix = app.request.attributes.get('routeCreatedByEasyAdmin') ? 'admin_portal_' : '' %}
+{% block content_title %}{{ block('title') }}{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
+    {% if training_route_prefix %}
+        {{ parent() }}
+    {% else %}
+        {{ block('training_content') }}
+    {% endif %}
+{% endblock %}
+{% block main %}{{ block('training_content') }}{% endblock %}
+{% block training_content %}
 <main class="container py-4" data-training-portal>
     <nav aria-label="Ausbildungsportal">
-        <a href="{{ path('training_portal') }}">Ausbildungsportal</a> ·
+        <a href="{{ path(training_route_prefix ~ 'training_portal') }}">Ausbildungsportal</a> ·
         <a href="{{ path('frontend_course_registration_index') }}">Kursangebot</a> ·
         <a href="{{ path('app_my_training_progress') }}">Mein Fortschritt</a> ·
         <a href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a>
     </nav>
+    {% if form is defined %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endif %}
     {% for type, messages in app.flashes %}
         {% for message in messages %}<div class="alert alert-{{ type }}" role="alert">{{ message }}</div>{% endfor %}
     {% endfor %}

@@ -10,17 +10,17 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-#[IsGranted('ROLE_MEMBER')]
+#[IsGranted('ROLE_USER')]
 final class CourseTimetableController extends AbstractController
 {
     private function ownRegistration(int $id, EntityManagerInterface $em): CourseParticipant
     {
         $user = $this->getUser();
-        if (!$user instanceof User || !$user->getMember()) {
+        if (!$user instanceof User || !$user->isVerified() || !$user->getPerson()) {
             throw $this->createAccessDeniedException();
         }
         $registration = $em->getRepository(CourseParticipant::class)->findOneBy([
-            'id' => $id, 'member' => $user->getMember(),
+            'id' => $id, 'person' => $user->getPerson(),
         ]);
         if (!$registration || !$registration->getCourse()?->getSchedulePublishedAt()) {
             throw $this->createNotFoundException('Terminplan noch nicht freigegeben.');

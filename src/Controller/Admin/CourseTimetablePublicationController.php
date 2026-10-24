@@ -9,10 +9,12 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 final class CourseTimetablePublicationController extends AbstractController
 {
     #[Route('/admin/training/timetable/{id}', name:'admin_training_timetable', requirements:['id'=>'\d+'], methods:['GET'])]
@@ -39,7 +41,7 @@ final class CourseTimetablePublicationController extends AbstractController
         return $this->redirectToRoute('admin_training_timetable',['id'=>$course->getId()],Response::HTTP_SEE_OTHER);
     }
     #[Route('/admin/training/timetable/{id}/send', name:'admin_training_timetable_send', requirements:['id'=>'\d+'], methods:['POST'])]
-    public function send(Courses $course, Request $request, MailerInterface $mailer, CourseTimetableService $service): RedirectResponse
+    public function send(Courses $course, Request $request, MailerInterface $mailer, CourseTimetableService $service, LoggerInterface $logger): RedirectResponse
     {
         $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
         if (!$this->isCsrfTokenValid('send_timetable_'.$course->getId(), (string)$request->request->get('_token',''))) {
@@ -60,8 +62,8 @@ final class CourseTimetablePublicationController extends AbstractController
         $text = implode("\n", $lines);
         $sent=0; $skipped=0; $failed=0; $seen=[];
         foreach ($course->getParticipants() as $registration) {
-            if (in_array($registration->getStatus()->value, ['cancelled','failed'],true)) {++$skipped;continue;}
-            $email = trim((string)$registration->getMember()?->getEmail());
+            if (!in_array($registration->getStatus()->value, ['registered','active','passed'],true)) {++$skipped;continue;}
+            $email = trim((string)$registration->getPerson()?->getEmail());
             if (!filter_var($email,FILTER_VALIDATE_EMAIL)) {++$skipped;continue;}
             $key=strtolower($email);
             if (isset($seen[$key])) {continue;}
@@ -69,8 +71,11 @@ final class CourseTimetablePublicationController extends AbstractController
             try {
                 $mailer->send((new Email())->from('info@diversworld.eu')->to($email)->subject('DICOMA Terminplan: '.$course->getTitle())->text($text));
                 ++$sent;
-            } catch (\Throwable $e) {
+            } catch (TransportExceptionInterface $e) {
                 ++$failed;
+                $logger->error('Course timetable delivery failed.', [
+                    'course_id' => $course->getId(), 'participant_id' => $registration->getId(), 'exception' => $e,
+                ]);
             }
         }
         $this->addFlash($failed ? 'warning':'success',

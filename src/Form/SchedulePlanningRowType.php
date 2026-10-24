@@ -3,7 +3,6 @@ namespace App\Form;
 
 use App\Entity\Schedule;
 use App\Entity\Member;
-use App\Entity\Club;
 use App\Repository\MemberRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -14,9 +13,12 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class SchedulePlanningRowType extends AbstractType
 {
+    public function __construct(private readonly MemberRepository $members) {}
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -34,6 +36,7 @@ class SchedulePlanningRowType extends AbstractType
 				'label' => 'Dauer (Stunden)',
 				'required' => false,
 				'scale' => 2,
+                'constraints' => [new Assert\Range(min: 0.25, max: 24)],
 				'attr' => [
 					'min' => 0,
 					'step' => 0.25,
@@ -41,19 +44,10 @@ class SchedulePlanningRowType extends AbstractType
 				],
 			])
             ->add('location',
-				TextType::class, ['label' => false, 'required' => false])
+				TextType::class, ['label' => false, 'required' => false, 'constraints' => [new Assert\Length(max: 100)]])
             ->add('instructor',
 				EntityType::class, ['class' => Member::class, 'label' => false, 'required' => false,  'placeholder' => '—',
-                    'query_builder' => static function (MemberRepository $repo) use ($options) {
-                        $qb = $repo->createQueryBuilder('m')->innerJoin('m.user', 'u')
-                            ->innerJoin('m.person', 'person')
-                            ->andWhere('u.roles LIKE :role')->setParameter('role', '%ROLE_INSTRUCTOR%')
-                            ->orderBy('person.lastname', 'ASC');
-                        if ($options['club'] instanceof Club) {
-                            $qb->andWhere('m.club = :club')->setParameter('club', $options['club']);
-                        }
-                        return $qb;
-                    }]);
+                    'choices' => $this->members->findInstructors($options['club'])]);
     }
     public function configureOptions(OptionsResolver $resolver): void
     {

@@ -1,6 +1,6 @@
 {% extends 'admin/standalone_base.html.twig' %}
 {% block title %}{{ mode == 'complete' ? 'Kurs abschließen' : 'Kurs wieder öffnen' }} – {{ course }}{% endblock %}
-{% block body %}
+{% block admin_body %}
 <main class="container py-4">
     <h1>{{ mode == 'complete' ? 'Kurs abschließen' : 'Kurs wieder öffnen' }}</h1>
     <p>Kurs: <strong>{{ course }}</strong></p>

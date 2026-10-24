@@ -5,7 +5,7 @@
     {{ 'Terminplanung'|trans }}: {{ course }}
 {% endblock %}
 
-{% block stylesheets %}
+{% block head_stylesheets %}
 {{ parent() }}
 <style>
 .schedule-page .row{display:flex;flex-wrap:wrap;gap:.65rem}.schedule-page .row>[class*="col-"]{flex:1 1 175px;min-width:0}
@@ -19,6 +19,7 @@
 </style>
 {% endblock %}
 {% block main %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
 <div class="schedule-page container-fluid py-3">
 {% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Terminplanung'} only %}
 
@@ -175,7 +176,7 @@
 </div>
 {% endblock %}
 
-{% block javascripts %}
+{% block body_javascript %}
     {{ parent() }}
 
     <script>

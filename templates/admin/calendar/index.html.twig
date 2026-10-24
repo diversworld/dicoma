@@ -1,24 +1,17 @@
-<!doctype html>
-<html lang="{{ app.request.locale }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DiCoMa – Kurskalender</title>
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}{{ 'Kurskalender'|trans }}{% endblock %}
+{% block head_stylesheets %}
+{{ parent() }}
 <style>
-:root { font-family: system-ui,-apple-system,"Segoe UI",sans-serif; color-scheme:light; }
-* { box-sizing:border-box; }
-body { margin:0; background:#f5f7fa; color:#243044; }
-.top { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; background:white; border-bottom:1px solid #dbe1ea; }
-main { max-width:1480px; margin:auto; padding:24px; }
-.card { background:#fff; border:1px solid #dce2e9; border-radius:10px; padding:16px; margin-bottom:16px; }
+.course-calendar .card { background:#fff; border:1px solid #dce2e9; border-radius:10px; padding:16px; margin-bottom:16px; }
 .filters { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
 .filters>div { flex:1; min-width:150px; }
-label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
-select { width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:5px; background:white; }
-.btn { display:inline-block; border:1px solid #cbd5e1; background:white; color:#25354e; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:14px; cursor:pointer; }
-.btn.active,.btn.primary { background:#235dc3; color:white; border-color:#235dc3; }
-.nav { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.nav h1 { font-size:21px; margin:0; }
+.course-calendar label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
+.course-calendar select { width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:5px; background:white; }
+.course-calendar .btn { display:inline-block; border:1px solid #cbd5e1; background:white; color:#25354e; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:14px; cursor:pointer; }
+.course-calendar .btn.active,.course-calendar .btn.primary { background:#235dc3; color:white; border-color:#235dc3; }
+.course-calendar .nav { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.course-calendar .nav h1 { font-size:21px; margin:0; }
 .jump { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .jump input { padding:7px; border:1px solid #cbd5e1; border-radius:5px; }
 .conflict-list { color:#9b2727; }
@@ -54,12 +47,11 @@ dialog.details::backdrop { background:#0008; }
 .details dt { font-weight:700; }
 .details dd { margin:0; overflow-wrap:anywhere; }
 .details footer { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
-@media(max-width:700px) { main { padding:12px; } .top { padding:12px; } .nav h1 { font-size:17px; } }
+@media(max-width:700px) { .course-calendar .nav h1 { font-size:17px; } }
 </style>
-</head>
-<body>
-<header class="top"><strong>DiCoMa · Kurskalender</strong><a class="btn" href="{{ path('admin') }}">Zurück zur Verwaltung</a></header>
-<main>
+{% endblock %}
+{% block main %}
+<div class="course-calendar">
 <form class="card filters" method="get" action="{{ path('admin_course_calendar') }}">
 <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="month" value="{{ month|date('Y-m') }}">
 {% if view == 'week' %}<input type="hidden" name="week" value="{{ weekStart|date('Y-m-d') }}">{% elseif view == 'day' %}<input type="hidden" name="day" value="{{ selectedDay|date('Y-m-d') }}">{% endif %}
@@ -149,4 +141,5 @@ dialog.details::backdrop { background:#0008; }
   });
 })();
 </script>
-</main></body></html>
+</div>
+{% endblock %}

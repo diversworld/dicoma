@@ -8,7 +8,7 @@
     {% set editUrl = ea_url().unsetAll().setController(courseController).setAction('edit').setEntityId(courseId) %}
     {% set generateUrl = path('admin_course_generate_confirm', {id: courseId}) %}
     {% set importUrl = path('admin_course_import_confirm', {id: courseId}) %}
-    {% set templateUrl = ea_url().unsetAll().setController(courseController).setAction('createTemplateFromCourse').setEntityId(courseId) %}
+    {% set templateUrl = path('admin_course_export_template', {id: courseId}) %}
     {% set completeUrl = path('admin_course_complete_confirm', {id: courseId}) %}
     {% set reopenUrl = path('admin_course_reopen_confirm', {id: courseId}) %}
     {% set matrixUrl = path('admin_course_training_matrix', {id: courseId}) %}
@@ -30,6 +30,7 @@
                 <h3 class="h6 mb-3">Kurs bearbeiten und organisieren</h3>
                 <div class="d-flex flex-wrap gap-2">
                     <a class="btn btn-primary" href="{{ matrixUrl }}"><i class="fa fa-table me-1"></i> Ausbildungsübersicht &amp; Bewertungen</a>
+                    <a class="btn btn-outline-primary" href="{{ path('admin_portal_training_course', {id: courseId}) }}">Teilnahmen, Zahlungen &amp; Lernziele</a>
                     {% if not completed %}
                         <a class="btn btn-outline-primary" href="{{ planUrl }}"><i class="fa fa-calendar-days me-1"></i> Termine planen</a>
                         <a class="btn btn-outline-secondary" href="{{ editUrl }}"><i class="fa fa-pen me-1"></i> Kurs bearbeiten</a>

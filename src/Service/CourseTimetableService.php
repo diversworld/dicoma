@@ -22,7 +22,7 @@ final class CourseTimetableService
     {
         $stream = fopen('php://temp', 'w+');
         fwrite($stream, "\xEF\xBB\xBF");
-        fputcsv($stream, ['Datum', 'Beginn', 'Ende', 'Einheit', 'Ort', 'Ausbilder'], ';');
+        fputcsv($stream, ['Datum', 'Beginn', 'Ende', 'Einheit', 'Ort', 'Ausbilder'], ';', '"', '\\');
         foreach ($this->appointments($course) as $s) {
             fputcsv($stream, [
                 $s->getStartDate()?->format('d.m.Y') ?? '',
@@ -31,7 +31,7 @@ final class CourseTimetableService
                 $s->getTrainingUnitLabel(),
                 $s->getLocation() ?? '',
                 $s->getInstructor()?->getFullName() ?? '',
-            ], ';');
+            ], ';', '"', '\\');
         }
         rewind($stream);
         $value = stream_get_contents($stream);
