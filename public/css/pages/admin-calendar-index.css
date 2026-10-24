@@ -16,7 +16,7 @@
 .month th { background:var(--dw-palette-f1f4f9); text-align:left; }
 .month td { height:130px; }
 .outside { background:var(--dw-palette-f7f8fa); }
-.event { display:block; text-decoration:none; background:var(--dw-palette-eaf1ff); border-left:4px solid var(--dw-palette-3065c7); color:var(--dw-palette-193f82); padding:6px; margin:5px 0; border-radius:4px; font-size:12px; overflow-wrap:anywhere; }
+.event { display:block; text-decoration:none; background:var(--dw-palette-eaf1ff); border-left:4px solid var(--dw-calendar-accent); color:var(--dw-palette-193f82); padding:6px; margin:5px 0; border-radius:4px; font-size:12px; overflow-wrap:anywhere; }
 .event small { display:block; color:var(--dw-palette-52647e); margin-top:2px; }
 .event.conflict { background:var(--dw-palette-ffe6e6); border-left-color:var(--dw-palette-c62828); color:var(--dw-palette-8b1919); }
 .event.incomplete { background:var(--dw-palette-fff2d9); border-left-color:var(--dw-palette-bd7b00); color:var(--dw-palette-6f4700); }

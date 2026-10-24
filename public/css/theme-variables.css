@@ -211,7 +211,6 @@
     --dw-rgba-37-99-235-0_12: rgba(37,99,235,0.12);
     --dw-rgba-5-57-106-0_06: rgba(5,57,106,0.06);
     --dw-rgba-60-55-55-0_5: rgba(60,55,55,0.5);
-    --dw-progress-color: var(--dw-palette-238557);
     --dw-calendar-accent: var(--dw-palette-3065c7);
     --dw-calendar-card: var(--dw-palette-535353);
 }

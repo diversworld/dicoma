@@ -19,8 +19,8 @@ final class TemplateStylesTest extends TestCase
         foreach ($this->files('templates', 'twig') as $path) {
             $source = file_get_contents($path);
             self::assertDoesNotMatchRegularExpression('/<style\b/i', $source, $path);
-            preg_match_all('/\bstyle\s*=\s*"([^"]*)"/i', $source, $styles);
-            foreach ($styles[1] as $style) {
+            preg_match_all("/\\bstyle\\s*=\\s*([\"'])(.*?)\\1/i", $source, $styles);
+            foreach ($styles[2] as $style) {
                 foreach (explode(';', $style) as $declaration) {
                     [$property, $value] = explode(':', $declaration, 2);
                     self::assertContains(trim($property), $allowedProperties, $path);
@@ -63,6 +63,9 @@ final class TemplateStylesTest extends TestCase
         $controller = file_get_contents(self::ROOT . '/src/Controller/Admin/DashboardController.php');
         self::assertStringContainsString("addCssFile('css/theme-variables.css')", $controller);
         self::assertStringContainsString("addCssFile('css/utilities.css')", $controller);
+        foreach (['base.html.twig', 'equipment_manager/layout.html.twig', 'instructor_portal/layout.html.twig'] as $layout) {
+            self::assertStringContainsString("asset('css/bootstrap-theme.css')", file_get_contents(self::ROOT . '/templates/' . $layout));
+        }
     }
 
     /** @return list<string> */

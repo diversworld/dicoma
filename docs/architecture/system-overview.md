@@ -68,6 +68,60 @@ horizontalen Seitenüberlauf bei 390, 768 und 1440 Pixeln. Die neuen Texte
 liegen in den gemeinsamen deutschen, englischen, französischen und
 spanischen Katalogen.
 
+## Zentrale Styles und Farbanpassung
+
+Eigene Styles liegen unter `public/css`, nicht in Twig-Styleblöcken:
+
+- `theme-variables.css`: zentrale Farbdefinitionen für öffentliche Seiten,
+  Portale, EasyAdmin und Druckansichten;
+- `utilities.css`: gemeinsam genutzte Layout-, Größen-, Abstands- und
+  Prioritätsklassen als Ersatz ehemaliger statischer Inline-Deklarationen;
+- `pages/*.css`: gezielt geladene Bereichs-/Druckstyles, damit allgemeine
+  Selektoren wie `table`, `.panel` und `body` keine anderen Seiten verändern;
+- bestehende Stylesheets wie `style.css`, `member-center.css` und `admin.css`:
+  verwenden dieselbe zentrale Farbpalette;
+- `bootstrap-theme.css`: verbindet die fest kodierten primären
+  Bootstrap-4-Komponentenfarben mit Variablen, ohne Vendor-Dateien zu ändern.
+
+Die Farbdatei wird in allen eigenständigen Layouts und über die
+EasyAdmin-Assets geladen. Bereichsstyles werden nur dort eingebunden, wo
+sie benötigt werden. Die vorhandenen Standardfarbtöne bleiben erhalten;
+die unterschiedlichen bisherigen Akzente sind absichtlich getrennt
+konfigurierbar:
+
+| Variable | Bedeutung |
+|---|---|
+| `--dw-primary` | Primärfarbe der eigenen Administrations-/Anwendungsstyles |
+| `--dw-public-primary` | Akzentfarbe des öffentlichen Airspace-Themes |
+| `--dw-training-primary` | Akzentfarbe der eigenständigen Ausbildungsansichten |
+| `--dw-bootstrap-primary` | Primärfarbe der Bootstrap-4-Schaltflächen und Fortschrittsbalken |
+| `--dw-bootstrap-primary-hover`, `--dw-bootstrap-primary-active` | Hover-/Aktivzustände; zugehörige Border-/Focus-Variablen mit anpassen |
+| `--dw-on-primary` | Beschriftung primärer Bootstrap-Schaltflächen |
+| `--dw-background`, `--dw-surface`, `--dw-text`, `--dw-muted`, `--dw-border` | Gemeinsame Grundfarben der darauf angebundenen Komponenten |
+| `--dw-success`, `--dw-warning`, `--dw-danger` | Semantische Statusfarben |
+| `--dw-calendar-accent`, `--dw-calendar-card` | Kalenderakzent und Kartenhintergrund |
+
+Für eine einheitliche Markenfarbe die gewünschten Akzentvariablen in
+`theme-variables.css` gemeinsam ändern; Kontrast sowie Hover-, Fokus- und
+Fehlerzustände mitprüfen. Die `--dw-palette-*`-/`--dw-rgba-*`-Variablen
+erhalten die vorhandenen weiteren Farbabstufungen, Schatten und Transparenzen.
+Auch diese Werte werden ausschließlich zentral gepflegt. Bereits vorhandene
+`--dw-admin-*`-Variablen bleiben als Bereichsanbindung erhalten;
+`admin-theme.css` wird durch diese Änderung nicht zusätzlich aktiviert.
+
+Die sechs verbliebenen `style`-Attribute enthalten ausschließlich erforderliche
+datensatzabhängige CSS-Variablen: vier Fortschrittswerte sowie Stundenoffset
+und Ereignisgeometrie im Kalender. Die tatsächlichen CSS-Regeln stehen in
+den zentralen Dateien. Statische Farben, Abstände oder andere
+Styledefinitionen gehören nicht mehr in Templates. Drittanbieter-CSS und
+von EasyAdmin/TinyMCE zur Laufzeit erzeugte Styles bleiben unverändert.
+
+`TemplateStylesTest` schützt diese Trennung und prüft Stylesheet-Verweise,
+zentrale Farbdefinitionen und fehlende beziehungsweise selbstreferenzierende
+Variablen. Die Browserprüfung lädt alle eigenen CSS-Dateien und prüft die
+Themeumschaltung sowie Fortschritts-/Kalendergeometrie ohne Geschäftsdaten
+zu ändern.
+
 ## Laufzeit und Prüfungen
 
 - Verifiziert: PHP 8.4.24 in DDEV, Symfony 7.4.21, PHPUnit 13.4.3, MariaDB 11.8.
