@@ -3,6 +3,13 @@
  * Palette tokens preserve legacy shades without changing existing layouts. */
 :root {
     --dw-background: #f4f7fb;
+    --dw-bootstrap-primary: #007bff;
+    --dw-bootstrap-primary-hover: #0069d9;
+    --dw-bootstrap-primary-hover-border: #0062cc;
+    --dw-bootstrap-primary-active: #0062cc;
+    --dw-bootstrap-primary-active-border: #005cbf;
+    --dw-bootstrap-primary-focus: rgba(38, 143, 255, .5);
+    --dw-on-primary: #ffffff;
     --dw-black: #000000;
     --dw-border: #e2e8f0;
     --dw-danger: #991b1b;

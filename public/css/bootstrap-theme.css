@@ -1,0 +1,56 @@
+/* Bootstrap 4 has fixed component colors; keep vendor files untouched. */
+.btn-primary {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary);
+    border-color: var(--dw-bootstrap-primary);
+}
+.btn-primary:hover {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary-hover);
+    border-color: var(--dw-bootstrap-primary-hover-border);
+}
+.btn-primary:focus, .btn-primary.focus {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary-hover);
+    border-color: var(--dw-bootstrap-primary-hover-border);
+    box-shadow: 0 0 0 .2rem var(--dw-bootstrap-primary-focus);
+}
+.btn-primary.disabled, .btn-primary:disabled {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary);
+    border-color: var(--dw-bootstrap-primary);
+}
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled).active,
+.show > .btn-primary.dropdown-toggle {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary-active);
+    border-color: var(--dw-bootstrap-primary-active-border);
+}
+.btn-primary:not(:disabled):not(.disabled):active:focus,
+.btn-primary:not(:disabled):not(.disabled).active:focus,
+.show > .btn-primary.dropdown-toggle:focus {
+    box-shadow: 0 0 0 .2rem var(--dw-bootstrap-primary-focus);
+}
+.btn-outline-primary {
+    color: var(--dw-bootstrap-primary);
+    border-color: var(--dw-bootstrap-primary);
+}
+.btn-outline-primary:hover,
+.btn-outline-primary:not(:disabled):not(.disabled):active,
+.btn-outline-primary:not(:disabled):not(.disabled).active {
+    color: var(--dw-on-primary);
+    background-color: var(--dw-bootstrap-primary);
+    border-color: var(--dw-bootstrap-primary);
+}
+.btn-outline-primary:focus, .btn-outline-primary.focus {
+    box-shadow: 0 0 0 .2rem var(--dw-bootstrap-primary-focus);
+}
+.btn-outline-primary.disabled, .btn-outline-primary:disabled {
+    color: var(--dw-bootstrap-primary);
+    background-color: transparent;
+}
+.progress-bar { background-color: var(--dw-bootstrap-primary); }
+.bg-primary { background-color: var(--dw-bootstrap-primary) !important; }
+.text-primary { color: var(--dw-bootstrap-primary) !important; }
+.border-primary { border-color: var(--dw-bootstrap-primary) !important; }
