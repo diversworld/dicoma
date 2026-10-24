@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="de">
 <head><meta charset="utf-8"><title>Ausbildungsbescheinigung {{ participant.certificateNumber }}</title>
-<style>body{font:18px sans-serif;max-width:900px;margin:3rem auto;padding:1rem}dt{font-weight:bold}dd{margin-bottom:1rem}@media print{button{display:none}}</style></head>
+<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pages/training-certificate.css') }}">
+<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+</head>
 <body>
 <h1>Ausbildungsbescheinigung</h1>
 <p>{{ archive.participant }} hat den Kurs <strong>{{ archive.course }}</strong> erfolgreich abgeschlossen.</p>

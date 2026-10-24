@@ -26,7 +26,7 @@ h2 {
 p,
 .btn {
   font-family: "Poppins", serif;
-  color: #777;
+  color: var(--dw-palette-777777);
   font-size: 16px;
 }
 
@@ -43,11 +43,11 @@ a:hover {
 }
 
 .bg-gray {
-  background: #fafafa;
+  background: var(--dw-palette-fafafa);
 }
 
 .navigation {
-  background: #005599;
+  background: var(--dw-palette-005599);
   padding: 20px 0;
 }
 .navigation .navbar {
@@ -65,30 +65,30 @@ a:hover {
   padding-top: 10px;
 }
 .navigation .navbar .navbar-nav > li > a {
-  color: #5C5C5C;
+  color: var(--dw-palette-5c5c5c);
   padding: 10px 15px;
   font-weight: 500;
   font-size: 14px;
   text-transform: uppercase;
 }
 .navigation .navbar .navbar-nav > li > a:hover, .navigation .navbar .navbar-nav > li > a:focus {
-  color: #4b4b4b;
+  color: var(--dw-palette-4b4b4b);
   background: transparent;
 }
 .navigation .navbar .dropdown-menu {
   border-radius: 0;
   border: none;
-  drop-shadow: 0 0 25px 0 rgba(0, 0, 0, 0.08);
+  drop-shadow: 0 0 25px 0 var(--dw-rgba-0-0-0-0_08);
 }
 .navigation .navbar .dropdown-menu a {
   font-weight: normal;
-  color: #808080;
+  color: var(--dw-palette-808080);
   padding: 10px 20px;
   transition: all 0.3s ease;
 }
 .navigation .navbar .dropdown-menu a:hover {
-  background: #655E7A;
-  color: #fff;
+  background: var(--dw-public-primary);
+  color: var(--dw-surface);
   padding-left: 25px;
 }
 
@@ -118,7 +118,7 @@ a:hover {
 }
 .demos .block img {
   width: 100%;
-  box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.11);
+  box-shadow: 0 8px 25px 0 var(--dw-rgba-0-0-0-0_11);
   border-radius: 8px;
   margin-bottom: 20px;
 }
@@ -126,7 +126,7 @@ a:hover {
   text-align: center;
 }
 .demos .block .content h4 {
-  color: #000;
+  color: var(--dw-black);
   margin-top: 0;
 }
 .demos .block .content p {
@@ -135,7 +135,7 @@ a:hover {
 
 .elements .feature-item {
   border-radius: 6px;
-  box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.11);
+  box-shadow: 0 8px 25px 0 var(--dw-rgba-0-0-0-0_11);
   padding: 20px 10px;
   text-align: center;
   margin-bottom: 20px;
@@ -148,18 +148,18 @@ a:hover {
 }
 .elements .feature-item h4 {
   font-size: 20px;
-  color: #000;
+  color: var(--dw-black);
 }
 .elements .feature-item p {
   font-size: 14px;
-  color: #808080;
+  color: var(--dw-palette-808080);
 }
 
 .call-to-action-landing {
-  background-color: #1A1B1F;
+  background-color: var(--dw-palette-1a1b1f);
 }
 .call-to-action-landing h2 {
-  color: #fff;
+  color: var(--dw-surface);
   margin-bottom: 30px;
 }
 .call-to-action-landing .btn {
@@ -168,11 +168,11 @@ a:hover {
   text-transform: uppercase;
 }
 .call-to-action-landing .btn-blue {
-  color: #fff;
-  background: #655E7A;
+  color: var(--dw-surface);
+  background: var(--dw-public-primary);
 }
 .call-to-action-landing .btn-gray {
-  background: #2E7EED;
-  color: #fff;
+  background: var(--dw-palette-2e7eed);
+  color: var(--dw-surface);
 }
 /*# sourceMappingURL=landing-page.css.map */

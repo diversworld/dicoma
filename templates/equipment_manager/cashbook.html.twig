@@ -3,7 +3,7 @@
 {% block title %}Gerätewart-Kasse | DICOMA{% endblock %}{% block hero %}{% endblock %}
 
 {% block body %}
-	<main class="container py-4" style="max-width:1100px">
+	<main class="container py-4 dw-max-width-1100px" >
 		<a href="{{ path('equipment_manager_dashboard') }}">← Gerätewart-Übersicht</a>
 		<h1 class="h2 mt-3">Gerätewart-Kasse</h1>
 		<div class="row g-2 mb-3">
@@ -60,11 +60,11 @@
 							<td>
 								<form method="post" action="{{ path('equipment_manager_tuv_collect_payment', {id:b.id}) }}" class="d-flex flex-wrap gap-2" onsubmit="return confirm('Geldannahme verbindlich im Kassenbuch erfassen?')">
 									<input type="hidden" name="_token" value="{{ csrf_token('tuv_collect_' ~ b.id) }}">
-									<input class="form-control form-control-sm" style="max-width:110px" type="text" inputmode="decimal" name="amount" placeholder="EUR" required>
-										<select class="form-select form-select-sm" style="max-width:150px" name="method">
+									<input class="form-control form-control-sm dw-max-width-110px"  type="text" inputmode="decimal" name="amount" placeholder="EUR" required>
+										<select class="form-select form-select-sm dw-max-width-150px"  name="method">
 											<option value="cash">Bar erhalten</option><option value="bank">Überweisung</option>
 										</select>
-										<input class="form-control form-control-sm" style="max-width:190px" type="text" name="note" maxlength="500" placeholder="Bemerkung">
+										<input class="form-control form-control-sm dw-max-width-190px"  type="text" name="note" maxlength="500" placeholder="Bemerkung">
 										<button class="btn btn-sm btn-primary">Kassieren</button>
 								</form>
 							</td>

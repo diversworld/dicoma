@@ -10,7 +10,7 @@
   <form method="post" id="tuv-multiple-form">
     <input type="hidden" name="_token" value="{{ csrf_token('member_tuv_multiple_' ~ check.id) }}">
     {% for row in rows %}
-      <div class="panel panel-default" style="margin-bottom:16px">
+      <div class="panel panel-default dw-margin-bottom-16px" >
         <div class="panel-heading"><label><input type="checkbox" class="js-tank" name="tanks[]" value="{{ row.tank.id }}"> <strong>{{ row.tank.label }}</strong> · {{ row.tank.serialNumber }} · {{ row.tank.volume ?: 'Größe unbekannt' }}</label></div>
         <div class="panel-body table-responsive">
           <table class="table table-striped"><thead><tr><th>Auswahl</th><th>Leistung</th><th>Netto</th><th>Brutto</th></tr></thead><tbody>

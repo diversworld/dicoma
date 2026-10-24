@@ -1,11 +1,11 @@
 {% extends 'equipment_manager/layout.html.twig' %}
 {% block title %}Tagesabschluss · Gerätewart-Kasse{% endblock %}
 {% block body %}
-<main class="container py-4" style="max-width:950px">
+<main class="container py-4 dw-max-width-950px" >
 <a href="{{ path('equipment_manager_cashbook_day', {date: date}) }}">← Tagesauswertung</a>
 <h1 class="h2 mt-3">Kassensturz und Tagesabschluss</h1>
 <p>Nur Bargeld. Überweisungen sind nicht Teil des Kassenbestands. Abschluss je Verein und Kalendertag.</p>
-<form method="get" class="d-flex gap-2 mb-4"><input class="form-control" style="max-width:200px" type="date" name="date" value="{{ date }}" required><button class="btn btn-outline-primary">Datum anzeigen</button></form>
+<form method="get" class="d-flex gap-2 mb-4"><input class="form-control dw-max-width-200px"  type="date" name="date" value="{{ date }}" required><button class="btn btn-outline-primary">Datum anzeigen</button></form>
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}">{{ message }}</div>{% endfor %}{% endfor %}
 {% if existing %}
 <div class="alert alert-success"><strong>Abgeschlossen</strong> am {{ existing.closedAt|date('d.m.Y H:i') }} von {{ existing.closedBy }}. Dieser Abschluss ist nicht nachträglich bearbeitbar.</div>

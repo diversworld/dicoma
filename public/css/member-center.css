@@ -5,15 +5,15 @@
 
 /* Standard: Light Mode */
 .member-center {
-    --mc-bg: #ffffff;
-    --mc-card: #f8fafc;
-    --mc-text: #17253b;
-    --mc-muted: #64748b;
-    --mc-border: #dce3ec;
-    --mc-head: #eaf0f7;
-    --mc-link: #1556ae;
-    --mc-primary: #175cd3;
-    --mc-primary-hover: #1249aa;
+    --mc-bg: var(--dw-surface);
+    --mc-card: var(--dw-palette-f8fafc);
+    --mc-text: var(--dw-palette-17253b);
+    --mc-muted: var(--dw-muted);
+    --mc-border: var(--dw-palette-dce3ec);
+    --mc-head: var(--dw-palette-eaf0f7);
+    --mc-link: var(--dw-training-primary);
+    --mc-primary: var(--dw-palette-175cd3);
+    --mc-primary-hover: var(--dw-palette-1249aa);
 
     max-width: 1400px;
     margin: 0 auto;
@@ -31,15 +31,15 @@
 [data-bs-theme="dark"] .member-center,
 [data-theme="dark"] .member-center,
 body.ea-dark-scheme .member-center {
-    --mc-bg: #151719;
-    --mc-card: #202328;
-    --mc-text: #f1f5f9;
-    --mc-muted: #a8b3c2;
-    --mc-border: #39414b;
-    --mc-head: #292f37;
-    --mc-link: #8bbcff;
-    --mc-primary: #3568e8;
-    --mc-primary-hover: #2455ca;
+    --mc-bg: var(--dw-palette-151719);
+    --mc-card: var(--dw-palette-202328);
+    --mc-text: var(--dw-palette-f1f5f9);
+    --mc-muted: var(--dw-palette-a8b3c2);
+    --mc-border: var(--dw-palette-39414b);
+    --mc-head: var(--dw-palette-292f37);
+    --mc-link: var(--dw-palette-8bbcff);
+    --mc-primary: var(--dw-palette-3568e8);
+    --mc-primary-hover: var(--dw-palette-2455ca);
 }
 
 /* Texte */
@@ -127,7 +127,7 @@ body.ea-dark-scheme .member-center {
 .member-center a.btn.btn-primary:visited {
     background: var(--mc-primary) !important;
     border: 1px solid var(--mc-primary) !important;
-    color: #ffffff !important;
+    color: var(--dw-surface) !important;
     text-decoration: none;
 }
 
@@ -135,7 +135,7 @@ body.ea-dark-scheme .member-center {
 .member-center a.btn.btn-primary:focus {
     background: var(--mc-primary-hover) !important;
     border-color: var(--mc-primary-hover) !important;
-    color: #ffffff !important;
+    color: var(--dw-surface) !important;
 }
 
 /* Sekundäre Schaltflächen */
@@ -177,13 +177,13 @@ body.ea-dark-scheme .member-center {
 }
 /* Sekundäre Schaltflächen */
 .member-center .btn-outline-primary {
-    color: #1556ae !important;
-    border-color: #1556ae !important;
+    color: var(--dw-training-primary) !important;
+    border-color: var(--dw-training-primary) !important;
 }
 
 .member-center .btn-outline-primary:hover {
-    color: #ffffff !important;
-    background-color: #1556ae !important;
+    color: var(--dw-surface) !important;
+    background-color: var(--dw-training-primary) !important;
 }
 
 /* Abstände zwischen Verwaltungsaktionen */
@@ -203,9 +203,9 @@ body.ea-dark-scheme .member-center {
 .member-center a.btn.btn-primary,
 .member-center a.btn.btn-primary:link,
 .member-center a.btn.btn-primary:visited {
-    background-color: #175cd3 !important;
-    border: 1px solid #175cd3 !important;
-    color: #ffffff !important;
+    background-color: var(--dw-palette-175cd3) !important;
+    border: 1px solid var(--dw-palette-175cd3) !important;
+    color: var(--dw-surface) !important;
     padding: 0.4rem 0.75rem;
     font-weight: 500;
     text-decoration: none;
@@ -213,9 +213,9 @@ body.ea-dark-scheme .member-center {
 
 .member-center a.btn.btn-primary:hover,
 .member-center a.btn.btn-primary:focus {
-    background-color: #1249aa !important;
-    border-color: #1249aa !important;
-    color: #ffffff !important;
+    background-color: var(--dw-palette-1249aa) !important;
+    border-color: var(--dw-palette-1249aa) !important;
+    color: var(--dw-surface) !important;
 }
 
 /* Umrandete Aktionen */
@@ -230,8 +230,8 @@ body.ea-dark-scheme .member-center {
 
 .member-center a.btn.btn-outline-primary:hover,
 .member-center a.btn.btn-outline-secondary:hover {
-    background-color: #1556ae !important;
-    color: #ffffff !important;
+    background-color: var(--dw-training-primary) !important;
+    color: var(--dw-surface) !important;
 }
 
 /* Einheitliche Abstände und Größen */
@@ -247,7 +247,7 @@ body.ea-dark-scheme .member-center {
 
 /* Sichtbarer Tastaturfokus */
 .member-center a.btn:focus-visible {
-    outline: 2px solid #175cd3;
+    outline: 2px solid var(--dw-palette-175cd3);
     outline-offset: 3px;
 }
 
@@ -263,8 +263,8 @@ body.ea-dark-scheme .member-center {
 [data-theme="dark"] .member-center a.btn.btn-outline-secondary,
 body.ea-dark-scheme .member-center a.btn.btn-outline-primary,
 body.ea-dark-scheme .member-center a.btn.btn-outline-secondary {
-    color: #b9d6ff !important;
-    border-color: #719bdb !important;
+    color: var(--dw-palette-b9d6ff) !important;
+    border-color: var(--dw-palette-719bdb) !important;
     background-color: transparent !important;
 }
 
@@ -275,9 +275,9 @@ body.ea-dark-scheme .member-center a.btn.btn-outline-secondary {
 [data-theme="dark"] .member-center a.btn.btn-outline-secondary:hover,
 body.ea-dark-scheme .member-center a.btn.btn-outline-primary:hover,
 body.ea-dark-scheme .member-center a.btn.btn-outline-secondary:hover {
-    color: #ffffff !important;
-    background-color: #2455ca !important;
-    border-color: #2455ca !important;
+    color: var(--dw-surface) !important;
+    background-color: var(--dw-palette-2455ca) !important;
+    border-color: var(--dw-palette-2455ca) !important;
 }
 
 /* Icons innerhalb der Schaltflächen */

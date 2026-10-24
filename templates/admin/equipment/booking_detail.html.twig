@@ -42,7 +42,7 @@
                     <td>
                         {% if line.loanStatus == 'returned' %}
                             {% if line.returnCondition == 'ready' %}Einsatzbereit{% elseif line.returnCondition == 'maintenance' %}Wartung erforderlich{% elseif line.returnCondition == 'damaged' %}Beschädigt{% else %}{{ line.returnCondition|default('—') }}{% endif %}
-                            {% if line.returnNotes %}<div class="small text-muted" style="white-space: pre-wrap">{{ line.returnNotes }}</div>{% endif %}
+                            {% if line.returnNotes %}<div class="small text-muted dw-pre-wrap" >{{ line.returnNotes }}</div>{% endif %}
                         {% else %}—{% endif %}
                     </td>
                     <td>

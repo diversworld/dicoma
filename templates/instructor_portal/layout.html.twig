@@ -2,14 +2,16 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}DICOMA · Ausbilder{% endblock %}</title>
 <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
-<style>body{background:#f5f7fa;color:#172b4d}.ip-header{background:#102c48;color:white;padding:1rem 0}.ip-header a{color:white;margin-right:1.2rem}.ip-main{min-height:80vh;padding:2rem 0}.ip-card{background:white;border:1px solid #dbe2eb;border-radius:12px;padding:1.3rem;margin-bottom:1rem}.table-responsive{overflow:auto}.panel{background:white;border:1px solid #dbe2eb;border-radius:12px;padding:1.2rem;margin-bottom:1rem}.muted{color:#63748a}.heading{display:flex;justify-content:space-between}.tag{background:#eef2f7;padding:.2rem .5rem;border-radius:4px}.table-wrap{overflow:auto}.table-wrap table{width:100%;border-collapse:collapse}.table-wrap td,.table-wrap th{padding:.65rem;border-bottom:1px solid #e5e7eb}.table-wrap th{text-align:left;background:#edf2f8}</style>
+<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pages/instructor-portal-layout.css') }}">
 </head><body>
 <header class="ip-header"><nav class="container" aria-label="Ausbilderportal">
 <strong>DICOMA · AUSBILDER</strong>
 <a href="{{ path('instructor_portal_dashboard') }}">Übersicht</a>
 <a href="{{ path('instructor_portal_tasks') }}">Meine Aufgaben</a>
 <a href="{{ path('member_portal_dashboard') }}">Mitgliederbereich</a>
-<form method="post" action="{{ path('app_logout') }}" style="display:inline">
+<form class="dw-inline" method="post" action="{{ path('app_logout') }}" >
 <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
 <button class="btn btn-sm btn-outline-light">Abmelden</button></form>
 </nav></header>

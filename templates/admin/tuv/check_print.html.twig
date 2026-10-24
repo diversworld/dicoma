@@ -4,26 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TÜV-Sammelliste – {{ check.checkDate|date('d.m.Y') }}</title>
-    <style>
-        body { font: 12px/1.4 Arial, sans-serif; color: #111; margin: 22mm 12mm; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { margin: 8px 0 18px; color: #444; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { padding: 5px 4px; border: 1px solid #888; text-align: left; vertical-align: top; }
-        th { background: #eee; }
-        .number { text-align: right; white-space: nowrap; }
-        .small { font-size: 10px; }
-        .actions { margin-bottom: 16px; }
-        .actions button, .actions a { margin-right: 10px; padding: 7px 12px; }
-        tr { break-inside: avoid; }
-        @page { size: A4 landscape; margin: 12mm; }
-        @media print {
-            body { margin: 0; }
-            .actions { display: none !important; }
-            thead { display: table-header-group; }
-            tfoot { display: table-footer-group; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pages/admin-tuv-check-print.css') }}">
+
+<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
 </head>
 <body>
     <div class="actions">

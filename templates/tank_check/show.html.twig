@@ -50,17 +50,17 @@
             <table class="table">
                 <thead>
                 <tr>
-                    <th style="width: 380px">Artikel</th>
+                    <th class="dw-width-380px" >Artikel</th>
                     <th >Notizen</th>
-                    <th style="width: 100px" class="text-right">Preis (netto)</th>
-                    <th style="width: 100px" class="text-right">Preis (rutto)</th>
-                    <th style="width: 100px"></th>
+                    <th  class="text-right dw-width-100px">Preis (netto)</th>
+                    <th  class="text-right dw-width-100px">Preis (rutto)</th>
+                    <th class="dw-width-100px" ></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for tank_check_article in tank_check_articles %}
                     <tr>
-                        <td style="width:180px;">{{ tank_check_article.title }}</td>
+                        <td class="dw-width-180px" >{{ tank_check_article.title }}</td>
                         <td>{{ tank_check_article.notes | raw }}</td>
                         <td class="text-right">{{ tank_check_article.priceNetto | number_format(2, ',', '.') }} €</td>
                         <td class="text-right">{{ tank_check_article.priceBrutto | number_format(2, ',', '.') }} €</td>

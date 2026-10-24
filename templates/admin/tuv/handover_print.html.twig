@@ -1,19 +1,10 @@
 <!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TÜV-Übergabeprotokoll – Anmeldung #{{ booking.id }}</title>
-<style>
-@page { size: A4 portrait; margin: 15mm; }
-body { font: 12px/1.45 Arial, sans-serif; color: #111; max-width: 210mm; margin: 20px auto; padding: 0 12px; }
-h1 { font-size: 20px; margin-bottom: 4px; } h2 { font-size: 15px; margin-top: 22px; }
-.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 20px 0; }
-.label { color: #555; font-size: 11px; } .value { font-weight: bold; overflow-wrap: anywhere; }
-table { border-collapse: collapse; width: 100%; margin-top: 12px; table-layout: fixed; }
-th,td { border: 1px solid #777; padding: 7px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-th { background: #eee; } tr { break-inside: avoid; }
-.signatures { display: flex; gap: 35px; margin-top: 65px; } .signature { flex: 1; border-top: 1px solid #333; padding-top: 7px; }
-.note { color: #555; } .toolbar { margin-bottom: 20px; } button { padding: 9px 15px; cursor: pointer; }
-@media print { body { margin: 0; padding: 0; } .toolbar { display: none; } }
-</style></head><body>
+<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pages/admin-tuv-handover-print.css') }}">
+<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+</head><body>
 <div class="toolbar"><button type="button" onclick="window.print()">Drucken / PDF speichern</button></div>
 <h1>TÜV-Übergabeprotokoll</h1>
 <p class="note">Dokumentation der physischen Übergaben. Dieses Protokoll ist kein TÜV-Prüfzeugnis.</p>
@@ -25,7 +16,7 @@ th { background: #eee; } tr { break-inside: avoid; }
  <div><div class="label">Buchungsstatus</div><div class="value">{{ booking.status }}</div></div>
 </div>
 <h2>Übergabehistorie</h2>
-<table><thead><tr><th style="width:18%">Zeitpunkt</th><th style="width:24%">Vorgang</th><th style="width:23%">Bearbeiter</th><th>Bemerkung / Zustand</th></tr></thead><tbody>
+<table><thead><tr><th class="dw-width-18pct" >Zeitpunkt</th><th class="dw-width-24pct" >Vorgang</th><th class="dw-width-23pct" >Bearbeiter</th><th>Bemerkung / Zustand</th></tr></thead><tbody>
 {% set labels = {'received':'Angenommen', 'sent':'An Prüfstelle übergeben', 'returned':'Von Prüfstelle zurück', 'collected':'An Eigentümer ausgegeben'} %}
 {% for h in handovers %}<tr><td>{{ h.occurredAt|date('d.m.Y H:i') }}</td><td>{{ labels[h.eventType]|default(h.eventType) }}</td><td>{{ h.actor }}</td><td>{{ h.notes|default('–') }}</td></tr>
 {% else %}<tr><td colspan="4">Noch keine Übergabe erfasst.</td></tr>{% endfor %}

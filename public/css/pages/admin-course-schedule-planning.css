@@ -1,0 +1,8 @@
+.schedule-page .row{display:flex;flex-wrap:wrap;gap:.65rem}.schedule-page .row>[class*="col-"]{flex:1 1 175px;min-width:0}
+.schedule-page .card{background:var(--dw-surface);border:1px solid var(--dw-palette-dce2ea);border-radius:10px;margin-bottom:1rem}.schedule-page .card-body{padding:1rem}
+.schedule-page .form-control,.schedule-page .form-select{display:block;width:100%;padding:.48rem;border:1px solid var(--dw-palette-bac6d5);border-radius:6px;background:var(--dw-surface);color:var(--dw-palette-152238)}
+.schedule-page .form-label{display:block;margin-bottom:.3rem;font-weight:600}.schedule-page .table-responsive{overflow-x:auto}
+.schedule-page .btn-primary{background:var(--dw-training-primary);color:var(--dw-surface)}.schedule-page .btn-secondary{background:var(--dw-palette-eef2f8)}
+.schedule-page .alert{padding:.75rem 1rem;border-radius:7px;margin-bottom:1rem}.schedule-page .alert-danger{background:var(--dw-palette-fff0f0);border:1px solid var(--dw-palette-e5a8a8)}
+.schedule-page .table-danger{background:var(--dw-palette-fff0f0)}.schedule-page .mb-3{margin-bottom:1rem}.schedule-page .mb-4{margin-bottom:1.5rem}
+.schedule-page .g-2{gap:.5rem}.schedule-page button{cursor:pointer}

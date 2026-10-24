@@ -10,32 +10,32 @@ body.ea-dark-scheme {
     color-scheme: light;
 
     /* Grundfarben */
-    --dw-admin-primary: #003366;
+    --dw-admin-primary: var(--dw-primary);
     --dw-admin-link: var(--dw-admin-primary);
-    --dw-admin-background: #f4f7fb;
-    --dw-admin-surface: #ffffff;
-    --dw-admin-text: #334155;
-    --dw-admin-muted: #64748b;
-    --dw-admin-border: #e2e8f0;
-    --dw-admin-hover: #f1f5f9;
+    --dw-admin-background: var(--dw-background);
+    --dw-admin-surface: var(--dw-surface);
+    --dw-admin-text: var(--dw-palette-334155);
+    --dw-admin-muted: var(--dw-muted);
+    --dw-admin-border: var(--dw-border);
+    --dw-admin-hover: var(--dw-palette-f1f5f9);
 
     /* Einzelne Bereiche koennen unabhaengig angepasst werden. */
     --dw-admin-header-bg: var(--dw-admin-background);
     --dw-admin-content-bg: var(--dw-admin-surface);
-    --dw-admin-sidebar-bg: #172554;
-    --dw-admin-sidebar-background: linear-gradient(145deg, #111827 0%, #172554 50%, #1d4ed8 100%);
-    --dw-admin-sidebar-text: #e2e8f0;
-    --dw-admin-sidebar-heading: #93c5fd;
-    --dw-admin-sidebar-icon: #cbd5e1;
-    --dw-admin-sidebar-logo: #ffffff;
-    --dw-admin-sidebar-active-text: #ffffff;
-    --dw-admin-sidebar-active-bg: rgba(255, 255, 255, .12);
-    --dw-admin-sidebar-hover-bg: rgba(255, 255, 255, .1);
+    --dw-admin-sidebar-bg: var(--dw-palette-172554);
+    --dw-admin-sidebar-background: linear-gradient(145deg, var(--dw-palette-111827) 0%, var(--dw-palette-172554) 50%, var(--dw-palette-1d4ed8) 100%);
+    --dw-admin-sidebar-text: var(--dw-border);
+    --dw-admin-sidebar-heading: var(--dw-palette-93c5fd);
+    --dw-admin-sidebar-icon: var(--dw-palette-cbd5e1);
+    --dw-admin-sidebar-logo: var(--dw-surface);
+    --dw-admin-sidebar-active-text: var(--dw-surface);
+    --dw-admin-sidebar-active-bg: var(--dw-rgba-255-255-255-0_12);
+    --dw-admin-sidebar-hover-bg: var(--dw-rgba-255-255-255-0_1);
     --dw-admin-card-bg: var(--dw-admin-surface);
 
     /* Form und Layout */
     --dw-admin-radius: 16px;
-    --dw-admin-shadow: 0 12px 35px rgba(15, 23, 42, .06);
+    --dw-admin-shadow: 0 12px 35px var(--dw-rgba-15-23-42-0_06);
     --dw-admin-header-padding: var(--ea-sp-18) 0 var(--ea-sp-8);
     --dw-admin-content-padding-bottom: 2rem;
     --dw-admin-table-cell-padding: .85rem;
@@ -89,13 +89,13 @@ body.ea-dark-scheme {
  */
 body.ea-dark-scheme {
     color-scheme: dark;
-    --dw-admin-primary: #2563eb;
-    --dw-admin-link: #93c5fd;
-    --dw-admin-background: #1e293b;
-    --dw-admin-surface: #243449;
-    --dw-admin-text: #e2e8f0;
-    --dw-admin-muted: #94a3b8;
-    --dw-admin-border: #475569;
-    --dw-admin-hover: #334155;
-    --dw-admin-shadow: 0 12px 35px rgba(15, 23, 42, .2);
+    --dw-admin-primary: var(--dw-palette-2563eb);
+    --dw-admin-link: var(--dw-palette-93c5fd);
+    --dw-admin-background: var(--dw-palette-1e293b);
+    --dw-admin-surface: var(--dw-palette-243449);
+    --dw-admin-text: var(--dw-border);
+    --dw-admin-muted: var(--dw-palette-94a3b8);
+    --dw-admin-border: var(--dw-palette-475569);
+    --dw-admin-hover: var(--dw-palette-334155);
+    --dw-admin-shadow: 0 12px 35px var(--dw-rgba-15-23-42-0_2);
 }

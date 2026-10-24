@@ -28,7 +28,7 @@
             <input type="hidden" name="_token" value="{{ csrf_token(tokenId) }}">
             {% if mode == 'reopen' %}
                 <label for="reopen-reason">Begründung für die Wiederöffnung (Pflichtfeld)</label>
-                <textarea id="reopen-reason" name="reason" minlength="3" maxlength="1000" required rows="3" style="display:block;width:100%;max-width:700px;margin:.5rem 0 1rem"></textarea>
+                <textarea class="dw-status-note" id="reopen-reason" name="reason" minlength="3" maxlength="1000" required rows="3" ></textarea>
                 <p class="muted small">Die Begründung wird in der Änderungshistorie gespeichert.</p>
             {% endif %}
             <button class="btn" type="submit">{{ mode == 'complete' ? 'Kurs jetzt abschließen' : 'Kurs jetzt wieder öffnen' }}</button>

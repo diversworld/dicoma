@@ -229,9 +229,11 @@ class DashboardController extends AbstractDashboardController
     public function configureAssets(): Assets
     {
         return Assets::new()
+           ->addCssFile('css/theme-variables.css')
 		   ->addCssFile('css/admin.css')
 			->addCssFile('css/admin-logout.css')
-			->addCssFile('css/member-center.css?v=3');
+			->addCssFile('css/member-center.css?v=3')
+            ->addCssFile('css/utilities.css');
 	}
 
 

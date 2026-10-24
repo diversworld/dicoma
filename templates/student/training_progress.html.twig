@@ -2,7 +2,7 @@
 {% block title %}Meine Ausbildung – DiCoMa{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
-<div class="container" style="padding-top:2rem;padding-bottom:3rem">
+<div class="container dw-training-spacing" >
 <h1>Meine Ausbildung</h1>
 <p><a class="btn btn-primary" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit ansehen</a></p>
 <p class="muted">Hier siehst du ausschließlich deine eigenen Kurse und Ausbildungsfortschritte.</p>
@@ -16,7 +16,7 @@
   <p><strong>Pflichtfortschritt:</strong> {{ item.progress.passed }} / {{ item.progress.target }}
   {% if item.progress.target > 0 %}({{ item.progress.percent }} %){% else %}(keine Pflichtanforderungen hinterlegt){% endif %}</p>
   {% if item.progress.target > 0 %}
-  <div class="bar" role="progressbar" aria-valuenow="{{ item.progress.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Pflichtfortschritt"><div class="fill" style="width:{{ item.progress.percent }}%"></div></div>
+  <div class="bar" role="progressbar" aria-valuenow="{{ item.progress.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Pflichtfortschritt"><div class="fill dw-progress-fill" style="--dw-progress:{{ item.progress.percent }}%"></div></div>
   {% endif %}
   <p><strong>Optionale Ausbildung:</strong> {% if item.progress.optionalTarget > 0 %}{{ item.progress.optionalCredited }} / {{ item.progress.optionalTarget }} angerechnet ({{ item.progress.optionalPercent }} %), tatsächlich bestanden: {{ item.progress.optionalPassed }}{% else %}Keine optionalen Einheiten{% endif %}</p>
   <h3>Ausbildungseinheiten</h3>

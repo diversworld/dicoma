@@ -2,7 +2,7 @@
 {% block title %}Rechnungseinstellungen – {{ club.name }}{% endblock %}
 {% block hero %}{% endblock %}
 {% block admin_body %}
-<main class="container py-4" style="max-width:850px">
+<main class="container py-4 dw-max-width-850px" >
     <h1 class="h3">Rechnungseinstellungen – {{ club.name }}</h1>
     <p class="text-muted">Diese Einstellungen gelten nur für diesen Verein. Die steuerliche Einordnung bitte mit der Buchhaltung abstimmen.</p>
     {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}

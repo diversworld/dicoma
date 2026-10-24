@@ -2,7 +2,7 @@
 {% block title %}Mein Mitgliederbereich – DiCoMa{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
-<section class="section" style="padding:2rem 0">
+<section class="section dw-section-spacing" >
 <div class="container">
 <h1>Mein Mitgliederbereich</h1>
 <p>Persönliche Informationen, Qualifikationen, Gruppen und Dokumente.</p>
@@ -48,7 +48,7 @@
 </form>
 <div class="table-responsive"><table class="table"><thead><tr><th>Datei</th><th>Hochgeladen</th><th>Aktionen</th></tr></thead><tbody>
 {% for document in documents %}<tr><td>{{ document.originalName }}</td><td>{{ document.createdAt|date('d.m.Y H:i') }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ path('app_profile_document_download', {id: document.id}) }}">Herunterladen</a>
-<form method="post" action="{{ path('app_profile_document_delete', {id: document.id}) }}" style="display:inline" onsubmit="return confirm('Dokument wirklich löschen?')"><input type="hidden" name="_token" value="{{ csrf_token('delete_member_document_' ~ document.id) }}"><button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button></form></td></tr>
+<form class="dw-inline" method="post" action="{{ path('app_profile_document_delete', {id: document.id}) }}"  onsubmit="return confirm('Dokument wirklich löschen?')"><input type="hidden" name="_token" value="{{ csrf_token('delete_member_document_' ~ document.id) }}"><button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button></form></td></tr>
 {% else %}<tr><td colspan="3">Noch keine Dokumente hochgeladen.</td></tr>{% endfor %}
 </tbody></table></div></div></div>
 </div></section>

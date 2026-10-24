@@ -1,6 +1,6 @@
 {% extends 'admin/standalone_base.html.twig' %}
 {% block title %}Sammelbewertung – {{ schedule.title }}{% endblock %}
-{% block stylesheets %}{{ parent() }}<style>.panel{background:white;border:1px solid #dbe2ec;border-radius:12px;padding:1.5rem}table{border-collapse:collapse;width:100%}td,th{padding:.75rem;border-bottom:1px solid #e2e8f0;text-align:left}select,button{font:inherit;padding:.45rem;border-radius:6px;border:1px solid #b9c4d2}button{background:#1558a6;color:white;cursor:pointer;padding:.65rem 1rem}.muted{color:#64748b}.notice{padding:.75rem;border-radius:6px;background:#e8f3ed;margin:1rem 0}.error{background:#fff1f1}.locked{color:#167446;font-weight:600}@media(max-width:650px){.panel{padding:.75rem}}</style>{% endblock %}
+{% block stylesheets %}{{ parent() }}<link rel="stylesheet" href="{{ asset('css/pages/admin-training-results-batch.css') }}">{% endblock %}
 {% block admin_body %}
 {% if isAdminAssessment %}{% include 'admin/partials/course_navigation.html.twig' with {'course': course, 'activeSection': 'Sammelbewertung'} only %}{% endif %}
 

@@ -43,7 +43,7 @@
                     {% endif %}
                 </div>
                 <details class="mt-3">
-                    <summary class="text-muted small" style="cursor:pointer">Weitere Aktionen</summary>
+                    <summary class="text-muted small dw-pointer" >Weitere Aktionen</summary>
                     <div class="d-flex flex-wrap gap-2 mt-2">
                         {% if not completed and course.qualification %}
                             <a class="btn btn-sm btn-outline-secondary" href="{{ importUrl }}">Ausbildungsplan übernehmen</a>
@@ -68,7 +68,7 @@
             {% if courseDashboard is defined %}
                 <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Terminbuchungen</div><div class="fs-3 fw-bold">{{ courseDashboard.bookingCount }}</div></div></div></div>
                 <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Anwesenheit noch geplant</div><div class="fs-3 fw-bold">{{ courseDashboard.attendanceOpenCount }}</div></div></div></div>
-                <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Durchschnittlicher Ausbildungsfortschritt</div><div class="fs-3 fw-bold">{{ courseDashboard.averageProgress }} %</div><div class="progress" role="progressbar" aria-valuenow="{{ courseDashboard.averageProgress }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:{{ courseDashboard.averageProgress }}%"></div></div></div></div></div>
+                <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Durchschnittlicher Ausbildungsfortschritt</div><div class="fs-3 fw-bold">{{ courseDashboard.averageProgress }} %</div><div class="progress" role="progressbar" aria-valuenow="{{ courseDashboard.averageProgress }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar dw-progress-fill" style="--dw-progress:{{ courseDashboard.averageProgress }}%"></div></div></div></div></div>
                 <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Pflichtnachweise vollständig</div><div class="fs-3 fw-bold">{{ courseDashboard.readyCount }} / {{ courseDashboard.participantCount }}</div></div></div></div>
                 <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Teilnehmer mit offenen Pflichtnachweisen</div><div class="fs-3 fw-bold">{{ courseDashboard.missingCount }}</div></div></div></div>
             {% endif %}
@@ -108,5 +108,5 @@
             </div>
         {% endif %}
     </section>
-    <details class="mt-4"><summary class="h6" style="cursor:pointer">Weitere Kursinformationen</summary><div class="mt-3">{{ parent() }}</div></details>
+    <details class="mt-4"><summary class="h6 dw-pointer" >Weitere Kursinformationen</summary><div class="mt-3">{{ parent() }}</div></details>
 {% endblock %}

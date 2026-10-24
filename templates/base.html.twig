@@ -42,7 +42,10 @@
       });
     </script>
     <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+    {% block stylesheets %}{% endblock %}
 </head>
     <body>
         {% include 'includes/_header.html.twig' %}

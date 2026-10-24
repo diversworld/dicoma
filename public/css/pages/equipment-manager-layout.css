@@ -1,0 +1,24 @@
+body{
+			background:var(--dw-palette-f5f7fa);color:var(--dw-text)
+		}
+		.manager-header{
+			background:var(--dw-palette-102c48);color:var(--dw-surface);padding:1rem 0}
+			.manager-header a{
+				color:var(--dw-surface);text-decoration:none;margin-right:1.2rem
+			}
+			.manager-header a:hover{
+				text-decoration:underline
+			}
+			.manager-header strong{
+				margin-right:2rem}.manager-main{min-height:75vh
+			}
+			.manager-footer{
+				border-top:1px solid var(--dw-palette-dbe2eb);
+				padding:1rem 0;color:var(--dw-palette-63748a)
+			}
+			.table-responsive{
+				overflow-x:auto
+			}
+			button{
+				cursor:pointer
+			}

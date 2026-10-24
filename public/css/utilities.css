@@ -1,0 +1,50 @@
+.dw-calendar-cell-border { border-left: 1px !important; border-right: 1px !important; border-color: var(--dw-palette-cecece) !important; border-style: solid !important; }
+.dw-card-toolbar { height:auto !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:16px !important; flex-wrap:wrap !important; }
+.dw-equipment-toolbar { margin:18px 0 24px !important; }
+.dw-height-120px { height: 120px !important; }
+.dw-hidden { display:none !important; }
+.dw-inline { display:inline !important; }
+.dw-margin-bottom-16px { margin-bottom:16px !important; }
+.dw-margin-bottom-20px { margin-bottom:20px !important; }
+.dw-margin-top-0 { margin-top:0 !important; }
+.dw-margin-top-12px { margin-top:12px !important; }
+.dw-margin-top-20px { margin-top:20px !important; }
+.dw-max-width-1100px { max-width:1100px !important; }
+.dw-max-width-110px { max-width:110px !important; }
+.dw-max-width-1150px { max-width:1150px !important; }
+.dw-max-width-1200px { max-width:1200px !important; }
+.dw-max-width-1400px { max-width: 1400px !important; }
+.dw-max-width-140px { max-width:140px !important; }
+.dw-max-width-1500px { max-width:1500px !important; }
+.dw-max-width-150px { max-width:150px !important; }
+.dw-max-width-180px { max-width:180px !important; }
+.dw-max-width-190px { max-width:190px !important; }
+.dw-max-width-200px { max-width:200px !important; }
+.dw-max-width-380px { max-width:380px !important; }
+.dw-max-width-760px { max-width:760px !important; }
+.dw-max-width-850px { max-width:850px !important; }
+.dw-max-width-900px { max-width:900px !important; }
+.dw-max-width-950px { max-width:950px !important; }
+.dw-min-width-240px { min-width: 240px !important; }
+.dw-min-width-350px { min-width: 350px !important; }
+.dw-navigation-button { background:transparent !important; border:0 !important; cursor:pointer !important; }
+.dw-pointer { cursor:pointer !important; }
+.dw-pre-wrap { white-space: pre-wrap !important; }
+.dw-priority-high { background:var(--dw-danger-background) !important; color:var(--dw-danger) !important; }
+.dw-priority-medium { background:var(--dw-warning-background) !important; color:var(--dw-palette-92400e) !important; }
+.dw-section-spacing { padding:2rem 0 !important; }
+.dw-status-note { display:block !important; width:100% !important; max-width:700px !important; margin:.5rem 0 1rem !important; }
+.dw-table-fixed { table-layout: fixed !important; }
+.dw-task-filter { display:grid !important; gap:.25rem !important; min-width:190px !important; }
+.dw-task-filters { display:flex !important; gap:.8rem !important; flex-wrap:wrap !important; align-items:end !important; }
+.dw-task-select { padding:.5rem !important; border:1px solid var(--dw-palette-c9d5e7) !important; border-radius:6px !important; }
+.dw-text-center { text-align: center !important; }
+.dw-text-right { text-align: right !important; }
+.dw-training-spacing { padding-top:2rem !important; padding-bottom:3rem !important; }
+.dw-width-100px { width: 100px !important; }
+.dw-width-180px { width:180px !important; }
+.dw-width-18pct { width:18% !important; }
+.dw-width-23pct { width:23% !important; }
+.dw-width-24pct { width:24% !important; }
+.dw-width-380px { width: 380px !important; }
+.dw-progress-fill { width: var(--dw-progress); }
