@@ -42,7 +42,7 @@ use App\Form\MemberQualificationType;
 #[IsGranted('ROLE_ADMIN')]
 class MemberCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator) {}
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships) {}
 
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
@@ -135,6 +135,8 @@ class MemberCrudController extends AbstractCrudController
     {
         if ($entityInstance instanceof Member) {
             $this->enforceMemberClub($entityInstance);
+            $entityManager->persist($entityInstance);
+            $this->memberships->record($entityInstance, 'created', $this->getUser()->getUserIdentifier(), 'Mitgliedschaft durch die Verwaltung angelegt.');
         }
         parent::persistEntity($entityManager, $entityInstance);
     }
@@ -144,6 +146,7 @@ class MemberCrudController extends AbstractCrudController
         if ($entityInstance instanceof Member) {
             $this->enforceMemberClub($entityInstance, $entityManager);
             $this->assertMemberAccess($entityInstance);
+            $this->memberships->record($entityInstance, 'administrative_update', $this->getUser()->getUserIdentifier(), 'Verwaltungspflichtige Mitglieds- oder Stammdaten geändert.');
         }
         parent::updateEntity($entityManager, $entityInstance);
     }
@@ -160,7 +163,7 @@ class MemberCrudController extends AbstractCrudController
     {
         $center = Action::new('memberCenter', 'Mitgliederzentrale', 'fa fa-address-card')
             ->linkToCrudAction(Crud::PAGE_DETAIL);
-        return $actions->add(Crud::PAGE_INDEX, $center);
+        return $actions->add(Crud::PAGE_INDEX, $center)->disable(Action::DELETE);
     }
 
     public function configureResponseParameters(KeyValueStore $responseParameters): KeyValueStore
@@ -334,7 +337,8 @@ class MemberCrudController extends AbstractCrudController
             ->collapsible();
 
         yield AssociationField::new('club', 'Verein')
-            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN'))
+            ->setFormTypeOption('disabled', $pageName !== Crud::PAGE_NEW || !$this->isGranted('ROLE_SUPER_ADMIN'))
+            ->setHelp('Bestehende Vereinsmitgliedschaften nicht verschieben; Aufnahme in einen anderen Verein separat erfassen.')
             ->setRequired(true)
             ->setColumns(4)
             ->hideOnIndex();
@@ -345,6 +349,8 @@ class MemberCrudController extends AbstractCrudController
 
         yield ChoiceField::new('membershipStatus', 'Status')
             ->setChoices(MembershipStatus::choices())
+            ->setFormTypeOption('disabled', $pageName !== Crud::PAGE_NEW)
+            ->setHelp('Statuswechsel, Kündigung und Archivierung erfolgen in der Mitgliederverwaltung.')
             ->setRequired(true)
             ->setColumns(3)
             ->hideOnIndex();
@@ -357,7 +363,13 @@ class MemberCrudController extends AbstractCrudController
         yield DateField::new('leftAt', 'Austritt')
             ->setFormat('dd.MM.yyyy')
             ->setColumns(3)
-            ->hideOnIndex();
+            ->onlyOnDetail();
+
+        yield TextField::new('membershipType', 'Mitgliedschaftsart')->hideOnIndex();
+        yield TextField::new('clubFunctions', 'Vereinsfunktionen (keine Berechtigungsvergabe)')->hideOnIndex();
+        yield TextField::new('emergencyContactName', 'Notfallkontakt: Name')->hideOnIndex();
+        yield TelephoneField::new('emergencyContactPhone', 'Notfallkontakt: Telefon')->hideOnIndex();
+        yield TextField::new('emergencyContactRelation', 'Notfallkontakt: Beziehung')->hideOnIndex();
 
         /*
          * Person

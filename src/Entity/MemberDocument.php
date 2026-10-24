@@ -33,6 +33,20 @@ class MemberDocument
     #[ORM\Column]
     private int $fileSize = 0;
 
+    #[ORM\Column(length: 30, options: ['default' => 'other'])]
+    private string $kind = 'other';
+
+    public static function kinds(): array
+    {
+        return ['Sonstiges' => 'other', 'Mitgliedsantrag' => 'application', 'Tauchtauglichkeit' => 'medical', 'Einwilligung' => 'consent'];
+    }
+    public function getKind(): string { return $this->kind; }
+    public function setKind(string $value): void
+    {
+        if (!in_array($value, self::kinds(), true)) { throw new \InvalidArgumentException('Unbekannte Dokumentart.'); }
+        $this->kind = $value;
+    }
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 

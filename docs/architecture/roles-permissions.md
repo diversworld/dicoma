@@ -1,5 +1,7 @@
 # Rollen und Berechtigungen – bestätigter Phase-2-Vertrag
 
+Die vereinsgebundenen Adminrechte und die hier beschriebenen Superadmin-Beschränkungen wurden am 24.10.2026 im laufenden Auftrag ausdrücklich fachlich freigegeben. Die Prüfung betroffener Konten vor einem Produktivwechsel bleibt erforderlich.
+
 | Rolle | Bedeutung |
 |---|---|
 | `ROLE_USER` | Basis eines Benutzerkontos; begründet keine Vereinsmitgliedschaft. |
@@ -22,6 +24,14 @@ Separat geschützte Ausbilder- und Gerätewartportalrouten erhalten die passende
 - Noch globale Geräte-/Kassen-/Konfigurationsverwaltungen bleiben hinter ihren bestehenden Superadmin-Sperren; die gleichartigen Dashboard-Geräteaktionen werden ebenso gesperrt.
 - Die zusätzlichen Legacy-Personenverwaltungen unter `/member`, `/student` und `/instructor` sind wegen ihrer ungefilterten Listen und Objektzugriffe ausschließlich Superadmins zugänglich. Reguläre Vereinsadmins verwenden die vorhandene, vereinsbezogen abgesicherte EasyAdmin-Mitgliederverwaltung; das Ausbilderportal bleibt davon getrennt.
 - Eigene Mitglieder-Dokumentdownloads prüfen weiterhin die zugehörige Mitglieds-ID, nicht allein die Rolle.
+
+## Ergänzung Phase 3
+
+Öffentliche Mitgliedsanträge sind ausschließlich unter `/membership/apply` zugelassen und begründen weder Konto noch Mitgliedsrechte. Vereinsadmins bearbeiten nur Anträge, Beitragsklassen, Forderungen und Mandate ihres Vereins. Globale Personenauswahl und die ausdrückliche Neuanlage einer anderen Person mit gemeinsamer Kontaktadresse bleiben Superadmins vorbehalten.
+
+Mitglieder bearbeiten nur eigene Kontakt-/Notfalldaten; die Konto-E-Mail bleibt unverändert. Sie sehen nur eigene Forderungen und maskierte Mandate, nicht die Bank-/Forderungsdaten eines Familienzahlers. Verwaltungsdaten, Ermäßigungen und Sicherheitsrollen bleiben administrativ. Status-/Vereinswechsel und direkte Löschung werden nicht über editierbare Legacy-Mitgliederfelder an den dokumentierten Abläufen vorbeigeführt.
+
+Eine geplante Kündigung setzt `leftAt` nicht vorzeitig. Erst die tägliche Verarbeitung nach dem wirksamen Austrittsdatum setzt Status `FORMER` und das Austrittsdatum; anschließend entfallen die bestehenden Mitgliedsrechte. Archivierung ist erst nach Austritt möglich. Siehe [Phase-3-Vertrag](../phase3-membership.md).
 
 ## Betriebsfolge
 

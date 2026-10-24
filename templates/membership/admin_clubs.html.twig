@@ -1,0 +1,6 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}Mitgliedschaftsverwaltung{% endblock %}
+{% block membership_body %}
+<h1>Mitgliedschaftsverwaltung</h1>
+<ul>{% for club in clubs %}<li><a href="{{ path('membership_club', {id: club.id}) }}">{{ club.name }}</a></li>{% else %}<li>Keine verwaltbare Vereinszuordnung.</li>{% endfor %}</ul>
+{% endblock %}

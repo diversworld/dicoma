@@ -13,7 +13,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[Assert\Callback('validateSportClubs')]
+#[Assert\Callback('validateMembershipAdministration')]
 #[UniqueEntity(fields: ['person', 'club'], errorPath: 'club', message: 'Diese Person hat bereits eine Mitgliedschaft in diesem Verein.')]
+#[UniqueEntity(fields: ['club', 'memberNumber'], errorPath: 'memberNumber', message: 'Diese Mitgliedsnummer ist im Verein bereits vergeben.')]
 #[ORM\Table(
     name: 'member',
     uniqueConstraints: [
@@ -24,6 +26,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
     ]
 )]
 #[ORM\UniqueConstraint(name: 'uniq_member_person_club', columns: ['person_id', 'club_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_member_club_number', columns: ['club_id', 'member_number'])]
 #[ORM\Entity(repositoryClass: MemberRepository::class)]
 class Member
 {
@@ -41,6 +44,46 @@ class Member
 
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $memberNumber = null;
+
+    #[ORM\Column(length: 60, nullable: true)]
+    #[Assert\Length(max: 60)]
+    private ?string $membershipType = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    #[Assert\Length(max: 500)]
+    private ?string $clubFunctions = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    #[Assert\Length(max: 180)]
+    private ?string $emergencyContactName = null;
+
+    #[ORM\Column(length: 40, nullable: true)]
+    #[Assert\Length(max: 40)]
+    private ?string $emergencyContactPhone = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    #[Assert\Length(max: 100)]
+    private ?string $emergencyContactRelation = null;
+
+    #[ORM\Column(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $terminationDate = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'RESTRICT')]
+    private ?ContributionClass $contributionClass = null;
+
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(onDelete: 'RESTRICT')]
+    private ?self $familyPayer = null;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $contributionDiscountCents = 0;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $contributionDiscountReason = null;
 
     #[ORM\Column(
         type: Types::DATE_MUTABLE,
@@ -203,6 +246,35 @@ class Member
     {
         return $this->memberNumber;
     }
+
+    public function getMembershipType(): ?string { return $this->membershipType; }
+    public function validateMembershipAdministration(ExecutionContextInterface $context): void
+    {
+        if ($this->archivedAt !== null && $this->membershipStatus !== MembershipStatus::FORMER) {
+            $context->buildViolation('Archivierte Mitgliedschaften müssen ausgetreten bleiben.')->atPath('membershipStatus')->addViolation();
+        }
+    }
+    public function setMembershipType(?string $value): void { $this->membershipType = $value; }
+    public function getClubFunctions(): ?string { return $this->clubFunctions; }
+    public function setClubFunctions(?string $value): void { $this->clubFunctions = $value; }
+    public function getEmergencyContactName(): ?string { return $this->emergencyContactName; }
+    public function setEmergencyContactName(?string $value): void { $this->emergencyContactName = $value; }
+    public function getEmergencyContactPhone(): ?string { return $this->emergencyContactPhone; }
+    public function setEmergencyContactPhone(?string $value): void { $this->emergencyContactPhone = $value; }
+    public function getEmergencyContactRelation(): ?string { return $this->emergencyContactRelation; }
+    public function setEmergencyContactRelation(?string $value): void { $this->emergencyContactRelation = $value; }
+    public function getTerminationDate(): ?\DateTimeImmutable { return $this->terminationDate; }
+    public function setTerminationDate(?\DateTimeImmutable $value): void { $this->terminationDate = $value; }
+    public function getArchivedAt(): ?\DateTimeImmutable { return $this->archivedAt; }
+    public function setArchivedAt(?\DateTimeImmutable $value): void { $this->archivedAt = $value; }
+    public function getContributionClass(): ?ContributionClass { return $this->contributionClass; }
+    public function setContributionClass(?ContributionClass $value): void { $this->contributionClass = $value; }
+    public function getFamilyPayer(): ?self { return $this->familyPayer; }
+    public function setFamilyPayer(?self $value): void { $this->familyPayer = $value; }
+    public function getContributionDiscountCents(): int { return $this->contributionDiscountCents; }
+    public function setContributionDiscountCents(int $value): void { $this->contributionDiscountCents = $value; }
+    public function getContributionDiscountReason(): ?string { return $this->contributionDiscountReason; }
+    public function setContributionDiscountReason(?string $value): void { $this->contributionDiscountReason = $value; }
 
     public function setMemberNumber(
         ?string $memberNumber

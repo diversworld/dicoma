@@ -1,0 +1,9 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}{{ title }}{% endblock %}
+{% block membership_body %}
+<h1>{{ title }}</h1><p>{{ explanation }}</p>
+{{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Absenden</button>{{ form_end(form) }}
+{% if payments is defined %}
+<h2>Zahlungshistorie</h2><ul>{% for payment in payments %}<li>{{ payment.receivedAt|date('d.m.Y H:i') }} · {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }} · {{ payment.actor }}</li>{% else %}<li>Noch keine Zahlungen.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

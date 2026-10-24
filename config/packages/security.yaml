@@ -66,6 +66,7 @@ security:
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/verify/email$, roles: PUBLIC_ACCESS }
+        - { path: ^/membership/apply(?:/|$), roles: PUBLIC_ACCESS }
 
         # Installation muss ohne Login möglich sein.
         # Der InstallController muss später zusätzlich abgesichert

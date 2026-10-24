@@ -1,6 +1,27 @@
 # DICOMA – Phase 2: Abschluss- und Abnahme-Gates
 
-Stand: 23.10.2026. Die Umsetzung umfasst jetzt ein normalisiertes Personenmodell und **zwei neue Datenmigrationen**. Dieses Dokument ist kein Beleg für eine Produktivfreigabe.
+Stand: 24.10.2026. Die Umsetzung umfasst ein normalisiertes Personenmodell, **zwei Datenmigrationen und eine additive Indexreparaturmigration**. Dieses Dokument ist kein Beleg für eine Produktivfreigabe.
+
+## Abschließende technische Abnahme der lokalen Umgebung
+
+Nach ausdrücklicher Freigabe wurde nun auch der echte lokale Bestand aus Dienst `db`, Datenbank `db`, geprüft und aktualisiert:
+
+- Vorher-Backup von Datenbank, Anwendung einschließlich Abhängigkeiten und vorhandener Konfiguration/Dateien geschützt aufbewahrt; vollständiges Archiv und Datenbank auf getrennten temporären Zielen wiederhergestellt und verglichen.
+- **24 Zielmigrationen** auf der Wiederherstellungskopie erfolgreich; ursprüngliche Zeilen aller **56 Anwendungstabellen**, sämtliche Personenfelder und Kontoverknüpfungen erhalten.
+- Dabei die bereits kanonischen historischen Ausrüstungsindizes in `Version20261022110559` berücksichtigt; bei fehlenden, mehrdeutigen oder fachlich falschen Indexdefinitionen weiterhin Abbruch vor Änderungen.
+- Anschließend mit gesonderter ausdrücklicher Freigabe dieselben Migrationen auf lokalem `db` angewendet, Prod-Verbindung korrigiert und Prod-Cache neu aufgebaut. Mapping synchron, keine offenen Migrationen, jeweils zwei Personen/Mitgliedschaften/Konten erhalten.
+- Persistenter Installationsabschlussmarker vorhanden; reale HTTPS-Prüfung: Login **200**, Installation **404**.
+- Finales kombiniertes Gate: **97 Tests, 1.191 Assertions**; vollständige Migrationssuite: **14 Tests, 112 Assertions**. Keine übersprungenen/unvollständigen Tests.
+
+**Die technische lokale Phase-2-Abnahme ist damit abgeschlossen.** Der Auftraggeber hat den Beginn von Phase 3 auf dieser Basis ausdrücklich freigegeben. Die nachstehende Checkliste bleibt eine weitergehende externe Produktiv-/Betriebsfreigabe, nicht mehr die Sperre für lokale Phase-3-Entwicklung.
+
+Der tatsächliche Ausgangsbestand enthält keine privaten Dokumentdatensätze, Ausrüstungsbuchungen oder Kurse. Dokumentabläufe sind deshalb zusätzlich mit synthetischen HTTP-Fixtures getestet; eine fachliche Abnahme sämtlicher Kassen-/Leih-/Ausbildungsabläufe wird daraus nicht abgeleitet. Es wurde kein externer Produktivserver verändert.
+
+## Aktueller lokaler Nachweis
+
+Das kombinierte Gate mit Schema-/Migrationsprüfung und vollständiger vorhandener Staging-HTTP-Suite besteht auf DDEV: **95 Tests, 1.093 Assertions**. `db_test` ist nach der Indexreparatur synchron und migrationsaktuell. Die lokale Backup-/Restore-Probe umfasst 70 Tabellen mit byteidentischem Schema-/Daten-Dump; ein produktionsnaher Komplett-Restore ist damit nicht nachgewiesen. Die Rollenänderungen wurden am 24.10.2026 fachlich bestätigt.
+
+Die erweiterte Migrationssuite und die gezielte Wiederholung ihres korrigierten historischen Rollbacktests sind im [Prüfbericht](docs/testing/test-report.md) getrennt ausgewiesen. Kein vollständiger grüner Wiederholungslauf dieser Suite wird daraus abgeleitet.
 
 ## Reproduzierbares technisches Basis-Gate
 
@@ -43,16 +64,18 @@ Für die vollständige vorhandene Staging-HTTP-Suite zusätzlich `DICOMA_RUN_STA
 ## Zwingende Freigabekriterien
 
 - [ ] Release, PHP-Version, Composer-Lockfile und tatsächlich verwendete Konfiguration dokumentiert.
-- [ ] Technisches Basis-Gate auf dem finalen Release erfolgreich.
+- [x] Technisches Basis-Gate auf dem aktuellen lokalen Arbeitsstand erfolgreich; eingefrorenes Release bleibt gesondert offen.
 - [ ] Verlustfreie Personenmigration auf isolierter Kopie des Zielbestands geprüft; alle Kopierprüfungen erfolgreich.
 - [ ] Zielmapping und Schema stimmen überein; keine offenen Migrationen.
-- [ ] Vollständige Staging-HTTP-Suite ohne übersprungene Tests erfolgreich.
+- [x] Vollständige vorhandene Staging-HTTP-Suite auf lokalem DDEV-Testdienst ohne übersprungene Tests erfolgreich.
 - [ ] Rollenmatrix anonym / Gast / aktives und inaktives Mitglied / Vereinsadmin A / Vereinsadmin B / Superadmin abgenommen.
-- [ ] Direkte CRUD-URLs, manipulierte Formulare und gültige schreibende Aktionen mit fremden Vereins-IDs getestet.
+- [x] Direkte CRUD-URLs, manipulierte Formulare und gültige schreibende Versuche mit fremden Vereins-IDs im Umfang der vorhandenen lokalen HTTP-Suite getestet.
 - [ ] Dokumente, TÜV, Kasse, Ausrüstung und bestehende Kursprozesse auf produktionsnahem Staging regressionsgetestet.
-- [ ] Bewusster Entzug impliziter Mitgliedsrechte und die Superadmin-only-Grenzen fachlich freigegeben.
+- [x] Bewusster Entzug impliziter Mitgliedsrechte und die Superadmin-only-Grenzen fachlich freigegeben (24.10.2026, laufender Auftrag).
 - [ ] Backup und Wiederherstellung tatsächlich durchgeführt und nachgewiesen; Wartungsfenster und Rückfallstrategie vereinbart.
 - [ ] Verantwortliche, Datum, Release-Version und Testergebnisse festgehalten.
+
+Die noch offenen fachlichen und betrieblichen Freigaben betreffen das externe Produktivdeployment. Die lokale Zielbestands-/Restore-Prüfung und ausdrücklich freigegebene Aktualisierung sind im obigen Abschluss dokumentiert; Phase-3-Entwicklung ist darauf freigegeben.
 
 ## Weiterführende Dokumentation
 

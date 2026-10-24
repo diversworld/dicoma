@@ -1,0 +1,10 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}Aufnahmeverfahren{% endblock %}
+{% block membership_body %}
+<h1>Aufnahmeverfahren</h1>
+<dl><dt>Name</dt><dd>{{ application.firstname }} {{ application.lastname }}</dd><dt>Geburtsdatum</dt><dd>{{ application.birthday|date('d.m.Y') }}</dd><dt>Kontakt</dt><dd>{{ application.email }}</dd><dt>Anschrift</dt><dd>{{ application.street }}, {{ application.postalCode }} {{ application.city }}</dd><dt>Status</dt><dd>{{ application.status }}</dd></dl>
+{% if application.status == 'pending' %}
+<p>Keine automatische Identitätszusammenführung anhand von Namen oder E-Mail. Eine vorhandene zentrale Person darf nur nach tatsächlicher Identitätsprüfung durch einen Superadmin zugeordnet werden. Öffentliche Angaben werden nicht ungeprüft in vorhandene Stammdaten übernommen.</p>
+{{ form_start(form) }}{{ form_widget(form) }}<button type="submit" class="btn btn-primary">Entscheidung dokumentieren</button>{{ form_end(form) }}
+{% else %}<p>{{ application.decidedAt|date('d.m.Y H:i') }} · {{ application.decidedBy }} · {{ application.decisionNote }}</p>{% endif %}
+{% endblock %}

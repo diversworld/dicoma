@@ -1,5 +1,31 @@
 # DICOMA – Phase 2: HTTP-Mandantentrennung (Abnahmepatch)
 
+## Erneute lokale Abnahme vom 24.10.2026
+
+Die vollständige vorhandene Staging-Suite wurde nach ausdrücklicher Schreibfreigabe auf dem getrennten DDEV-Dienst `db_test` ausgeführt: **30 Tests, 889 Assertions**, keine übersprungenen oder unvollständigen Tests. Vorher wurden Verbindung, gekennzeichnete Wegwerf-Fixtures und deren Vereinszuordnung geprüft. Der fehlende Person-/Verein-Unique-Index wurde mit `Version20261024100000` ergänzt; Schema und Mapping stimmen anschließend überein und keine Migration ist offen.
+
+Reproduktion ausschließlich mit genau diesen zuvor geprüften lokalen Fixtures (IDs sind keine universellen Standardwerte):
+
+```bash
+ddev exec env APP_ENV=test MAILER_DSN=null://null \
+  DICOMA_PHASE2_HTTP_TEST_DB_CONFIRMED=1 \
+  DICOMA_PHASE2_DESTRUCTIVE_TEST_CONFIRMED=1 \
+  DICOMA_TEST_EXPECTED_DATABASE=db_test \
+  DICOMA_TEST_CLUB_A_ADMIN_EMAIL=phase2-isolation-admin-a@example.invalid \
+  DICOMA_TEST_CLUB_B_ADMIN_EMAIL=phase2-isolation-admin-b@example.invalid \
+  DICOMA_TEST_SUPER_ADMIN_EMAIL=phase2-isolation-super-admin@example.invalid \
+  DICOMA_TEST_ROLE_USER_EMAIL=phase2-isolation-normal-user@example.invalid \
+  DICOMA_TEST_CLUB_A_COURSE_ID=1 DICOMA_TEST_CLUB_B_COURSE_ID=2 \
+  DICOMA_TEST_CLUB_A_PARTICIPANT_ID=1 DICOMA_TEST_CLUB_B_PARTICIPANT_ID=2 \
+  DICOMA_TEST_DISPOSABLE_MEMBER_A_ID=5 DICOMA_TEST_DISPOSABLE_MEMBER_B_ID=6 \
+  php vendor/bin/phpunit --testsuite staging --no-progress \
+  --fail-on-skipped --fail-on-incomplete
+```
+
+Die Mitgliedschaften 5/6 sind als `PHASE2-DISPOSABLE-A/B` markiert und haben kein Benutzerkonto. Die Suite prüft unter anderem gültige CSRF-Schreibversuche auf fremde Mitglieder, Buchungen und Kursteilnahmen sowie manipulierte Formbeziehungen und die bestehenden Superadmin-Beschränkungen für Lieferanten, Rechnungs-/TÜV-Einstellungen und Benachrichtigungen. Echte Mailzustellung wird bewusst durch den Null-Mailer ausgeschlossen.
+
+Dieses Ergebnis ersetzt nicht die fachliche Regression sämtlicher Dokument-, Kassen-, Ausrüstungs- und Ausbildungsabläufe auf einem produktionsnahen Zielbestand. Die nachstehende frühere Drei-Test-Anleitung bleibt ein engerer Teilnachweis.
+
 ## Aktualisierung vom 23.10.2026
 
 Die nachstehenden drei Kurs-Historientests sind ein älterer, enger Teilnachweis. Zusätzlich existieren jetzt datenbankunabhängig provisionierte HTTP-Regressionsfälle in `tests/Integration/Phase2FoundationHttpTest.php`: Sie verwenden ausschließlich SQLite im Speicher und einen Null-Mailer, nicht die unten beschriebenen Staging-Fixtures.

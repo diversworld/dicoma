@@ -1,0 +1,6 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}Mitglied werden{% endblock %}
+{% block membership_body %}
+<h1>Mitglied werden</h1><p>Online-Anträge werden durch die zuständige Vereinsverwaltung geprüft. Eine Registrierung oder ein Antrag allein begründet keine Mitgliedschaft.</p>
+<ul>{% for policy in policies %}<li><a href="{{ path('membership_apply', {id: policy.club.id}) }}">{{ policy.club.name }}</a></li>{% else %}<li>Derzeit nimmt kein Verein öffentliche Online-Anträge entgegen.</li>{% endfor %}</ul>
+{% endblock %}

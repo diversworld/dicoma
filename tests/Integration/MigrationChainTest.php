@@ -132,6 +132,50 @@ final class MigrationChainTest extends TestCase
         $this->assertSchemaMatchesMapping();
     }
 
+    public function testMissingPersonClubUniqueIndexIsRepairedWithoutChangingMemberships(): void
+    {
+        $this->migrate('20261023110000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Index', 'lastname' => 'Repair']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club, 'member_number' => 'KEEP-INDEX']);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM member ORDER BY id');
+        $this->connection->executeStatement('DROP INDEX uniq_member_person_club ON member');
+
+        $this->migrate('20261024100000');
+
+        $index = $this->connection->createSchemaManager()->introspectTable('member')->getIndex('uniq_member_person_club');
+        self::assertTrue($index->isUnique());
+        self::assertSame(['person_id', 'club_id'], $index->getColumns());
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM member ORDER BY id'));
+        $this->migrate('latest');
+        $this->assertSchemaMatchesMapping();
+        $this->expectException(\Doctrine\DBAL\Exception\UniqueConstraintViolationException::class);
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club]);
+    }
+
+    public function testPersonClubIndexRepairRejectsDuplicatesWithoutChangingData(): void
+    {
+        $this->migrate('20261023110000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Duplicate', 'lastname' => 'Membership']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->executeStatement('DROP INDEX uniq_member_person_club ON member');
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club]);
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club]);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM member ORDER BY id');
+
+        try {
+            $this->migrate('latest');
+            self::fail('Duplicate memberships must require explicit resolution.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('Duplicate person/club memberships', $exception->getMessage());
+        }
+
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM member ORDER BY id'));
+        self::assertFalse($this->connection->createSchemaManager()->introspectTable('member')->hasIndex('uniq_member_person_club'));
+    }
+
     public function testUpgradeFromReportedFailurePreservesInventoryAndIndexes(): void
     {
         $this->migrate('20261014100000');
@@ -217,6 +261,81 @@ final class MigrationChainTest extends TestCase
         self::assertTrue($this->connection->createSchemaManager()->introspectTable('training_unit_type')->hasIndex('uniq_training_unit_type_club_code'));
     }
 
+    public function testEquipmentIndexAlignmentAcceptsAlreadyCanonicalTargetIndexes(): void
+    {
+        $this->migrate('20261022110000');
+        foreach ([
+            ['equipment_model', 'idx_eq_model_club', 'IDX_3ECC533D61190A32'],
+            ['equipment_model', 'idx_eq_model_category', 'IDX_3ECC533D12469DE2'],
+            ['equipment_model', 'idx_eq_model_manufacturer', 'IDX_3ECC533DA23B42D'],
+            ['equipment_size', 'idx_eq_size_manufacturer', 'IDX_CD44F56CA23B42D'],
+            ['equipment_item', 'idx_eq_item_model_reference', 'IDX_259FF418BF9772C3'],
+        ] as [$table, $old, $new]) {
+            $this->connection->executeStatement('ALTER TABLE ' . $table . ' RENAME INDEX ' . $old . ' TO ' . $new);
+        }
+
+        $this->migrate('latest');
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testEquipmentIndexAlignmentRejectsAmbiguousIndexesBeforeRenamingAny(): void
+    {
+        $this->migrate('20261022110000');
+        $this->connection->executeStatement('CREATE INDEX IDX_259FF418BF9772C3 ON equipment_item (model_reference_id)');
+        try {
+            $this->migrate('20261022110559');
+            self::fail('Ambiguous index definitions must require explicit inspection.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('Expected exactly one equipment index name', $exception->getMessage());
+        }
+        $table = $this->connection->createSchemaManager()->introspectTable('equipment_model');
+        self::assertTrue($table->hasIndex('idx_eq_model_club'));
+        self::assertFalse($table->hasIndex('IDX_3ECC533D61190A32'));
+    }
+
+    public function testMembershipUpgradePreservesExistingMembersDocumentsAndCashCorrections(): void
+    {
+        $this->migrate('20261024100000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Keep', 'lastname' => 'Member']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['person_id' => $person, 'club_id' => $club, 'member_number' => 'KEEP-P3']);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member_document', [
+            'member_id' => $member, 'storage_name' => str_repeat('a', 40) . '.pdf', 'original_name' => 'Keep.pdf',
+            'mime_type' => 'application/pdf', 'file_size' => 1, 'created_at' => '2026-10-24 12:00:00',
+        ]);
+        $this->connection->insert('equipment_cash_correction', [
+            'club_id' => $club, 'source_type' => 'rental', 'source_id' => 42, 'direction' => 'in',
+            'amount_cents' => 100, 'reason' => 'Keep original correction', 'created_by' => 'test', 'created_at' => '2026-10-24 12:00:00',
+        ]);
+        $corrections = $this->connection->fetchAllAssociative('SELECT * FROM equipment_cash_correction');
+        $this->migrate('latest');
+        self::assertSame($corrections, $this->connection->fetchAllAssociative('SELECT * FROM equipment_cash_correction'));
+        self::assertSame('KEEP-P3', $this->connection->fetchOne('SELECT member_number FROM member WHERE id = ?', [$member]));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT contribution_discount_cents FROM member WHERE id = ?', [$member]));
+        self::assertSame('other', $this->connection->fetchOne('SELECT kind FROM member_document WHERE member_id = ?', [$member]));
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testMembershipUpgradeAbortsBeforeChangesForDuplicateMemberNumbers(): void
+    {
+        $this->migrate('20261024100000');
+        $club = $this->createClub();
+        foreach (['First', 'Second'] as $name) {
+            $this->connection->insert('person', ['firstname' => $name, 'lastname' => 'Duplicate number']);
+            $this->connection->insert('member', ['person_id' => (int) $this->connection->lastInsertId(), 'club_id' => $club, 'member_number' => 'DUPLICATE']);
+        }
+        try {
+            $this->migrate('latest');
+            self::fail('Duplicate numbers must require explicit resolution.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('Duplicate club membership numbers', $exception->getMessage());
+        }
+        self::assertFalse($this->connection->createSchemaManager()->tablesExist(['contribution_class']));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM member'));
+    }
+
     public function testHistoricalReversibleMigrationsCanBeRolledBackAndReapplied(): void
     {
         $previous = '0';
@@ -232,6 +351,8 @@ final class MigrationChainTest extends TestCase
             '20261017181500',
             '20261023100000',
             '20261023110000',
+            '20261024100000',
+            '20261024102048',
         ];
 
         $migrations = $this->factory()

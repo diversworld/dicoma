@@ -1,0 +1,26 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}Mitgliedschaft – {{ member.fullName }}{% endblock %}
+{% block membership_body %}
+<h1>Mitgliedschaft – {{ member.fullName }}</h1>
+<p>{{ member.club }} · {{ member.memberNumber }} · {{ member.membershipStatus.label }}{% if member.membershipType %} · {{ member.membershipType }}{% endif %}</p>
+<p>Eintritt: {{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }} · Austritt: {{ member.leftAt ? member.leftAt|date('d.m.Y') : '—' }} · Archiv: {{ member.archivedAt ? member.archivedAt|date('d.m.Y') : '—' }}</p>
+{% if not admin %}<p><a href="{{ path('membership_contact') }}">Kontakt- und Notfalldaten bearbeiten</a> · <a href="{{ path('app_profile') }}">Dokumente und Qualifikationen</a></p>{% endif %}
+{% if member.familyPayer %}<p>Familienbeitrag wird über {{ member.familyPayer.fullName }} abgerechnet. Dessen Forderungen und Bankdaten bleiben privat.</p>{% endif %}
+{% if member.contributionClass %}<p>Beitragsklasse: {{ member.contributionClass.name }} · Ermäßigung {{ (member.contributionDiscountCents / 100)|number_format(2, ',', '.') }} EUR/Jahr</p>{% endif %}
+<h2>Kündigung</h2>
+{% if member.terminationDate %}<p>Kündigung zum {{ member.terminationDate|date('d.m.Y') }} erfasst. Bestehende Mitgliedsrechte bleiben bis zum wirksamen Austritt erhalten.</p>
+{% elseif not member.leftAt and not member.archivedAt %}<p>Das wirksame Datum ergibt sich ausschließlich aus den gespeicherten Vereinsregeln. Ohne Konfiguration wird die Anfrage mit einer Fehlermeldung abgewiesen.</p>
+{{ form_start(forms.termination) }}{{ form_widget(forms.termination) }}<button type="submit" class="btn btn-warning">Mitgliedschaft verbindlich kündigen</button>{{ form_end(forms.termination) }}{% endif %}
+<h2>Forderungen und Zahlungsstatus</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Forderung</th><th>Fällig</th><th>EUR</th><th>Bezahlt EUR</th><th>Offen EUR</th>{% if admin %}<th>Aktion</th>{% endif %}</tr></thead><tbody>
+{% for charge in charges %}<tr><td>{{ charge.description }}</td><td>{{ charge.dueAt|date('d.m.Y') }}</td><td>{{ (charge.amountCents / 100)|number_format(2, ',', '.') }}</td><td>{{ (charge.paidCents / 100)|number_format(2, ',', '.') }}</td><td>{{ (charge.outstandingCents / 100)|number_format(2, ',', '.') }}</td>{% if admin %}<td><a href="{{ path('membership_payment', {id: charge.id}) }}">Zahlung / Historie</a></td>{% endif %}</tr>{% else %}<tr><td colspan="{{ admin ? 6 : 5 }}">Keine Forderungen.</td></tr>{% endfor %}
+</tbody></table></div>
+<h2>SEPA-Mandate</h2><p>Nur Mandatsverwaltung, kein automatischer Bankeinzug. IBAN wird verschlüsselt gespeichert und hier ausschließlich maskiert angezeigt.</p>
+<ul>{% for mandate in mandates %}<li>{{ mandate.reference }} · {{ mandate.creditorIdentifier }} · {{ mandate.holder }} · {{ mandate.maskedIban }} · unterschrieben {{ mandate.signedAt|date('d.m.Y') }} {% if mandate.revokedAt %}· widerrufen {{ mandate.revokedAt|date('d.m.Y') }}{% elseif admin %}<form method="post" action="{{ path('membership_mandate_revoke', {id: mandate.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('mandate_revoke_' ~ mandate.id) }}"><button type="submit" class="btn btn-outline-danger">Widerruf erfassen</button></form>{% endif %}</li>{% else %}<li>Keine Mandate.</li>{% endfor %}</ul>
+{% if admin %}
+{% set titles = {status: 'Mitgliedschaftswechsel', assignment: 'Beiträge / Familienzuordnung', annual: 'Jahresbeitrag erheben', special: 'Sonderbeitrag erheben', mandate: 'SEPA-Mandat mit Nachweis erfassen', archive: 'Archivieren nach Austritt'} %}
+{% for name, title in titles %}<details class="mb-3"><summary>{{ title }}</summary>{{ form_start(forms[name]) }}{{ form_widget(forms[name]) }}<button type="submit" class="btn btn-primary">{{ title }}</button>{{ form_end(forms[name]) }}</details>{% endfor %}
+{% endif %}
+<h2>Vorgangshistorie</h2>
+<ul>{% for event in events %}<li>{{ event.occurredAt|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.description }}</li>{% else %}<li>Keine protokollierten Vorgänge.</li>{% endfor %}</ul>
+{% endblock %}

@@ -15,6 +15,7 @@ enum QualificationType: string
     case EQUIPMENT_TECHNICIAN = 'equipment_technician';
     case OFFICIAL = 'official';
     case OTHER = 'other';
+    case MEDICAL_FITNESS = 'medical_fitness';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum QualificationType: string
             self::EQUIPMENT_TECHNICIAN => 'Gerätetechnik',
             self::OFFICIAL => 'Funktionär / Schiedsrichter',
             self::OTHER => 'Sonstige',
+            self::MEDICAL_FITNESS => 'Tauchtauglichkeit',
         };
     }
 

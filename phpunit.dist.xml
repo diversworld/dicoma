@@ -29,6 +29,7 @@
             <file>tests/Integration/PersonModelTest.php</file>
             <file>tests/Integration/TeamMemberPersistenceTest.php</file>
             <file>tests/Integration/Phase2FoundationHttpTest.php</file>
+            <file>tests/Integration/Phase3MembershipHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

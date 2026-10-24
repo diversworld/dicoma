@@ -69,9 +69,14 @@ final class ProfileController extends AbstractController
             return $this->redirectToRoute('app_profile');
         }
         try {
+            $kind = (string) $request->request->get('kind', 'other');
+            if (!in_array($kind, MemberDocument::kinds(), true)) {
+                throw new \InvalidArgumentException('Unbekannte Dokumentart.');
+            }
             [$name, $mime, $size] = $storage->store($file);
             $original = mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 255);
             $document = new MemberDocument($member, $name, $original, $mime, $size);
+            $document->setKind($kind);
             try {
                 $em->persist($document);
                 $em->flush();
@@ -112,6 +117,10 @@ final class ProfileController extends AbstractController
         }
         if (!$this->isCsrfTokenValid('delete_member_document_' . $document->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
+        }
+        if ($em->getRepository(\App\Entity\SepaMandate::class)->count(['document' => $document]) > 0) {
+            $this->addFlash('danger', 'Ein als SEPA-Nachweis verwendetes Dokument muss aufbewahrt werden und kann hier nicht gelöscht werden.');
+            return $this->redirectToRoute('app_profile');
         }
         $path = $storage->path($document->getStorageName());
         $em->remove($document);

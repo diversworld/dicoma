@@ -1,0 +1,8 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block body %}
+<section class="section" style="padding:2rem 0"><div class="container">
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+{% block membership_body %}{% endblock %}
+</div></section>
+{% endblock %}

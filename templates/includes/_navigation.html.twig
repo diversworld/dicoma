@@ -9,6 +9,7 @@
     <div class="collapse navbar-collapse ml-auto" id="frontendNavbar">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item"><a class="nav-link" href="{{ path('app_home') }}">Startseite</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ path('membership_application_clubs') }}">Mitglied werden</a></li>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="frontendCoursesMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tauchkurse</a>
                 <ul class="dropdown-menu" aria-labelledby="frontendCoursesMenu">
@@ -31,6 +32,7 @@
                         <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
                             <li><a class="dropdown-item" href="{{ path('member_portal_dashboard') }}">Mein Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_profile') }}">Meine Daten</a></li>
+                            <li><a class="dropdown-item" href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></li>
 							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
                             <li><a class="dropdown-item" href="{{ path('member_reservations') }}">Ausrüstung reservieren</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>

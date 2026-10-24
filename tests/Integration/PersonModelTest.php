@@ -27,7 +27,7 @@ final class PersonModelTest extends TestCase
         $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
         $this->em = EntityManager::create(['driver' => 'pdo_sqlite', 'memory' => true], $config);
         $this->em->getConnection()->executeStatement('PRAGMA foreign_keys = ON');
-        $metadata = array_map($this->em->getClassMetadata(...), [Person::class, Club::class, User::class, Member::class]);
+        $metadata = $this->em->getMetadataFactory()->getAllMetadata();
         (new SchemaTool($this->em))->createSchema($metadata);
     }
 

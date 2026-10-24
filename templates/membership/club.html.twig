@@ -1,0 +1,19 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}Mitgliedschaften – {{ club.name }}{% endblock %}
+{% block membership_body %}
+<h1>Mitgliedschaften – {{ club.name }}</h1>
+<p><a href="{{ path('membership_apply', {id: club.id}) }}">Öffentlicher Antrag</a> (nur bei aktivierter Aufnahme erreichbar)</p>
+<h2>Vereinsregeln</h2><p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Das Beispiel 09-30 / 12-31 muss ausdrücklich gespeichert werden. Beiträge sind Jahresbeträge in EUR, ohne automatische anteilige Berechnung.</p>
+{{ form_start(policyForm) }}{{ form_widget(policyForm) }}<button type="submit" class="btn btn-primary">Vereinsregeln speichern</button>{{ form_end(policyForm) }}
+<h2>Beitragsklassen</h2>
+<ul>{% for class in classes %}<li><a href="{{ path('membership_contribution_edit', {id: class.id}) }}">{{ class.name }}</a> · {{ (class.annualCents / 100)|number_format(2, ',', '.') }} EUR/Jahr {% if class.family %}· Familienbeitrag{% endif %} {% if not class.active %}· deaktiviert{% endif %}</li>{% else %}<li>Keine Beitragsklassen konfiguriert.</li>{% endfor %}</ul>
+{{ form_start(classForm) }}{{ form_widget(classForm) }}<button type="submit" class="btn btn-primary">Beitragsklasse anlegen</button>{{ form_end(classForm) }}
+<h2>Aufnahmeverfahren</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Antragsteller</th><th>Eingang</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
+{% for application in applications %}<tr><td>{{ application.firstname }} {{ application.lastname }}</td><td>{{ application.submittedAt|date('d.m.Y') }}</td><td>{{ application.status }}</td><td><a href="{{ path('membership_application_decide', {id: application.id}) }}">Prüfen / Entscheidung ansehen</a></td></tr>{% else %}<tr><td colspan="4">Keine Anträge.</td></tr>{% endfor %}
+</tbody></table></div>
+<h2>Mitgliedschaften einschließlich Archiv</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Nummer / Name</th><th>Status</th><th>Archiv</th><th>Aktion</th></tr></thead><tbody>
+{% for member in members %}<tr><td>{{ member.memberNumber }} · {{ member.fullName }}</td><td>{{ member.membershipStatus.label }}</td><td>{{ member.archivedAt ? member.archivedAt|date('d.m.Y') : '—' }}</td><td><a href="{{ path('membership_member', {id: member.id}) }}">Vorgänge und Beiträge</a></td></tr>{% else %}<tr><td colspan="4">Keine Mitgliedschaften.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -77,13 +77,12 @@ class MemberController extends AbstractController
 
     #[Route('/{id}', name: 'app_member_delete', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function delete(Request $request, Member $member, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, Member $member): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$member->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($member);
-            $entityManager->flush();
+        if (!$this->isCsrfTokenValid('delete'.$member->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
         }
-
-        return $this->redirectToRoute('app_member_index', [], Response::HTTP_SEE_OTHER);
+        $this->addFlash('warning', 'Mitgliedschaften werden nicht gelöscht. Bitte nach dem Austritt über die Mitgliederverwaltung archivieren.');
+        return $this->redirectToRoute('membership_member', ['id' => $member->getId()], Response::HTTP_SEE_OTHER);
     }
 }

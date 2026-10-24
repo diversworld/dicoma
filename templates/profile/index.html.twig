@@ -22,7 +22,8 @@
 <dt class="col-sm-3">Adresse</dt><dd class="col-sm-9">{{ member.street|default('') }} · {{ member.postalCode|default('') }} {{ member.city|default('') }}</dd>
 <dt class="col-sm-3">E-Mail</dt><dd class="col-sm-9">{{ member.email|default('—') }}</dd>
 <dt class="col-sm-3">Telefon</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd></dl>
-<p class="text-muted">Änderungen an Stammdaten erfolgen derzeit über die Vereinsverwaltung.</p></div></div>
+<p><a href="{{ path('membership_contact') }}">Kontakt- und Notfalldaten bearbeiten</a> · <a href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></p>
+<p class="text-muted">Name, Geburtstag, Mitgliedsnummer und Mitgliedschaftsdaten verwaltet weiterhin der Verein.</p></div></div>
 <div class="card mb-4"><div class="card-body"><h2>Meine Qualifikationen</h2>
 <div class="table-responsive"><table class="table"><thead><tr><th>Qualifikation</th><th>Erteilt</th><th>Gültig bis</th><th>Status</th></tr></thead><tbody>
 {% for item in qualifications %}
@@ -42,6 +43,7 @@
 <input type="hidden" name="_token" value="{{ csrf_token('member_document_upload') }}">
 <label for="member-document">Dokument auswählen</label>
 <input class="form-control mb-2" type="file" id="member-document" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
+<label for="member-document-kind">Dokumentart</label><select class="form-control mb-2" id="member-document-kind" name="kind"><option value="other">Sonstiges</option><option value="application">Mitgliedsantrag</option><option value="medical">Tauchtauglichkeit</option><option value="consent">Einwilligung</option></select>
 <button class="btn btn-primary" type="submit">Dokument hochladen</button>
 </form>
 <div class="table-responsive"><table class="table"><thead><tr><th>Datei</th><th>Hochgeladen</th><th>Aktionen</th></tr></thead><tbody>
