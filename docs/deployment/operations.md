@@ -57,6 +57,32 @@ Bekannter unabhängiger Asset-Nebenbefund: Das vorhandene Ionicons-Bundle
 fordert eine fehlende JS-Chunkdatei an (404). Die Drittanbieter-Assets
 wurden bei dieser Routenbereinigung nicht verändert.
 
+### Nachlauf: aufgabenorientiertes Menü und Dashboard
+
+Nach Auswahl der aufgabenorientierten Überarbeitung wurde das EasyAdmin-Menü
+in Tagesgeschäft und Stammdaten/Einstellungen gegliedert. Das Dashboard
+enthält berechtigte Schnellzugriffe, offene Mitgliedsanträge, kommende
+Kurstermine und Qualifikationshinweise. Rollen- und Vereinsgrenzen bleiben
+unverändert; globale CRUD-Rechte wurden nicht erweitert.
+Die [Navigations- und Dashboardregeln](../architecture/system-overview.md#verwaltungsnavigation-und-dashboard)
+beschreiben die Gruppen und Kennzahlendefinitionen.
+
+Prüfung: 111 Unit-/isolierte Tests mit 1828 Assertions, alle 202
+Twig-Templates und Container-Lint erfolgreich. Der Menüziel-Smoke-Test
+öffnet sämtliche sichtbaren Menüziele und Schnellzugriffe als Vereinsadmin
+beziehungsweise Superadmin. Die isolierte Browserprüfung bestätigt
+auf-/zuklappbare Untermenüs sowie keinen horizontalen Seitenüberlauf bei
+390, 768 und 1440 Pixeln. Der kurzlebige Vorschau-Server und seine
+synthetischen Fixtures wurden anschließend entfernt.
+
+Der lokale Prod-Cache wurde mit PHP 8.4 erneuert, der identifizierte
+PHP-FPM-Master gezielt sanft neu geladen. Login und Kurskatalog liefern
+200, geschützte deutsche/englische Verwaltungs- und Ausbildungszugänge
+anonym 302 zur Anmeldung, Installation 404. Der Browser bestätigt die
+Anmeldeumleitung. Der Datenbestand blieb unverändert; es wurde keine
+Migration ausgeführt und keine produktive Anmeldung, Zahlung oder
+Nachricht erzeugt.
+
 ## Phase 3: lokale Aktivierung und aktueller Snapshot
 
 Die lokale Phase-3-Aktivierung wurde nach vollständigen erfolgreichen Prüfungen ausdrücklich freigegeben. Bei der anschließenden direkten Zielprüfung war `Version20261024102048` auf Dienst `db`/Datenbank `db` bereits verbucht; es wurde deshalb kein erneutes DDL und keine manuelle Änderung der Migrationshistorie vorgenommen. Prod-Cache, Schema, tatsächliches Verbindungsziel und HTTPS wurden geprüft bzw. erneuert.
