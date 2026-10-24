@@ -84,7 +84,7 @@ class ScheduleController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_schedule_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_schedule_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Schedule $schedule): Response
     {
         return $this->render('schedule/show.html.twig', [

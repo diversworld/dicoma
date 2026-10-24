@@ -193,7 +193,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_schedule_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/{id}', name: 'app_booking_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_booking_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Booking $booking): Response
     {
         if (!$this->isGranted('ROLE_ADMIN')) {

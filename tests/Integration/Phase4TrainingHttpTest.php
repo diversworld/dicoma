@@ -485,6 +485,7 @@ final class Phase4TrainingHttpTest extends WebTestCase
                 self::assertStringContainsString('function initializeSchedulePlanning()', $this->client->getResponse()->getContent());
                 self::assertStringContainsString('.schedule-page .form-control', $crawler->filter('head style')->text());
             }
+
         }
         $booking = $this->em->getRepository(Booking::class)->findOneBy(['courseParticipant' => $participant]);
         foreach ([
@@ -515,6 +516,97 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('aside.sidebar');
         $this->assertFormRoutes($this->client->getCrawler(), false);
+    }
+
+    public function testLegacyAdministrativePagesDoNotLeakIntoFrontendOrFailToRender(): void
+    {
+        $admin = $this->staff('legacy-admin', User::ROLE_SUPER_ADMIN);
+        $admin->setRoles([User::ROLE_SUPER_ADMIN, User::ROLE_MEMBER]);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $failures = [];
+        $checked = 0;
+        foreach (static::getContainer()->get('router')->getRouteCollection() as $name => $route) {
+            if (!str_starts_with($name, 'app_') || str_starts_with($route->getPath(), '/admin')
+                || ($route->getMethods() !== [] && !in_array('GET', $route->getMethods(), true))
+                || $route->compile()->getPathVariables() !== []) { continue; }
+            $controller = $route->getDefault('_controller');
+            if (!is_string($controller)) { continue; }
+            [$class, $method] = str_contains($controller, '::') ? explode('::', $controller) : [$controller, '__invoke'];
+            $reflection = new \ReflectionClass($class);
+            $attributes = [...$reflection->getAttributes(\Symfony\Component\Security\Http\Attribute\IsGranted::class),
+                ...$reflection->getMethod($method)->getAttributes(\Symfony\Component\Security\Http\Attribute\IsGranted::class)];
+            $administration = $name === 'app_settings' || $route->hasDefault('legacy_permission');
+            foreach ($attributes as $attribute) {
+                if (in_array($attribute->newInstance()->attribute, ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN'], true)) { $administration = true; }
+            }
+            if (!$administration) { continue; }
+            ++$checked;
+            $crawler = $this->client->request('GET', static::getContainer()->get('router')->generate($name));
+            if ($this->client->getResponse()->isRedirect()) { $crawler = $this->client->followRedirect(); }
+            $status = $this->client->getResponse()->getStatusCode();
+            if ($status >= 400) {
+                $failures[] = $name . ': ' . $status . ' ' . rawurldecode($this->client->getResponse()->headers->get('X-Debug-Exception', ''));
+            } elseif ($status === 200 && str_contains($this->client->getResponse()->headers->get('Content-Type', ''), 'text/html')) {
+                if ($crawler->filter('aside.sidebar')->count() !== 1) { $failures[] = $name . ': frontend instead of backend'; }
+                $this->assertFormRoutes($crawler);
+            }
+        }
+        self::assertGreaterThan(10, $checked);
+        self::assertSame([], $failures);
+    }
+
+    public function testAllRetiredAdministrationRoutesRedirectReadsAndRejectWritesWithoutChanges(): void
+    {
+        $admin = $this->staff('retired-admin', User::ROLE_SUPER_ADMIN);
+        $admin->setRoles([User::ROLE_SUPER_ADMIN, User::ROLE_MEMBER]);
+        $course = $this->course();
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $router = static::getContainer()->get('router');
+        $checked = 0;
+        foreach ($router->getRouteCollection() as $name => $route) {
+            if (!$route->hasDefault('legacy_permission')) { continue; }
+            ++$checked;
+            $parameters = array_fill_keys($route->compile()->getPathVariables(), 1);
+            $url = $router->generate($name, $parameters);
+            if (in_array('GET', $route->getMethods(), true)) {
+                $this->client->request('GET', $url);
+                self::assertResponseStatusCodeSame(303);
+                self::assertStringContainsString('/admin', $this->client->getResponse()->headers->get('Location'));
+            }
+            if (in_array('POST', $route->getMethods(), true)) {
+                $this->client->request('POST', $url, ['_token' => 'stale', 'title' => 'Must not be saved']);
+                self::assertResponseStatusCodeSame(410);
+                self::assertSelectorExists('aside.sidebar');
+                self::assertSelectorTextContains('body', 'keine Daten gespeichert oder gelöscht');
+                self::assertSelectorExists('a.btn-primary[href]');
+            }
+        }
+        self::assertSame(54, $checked);
+        self::assertSame(1, $this->em->getRepository(Courses::class)->count([]));
+        self::assertSame('Phase 4 Dive Course', $this->em->find(Courses::class, $course->getId())->getTitle());
+        self::assertSame(1, $this->em->getRepository(Member::class)->count([]));
+        self::assertSame(0, $this->em->getRepository(Booking::class)->count([]));
+        $instructor = $this->staff('legacy-reader', User::ROLE_INSTRUCTOR);
+        $this->em->flush();
+        $this->client->loginUser($instructor);
+        $this->client->request('GET', '/brevets/');
+        self::assertResponseRedirects('/admin/training', 303);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-training-staff-navigation]');
+        $this->client->request('GET', '/brevets/new');
+        self::assertResponseStatusCodeSame(403);
+        $clubAdmin = $this->staff('legacy-club-admin', User::ROLE_ADMIN);
+        $this->em->flush();
+        $this->client->loginUser($clubAdmin);
+        $this->client->request('GET', '/student/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/booking/new');
+        self::assertResponseRedirects('/admin/training', 303);
+        $this->client->request('GET', '/tank/new');
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
     }
 
     public function testGuestTimetableIsPersonOwnedPublishedAndFrontendEvenForAdministrators(): void
@@ -712,7 +804,9 @@ final class Phase4TrainingHttpTest extends WebTestCase
     private function staff(string $name, string $role, ?Club $club = null): User
     {
         $user = $this->user($name)->setRoles([$role]);
-        $member = (new Member())->setPerson($user->getPerson())->setClub($club ?? $this->club)->setUser($user)->setMembershipStatus(MembershipStatus::ACTIVE);
+        $member = (new Member())->setPerson($user->getPerson())
+            ->setClub($this->em->find(Club::class, ($club ?? $this->club)->getId()))
+            ->setUser($user)->setMembershipStatus(MembershipStatus::ACTIVE);
         $this->em->persist($member);
         return $user;
     }

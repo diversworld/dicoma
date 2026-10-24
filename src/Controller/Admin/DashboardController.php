@@ -65,6 +65,11 @@ class DashboardController extends AbstractDashboardController
 {
     use EquipmentBookingBasketTrait;
 
+    public const ROUTE_DEFAULTS = [
+        'routeCreatedByEasyAdmin' => true,
+        'dashboardControllerFqcn' => self::class,
+    ];
+
     #[AdminRoute(path: '/equipment-center', name: 'equipment_center')]
     public function equipmentCenter(TankInspectionOverview $overview): Response
     {

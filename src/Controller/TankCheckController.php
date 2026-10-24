@@ -78,7 +78,7 @@ class TankCheckController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tank_check_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_tank_check_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(TankCheck $tankCheck, TankCheckArticleRepository $checkArticleRepository): Response
     {
         $checkArticles = $checkArticleRepository->findByCheck($tankCheck->getId());

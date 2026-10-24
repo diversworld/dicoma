@@ -75,7 +75,7 @@ class MemberController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_member_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_member_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Member $member): Response
     {

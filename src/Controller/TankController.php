@@ -73,7 +73,7 @@ class TankController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tank_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_tank_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Tank $tank): Response
     {
         return $this->render('tank/show.html.twig', [

@@ -37,3 +37,7 @@ training_administration:
 easyadmin:
     resource: .
     type: easyadmin.routes
+
+legacy_administration:
+    resource: routes/legacy_administration.php
+    type: php
