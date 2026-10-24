@@ -483,7 +483,8 @@ final class Phase4TrainingHttpTest extends WebTestCase
             $this->assertFormRoutes($crawler);
             if ($name === 'admin_course_plan') {
                 self::assertStringContainsString('function initializeSchedulePlanning()', $this->client->getResponse()->getContent());
-                self::assertStringContainsString('.schedule-page .form-control', $crawler->filter('head style')->text());
+                self::assertSelectorExists('head link[rel="stylesheet"][href="/css/pages/admin-course-schedule-planning.css"]');
+                self::assertSelectorNotExists('style');
             }
 
         }
