@@ -175,6 +175,50 @@ geöffnet; Kursstatus und Benutzerrollen wurden bei der Aktivierung nicht
 verändert. Es wurden keine externen Systeme, Mailversände, Bankeinzüge oder
 Cronjobs aktiviert.
 
+## Routen- und Backendbereinigung
+
+Die Ausbildungsverwaltung liegt unter `/admin/training`. Ihre Ansichten
+verwenden den EasyAdmin-Rahmen; Ausbilder und funktionale Ausbildungsrollen
+ohne allgemeines Administrationsrecht erhalten eine eingeschränkte
+Navigation. Vereins- und Kursberechtigungen bleiben maßgeblich. Persönliche
+Ansichten unter `/my-training` bleiben auch für Administratoren im Frontend.
+Alte Ausbildungs-Verwaltungslinks unter `/training` führen mit 303 ins
+Backend; alte Formular-POSTs werden mit 307 unter Erhalt der Eingaben
+weitergeleitet.
+
+Ausbildungsplanexport und Vorlagenduplikation besitzen eigene GET-/POST-Routen:
+
+- `/admin/course/{id}/export-template`;
+- `/admin/schedule-template/{id}/duplicate`.
+
+Die Formulare senden ausdrücklich an diese Endpunkte, nicht an das nur für
+GET vorgesehene Dashboard. Ungültige Eingaben und CSRF-Fehler bleiben auf der
+passenden Verwaltungsseite sichtbar. Die Terminplanung lädt ihre Skripte und
+Styles über die EasyAdmin-Blöcke; Serien, Wochenendblöcke, Vorlagen,
+Ausschlusstage, Überschreibschutz und Konflikthinweise sind damit nutzbar.
+
+Gastteilnehmer können ihren veröffentlichten Stundenplan anhand ihrer
+Personenidentität abrufen und exportieren, ohne Vereinsmitglied werden zu
+müssen. Unveröffentlichte oder fremde Stundenpläne bleiben unzugänglich.
+Veröffentlichungsnachrichten verwenden die E-Mail-Adresse der Person,
+berücksichtigen nur aktive Teilnahmen und melden Transportfehler ausdrücklich.
+
+Nach Betreiberentscheidung werden 54 veraltete doppelte Verwaltungsrouten
+zentral in [legacy_administration.php](../config/routes/legacy_administration.php)
+auf die vorhandene aktuelle Verwaltung geführt:
+
+- GET/HEAD: 303 zur aktuellen Verwaltungsansicht;
+- veraltete Formular-POSTs: 410 mit verständlichem Hinweis, ohne Datenänderung;
+- bisherige Rollenbeschränkungen bleiben erhalten; funktionale Rollen erhalten
+  gegebenenfalls das berechtigte Ausbildungs- oder TÜV-Portal statt eines
+  nicht erlaubten globalen CRUD-Bereichs.
+
+Der bestehende CSRF-geschützte Mitglieder-Archivierungsverweis bleibt erhalten:
+Er löscht keine Mitgliedschaft und führt zur aktuellen Mitgliederverwaltung.
+Öffentliche beziehungsweise persönliche Leseansichten bleiben bestehen.
+Numerische ID-Anforderungen verhindern, dass `/new` als Datensatz-ID
+interpretiert wird.
+
 ## Prüfung
 
 Die dedizierten HTTP-/Integrationstests stehen in
@@ -189,7 +233,8 @@ Die MariaDB-Migrationssuite prüft zusätzlich die Übernahme bestehender
 Teilnahmen, Gebühren und Terminbuchungen sowie Mapping-/Schemagleichheit.
 Die Tests verwenden keine externen Mails oder Zahlungsdienste.
 
-Prüfstand vom 24.10.2026 (bestehender DDEV-Webcontainer mit PHP 8.5):
+Ursprünglicher Phase-4-Prüfstand vom 24.10.2026
+(bestehender DDEV-Webcontainer mit PHP 8.5):
 
 | Prüfung | Ergebnis |
 |---|---|
@@ -202,6 +247,37 @@ Prüfstand vom 24.10.2026 (bestehender DDEV-Webcontainer mit PHP 8.5):
 Die neuen Formularbezeichnungen sind in Deutsch, Englisch, Französisch und
 Spanisch ergänzt. Die bestehenden, nicht zu Phase 4 gehörenden
 Übersetzungslücken wurden nicht nebenbei bereinigt.
+
+Abschließender Prüfstand nach der Routenbereinigung am 24.10.2026:
+
+| Prüfung | Ergebnis |
+|---|---|
+| Kombinierte Unit-/isolierte Suite | 108 Tests, 1602 Assertions, erfolgreich |
+| Dedizierte Ausbildungs-HTTP-Suite | 18 Tests, 1198 Assertions, erfolgreich |
+| JavaScript-Suite | 4 Tests, erfolgreich |
+| Container, 22 YAML-Dateien, alle 202 Twig-Templates, Patchformat | Erfolgreich; Container/YAML/Twig zusätzlich mit der Weblaufzeit PHP 8.4 geprüft |
+| Routeninventar | 551 registrierte Routen; alle 54 stillgelegten Alt-Routen mit Status- und Schreibschutzprüfung abgedeckt |
+| Lokale Prod-Aktivierung | Cache mit PHP 8.4 erneuert, PHP-FPM gezielt sanft neu geladen; Prod-Container, Schema, Migrationsstand und Installationsschutz geprüft |
+| Reale HTTPS-Prüfung | Elf Endpunkte mit erwarteten 200/302/404; öffentliches Kursangebot zusätzlich im Browser geöffnet |
+
+Der automatische Seiten-Smoke-Test prüft parameterfreie administrative
+Listen-, Neuanlage- und Sonderseiten sowie parametrisierte Ausbildungsseiten,
+ihre Backendlayouts und statisch prüfbaren Formularziele.
+Kontextabhängige Autocomplete-/Filterfragmente sind keine eigenständigen
+Seiten; ausdrücklich gesperrte Neuanlagen bleiben 403. Das Routeninventar ist
+keine Behauptung, sämtliche Geschäftsvorgänge jeder Route vollständig
+Ende-zu-Ende getestet zu haben.
+
+Im Browser wurden Serien mit Ausschlusstagen, Wochenendblöcke, Vorlagen,
+Überschreibschutz und Konfliktmarkierungen mit synthetischen Planungsdaten
+ausgeführt. In Prod wurden keine Teilnahmen, Zahlungen oder Nachrichten
+erzeugt. Der Bestand blieb bei vier Personen, drei Mitgliedern, einem Kurs
+und null Kursteilnahmen; es war keine neue Migration erforderlich.
+
+Unabhängiger vorhandener Frontend-Nebenbefund: Das Ionicons-Bundle fordert
+`/plugins/Ionicons/js/p-c20d7e9f.js` an, die Ressource liefert 404.
+Die unveränderten Drittanbieter-Assets wurden nicht im Rahmen der
+Routenbereinigung ersetzt.
 
 ```sh
 php vendor/bin/phpunit --testsuite unit,isolated

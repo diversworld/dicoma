@@ -26,6 +26,37 @@ HTTPS-Endpunkte geprüft. Die lokale Anwendung läuft mit `APP_ENV=prod`,
 `APP_DEBUG=0`; Installationsschutz und vorhandene Daten sind unverändert.
 Einzelheiten stehen in [Phase 4: lokale Prod-Aktivierung](../phase4-training.md#lokale-prod-aktivierung-am-24102026).
 
+### Nachlauf: Routen- und Backendbereinigung
+
+Am selben Tag wurde der geprüfte Korrekturstand lokal aktiviert:
+108 Unit-/isolierte Tests mit 1602 Assertions, 18 dedizierte
+Ausbildungs-HTTP-Tests mit 1198 Assertions sowie vier JavaScript-Tests
+waren erfolgreich. Container, alle 22 YAML-Dateien und 202 Twig-Templates
+wurden zusätzlich mit PHP 8.4 geprüft.
+
+Der Prod-Cache wurde mit PHP 8.4 erneuert und der zuvor identifizierte
+PHP-FPM-Master gezielt mit USR2 sanft neu geladen. Prod läuft weiterhin
+ohne Debug; Schema und Migrationsstand sind aktuell. Es wurde keine
+Migration ausgeführt. Der Installationsmarker blieb bestehen, der Bestand
+bei vier Personen, drei Mitgliedern, einem Kurs und null Kursteilnahmen.
+
+Elf echte HTTPS-Aufrufe lieferten die erwarteten Statuscodes:
+Login, Registrierung und öffentlicher Kurskatalog 200; geschützte
+Ausbildungs-, Vorlagen- und alte Verwaltungslinks anonym 302 zur Anmeldung;
+Installation 404. Der Kurskatalog wurde zusätzlich im Browser geöffnet.
+Keine produktiven Anmeldungen, Zahlungen oder externen Mails wurden erzeugt.
+
+Die [Routenbereinigung](../phase4-training.md#routen--und-backendbereinigung)
+führt Verwaltungsseiten ins Backend und ersetzt 54 doppelte Alt-Routen.
+Alte Leseaufrufe erhalten 303, veraltete Formular-POSTs ausdrücklich 410
+ohne Änderung. Dieser Status ist beabsichtigt und kein fehlgeschlagener
+Speicherversuch auf dem aktuellen Formular. Der CSRF-geschützte,
+nichtlöschende Mitglieder-Archivierungsverweis bleibt erhalten.
+
+Bekannter unabhängiger Asset-Nebenbefund: Das vorhandene Ionicons-Bundle
+fordert eine fehlende JS-Chunkdatei an (404). Die Drittanbieter-Assets
+wurden bei dieser Routenbereinigung nicht verändert.
+
 ## Phase 3: lokale Aktivierung und aktueller Snapshot
 
 Die lokale Phase-3-Aktivierung wurde nach vollständigen erfolgreichen Prüfungen ausdrücklich freigegeben. Bei der anschließenden direkten Zielprüfung war `Version20261024102048` auf Dienst `db`/Datenbank `db` bereits verbucht; es wurde deshalb kein erneutes DDL und keine manuelle Änderung der Migrationshistorie vorgenommen. Prod-Cache, Schema, tatsächliches Verbindungsziel und HTTPS wurden geprüft bzw. erneuert.

@@ -804,8 +804,10 @@ final class Phase4TrainingHttpTest extends WebTestCase
     private function staff(string $name, string $role, ?Club $club = null): User
     {
         $user = $this->user($name)->setRoles([$role]);
+        $club ??= $this->club;
+        if ($club->getId() !== null) { $club = $this->em->find(Club::class, $club->getId()); }
         $member = (new Member())->setPerson($user->getPerson())
-            ->setClub($this->em->find(Club::class, ($club ?? $this->club)->getId()))
+            ->setClub($club)
             ->setUser($user)->setMembershipStatus(MembershipStatus::ACTIVE);
         $this->em->persist($member);
         return $user;
