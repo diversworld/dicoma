@@ -1,0 +1,14 @@
+{% extends 'competition/layout.html.twig' %}
+{% block competition_title %}{{ title|trans }}{% endblock %}
+{% block competition_body %}
+{% if clubs|default([])|length > 1 %}
+    <form method="get" class="mb-3"><label for="host-club">{{ 'Veranstaltender Verein'|trans }}</label>
+        <select id="host-club" name="club" class="form-select">{% for club in clubs %}<option value="{{ club.id }}" {{ selectedClub.id == club.id ? 'selected' : '' }}>{{ club.name }}</option>{% endfor %}</select>
+        <button class="btn btn-secondary mt-2">{{ 'Verein auswählen'|trans }}</button>
+    </form>
+{% endif %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{{ form_start(form) }}{{ form_errors(form) }}{{ form_rest(form) }}
+<div class="d-flex gap-2 mt-3"><button class="btn btn-primary">{{ 'Speichern'|trans }}</button><a class="btn btn-secondary" href="{{ backUrl }}">{{ 'Zurück'|trans }}</a></div>
+{{ form_end(form) }}
+{% endblock %}

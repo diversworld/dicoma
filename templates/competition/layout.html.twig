@@ -1,0 +1,22 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block sidebar %}
+    {% if is_granted('ROLE_ADMIN') %}{{ parent() }}{% else %}
+        <aside class="sidebar" data-competition-navigation>
+            <nav class="p-3" aria-label="{{ 'Mannschaften und Turniere'|trans }}">
+                <h2 class="h5">{{ 'Mannschaften und Turniere'|trans }}</h2>
+                <p><a href="{{ path('competition_teams') }}">{{ 'Meine Mannschaften'|trans }}</a></p>
+                <p><a href="{{ path('competition_tournaments') }}">{{ 'Turniere'|trans }}</a></p>
+                <p><a href="{{ path('club_calendar') }}">{{ 'Veranstaltungskalender'|trans }}</a></p>
+            </nav>
+        </aside>
+    {% endif %}
+{% endblock %}
+{% block content_title %}{% block competition_title %}{{ 'Mannschaften und Turniere'|trans }}{% endblock %}{% endblock %}
+{% block main %}
+    <nav class="d-flex flex-wrap gap-3 mb-4" aria-label="{{ 'Bereichsnavigation'|trans }}">
+        <a href="{{ path('competition_teams') }}">{{ 'Mannschaften'|trans }}</a>
+        <a href="{{ path('competition_tournaments') }}">{{ 'Turniere'|trans }}</a>
+        <a href="{{ path('club_calendar') }}">{{ 'Veranstaltungskalender'|trans }}</a>
+    </nav>
+    {% block competition_body %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'competition/layout.html.twig' %}
+{% block competition_title %}{{ team.name }}{% endblock %}
+{% block competition_body %}
+<p>{{ team.sport.name }} · {{ team.sport.club.name }} · {{ team.type.label()|trans }}</p>
+<p>{{ team.description }}</p>
+<div class="d-flex flex-wrap gap-2 mb-4">
+<a class="btn btn-secondary" href="{{ path('competition_team_edit', {id: team.id}) }}">{{ 'Mannschaft bearbeiten'|trans }}</a>
+<a class="btn btn-primary" href="{{ path('competition_roster_new', {id: team.id}) }}">{{ 'Kaderzuordnung hinzufügen'|trans }}</a>
+<a class="btn btn-primary" href="{{ path('competition_training_new', {id: team.id}) }}">{{ 'Training planen'|trans }}</a>
+</div>
+<h2 class="h4">{{ 'Kader und Betreuung'|trans }}</h2>
+<p class="text-muted">{{ 'Spielberechtigungen werden vor der Turniermeldung und beim Turnierstart für den gesamten Zeitraum geprüft.'|trans }}</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Name'|trans }}</th><th>{{ 'Funktion'|trans }}</th><th>{{ 'Spielerposition'|trans }}</th><th>{{ 'Rückennummer'|trans }}</th><th>{{ 'Zuordnung'|trans }}</th><th>{{ 'Spielberechtigung'|trans }}</th></tr></thead><tbody>
+{% for item in roster %}<tr>
+<td><a href="{{ path('competition_roster_edit', {assignmentId: item.id}) }}">{{ item.member.fullName }}</a></td><td>{{ item.role.label()|trans }}</td><td>{{ item.position ?? '—' }}</td><td>{{ item.jerseyNumber ?? '—' }}</td>
+<td>{{ item.joinedAt ? item.joinedAt|date('d.m.Y') : '—' }} – {{ item.leftAt ? item.leftAt|date('d.m.Y') : '—' }}</td>
+<td>{{ (item.competitionEligible ? 'Geprüft' : 'Nicht bestätigt')|trans }}{% if item.eligibilityUntil %} · {{ item.eligibilityUntil|date('d.m.Y') }}{% endif %}<br>{{ item.eligibilityNote }}</td>
+</tr>{% else %}<tr><td colspan="6">{{ 'Noch keine Kaderzuordnung.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+<h2 class="h4 mt-4">{{ 'Trainingszeiten und Orte'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Training'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Ende'|trans }}</th><th>{{ 'Ort'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
+{% for session in sessions %}<tr><td><a href="{{ path('competition_training_edit', {sessionId: session.id}) }}">{{ session.title }}</a></td><td>{{ session.startsAt|date('d.m.Y H:i') }}</td><td>{{ session.endsAt|date('d.m.Y H:i') }}</td><td>{{ session.location }}</td><td>{{ (session.cancelled ? 'Abgesagt' : 'Geplant')|trans }}</td></tr>
+{% else %}<tr><td colspan="5">{{ 'Noch keine Trainingszeiten geplant.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

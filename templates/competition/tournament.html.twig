@@ -1,0 +1,70 @@
+{% extends 'competition/layout.html.twig' %}
+{% block competition_title %}{{ tournament.name }}{% endblock %}
+{% block competition_body %}
+{% set preparing = tournament.status.value in ['draft', 'open'] %}
+<p>{{ tournament.organizer }} · {{ tournament.location }} · {{ tournament.sportCode }} · <strong>{{ tournament.status.label()|trans }}</strong></p>
+<p>{{ tournament.startsAt|date('d.m.Y H:i') }} – {{ tournament.endsAt|date('d.m.Y H:i') }}{% if tournament.registrationDeadline %} · {{ 'Meldeschluss'|trans }}: {{ tournament.registrationDeadline|date('d.m.Y H:i') }}{% endif %}</p>
+<p>{{ tournament.description }}</p>
+<p>{{ 'Teilnahmegebühr'|trans }}: {{ (tournament.feeCents / 100)|number_format(2, ',', '.') }} EUR · {{ 'Kadergröße'|trans }}: {{ tournament.minPlayers }}–{{ tournament.maxPlayers }} · {{ 'Maximale Mannschaftszahl'|trans }}: {{ tournament.maxTeams }}</p>
+<div class="d-flex flex-wrap gap-2 mb-4">
+{% if rosterOpen %}<a class="btn btn-primary" href="{{ path('competition_entry_new', {id: tournament.id}) }}">{{ 'Mannschaft melden'|trans }}</a>{% endif %}
+{% if manager and preparing %}
+{% if entries is empty and matches is empty %}<a class="btn btn-secondary" href="{{ path('competition_tournament_edit', {id: tournament.id}) }}">{{ 'Turnier bearbeiten'|trans }}</a>{% endif %}
+{% if matches is empty %}<a class="btn btn-secondary" href="{{ path('competition_generate', {id: tournament.id}) }}">{{ 'Spielplan erzeugen'|trans }}</a>{% endif %}
+<a class="btn btn-secondary" href="{{ path('competition_match_new', {id: tournament.id}) }}">{{ 'Spiel planen'|trans }}</a>
+{% if matches is not empty %}
+<form method="post" action="{{ path('competition_reset_schedule', {id: tournament.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tournament_reset_' ~ tournament.id) }}">
+<label><input type="checkbox" name="confirm" value="1" required> {{ 'Ungewerteten Spielplan vollständig entfernen'|trans }}</label>
+<button class="btn btn-outline-danger">{{ 'Spielplan zurücksetzen'|trans }}</button></form>
+{% endif %}
+{% endif %}
+</div>
+{% if manager %}
+<div class="d-flex flex-wrap gap-2 mb-4" aria-label="{{ 'Turnierstatus ändern'|trans }}">
+{% set transitions = tournament.status.value == 'draft' ? {'open': 'Meldung öffnen', 'cancelled': 'Turnier absagen'} : (tournament.status.value == 'open' ? {'running': 'Turnier starten', 'cancelled': 'Turnier absagen'} : (tournament.status.value == 'running' ? {'completed': 'Turnier abschließen', 'cancelled': 'Turnier absagen'} : {})) %}
+{% for value, label in transitions %}
+<form method="post" action="{{ path('competition_status', {id: tournament.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tournament_status_' ~ tournament.id) }}"><input type="hidden" name="status" value="{{ value }}">
+<button class="btn {{ value == 'cancelled' ? 'btn-outline-danger' : 'btn-primary' }}">{{ label|trans }}</button></form>
+{% endfor %}
+</div>
+{% endif %}
+{% if tournament.archivedAt %}<p class="alert alert-success">{{ 'Abschlussarchiv erstellt am'|trans }} {{ tournament.archivedAt|date('d.m.Y H:i') }}. {{ 'Sportliche Daten sind gegen Änderungen geschützt.'|trans }}</p>{% endif %}
+<h2 class="h4">{{ 'Mannschaftsmeldungen'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Mannschaft'|trans }}</th><th>{{ 'Gruppe'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
+{% for entry in entries %}<tr><td>{% if access.managesEntry(entry) %}<a href="{{ path('competition_entry', {id: entry.id}) }}">{{ entry.name }}</a>{% else %}{{ entry.name }}{% endif %}</td><td>{{ entry.groupName }}</td><td>{{ (entry.withdrawn ? 'Zurückgezogen' : 'Gemeldet')|trans }}</td></tr>
+{% else %}<tr><td colspan="3">{{ 'Noch keine Mannschaftsmeldung.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+<h2 class="h4 mt-4">{{ 'Spielplan und Ergebnisse'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Runde'|trans }}</th><th>{{ 'Beginn'|trans }}</th><th>{{ 'Begegnung'|trans }}</th><th>{{ 'Ort'|trans }}</th><th>{{ 'Ergebnis'|trans }}</th><th>{{ 'Aktionen'|trans }}</th></tr></thead><tbody>
+{% for match in matches %}<tr><td>{{ match.roundNumber }}</td><td>{{ match.startsAt ? match.startsAt|date('d.m.Y H:i') : 'Noch offen'|trans }} · {{ match.durationMinutes }} min</td><td>{{ match.home.name }} – {{ match.away.name }}</td><td>{{ match.location }}</td>
+<td>{% if match.cancelled %}{{ 'Abgesagt'|trans }}{% elseif match.homeScore is not null %}{{ match.homeScore }} : {{ match.awayScore }}{% else %}—{% endif %}</td>
+<td>{% if manager and preparing %}<a href="{{ path('competition_match_edit', {matchId: match.id}) }}">{{ 'Planung bearbeiten'|trans }}</a>{% endif %}
+{% if manager and tournament.status.value == 'running' and not match.cancelled %}<a href="{{ path('competition_result', {id: match.id}) }}">{{ 'Ergebnis erfassen'|trans }}</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6">{{ 'Noch kein Spielplan vorhanden.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if manager %}
+<details class="mb-4"><summary>{{ 'Ergebnisprotokoll'|trans }}</summary>
+{% for match in matches %}{% if match.resultHistory is not empty %}
+<h3 class="h6 mt-3">{{ match.home.name }} – {{ match.away.name }}</h3><ul>
+{% for result in match.resultHistory %}<li>{{ result.at|date('d.m.Y H:i') }} · {{ result.home }}:{{ result.away }} · {{ result.actor }} · {{ result.reason }}</li>{% endfor %}
+</ul>{% endif %}{% endfor %}
+</details>
+{% endif %}
+<h2 class="h4 mt-4">{{ 'Tabellen'|trans }}</h2>
+<p class="text-muted">{{ 'Sortierung: Wertungspunkte, Differenz, erzielte Spielpunkte. Bei vollständigem Gleichstand wird derselbe Rang vergeben.'|trans }} {{ tournament.winPoints }}/{{ tournament.drawPoints }}/{{ tournament.lossPoints }}</p>
+{% for group, rows in standings %}
+<h3 class="h5">{{ 'Gruppe'|trans }} {{ group }}</h3>
+<div class="table-responsive"><table class="table" data-tournament-standings><thead><tr><th>{{ 'Rang'|trans }}</th><th>{{ 'Mannschaft'|trans }}</th><th>{{ 'Spiele'|trans }}</th><th>{{ 'Siege'|trans }}</th><th>{{ 'Unentschieden'|trans }}</th><th>{{ 'Niederlagen'|trans }}</th><th>{{ 'Spielpunkte'|trans }}</th><th>{{ 'Differenz'|trans }}</th><th>{{ 'Wertungspunkte'|trans }}</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.rank }}</td><td>{{ row.name }}</td><td>{{ row.played }}</td><td>{{ row.won }}</td><td>{{ row.drawn }}</td><td>{{ row.lost }}</td><td>{{ row.for }}:{{ row.against }}</td><td>{{ row.difference }}</td><td>{{ row.points }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>{{ 'Noch keine Tabelle vorhanden.'|trans }}</p>{% endfor %}
+<h2 class="h4 mt-4">{{ 'Turnierdokumente'|trans }}</h2>
+<ul>{% for document in documents %}<li><a href="{{ path('competition_document_download', {id: document.id}) }}">{{ document.originalName }}</a></li>{% else %}<li>{{ 'Noch keine Dokumente vorhanden.'|trans }}</li>{% endfor %}</ul>
+{% if manager and tournament.status.value not in ['completed', 'cancelled'] %}
+<form method="post" enctype="multipart/form-data" action="{{ path('competition_document_upload', {id: tournament.id}) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('tournament_document_' ~ tournament.id) }}">
+<label for="tournament-document">{{ 'PDF, JPG oder PNG, maximal 5 MB'|trans }}</label><input id="tournament-document" class="form-control" type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
+<button class="btn btn-secondary mt-2">{{ 'Dokument hochladen'|trans }}</button></form>
+{% endif %}
+{% endblock %}

@@ -12,6 +12,8 @@ use App\Entity\Team;
 use App\Entity\TeamMember;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
+use Symfony\Component\Validator\Constraints\Callback;
+use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class TeamMemberAssignmentValidationTest extends TestCase
@@ -37,10 +39,15 @@ final class TeamMemberAssignmentValidationTest extends TestCase
         return [$assignment, $member, $sport, $club];
     }
 
+    private function validateAssignment(TeamMember $assignment): ConstraintViolationListInterface
+    {
+        return $this->validator->validate($assignment, new Callback('validateAssignment'));
+    }
+
     public function testMissingSportWithoutConsentIsRejected(): void
     {
         [$assignment] = $this->assignment();
-        $violations = $this->validator->validate($assignment);
+        $violations = $this->validateAssignment($assignment);
         self::assertGreaterThan(0, $violations->count());
         self::assertSame('member', $violations->get(0)->getPropertyPath());
     }
@@ -49,14 +56,14 @@ final class TeamMemberAssignmentValidationTest extends TestCase
     {
         [$assignment] = $this->assignment();
         $assignment->setAssignMissingSport(true);
-        self::assertCount(0, $this->validator->validate($assignment));
+        self::assertCount(0, $this->validateAssignment($assignment));
     }
 
     public function testExistingSportNeedsNoConsent(): void
     {
         [$assignment, $member, $sport] = $this->assignment();
         $member->addSport((new MemberSport())->setSport($sport));
-        self::assertCount(0, $this->validator->validate($assignment));
+        self::assertCount(0, $this->validateAssignment($assignment));
     }
 
     public function testDifferentClubIsRejectedEvenWithConsent(): void
@@ -64,16 +71,28 @@ final class TeamMemberAssignmentValidationTest extends TestCase
         [$assignment, $member] = $this->assignment();
         $member->setClub(new Club());
         $assignment->setAssignMissingSport(true);
-        self::assertGreaterThan(0, $this->validator->validate($assignment)->count());
+        self::assertGreaterThan(0, $this->validateAssignment($assignment)->count());
     }
 
     public function testMissingTeamOrMemberDoesNotTriggerSportCallback(): void
     {
-        self::assertCount(0, $this->validator->validate(new TeamMember()));
+        self::assertCount(0, $this->validateAssignment(new TeamMember()));
     }
 
     public function testConsentIsOffByDefault(): void
     {
         self::assertFalse((new TeamMember())->isAssignMissingSport());
+    }
+
+    public function testAssignmentDatesAreInclusiveAndRejectInvertedPeriods(): void
+    {
+        [$assignment] = $this->assignment();
+        $assignment->setAssignMissingSport(true);
+        $assignment->setJoinedAt(new \DateTime('2026-10-10'))->setLeftAt(new \DateTime('2026-10-20'));
+        self::assertTrue($assignment->isAssignedOn(new \DateTimeImmutable('2026-10-10 23:59')));
+        self::assertTrue($assignment->isAssignedOn(new \DateTimeImmutable('2026-10-20 00:01')));
+        self::assertFalse($assignment->isAssignedOn(new \DateTimeImmutable('2026-10-21')));
+        $assignment->setLeftAt(new \DateTime('2026-10-09'));
+        self::assertGreaterThan(0, $this->validateAssignment($assignment)->count());
     }
 }

@@ -70,6 +70,34 @@ final class MigrationChainTest extends TestCase
         $this->migrate('20261016194500');
     }
 
+    public function testCompetitionUpgradePreservesExistingTeamsAndMemberships(): void
+    {
+        $this->migrate('20261024130000');
+        $club = $this->createClub();
+        $this->connection->insert('sport', ['club_id' => $club, 'name' => 'Underwater rugby', 'short_name' => 'uwr', 'active' => 1, 'sort_order' => 0]);
+        $sport = (int) $this->connection->lastInsertId();
+        $this->connection->insert('team', ['sport_id' => $sport, 'name' => 'Existing squad', 'type' => 'team', 'active' => 1, 'sort_order' => 0]);
+        $team = (int) $this->connection->lastInsertId();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Player']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => $person, 'membership_status' => 'active']);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('team_member', ['team_id' => $team, 'member_id' => $member, 'role' => 'player', 'notes' => 'Keep roster evidence']);
+        $assignment = (int) $this->connection->lastInsertId();
+        $before = $this->connection->fetchAssociative('SELECT * FROM team_member WHERE id = ?', [$assignment]);
+        $this->connection->executeStatement('CREATE TABLE competition_unmapped_legacy (id INT PRIMARY KEY, evidence VARCHAR(80))');
+        $this->connection->insert('competition_unmapped_legacy', ['id' => 1, 'evidence' => 'Never drop unknown tables']);
+        $this->migrate('latest');
+        $after = $this->connection->fetchAssociative('SELECT * FROM team_member WHERE id = ?', [$assignment]);
+        self::assertSame($before, array_intersect_key($after, $before));
+        self::assertSame(0, (int) $after['competition_eligible']);
+        self::assertNull($after['position']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM member'));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM person'));
+        self::assertSame('Never drop unknown tables', $this->connection->fetchOne('SELECT evidence FROM competition_unmapped_legacy'));
+        self::assertTrue($this->connection->createSchemaManager()->tablesExist(['team_training', 'tournament', 'tournament_entry', 'tournament_player', 'tournament_match', 'tournament_payment', 'tournament_document']));
+    }
+
     public function testPersonNormalizationPreservesAllFieldsIdsAndAccountLinks(): void
     {
         $this->migrate('20261022130000');
@@ -382,6 +410,7 @@ final class MigrationChainTest extends TestCase
             '20261024100000',
             '20261024102048',
             '20261024130000',
+            '20261024150454',
         ];
 
         $migrations = $this->factory()

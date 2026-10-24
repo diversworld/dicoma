@@ -1,0 +1,26 @@
+{% extends 'competition/layout.html.twig' %}
+{% block competition_title %}{{ entry.name }} · {{ entry.tournament.name }}{% endblock %}
+{% block competition_body %}
+{% set preparing = rosterOpen %}
+<p><a href="{{ path('competition_tournament', {id: entry.tournament.id}) }}">{{ 'Zur Turnierzentrale'|trans }}</a></p>
+<p>{{ 'Kontaktadresse'|trans }}: {{ entry.contactEmail ?: '—' }} · {{ 'Teilnahmegebühr'|trans }}: {{ (entry.feeCents / 100)|number_format(2, ',', '.') }} EUR · {{ 'Bezahlt'|trans }}: {{ (paid / 100)|number_format(2, ',', '.') }} EUR · {{ 'Offen'|trans }}: {{ ((entry.feeCents - paid) / 100)|number_format(2, ',', '.') }} EUR</p>
+{% if manager %}<p><a class="btn btn-secondary" href="{{ path('competition_payment', {id: entry.id}) }}">{{ 'Zahlung oder Erstattung erfassen'|trans }}</a></p>{% endif %}
+<h2 class="h4">{{ 'Turnierkader'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Spieler'|trans }}</th><th>{{ 'Spielerposition'|trans }}</th><th>{{ 'Rückennummer'|trans }}</th><th>{{ 'Berechtigungsnachweis'|trans }}</th><th>{{ 'Aktionen'|trans }}</th></tr></thead><tbody>
+{% for player in players %}<tr><td>{{ player.name }}</td><td>{{ player.position ?? '—' }}</td><td>{{ player.jerseyNumber ?? '—' }}</td><td>{{ player.eligibilityEvidence }}</td><td>
+{% if preparing %}<form method="post" action="{{ path('competition_player_remove', {id: player.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('player_remove_' ~ player.id) }}"><button class="btn btn-sm btn-outline-danger">{{ 'Aus Turnierkader entfernen'|trans }}</button></form>{% endif %}
+</td></tr>{% else %}<tr><td colspan="5">{{ 'Noch keine Spieler registriert.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if preparing and not entry.withdrawn %}
+<h3 class="h5 mt-4">{{ 'Spieler registrieren'|trans }}</h3>
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{{ form_start(form) }}{{ form_errors(form) }}{{ form_rest(form) }}<button class="btn btn-primary">{{ 'Spieler registrieren'|trans }}</button>{{ form_end(form) }}
+<form method="post" action="{{ path('competition_entry_withdraw', {id: entry.id}) }}" class="mt-4">
+<input type="hidden" name="_token" value="{{ csrf_token('entry_withdraw_' ~ entry.id) }}"><button class="btn btn-outline-danger">{{ 'Mannschaftsmeldung zurückziehen'|trans }}</button></form>
+{% endif %}
+<h2 class="h4 mt-4">{{ 'Zahlungshistorie'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Datum'|trans }}</th><th>{{ 'Betrag'|trans }}</th><th>{{ 'Beleg'|trans }}</th><th>{{ 'Erfasst von'|trans }}</th></tr></thead><tbody>
+{% for payment in payments %}<tr><td>{{ payment.recordedAt|date('d.m.Y H:i') }}</td><td>{{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR</td><td>{{ payment.reference }}</td><td>{{ payment.recordedBy }}</td></tr>
+{% else %}<tr><td colspan="4">{{ 'Noch keine Zahlung erfasst.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

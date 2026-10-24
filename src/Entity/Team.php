@@ -8,8 +8,12 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TeamRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_team_sport_name', columns: ['sport_id', 'name'])]
+#[UniqueEntity(fields: ['sport', 'name'], message: 'Diese Mannschaft existiert bereits in dieser Sportart.')]
 #[ORM\Table(
     name: 'team',
     uniqueConstraints: [
@@ -28,9 +32,11 @@ class Team
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[Assert\NotNull]
     private ?Sport $sport = null;
 
     #[ORM\Column(length: 120)]
+    #[Assert\NotBlank, Assert\Length(max: 120)]
     private ?string $name = null;
 
     #[ORM\Column(

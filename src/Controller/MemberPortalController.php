@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class MemberPortalController extends AbstractController
 {
     #[Route('/my', name: 'member_portal_dashboard', methods: ['GET'])]
-    public function dashboard(EntityManagerInterface $em): Response
+    public function dashboard(EntityManagerInterface $em, \App\Service\CompetitionAccess $competitions): Response
     {
         $user = $this->getUser();
         if (!$user instanceof User || ($member = $user->getMember()) === null) {
@@ -39,6 +39,7 @@ final class MemberPortalController extends AbstractController
         return $this->render('member_portal/dashboard.html.twig', [
             'tankCount' => count($tanks), 'dueCount' => $dueCount,
             'bookings' => $bookings, 'upcoming' => $upcoming,
+            'competitionStaff' => $competitions->isStaff(),
         ]);
     }
 }

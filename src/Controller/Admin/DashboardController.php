@@ -359,6 +359,7 @@ class DashboardController extends AbstractDashboardController
     {
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
+            MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
 
             MenuItem::section('Tägliche Verwaltung'),
 
@@ -367,12 +368,13 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
                 MenuItem::linkTo(PersonCrudController::class, 'Personen und Gäste', 'fa fa-address-book')
                     ->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkTo(TeamCrudController::class, 'Gruppen & Mannschaften', 'fa fa-people-group')
-                    ->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkTo(TeamMemberCrudController::class, 'Gruppenzuordnungen', 'fa fa-user-group')
-                    ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card')
                     ->setPermission('ROLE_SUPER_ADMIN'),
+            ]),
+
+            MenuItem::subMenu('Mannschaften & Turniere', 'fa fa-trophy')->setSubItems([
+                MenuItem::linkToRoute('Mannschaften und Kader', 'fa fa-people-group', 'competition_teams'),
+                MenuItem::linkToRoute('Turniere und Historie', 'fa fa-trophy', 'competition_tournaments'),
             ]),
 
             MenuItem::subMenu('Ausbildung & Kurse', 'fa fa-graduation-cap')

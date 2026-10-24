@@ -20,6 +20,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -239,6 +241,11 @@ class TeamMemberCrudController extends AbstractCrudController
 
         yield TextareaField::new('notes', 'Notizen')
             ->hideOnIndex();
+        yield TextField::new('position', 'Spielerposition');
+        yield IntegerField::new('jerseyNumber', 'Rückennummer');
+        yield BooleanField::new('competitionEligible', 'Spielberechtigung geprüft')->renderAsSwitch(false);
+        yield DateField::new('eligibilityUntil', 'Spielberechtigung gültig bis')->setFormat('dd.MM.yyyy');
+        yield TextField::new('eligibilityNote', 'Nachweis der Spielberechtigung')->hideOnIndex();
     }
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {

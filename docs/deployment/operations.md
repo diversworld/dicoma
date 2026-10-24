@@ -1,4 +1,39 @@
-# Betrieb und Wiederherstellung – Phase 2 bis 4
+# Betrieb und Wiederherstellung – Phase 2 bis 5
+
+## Phase 5: Migration und Aktivierungsgrenze
+
+`Version20261024150454` ergänzt sieben Tabellen für Trainingszeiten,
+Turniere, Mannschaftsmeldungen, Spieler, Begegnungen, Gebührenbelege und
+Dokumente sowie fünf Kaderfelder für Position und Spielberechtigung.
+Vorhandene Personen, Mitgliedschaften und Mannschaftszuordnungen werden
+nicht umgeschrieben. Bestehende Zuordnungen erhalten ausdrücklich keine
+automatische Spielberechtigung.
+
+Die Migration prüft doppelte Mannschaftsnamen je Sportart und doppelte
+Kaderzuordnungen vor dem ersten DDL. Konflikte verlangen eine ausdrücklich
+entschiedene fachliche Bereinigung; die Migration führt keine Datensätze
+automatisch zusammen. Sie entfernt auch keine nicht gemappten
+Bestandstabellen. Ein destruktives `down` ist zum Schutz von Ergebnissen,
+Nachweisen und Zahlungsbelegen gesperrt.
+
+**Der Code allein ist keine Produktivfreigabe.** Vor lokaler oder externer
+Aktivierung sind erforderlich:
+
+1. Ausdrückliche Freigabe des Datenbank-Upgrades.
+2. Neuer konsistenter, geschützter Anwendungs-/Datenbanksnapshot mit
+   Prüfsummen und tatsächlicher isolierter Wiederherstellungsprüfung.
+3. Prüfung der Migrationskette auf dem getrennten MariaDB-Testserver
+   und erfolgreicher Unit-/HTTP-Regression.
+4. Kontrollierte Migration mit MySQL/MariaDB, danach Vergleich von
+   Mapping, Migrationsstand und erhaltenen Bestandsdaten.
+5. Erst anschließend Prod-Cache mit der Weblaufzeit PHP 8.4 erneuern
+   und den zuvor identifizierten PHP-FPM-Master gezielt sanft neu laden.
+
+Nicht nur den Menüstand vorzeitig aktivieren: Die neuen Ansichten und
+Kaderabfragen benötigen die neuen Tabellen beziehungsweise Spalten.
+Tests erzeugen ihre Mannschaften, Meldungen, Gebühren und Dokumente
+ausschließlich in isolierten Testdatenbanken. Die private Dokumentenablage
+ist in Backups einzuschließen.
 
 ## Phase 4: lokale Prod-Aktivierung
 

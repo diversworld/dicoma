@@ -10,6 +10,9 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -24,6 +27,7 @@ class TeamMemberType extends AbstractType
                 'class' => Member::class,
                 'label' => 'Mitglied',
                 'placeholder' => 'Mitglied auswählen',
+                'choices' => $options['members'],
                 'choice_label' => static function (
                     Member $member
                 ): string {
@@ -64,7 +68,12 @@ class TeamMemberType extends AbstractType
             ->add('notes', TextareaType::class, [
                 'label' => 'Notizen',
                 'required' => false,
-            ]);
+            ])
+            ->add('position', TextType::class, ['label' => 'Spielerposition', 'required' => false])
+            ->add('jerseyNumber', IntegerType::class, ['label' => 'Rückennummer', 'required' => false])
+            ->add('competitionEligible', CheckboxType::class, ['label' => 'Spielberechtigung geprüft', 'required' => false])
+            ->add('eligibilityUntil', DateType::class, ['label' => 'Spielberechtigung gültig bis', 'widget' => 'single_text', 'required' => false])
+            ->add('eligibilityNote', TextType::class, ['label' => 'Nachweis der Spielberechtigung', 'required' => false]);
     }
 
     public function configureOptions(
@@ -72,6 +81,7 @@ class TeamMemberType extends AbstractType
     ): void {
         $resolver->setDefaults([
             'data_class' => TeamMember::class,
+            'members' => null,
         ]);
     }
 }

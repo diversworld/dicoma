@@ -1,0 +1,10 @@
+{% extends 'competition/layout.html.twig' %}
+{% block competition_title %}{{ 'Mannschaften und Kader'|trans }}{% endblock %}
+{% block competition_body %}
+<p class="text-muted">{{ 'Mannschaft auswählen, Kader pflegen und Trainingszeiten planen.'|trans }}</p>
+{% if canCreate %}<p><a class="btn btn-primary" href="{{ path('competition_team_new') }}">{{ 'Mannschaft anlegen'|trans }}</a></p>{% endif %}
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Mannschaft'|trans }}</th><th>{{ 'Sportart'|trans }}</th><th>{{ 'Verein'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
+{% for team in teams %}<tr><td><a href="{{ path('competition_team', {id: team.id}) }}">{{ team.name }}</a></td><td>{{ team.sport.name }}</td><td>{{ team.sport.club.name }}</td><td>{{ (team.active ? 'Aktiv' : 'Inaktiv')|trans }}</td></tr>
+{% else %}<tr><td colspan="4">{{ 'Keine verwalteten Mannschaften vorhanden.'|trans }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

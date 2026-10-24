@@ -33,6 +33,32 @@ Mitglieder bearbeiten nur eigene Kontakt-/Notfalldaten; die Konto-E-Mail bleibt 
 
 Eine geplante Kündigung setzt `leftAt` nicht vorzeitig. Erst die tägliche Verarbeitung nach dem wirksamen Austrittsdatum setzt Status `FORMER` und das Austrittsdatum; anschließend entfallen die bestehenden Mitgliedsrechte. Archivierung ist erst nach Austritt möglich. Siehe [Phase-3-Vertrag](../phase3-membership.md).
 
+## Ergänzung Phase 5
+
+Die neuen Backendrouten `/admin/teams`, `/admin/tournaments` und
+`/admin/calendar` verlangen ein angemeldetes Konto und zusätzliche
+Objektprüfungen durch `CompetitionAccess`. Die Basisrolle allein gewährt
+keinen Zugriff.
+
+| Aufgabe | Berechtigung |
+|---|---|
+| Mannschaft anlegen | Vereinsadmin im eigenen Verein; Superadmin global |
+| Mannschaft, Kader und Training pflegen | Vereinsadmin oder aktuell zugeordneter Trainer, Co-Trainer bzw. Mannschaftsführung der konkreten aktiven Mannschaft |
+| Turnier erstellen, planen, starten, werten und abschließen | Admin des veranstaltenden Vereins; Superadmin global |
+| Offene Ausschreibungen ansehen | Berechtigte Mannschaftsbetreuung und Vereinsadmins |
+| Eigene Turniermeldung und Kader bearbeiten | Betreuung der gemeldeten Mannschaft oder Veranstalter, vor Meldeschluss/Start |
+| Externe Mannschaften und Spieler erfassen | Veranstalter |
+| Gebühren verbuchen | Veranstalter; keine Veränderung alter Zahlungsbelege |
+| Private Turnierdokumente herunterladen | Für das zugehörige Turnier berechtigte Verwaltung/Betreuung |
+
+Abgelaufene Mannschaftszuordnungen, gewöhnliche Spieler, Betreuer ohne
+Leitungsfunktion und nicht mehr aktive Mitglieder erhalten dadurch keine
+Verwaltungsrechte. Eine Zuordnung zu einem fremden Verein berechtigt nicht.
+Die alten EasyAdmin-Mannschafts-CRUDs behalten ihre Superadmin-Sperre.
+Teilnehmer- und Berechtigungsnachweise anderer Mannschaften bleiben
+deren Betreuung und dem Veranstalter vorbehalten; offene Ausschreibungen
+zeigen keine Kontaktdaten oder Spielerlisten.
+
 ## Betriebsfolge
 
 Vor Freigabe müssen die Vereine betroffene Konten mit fehlendem Profil, fehlendem Verein, inaktivem Status oder Austrittsdatum prüfen. Diese Konten verlieren bewusst Mitgliedsrechte. Ein Funktionskonto benötigt für echte Mitgliedsrechte zusätzlich eine aktive Mitgliedschaft.

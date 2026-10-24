@@ -9,6 +9,7 @@ enum TeamMemberRole: string
     case TRAINER = 'trainer';
     case ASSISTANT_TRAINER = 'assistant_trainer';
     case TEAM_LEADER = 'team_leader';
+    case SUPERVISOR = 'supervisor';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum TeamMemberRole: string
             self::TRAINER => 'Trainer/in',
             self::ASSISTANT_TRAINER => 'Co-Trainer/in',
             self::TEAM_LEADER => 'Mannschaftsführer/in',
+            self::SUPERVISOR => 'Betreuer/in',
         };
     }
 

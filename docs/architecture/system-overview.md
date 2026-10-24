@@ -1,4 +1,4 @@
-# Systemübersicht – Phase 2
+# Systemübersicht – Phase 2 bis 5
 
 DICOMA bleibt eine bestehende Symfony-7.4-Anwendung mit Doctrine ORM 2, Twig, Symfony Security und EasyAdmin. Fachlogik bleibt in den vorhandenen Services, HTTP-Orchestrierung in den vorhandenen Controllern. MySQL/MariaDB ist die von der vorhandenen Migrationshistorie unterstützte Datenbank.
 
@@ -11,6 +11,99 @@ HTTP / Symfony Security / CSRF
 
 Personenstammdaten werden zentral gehalten; fachliche Mitgliedschaften, Benutzerkonto und Rollen bleiben getrennt. Siehe [Datenmodell](data-model.md) und [Rollenvertrag](roles-permissions.md).
 
+## Phase 5: Mannschaften und Turniere
+
+Der operative Einstieg ist **Mannschaften & Turniere** mit **Mannschaften und
+Kader** sowie **Turniere und Historie**. Die bisherigen globalen
+Mannschafts-CRUDs bleiben Superadmin-only, werden aber nicht als parallele
+operative Menüeinträge angeboten. Berechtigte Trainer finden ihre
+Mannschaften auch im Mitgliederbereich.
+
+### Mannschaften und Spielberechtigung
+
+Eine Mannschaft gehört weiterhin über ihre Sportart zu genau einem Verein.
+Ihr Kader verwendet die vorhandenen `TeamMember`-Zuordnungen, einschließlich
+Trainer, Co-Trainer, Mannschaftsführung und Betreuung. Position,
+Rückennummer, ausdrücklich geprüfte Spielberechtigung, Nachweis und
+Gültigkeitsdatum ergänzen die Zuordnung. Neue Trainingsdatensätze halten
+Beginn, Ende, Trainingsort und Absage fest. Die Sportart einer bestehenden
+Mannschaft wird im operativen Formular nicht nachträglich gewechselt.
+
+Bestehende Mitglieder und Zuordnungen bleiben erhalten; die Migration
+erteilt **keine automatische Spielberechtigung**. Für einen internen
+Turnierspieler werden aktive Mitgliedschaft, aktive Mannschaft, Spieler-
+oder Mannschaftsführungsrolle, vollständiger Zuordnungszeitraum sowie
+aktive und zeitlich passende Sportzuordnung geprüft. Ein hinterlegtes
+Berechtigungsende muss mindestens bis zum letzten Turniertag reichen.
+Die Prüfung erfolgt bei der Registrierung und erneut vor Turnierstart.
+
+### Turnierablauf
+
+1. Ein Vereinsadmin erstellt eine Ausschreibung mit Sportkennung,
+   Veranstalter, Ort, Zeitraum, optionalem Meldeschluss, Grenzen,
+   Mannschaftsgebühr und Sieg-/Unentschieden-/Niederlagenpunkten.
+2. Die Turnierleitung öffnet die Meldung. Betreuende Trainer und
+   Mannschaftsführungen melden eigene Mannschaften und berechtigte
+   Kaderspieler. Veranstalter können zusätzlich externe Mannschaften und
+   Spieler manuell erfassen.
+3. Der Veranstalter erstellt freie Begegnungen oder einen
+   **Jeder-gegen-jeden-Plan je Gruppe**. Gerade und ungerade Gruppengrößen
+   sind unterstützt; bei ungerader Zahl gibt es rundenweise Freilose.
+   Spiel- einschließlich Wechselzeit muss vollständig in den Zeitraum
+   passen. Eine Mannschaft spielt höchstens einmal je Runde;
+   Mannschafts- und Spielfeldüberschneidungen werden abgewiesen.
+4. Ein noch nicht gestarteter, vollständig ungewerteter Plan kann nach
+   ausdrücklicher Bestätigung zurückgesetzt werden. Erst danach ist der
+   Rückzug bereits eingeplanter Mannschaften möglich. Ergebnisse und
+   deren Protokolle werden dadurch niemals gelöscht.
+5. Nach Turnierstart erfasst die Leitung Ergebnisse einschließlich
+   Begründung. Korrekturen ergänzen das Ergebnisprotokoll mit Zeitpunkt
+   und Bearbeiter; Versionsprüfungen verhindern veraltetes Überschreiben.
+6. Abschluss ist erst möglich, wenn jedes aktive Spiel ein Ergebnis hat.
+   Das Abschlussarchiv enthält Tabellen, Begegnungen samt Protokollen
+   und Zeitangaben sowie Kader- und Nachweissnapshots. Sportliche Daten
+   bleiben danach schreibgeschützt; Gebühren können weiterhin beglichen
+   oder erstattet werden.
+
+Die Stammdaten und Wertungsregeln sind ab der ersten Mannschaftsmeldung
+gesperrt. Registrierungen und Kaderänderungen enden mit Meldeschluss oder
+Turnierstart. Absagen sind eigene, unveränderliche Endzustände. Tabellen
+ignorieren abgesagte Spiele; die Sortierung ist Wertungspunkte,
+Punktdifferenz und erzielte Spielpunkte. Vollständig gleiche Werte erhalten
+denselben Rang, Namen sorgen nur für eine stabile Anzeige.
+
+Externe Spieler sind **Turnierregistrierungen, keine künstlichen
+Vereinsmitglieder oder Personenstammsätze**. Namen lösen keine automatische
+Verknüpfung mit existierenden Personen aus. Die Mannschaftsgebühr wird
+bei der Meldung eingefroren. Zahlungen und negative Erstattungen werden
+als einzelne Belege geführt; doppelte Belegnummern je Meldung,
+Überzahlungen und Erstattungen über die Zahlungssumme sind ausgeschlossen.
+Es gibt keine automatische Bank- oder Zahlungsanbieteranbindung.
+
+PDF-, JPG- und PNG-Dokumente bis 5 MiB liegen in der bestehenden privaten
+Dokumentenablage. Inhaltstyp und Größe werden serverseitig geprüft;
+berechtigte Downloads sind Attachments mit `nosniff` und ohne
+öffentlichen Cache. Neue Dokumente sind nach Abschluss/Absage gesperrt.
+
+Sportkennungen entsprechen normalisiert dem Kürzel der bestehenden
+Sportart, ersatzweise dem Namen. Weitere Unterwassersportarten benötigen
+keine festen Sport-Enums. Die aktuelle Wertung unterstützt ganzzahlige
+Ergebnisse und konfigurierbare Tabellenpunkte. Sportartspezifische
+Satz-/Strafpunktregeln oder K.-o.-Bäume sind bewusst keine impliziten
+Alternativen zur gewählten Gruppen-/Ligastruktur. Die Registrierung ist
+bewusst verwaltungsgeführt, nicht öffentlich.
+
+### Gemeinsamer Veranstaltungskalender
+
+`/admin/calendar` projiziert berechtigte Kurstermine, Mannschaftstrainings
+und offene/laufende/abgeschlossene Turniere in eine gemeinsame
+Monatsansicht. Die Termine bleiben ausschließlich im jeweiligen
+Fachmodul gespeichert; Modul-ID und Ereignistyp bilden einen eindeutigen
+Schlüssel. Mehrtägige Turniere werden in jedem überlappenden Monat
+angezeigt. Abgesagte Veranstaltungen und nicht berechtigte Datensätze
+werden ausgeblendet. Die Links führen direkt zur zuständigen
+Backendverwaltung, nicht zu einer zweiten Bearbeitungsmaske.
+
 ## Vereinskontext
 
 Der Verein eines regulären Administrators wird weiterhin über `User.member.club` bestimmt. Es wird kein frei manipulierbarer Vereinsparameter als Berechtigungsquelle eingeführt. Ein fehlender Kontext führt zur Verweigerung, nicht zu einer globalen Standardabfrage.
@@ -21,7 +114,7 @@ Superadmins dürfen vereinsübergreifend arbeiten. Vorhandene Superadmin-only-Sp
 
 Das EasyAdmin-Menü trennt tägliche Aufgaben von seltener gepflegten Grundlagen:
 
-- **Tägliche Verwaltung:** Mitglieder & Verein, Ausbildung & Kurse,
+- **Tägliche Verwaltung:** Mitglieder & Verein, Mannschaften & Turniere, Ausbildung & Kurse,
   Ausrüstung & Verleih sowie Flaschenprüfungen (TÜV).
 - **Stammdaten & Einstellungen:** Ausbildungsgrundlagen,
   Ausrüstungsstammdaten sowie System & Einstellungen.
