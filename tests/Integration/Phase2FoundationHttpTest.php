@@ -8,12 +8,16 @@ use App\Controller\Admin\DashboardController;
 use App\Controller\Admin\MemberCrudController;
 use App\Controller\Admin\PersonCrudController;
 use App\Entity\Club;
+use App\Entity\Courses;
+use App\Entity\MembershipApplication;
+use App\Entity\Schedule;
 use App\Entity\Member;
 use App\Entity\MemberQualification;
 use App\Entity\Person;
 use App\Entity\Qualification;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
+use App\Enum\CourseStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -205,6 +209,149 @@ final class Phase2FoundationHttpTest extends WebTestCase
         }
         $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_NEW, personId: $b->getPerson()->getId()));
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testAdministrationMenuAndShortcutsOnlyOfferAccessibleDistinctDestinations(): void
+    {
+        $admin = $this->admin('menu-admin', 'MenuAdmin', User::ROLE_ADMIN);
+        $super = $this->admin('menu-super', 'MenuSuper', User::ROLE_SUPER_ADMIN);
+        foreach ([$admin, $super] as $user) {
+            $this->client->loginUser($user);
+            $crawler = $this->client->request('GET', '/admin/de');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('aside.sidebar', 'Tägliche Verwaltung');
+            self::assertSelectorTextContains('aside.sidebar', 'Mitglieder & Verein');
+            self::assertSelectorTextContains('aside.sidebar', 'Ausbildungsportal');
+            self::assertSelectorNotExists('aside.sidebar .submenu a[href="#"]');
+            if ($user->getId() === $admin->getId()) {
+                self::assertSelectorTextNotContains('aside.sidebar', 'Stammdaten & Einstellungen');
+                self::assertSelectorTextNotContains('aside.sidebar', 'Prüfungsübersicht');
+                self::assertSelectorNotExists('[data-dashboard-all-qualifications]');
+                self::assertSelectorNotExists('[data-dashboard-metric="expired"] a');
+                self::assertSelectorNotExists('[data-dashboard-metric="expiring"] a');
+            } else {
+                self::assertSelectorTextContains('aside.sidebar', 'Ausbildungsgrundlagen');
+                self::assertSelectorTextContains('aside.sidebar', 'Ausrüstungsstammdaten');
+                self::assertSelectorTextContains('aside.sidebar', 'System & Einstellungen');
+                self::assertSelectorExists('[data-dashboard-all-qualifications]');
+            }
+            $menuUrls = $crawler->filter('aside.sidebar .menu a[href]:not(.submenu-toggle)')->extract(['href']);
+            self::assertGreaterThan(5, count($menuUrls));
+            self::assertSame(count($menuUrls), count(array_unique($menuUrls)), 'No duplicate sidebar destinations.');
+            $shortcuts = $crawler->filter('[data-dashboard-shortcuts] a')->extract(['href']);
+            self::assertCount(4, $shortcuts);
+            foreach (array_unique([...$menuUrls, ...$shortcuts]) as $url) {
+                $this->client->request('GET', $url);
+                self::assertResponseIsSuccessful('Visible navigation target: ' . $url);
+                self::assertSelectorExists('aside.sidebar');
+            }
+        }
+    }
+
+    public function testDashboardQueuesCountsAndLimitsRespectClubAndCourseStatus(): void
+    {
+        $admin = $this->admin('dashboard-own', 'DashboardOwn', User::ROLE_ADMIN);
+        $foreign = $this->admin('dashboard-foreign', 'DashboardForeign', User::ROLE_ADMIN);
+        $super = $this->admin('dashboard-super', 'DashboardSuper', User::ROLE_SUPER_ADMIN);
+        $course = (new Courses())->setClub($admin->getMember()->getClub())->setTitle('Own active course')
+            ->setCategory('training')->setStatus(CourseStatus::OPEN);
+        $running = (new Courses())->setClub($admin->getMember()->getClub())->setTitle('Own running course')
+            ->setCategory('training')->setStatus(CourseStatus::RUNNING);
+        $foreignCourse = (new Courses())->setClub($foreign->getMember()->getClub())->setTitle('Foreign active course')
+            ->setCategory('training')->setStatus(CourseStatus::OPEN);
+        foreach ([$course, $running, $foreignCourse] as $item) { $this->em->persist($item); }
+        for ($i = 0; $i < 6; ++$i) {
+            $application = new MembershipApplication($admin->getMember()->getClub());
+            $application->setFirstname('Own application ' . $i);
+            $application->setLastname('Diver');
+            $application->setBirthday(new \DateTimeImmutable('2000-01-01'));
+            $application->setEmail('application-' . $i . '@example.invalid');
+            $application->setStreet('Test Street 1');
+            $application->setPostalCode('12345');
+            $application->setCity('Test City');
+            $this->em->persist($application);
+            $qualification = (new Qualification())->setName('Expired qualification ' . $i);
+            $this->em->persist($qualification);
+            $this->em->persist((new MemberQualification())->setMember($admin->getMember())->setQualification($qualification)
+                ->setValidUntil(new \DateTime('-' . ($i + 1) . ' days')));
+            $this->em->persist((new Schedule())->setCourses($course)->setTitle('Own session ' . $i)
+                ->setStartDate(new \DateTime('+' . ($i + 2) . ' days'))->setStartTime(new \DateTime('10:00')));
+        }
+        foreach ([CourseStatus::DRAFT, CourseStatus::COMPLETED, CourseStatus::CANCELLED] as $status) {
+            $hidden = (new Courses())->setClub($admin->getMember()->getClub())->setTitle('Hidden course ' . $status->value)
+                ->setCategory('training')->setStatus($status);
+            $this->em->persist($hidden);
+            $this->em->persist((new Schedule())->setCourses($hidden)->setTitle('Hidden session ' . $status->value)
+                ->setStartDate(new \DateTime('tomorrow')));
+        }
+        $this->em->persist((new Schedule())->setCourses($course)->setTitle('Past session')
+            ->setStartDate(new \DateTime('yesterday')));
+        $this->em->persist((new Schedule())->setCourses($foreignCourse)->setTitle('Foreign session')
+            ->setStartDate(new \DateTime('tomorrow')));
+        $application = new MembershipApplication($foreign->getMember()->getClub());
+        $application->setFirstname('Foreign application');
+        $application->setBirthday(new \DateTimeImmutable('2000-01-01'));
+        $this->em->persist($application);
+        $decided = new MembershipApplication($admin->getMember()->getClub());
+        $decided->setFirstname('Decided application');
+        $decided->setBirthday(new \DateTimeImmutable('2000-01-01'));
+        $decided->decide(null, 'test', 'Not a pending application');
+        $this->em->persist($decided);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin/de');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '2');
+        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '6');
+        self::assertSelectorTextContains('[data-dashboard-metric="expired"] .fs-1', '6');
+        self::assertCount(5, $crawler->filter('[data-dashboard-schedules] tbody tr'));
+        self::assertCount(5, $crawler->filter('[data-dashboard-applications] tbody tr'));
+        self::assertSelectorTextContains('body', 'Own session 0');
+        foreach (['Foreign session', 'Foreign application', 'Hidden session', 'Past session', 'Decided application', 'Own session 5', 'Own application 5', 'Expired qualification 0'] as $hidden) {
+            self::assertSelectorTextNotContains('body', $hidden);
+        }
+        foreach ($crawler->filter('[data-dashboard-applications] a, [data-dashboard-schedules] a')->extract(['href']) as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful('Dashboard queue destination: ' . $url);
+            self::assertSelectorExists('aside.sidebar');
+        }
+        $this->client->loginUser($super);
+        $this->client->request('GET', '/admin/de');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '3');
+        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '7');
+        self::assertSelectorTextContains('[data-dashboard-schedules]', 'Foreign session');
+    }
+
+    public function testDashboardQualificationLinksDoNotLeakFiltersAndEnglishLabelsAreTranslated(): void
+    {
+        $super = $this->admin('dashboard-links', 'DashboardLinks', User::ROLE_SUPER_ADMIN);
+        $qualification = (new Qualification())->setName('Qualification link test');
+        $this->em->persist($qualification);
+        $this->em->persist((new MemberQualification())->setMember($super->getMember())->setQualification($qualification)
+            ->setValidUntil(new \DateTime('yesterday')));
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/de?validity=expired&query=not-a-dashboard-filter');
+        self::assertResponseIsSuccessful();
+        $allUrl = $crawler->filter('[data-dashboard-all-qualifications]')->attr('href');
+        self::assertStringNotContainsString('validity=', $allUrl);
+        self::assertStringNotContainsString('query=', $allUrl);
+        foreach (['expired', 'expiring'] as $filter) {
+            $url = $crawler->filter('[data-dashboard-metric="' . $filter . '"] a')->attr('href');
+            self::assertStringContainsString('validity=' . $filter, $url);
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
+        $this->client->request('GET', $allUrl);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Qualification link test');
+        $this->client->request('GET', '/admin/en');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#dashboard-shortcuts', 'Quick access');
+        self::assertSelectorTextContains('aside.sidebar', 'Daily operations');
+        self::assertSelectorTextContains('aside.sidebar', 'Training reference data');
+        self::assertSelectorTextNotContains('body', 'Schnellzugriffe');
     }
 
     public function testInactiveInstructorKeepsFunctionalAccessButNotMemberPrivileges(): void

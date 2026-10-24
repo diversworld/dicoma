@@ -1,160 +1,129 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block content_title %}
-    DiCoMa Dashboard
-{% endblock %}
+{% block content_title %}{{ 'Verwaltungsübersicht'|trans }}{% endblock %}
 
 {% block main %}
-    <div class="row mb-4">
-        <div class="col-md-6 col-xl-3 mb-3">
-            <a href="{{ expiredQualificationsUrl }}" class="text-decoration-none text-reset" >
-                <div class="card-body">
-                    <div class="text-muted">
-                        Qualifikationen abgelaufen
-                    </div>
-                    <div class="fs-1 fw-bold">
-                        {{ expiredQualificationCount }}
-                    </div>
-                    {% if expiredQualificationCount > 0 %}
-                        <div class="text-danger">
-                            Handlungsbedarf
-                        </div>
-                    {% else %}
-                        <div class="text-success">
-                            Keine
-                        </div>
-                    {% endif %}
-                </div>
-			</a>
-		</div>
-		<div class="col-md-6 col-xl-3 mb-3">
-			<a href="{{ expiringQualificationsUrl }}" class="text-decoration-none text-reset">
-				<div class="card-body">
-					<div class="text-muted">
-						Ablauf innerhalb 30 Tagen
-					</div>
-					<div class="fs-1 fw-bold">
-						{{ expiringQualificationCount }}
-					</div>
-					{% if expiringQualificationCount > 0 %}
-					<div class="text-warning">
-						Bitte prüfen
-					</div>
-					{% else %}
-					<div class="text-success">
-						Keine
-					</div>
-					{% endif %}
-				</div>
-			</a>
-		</div>
-		<div class="col-md-6 col-xl-3 mb-3">
-			<a href="{{ allQualificationsUrl }}" class="text-decoration-none text-reset">
-				<div class="card h-100">
-					<div class="card-body">
-						<div class="text-muted">
-							Mitgliedsqualifikationen
-						</div>
-						<div class="fs-1 fw-bold">
-							<i class="fa fa-certificate"></i>
-						</div>
-						<div>
-							Alle anzeigen
-						</div>
-					</div>
-				</div>
-			</a>
-		</div>
-	</div>
+    <p class="text-muted">{{ 'Ansicht für'|trans }}: <strong>{{ dashboardScope ?? 'Alle Vereine'|trans }}</strong></p>
 
-    <div class="row">
-        <div class="col-xl-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <strong>
-                        Abgelaufene Qualifikationen
-                    </strong>
-                </div>
-                <div class="card-body p-0">
-                    {% if expiredQualifications is empty %}
-
-                        <div class="p-3 text-muted">
-                            Keine abgelaufenen Qualifikationen.
+    <section aria-labelledby="dashboard-shortcuts" class="mb-4">
+        <h2 id="dashboard-shortcuts" class="h5">{{ 'Schnellzugriffe'|trans }}</h2>
+        <div class="row g-3" data-dashboard-shortcuts>
+            {% for link in quickLinks %}
+                <div class="col-sm-6 col-xl-3">
+                    <a href="{{ link.url }}" class="card h-100 text-decoration-none">
+                        <div class="card-body">
+                            <i class="fa {{ link.icon }} me-2" aria-hidden="true"></i>{{ link.label|trans }}
                         </div>
-                    {% else %}
-                        <div class="table-responsive">
-                            <table class="table mb-0">
-                                <thead>
-                                <tr>
-                                    <th>Mitglied</th>
-                                    <th>Qualifikation</th>
-                                    <th>Abgelaufen am</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for item in expiredQualifications %}
-                                    <tr>
-                                        <td>
-                                            {{ item.member.fullName }}
-                                        </td>
-                                        <td>
-                                            {{ item.qualification }}
-                                        </td>
-                                        <td class="text-danger">
-                                            {{ item.validUntil|date('d.m.Y') }}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endif %}
+                    </a>
                 </div>
-            </div>
+            {% endfor %}
         </div>
+    </section>
 
-        <div class="col-xl-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <strong>
-                        Ablauf innerhalb 30 Tagen
-                    </strong>
-                </div>
-                <div class="card-body p-0">
-                    {% if expiringQualifications is empty %}
-                        <div class="p-3 text-muted">
-                            Keine anstehenden Abläufe.
+    <section aria-labelledby="dashboard-attention" class="mb-4">
+        <h2 id="dashboard-attention" class="h5">{{ 'Aktuell im Blick'|trans }}</h2>
+        <div class="row g-3">
+            {% set metrics = [
+                {label: 'Offene und laufende Kurse', count: activeCourseCount, url: path('admin_portal_training_portal'), key: 'courses'},
+                {label: 'Offene Mitgliedsanträge', count: pendingApplicationCount, url: path('membership_admin'), key: 'applications'},
+                {label: 'Qualifikationen abgelaufen', count: expiredQualificationCount, url: expiredQualificationsUrl, key: 'expired'},
+                {label: 'Ablauf innerhalb 30 Tagen', count: expiringQualificationCount, url: expiringQualificationsUrl, key: 'expiring'}
+            ] %}
+            {% for metric in metrics %}
+                <div class="col-sm-6 col-xl-3" data-dashboard-metric="{{ metric.key }}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ metric.label|trans }}</div>
+                            <div class="fs-1 fw-bold">{{ metric.count }}</div>
+                            {% if metric.url %}
+                                <a href="{{ metric.url }}">{{ 'Ansehen'|trans }}<span class="visually-hidden">: {{ metric.label|trans }}</span></a>
+                            {% endif %}
                         </div>
-                    {% else %}
-                        <div class="table-responsive">
-                            <table class="table mb-0">
-                                <thead>
-                                <tr>
-                                    <th>Mitglied</th>
-                                    <th>Qualifikation</th>
-                                    <th>Gültig bis</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for item in expiringQualifications %}
-                                    <tr>
-                                        <td>
-                                            {{ item.member.fullName }}
-                                        </td>
-                                        <td>
-                                            {{ item.qualification }}
-                                        </td>
-                                        <td>
-                                            {{ item.validUntil|date('d.m.Y') }}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endif %}
+                    </div>
                 </div>
-            </div>
+            {% endfor %}
         </div>
+    </section>
+
+    <div class="row g-4 mb-4">
+        <section class="col-xl-7" aria-labelledby="dashboard-schedules">
+            <div class="card h-100">
+                <div class="card-header"><h2 id="dashboard-schedules" class="h5 mb-0">{{ 'Nächste Kurstermine'|trans }}</h2></div>
+                <div class="table-responsive">
+                    <table class="table mb-0" data-dashboard-schedules>
+                        <thead><tr><th scope="col">{{ 'Beginn'|trans }}</th><th scope="col">{{ 'Kurs'|trans }}</th><th scope="col">{{ 'Termin'|trans }}</th></tr></thead>
+                        <tbody>
+                        {% for appointment in upcomingSchedules %}
+                            <tr>
+                                <td class="text-nowrap">{{ appointment.startDate|date('d.m.Y') }}<br>{{ appointment.startTime ? appointment.startTime|date('H:i') : 'Uhrzeit offen'|trans }}</td>
+                                <td><a href="{{ path('admin_portal_training_course', {id: appointment.courses.id}) }}">{{ appointment.courses.title }}</a></td>
+                                <td>{{ appointment.title }}{% if appointment.location %}<br><span class="text-muted">{{ appointment.location }}</span>{% endif %}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="3" class="text-muted">{{ 'Keine anstehenden Termine in offenen oder laufenden Kursen.'|trans }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer"><a href="{{ path('admin_course_calendar') }}">{{ 'Zum Kurskalender'|trans }}</a></div>
+            </div>
+        </section>
+        <section class="col-xl-5" aria-labelledby="dashboard-applications">
+            <div class="card h-100">
+                <div class="card-header"><h2 id="dashboard-applications" class="h5 mb-0">{{ 'Offene Mitgliedsanträge'|trans }}</h2></div>
+                <div class="table-responsive">
+                    <table class="table mb-0" data-dashboard-applications>
+                        <thead><tr><th scope="col">{{ 'Eingang'|trans }}</th><th scope="col">{{ 'Antrag'|trans }}</th></tr></thead>
+                        <tbody>
+                        {% for application in pendingApplications %}
+                            <tr>
+                                <td>{{ application.submittedAt|date('d.m.Y') }}</td>
+                                <td><a href="{{ path('membership_application_decide', {id: application.id}) }}">{{ application.firstname }} {{ application.lastname }}</a></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="2" class="text-muted">{{ 'Keine offenen Mitgliedsanträge.'|trans }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer"><a href="{{ path('membership_admin') }}">{{ 'Zur Mitgliederverwaltung'|trans }}</a></div>
+            </div>
+        </section>
     </div>
+    <p class="text-muted small">{{ 'Die Listen zeigen jeweils höchstens fünf Einträge; die Kennzahlen zählen alle passenden Datensätze.'|trans }}</p>
+
+    <section aria-labelledby="dashboard-qualifications">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+            <h2 id="dashboard-qualifications" class="h5">{{ 'Qualifikationen im Blick'|trans }}</h2>
+            {% if allQualificationsUrl %}<a href="{{ allQualificationsUrl }}" data-dashboard-all-qualifications>{{ 'Alle Qualifikationen anzeigen'|trans }}</a>{% endif %}
+        </div>
+        <div class="row g-4">
+            {% for group in [
+                {title: 'Abgelaufene Qualifikationen', items: expiredQualifications, empty: 'Keine abgelaufenen Qualifikationen.'},
+                {title: 'Ablauf innerhalb 30 Tagen', items: expiringQualifications, empty: 'Keine anstehenden Abläufe.'}
+            ] %}
+                <div class="col-xl-6">
+                    <div class="card h-100">
+                        <div class="card-header"><h3 class="h6 mb-0">{{ group.title|trans }}</h3></div>
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead><tr><th scope="col">{{ 'Mitglied'|trans }}</th><th scope="col">{{ 'Qualifikation'|trans }}</th><th scope="col">{{ 'Gültig bis'|trans }}</th></tr></thead>
+                                <tbody>
+                                {% for item in group.items %}
+                                    <tr>
+                                        <td><a href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\MemberCrudController').setAction('detail').setEntityId(item.member.id) }}">{{ item.member.fullName }}</a></td>
+                                        <td>{{ item.qualification }}</td>
+                                        <td>{{ item.validUntil|date('d.m.Y') }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="3" class="text-muted">{{ group.empty|trans }}</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
 {% endblock %}

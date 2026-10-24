@@ -25,7 +25,7 @@ class MemberQualificationRepository extends ServiceEntityRepository
      *
      * @return list<MemberQualification>
      */
-    public function findExpired(?Club $club = null): array
+    public function findExpired(?Club $club = null, ?int $limit = null): array
     {
         $today = new \DateTimeImmutable('today');
 
@@ -37,7 +37,9 @@ class MemberQualificationRepository extends ServiceEntityRepository
             ->andWhere('mq.validUntil IS NOT NULL')
             ->andWhere('mq.validUntil < :today')
             ->setParameter('today', $today)
-            ->orderBy('mq.validUntil', 'ASC');
+            ->orderBy('mq.validUntil', 'ASC')
+            ->addOrderBy('mq.id', 'ASC')
+            ->setMaxResults($limit);
 
         if ($club !== null) {
             $qb
@@ -59,7 +61,8 @@ class MemberQualificationRepository extends ServiceEntityRepository
      */
     public function findExpiringWithinDays(
         int $days = 30,
-        ?Club $club = null
+        ?Club $club = null,
+        ?int $limit = null
     ): array {
         $today = new \DateTimeImmutable('today');
 
@@ -77,7 +80,9 @@ class MemberQualificationRepository extends ServiceEntityRepository
             ->andWhere('mq.validUntil <= :until')
             ->setParameter('today', $today)
             ->setParameter('until', $until)
-            ->orderBy('mq.validUntil', 'ASC');
+            ->orderBy('mq.validUntil', 'ASC')
+            ->addOrderBy('mq.id', 'ASC')
+            ->setMaxResults($limit);
 
         if ($club !== null) {
             $qb
