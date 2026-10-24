@@ -122,6 +122,18 @@ Variablen. Die Browserprüfung lädt alle eigenen CSS-Dateien und prüft die
 Themeumschaltung sowie Fortschritts-/Kalendergeometrie ohne Geschäftsdaten
 zu ändern.
 
+Prüfstand der CSS-Zentralisierung vom 24.10.2026: 113 Unit-/isolierte Tests
+mit 2511 Assertions, vier JavaScript-Tests, alle 202 Twig-Templates sowie
+Container-Lint erfolgreich. Die acht bestehenden CSS-Dateien behalten nach
+Auflösung der neuen Variablen ihre bisherigen Deklarationen und Farbwerte.
+Der Browser las alle 25 eigenen CSS-Dateien ein und bestätigte Prioritäts-/
+Hilfsklassen, 37 % Fortschritt als exakt 148 px bei 400 px Bezugsbreite sowie
+unveränderte Ereignisposition und -breite im Kalender. Die reale Anmeldeseite
+übernimmt eine temporäre Änderung von `--dw-bootstrap-primary` einschließlich
+der bestehenden CSS-Transition; nach Rücknahme erscheint wieder die
+Originalfarbe. Bei 390, 768 und 1440 px entsteht kein horizontaler
+Seitenüberlauf.
+
 ## Laufzeit und Prüfungen
 
 - Verifiziert: PHP 8.4.24 in DDEV, Symfony 7.4.21, PHPUnit 13.4.3, MariaDB 11.8.

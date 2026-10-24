@@ -83,6 +83,31 @@ Anmeldeumleitung. Der Datenbestand blieb unverändert; es wurde keine
 Migration ausgeführt und keine produktive Anmeldung, Zahlung oder
 Nachricht erzeugt.
 
+### Nachlauf: zentrale Styles und Farbvariablen
+
+Statische Styleblöcke und Inline-Deklarationen wurden aus den Twig-Templates
+in eigene zentrale CSS-Dateien ausgelagert. Die sechs verbleibenden
+Styleattribute setzen ausschließlich datensatzabhängige Variablen für
+Fortschritt und Kalendergeometrie. `public/css/theme-variables.css` definiert
+die gemeinsame Palette; auch die acht bestehenden eigenen Stylesheets
+verwenden diese Werte. Drittanbieterdateien wurden nicht geändert.
+Die [Style- und Farbanpassungsregeln](../architecture/system-overview.md#zentrale-styles-und-farbanpassung)
+beschreiben Dateien, Akzentfarben und erforderliche Ausnahmen.
+
+Verifiziert: 113 Unit-/isolierte Tests mit 2511 Assertions, vier
+JavaScript-Tests, alle 202 Twig-Templates und Container-Lint erfolgreich.
+Alle 25 eigenen CSS-Dateien wurden im Browser geladen; Themeänderung,
+Hilfsklassen, Fortschritts- und Kalendergeometrie sind geprüft. Die reale
+Loginseite übernimmt eine temporäre Änderung der Primärfarbvariable.
+Die Teständerung wurde anschließend vollständig zurückgenommen. Bei
+390, 768 und 1440 Pixeln entsteht kein horizontaler Seitenüberlauf.
+
+Der Prod-Cache wurde mit PHP 8.4 erneuert und der zuvor identifizierte
+PHP-FPM-Master gezielt sanft neu geladen. Login liefert HTTPS 200.
+Der Bestand blieb bei vier Personen, drei Mitgliedern, einem Kurs und
+null Kursteilnahmen. Es wurde keine Migration ausgeführt.
+Der bekannte, unabhängige Ionicons-Chunk-404 bleibt unverändert.
+
 ## Phase 3: lokale Aktivierung und aktueller Snapshot
 
 Die lokale Phase-3-Aktivierung wurde nach vollständigen erfolgreichen Prüfungen ausdrücklich freigegeben. Bei der anschließenden direkten Zielprüfung war `Version20261024102048` auf Dienst `db`/Datenbank `db` bereits verbucht; es wurde deshalb kein erneutes DDL und keine manuelle Änderung der Migrationshistorie vorgenommen. Prod-Cache, Schema, tatsächliches Verbindungsziel und HTTPS wurden geprüft bzw. erneuert.
