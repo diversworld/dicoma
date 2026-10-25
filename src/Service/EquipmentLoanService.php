@@ -10,7 +10,12 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class EquipmentLoanService
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly EquipmentAssetAvailability $availability,
+        private readonly EquipmentMaintenanceService $maintenance,
+        private readonly EquipmentInventory $inventory,
+    ) {}
 
     public function issue(int $id): void
     {
@@ -23,8 +28,12 @@ final class EquipmentLoanService
             if ($item === null || !$item->isLendable() || $item->getConditionStatus() !== 'ready') {
                 throw new \DomainException('Ausrustung ist nicht verleihbar.');
             }
-            // Lock the item to serialize with reservation creation and other issues.
-            $this->em->lock($item, LockMode::PESSIMISTIC_WRITE);
+            $clubId = $reservation->getMember()?->getClub()?->getId();
+            if (!$clubId || !$reservation->getStartsAt() || !$reservation->getEndsAt()) { throw new \DomainException('Mitglied oder Zeitraum fehlt.'); }
+            if ($this->inventory->requiresApproval($item)) { throw new \DomainException('Genehmigungspflichtige Altreservierung stornieren und im konsolidierten Verleih neu anlegen.'); }
+            $now = new \DateTimeImmutable();
+            if ($reservation->getStartsAt() > $now || $reservation->getEndsAt() <= $now) { throw new \DomainException('Ausgabe ist nur innerhalb des reservierten Zeitraums möglich.'); }
+            $this->availability->assertAvailable($item, $clubId, $reservation->getStartsAt(), $reservation->getEndsAt(), null, $reservation->getId());
             $reservation->setConditionAtIssue($item->getConditionStatus());
             $reservation->setIssuedAt(new \DateTimeImmutable());
             $reservation->setStatus('issued');
@@ -36,6 +45,9 @@ final class EquipmentLoanService
         if (!in_array($condition, ['ready', 'maintenance', 'damaged'], true)) {
             throw new \InvalidArgumentException('Ungueltiger Rueckgabezustand.');
         }
+        if (mb_strlen($notes ?? '') > 2000 || ($condition !== 'ready' && mb_strlen(trim($notes ?? '')) < 10)) {
+            throw new \DomainException('Bei Defekt oder Wartung ist eine Beschreibung mit 10 bis 2000 Zeichen erforderlich.');
+        }
         $this->em->wrapInTransaction(function () use ($id, $condition, $notes): void {
             $reservation = $this->lockReservation($id);
             if ($reservation->getStatus() !== 'issued') {
@@ -43,7 +55,9 @@ final class EquipmentLoanService
             }
             $item = $reservation->getEquipmentItem();
             if ($item === null) { throw new \DomainException('Inventarartikel fehlt.'); }
-            $this->em->lock($item, LockMode::PESSIMISTIC_WRITE);
+            $physical = EquipmentInventory::physicalAsset($item);
+            $this->em->refresh($physical, LockMode::PESSIMISTIC_WRITE);
+            if ($physical !== $item) { $this->em->refresh($item, LockMode::PESSIMISTIC_WRITE); }
             $reservation->setReturnedAt(new \DateTimeImmutable());
             $reservation->setConditionAtReturn($condition);
             $reservation->setReturnNotes($notes);
@@ -51,7 +65,14 @@ final class EquipmentLoanService
             if ($condition !== 'ready') {
                 // For bulk stock, this conservatively blocks the whole item until inspected.
                 $item->setConditionStatus($condition);
+                $item->setLendable(false);
+                $physical->setConditionStatus($condition);
+                $physical->setLendable(false);
+                if (!$this->maintenance->hasOpenOrder($item)) {
+                    $this->em->persist(new \App\Entity\TankMaintenanceOrder($physical, (string) $notes, $condition === 'damaged' ? 'defect' : 'maintenance', 'Gerätewart', 'Altreservierung #'.$id));
+                }
             }
+            $this->maintenance->history($item, 'returned', $condition.': '.($notes ?? ''), 'Altreservierung #'.$id);
         });
     }
 
@@ -72,6 +93,7 @@ final class EquipmentLoanService
         if (!$reservation instanceof EquipmentReservation) {
             throw new \DomainException('Reservierung nicht gefunden.');
         }
+        $this->em->refresh($reservation, LockMode::PESSIMISTIC_WRITE);
         return $reservation;
     }
 }

@@ -12,7 +12,7 @@
 			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-primary w-100" href="{{ path('equipment_manager_cash_closing') }}">Kassensturz /<br>Tagesabschluss</a></div>
 			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-danger w-100" href="{{ path('equipment_manager_cash_corrections') }}"><br>Kassenkorrekturen</a></div>
 		</div>
-		<p>Geldannahmen für TÜV-Prüfungen und Ausrüstungsverleih deines Vereins. Überweisungen werden separat ausgewiesen und zählen nicht zum Bargeldbestand.</p>
+		<p>Geldannahmen für TÜV-Prüfungen, Ausrüstungsverleih und Füllungen deines Vereins. Überweisungen werden separat ausgewiesen und zählen nicht zum Bargeldbestand.</p>
 		{% for message in app.flashes('success') %}
 			<div class="alert alert-success">
 				{{ message }}
@@ -115,8 +115,8 @@
                         {% else %}
                         <tr>
                             <td>{{ row.receipt.collectedAt|date('d.m.Y H:i') }}</td>
-                            <td>{{ row.type == 'tuv' ? 'TÜV' : 'Leihgebühr' }}</td>
-                            <td>{{ row.receipt.booking.id }}</td>
+                            <td>{{ row.type == 'fill' ? 'Füllgebühr' : (row.type == 'tuv' ? 'TÜV' : 'Leihgebühr') }}</td>
+                            <td>{{ row.type == 'fill' ? row.receipt.label : row.receipt.booking.id }}</td>
                             <td>{{ row.receipt.method == 'cash' ? 'Bar' : 'Überweisung' }}</td>
                             <td>{{ (row.receipt.amountCents / 100)|number_format(2, ',', '.') }} €</td>
                             <td>{{ row.receipt.collectedBy }}</td>

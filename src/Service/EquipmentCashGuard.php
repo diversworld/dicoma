@@ -37,11 +37,12 @@ final class EquipmentCashGuard
         $args=['club'=>$clubId]; if ($after) {$args['after']=$after;}
         $tuv=(int)$db->fetchOne("SELECT COALESCE(SUM(r.amount_cents),0) FROM tuv_payment_receipt r INNER JOIN member_tank_check_booking b ON b.id=r.booking_id INNER JOIN member m ON m.id=b.member_id WHERE m.club_id=:club AND r.method='cash'".$filter,$args);
         $rental=(int)$db->fetchOne("SELECT COALESCE(SUM(r.amount_cents),0) FROM equipment_rental_receipt r INNER JOIN equipment_booking b ON b.id=r.booking_id INNER JOIN member m ON m.id=b.member_id WHERE m.club_id=:club AND r.method='cash'".$filter,$args);
+        $fill=(int)$db->fetchOne("SELECT COALESCE(SUM(r.amount_cents),0) FROM equipment_fill_charge r WHERE r.club_id=:club AND r.method='cash'".$filter,$args);
         $pArgs=['club'=>$clubId];$pFilter='';if ($after) {$pFilter=' AND paid_at > :after';$pArgs['after']=$after;}
         $out=(int)$db->fetchOne('SELECT COALESCE(SUM(amount_cents),0) FROM equipment_cash_payout WHERE club_id=:club'.$pFilter,$pArgs);
         $cArgs=['club'=>$clubId];$cFilter='';if ($after) {$cFilter=' AND created_at > :after';$cArgs['after']=$after;}
         $corrections=$db->fetchAllAssociative('SELECT direction,amount_cents FROM equipment_cash_correction WHERE club_id=:club'.$cFilter,$cArgs);
         $net=0;foreach ($corrections as $correction) {$net+=($correction['direction']==='in'?1:-1)*(int)$correction['amount_cents'];}
-        return (int)($last['counted_cents']??0)+$tuv+$rental-$out+$net;
+        return (int)($last['counted_cents']??0)+$tuv+$rental+$fill-$out+$net;
     }
 }

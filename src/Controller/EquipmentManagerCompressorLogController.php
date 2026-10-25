@@ -19,10 +19,11 @@ final class EquipmentManagerCompressorLogController extends AbstractController
         return $club;
     }
     #[Route('/equipment-manager/compressor-log', name:'equipment_manager_compressor_log', methods:['GET','POST'])]
-    public function index(Request $request, EntityManagerInterface $em): Response
+    public function index(Request $request, EntityManagerInterface $em, \App\Service\EquipmentFillingService $filling): Response
     {
         $club=$this->club($em);
         if ($request->isMethod('POST')) {
+            $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
             if (!$this->isCsrfTokenValid('compressor_fill_create',(string)$request->request->get('_token',''))) {
                 throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
             }
@@ -62,7 +63,11 @@ final class EquipmentManagerCompressorLogController extends AbstractController
                 $log->setCylinderCheckConfirmed(true);
                 $log->setAirQualityConfirmed(true);
                 $log->setFilterCheckConfirmed(true);
-                $em->persist($log); $em->flush();
+                try { $filling->save($club, $log, $request->request->getString('fee')); }
+                catch (\DomainException $e) {
+                    $this->addFlash('danger', $e->getMessage());
+                    return $this->redirectToRoute('equipment_manager_compressor_log', [], Response::HTTP_SEE_OTHER);
+                }
                 $this->addFlash('success','Füllung #'.$log->getId().' dokumentiert.');
                 return $this->redirectToRoute('equipment_manager_compressor_log',[],Response::HTTP_SEE_OTHER);
             }

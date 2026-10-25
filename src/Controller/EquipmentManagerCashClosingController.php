@@ -40,6 +40,8 @@ final class EquipmentManagerCashClosingController extends AbstractController
             $rows=$db->fetchAllAssociative("SELECT r.id,r.amount_cents,r.collected_at FROM $table r INNER JOIN $booking b ON b.id=r.booking_id INNER JOIN member m ON m.id=b.member_id WHERE m.club_id=:club AND r.method='cash' AND r.collected_at>=:start AND r.collected_at<:end", ['club'=>$clubId,'start'=>$start,'end'=>$end]);
             foreach ($rows as $r) {$cashIn+=(int)$r['amount_cents'];$items[]=$kind.':'.$r['id'].':'.$r['amount_cents'].':'.$r['collected_at'];}
         }
+        $rows=$db->fetchAllAssociative("SELECT id,amount_cents,collected_at FROM equipment_fill_charge WHERE club_id=:club AND method='cash' AND collected_at>=:start AND collected_at<:end", ['club'=>$clubId,'start'=>$start,'end'=>$end]);
+        foreach ($rows as $r) {$cashIn+=(int)$r['amount_cents'];$items[]='fill:'.$r['id'].':'.$r['amount_cents'].':'.$r['collected_at'];}
         $rows=$db->fetchAllAssociative('SELECT id,amount_cents,paid_at FROM equipment_cash_payout WHERE club_id=:club AND paid_at>=:start AND paid_at<:end', ['club'=>$clubId,'start'=>$start,'end'=>$end]);
         foreach ($rows as $r) {$cashOut+=(int)$r['amount_cents'];$items[]='payout:'.$r['id'].':'.$r['amount_cents'].':'.$r['paid_at'];}
         $corrections=$db->fetchAllAssociative('SELECT id,amount_cents,direction,created_at FROM equipment_cash_correction WHERE club_id=:club AND created_at>=:start AND created_at<:end', ['club'=>$clubId,'start'=>$start,'end'=>$end]);

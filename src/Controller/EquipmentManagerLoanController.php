@@ -35,7 +35,7 @@ final class EquipmentManagerLoanController extends AbstractController
     {
         $clubId = $this->clubId();
         $filter = $request->query->get('status', 'open');
-        if (!is_string($filter) || !in_array($filter, ['open', 'all', 'returned', 'cancelled'], true)) {
+        if (!is_string($filter) || !in_array($filter, ['open', 'all', 'returned', 'cancelled', 'closed'], true)) {
             throw $this->createNotFoundException('Unbekannter Filter.');
         }
 
@@ -49,7 +49,7 @@ final class EquipmentManagerLoanController extends AbstractController
             ->setParameter('clubId', $clubId)
             ->orderBy('b.createdAt', 'DESC');
         if ($filter === 'open') {
-            $qb->andWhere('b.status IN (:statuses)')->setParameter('statuses', ['reserved', 'partially_issued', 'issued', 'partially_returned']);
+            $qb->andWhere('b.status IN (:statuses)')->setParameter('statuses', ['reserved', 'partially_issued', 'issued', 'partially_returned', 'returned']);
         } elseif ($filter !== 'all') {
             $qb->andWhere('b.status = :status')->setParameter('status', $filter);
         }
@@ -59,7 +59,7 @@ final class EquipmentManagerLoanController extends AbstractController
             ->where('c.id = :clubId')->setParameter('clubId', $clubId)
             ->orderBy('b.createdAt', 'DESC')->setMaxResults(100);
         if ($filter === 'open') {
-            $idsQb->andWhere('b.status IN (:statuses)')->setParameter('statuses', ['reserved', 'partially_issued', 'issued', 'partially_returned']);
+            $idsQb->andWhere('b.status IN (:statuses)')->setParameter('statuses', ['reserved', 'partially_issued', 'issued', 'partially_returned', 'returned']);
         } elseif ($filter !== 'all') {
             $idsQb->andWhere('b.status = :status')->setParameter('status', $filter);
         }

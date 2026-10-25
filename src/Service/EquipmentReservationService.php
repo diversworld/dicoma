@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class EquipmentReservationService
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(private readonly EntityManagerInterface $em, private readonly EquipmentAssetAvailability $availability) {}
 
     public function available(EquipmentReservation $reservation): bool
     {
@@ -20,35 +20,9 @@ final class EquipmentReservationService
         $start = $reservation->getStartsAt();
         $end = $reservation->getEndsAt();
         if (!$item || !$member || !$start || !$end || $start >= $end || $reservation->getQuantity() < 1) { return false; }
-        if (!$item->isLendable() || $item->getConditionStatus() !== 'ready') { return false; }
-        if (!$item->getClub()?->getId() || $item->getClub()->getId() !== $member->getClub()?->getId()) { return false; }
-        if ($item->getStockType() === 'individual' && $reservation->getQuantity() !== 1) { return false; }
-        $used = (int) $this->em->createQueryBuilder()
-            ->select('COALESCE(SUM(r.quantity), 0)')
-            ->from(EquipmentReservation::class, 'r')
-            ->where('r.equipmentItem = :item')
-            ->andWhere('(r.status = :issued OR (r.status = :reserved AND r.startsAt < :end AND r.endsAt > :start))')
-            ->andWhere('(:exclude IS NULL OR r.id != :exclude)')
-            ->setParameter('item', $item)
-            ->setParameter('issued', 'issued')
-            ->setParameter('reserved', 'reserved')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->setParameter('exclude', $reservation->getId())
-            ->getQuery()->getSingleScalarResult();
-        // New multi-item bookings share the same physical stock.
-        $bookingUsed = (int) $this->em->createQueryBuilder()
-            ->select('COALESCE(SUM(bi.quantity), 0)')
-            ->from(EquipmentBookingItem::class, 'bi')
-            ->join('bi.booking', 'b')
-            ->where('bi.equipmentItem = :item')
-            ->andWhere('b.status = :reserved AND b.startsAt < :end AND b.endsAt > :start')
-            ->setParameter('item', $item)
-            ->setParameter('reserved', 'reserved')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->getQuery()->getSingleScalarResult();
-        return $used + $bookingUsed + $reservation->getQuantity() <= $item->getTotalQuantity();
+        $clubId = $member->getClub()?->getId();
+        return $clubId !== null && $reservation->getQuantity() === 1
+            && $this->availability->isAvailablePreview($item, $clubId, $start, $end, null, $reservation->getId());
     }
 
     public function save(EquipmentReservation $reservation): void
@@ -57,6 +31,9 @@ final class EquipmentReservationService
             $item = $reservation->getEquipmentItem();
             if (!$item || !$item->getId()) { throw new \DomainException('Ungültiger Inventarartikel.'); }
             $this->em->lock($item, LockMode::PESSIMISTIC_WRITE);
+            $clubId = $reservation->getMember()?->getClub()?->getId();
+            if (!$clubId || !$reservation->getStartsAt() || !$reservation->getEndsAt()) { throw new \DomainException('Mitglied oder Zeitraum fehlt.'); }
+            $this->availability->assertAvailable($item, $clubId, $reservation->getStartsAt(), $reservation->getEndsAt(), null, $reservation->getId());
             if (!$this->available($reservation)) { throw new \DomainException('Ausrüstung im Zeitraum nicht verfügbar oder nicht zulässig.'); }
             $this->em->persist($reservation);
             $this->em->flush();

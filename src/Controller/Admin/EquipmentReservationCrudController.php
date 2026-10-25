@@ -18,10 +18,16 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\Field;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use Symfony\Component\HttpFoundation\Response;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
 final class EquipmentReservationCrudController extends AbstractCrudController
 {
+    public function new(AdminContext $context): Response
+    {
+        return $this->redirectToRoute('equipment_manager_loans_direct', [], Response::HTTP_SEE_OTHER);
+    }
     public function __construct(private readonly EquipmentReservationService $reservations) {}
     public static function getEntityFqcn(): string { return EquipmentReservation::class; }
     public function configureCrud(Crud $crud): Crud
@@ -33,7 +39,7 @@ final class EquipmentReservationCrudController extends AbstractCrudController
     // Loeschen ueber EasyAdmin wuerde die Ausleihhistorie umgehen.
     public function configureActions(Actions $actions): Actions
     {
-        return $actions->disable(Action::DELETE, Action::BATCH_DELETE);
+        return $actions->disable(Action::EDIT, Action::DELETE, Action::BATCH_DELETE);
     }
 
     public function configureFields(string $pageName): iterable

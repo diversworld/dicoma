@@ -1,0 +1,67 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Inventarakte | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <a href="{{ path('equipment_manager_inventory', {type:type}) }}">Zurück zum Inventar</a>
+    <h1>Inventarakte: {{ asset }}</h1>
+    {% for category in ['success', 'danger'] %}{% for message in app.flashes(category) %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endfor %}
+    <p>Zustand: <strong>{{ asset.conditionStatus }}</strong> · Verleihfreigabe: {{ asset.lendable ? 'Ja' : 'Nein' }} · Nächste Prüfung: {{ due ? due|date('d.m.Y') : 'Nicht hinterlegt' }}</p>
+    {% if type == 'tank' %}<p><a href="{{ path('equipment_manager_tank_detail', {id:asset.id}) }}">Flaschenprüfungen, TÜV und bisherige Flaschenhistorie</a></p>{% endif %}
+    <section class="card card-body mb-3">
+        <h2>Stammdaten und Prüfplanung</h2>
+        {{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary">Inventarakte speichern</button>{{ form_end(form) }}
+    </section>
+    <section class="card card-body mb-3">
+        <h2>Wartung, Reparatur und Defektmeldung</h2>
+        <form method="post" action="{{ path('equipment_manager_inventory_maintenance', {type:type, id:asset.id}) }}" class="mb-3">
+            <input type="hidden" name="_token" value="{{ csrf_token('inventory_maintenance_' ~ type ~ '_' ~ asset.id) }}">
+            <input type="hidden" name="operation" value="inspect">
+            <label>Prüfung / Revision durchgeführt am <input type="date" name="performed" max="{{ 'now'|date('Y-m-d') }}" required></label>
+            <label>Nächste Fälligkeit <input type="date" name="next"> (leer = eingetragenes Prüfintervall)</label>
+            <label>Prüfer und Nachweis <input name="reference" minlength="10" maxlength="2000" required></label>
+            <button class="btn btn-outline-primary">Prüfnachweis dokumentieren (keine automatische Freigabe)</button>
+        </form>
+        <form method="post" action="{{ path('equipment_manager_inventory_maintenance', {type:type, id:asset.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('inventory_maintenance_' ~ type ~ '_' ~ asset.id) }}">
+            <input type="hidden" name="operation" value="open">
+            <label>Auftragsart <select name="kind" required><option value="maintenance">Wartung</option><option value="repair">Reparatur</option><option value="defect">Defekt / Schaden</option></select></label>
+            <label>Verantwortlich <input name="responsible" maxlength="180" required></label>
+            <label>Beschreibung <textarea name="description" minlength="10" maxlength="2000" required></textarea></label>
+            <button class="btn btn-warning">Auftrag eröffnen und technisch sperren</button>
+        </form>
+        {% for order in orders %}
+            <article class="border-top mt-3 pt-3">
+                <h3>Auftrag #{{ order.id }} · {{ order.kind }} · {{ order.status }}</h3>
+                <p>{{ order.createdAt|date('d.m.Y H:i') }} · Verantwortlich: {{ order.responsible|default('Gerätewart') }} · Erfasst von: {{ order.openedBy|default('Altbestand') }}</p>
+                <p>{{ order.description }}</p>
+                {% if order.status == 'open' %}
+                    <form method="post" action="{{ path('equipment_manager_inventory_maintenance', {type:type, id:asset.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('inventory_maintenance_' ~ type ~ '_' ~ asset.id) }}">
+                        <input type="hidden" name="operation" value="close"><input type="hidden" name="order_id" value="{{ order.id }}">
+                        <label>Abschlussbericht <textarea name="resolution" minlength="10" maxlength="2000" required></textarea></label>
+                        <button class="btn btn-outline-primary">Auftrag abschließen (bleibt gesperrt)</button>
+                    </form>
+                {% else %}<p>{{ order.resolution }} · {{ order.closedBy }} · {{ order.closedAt|date('d.m.Y H:i') }}</p>{% endif %}
+            </article>
+        {% endfor %}
+        {% if not asset.lendable or asset.conditionStatus != 'ready' %}
+            <form class="mt-3" method="post" action="{{ path('equipment_manager_inventory_maintenance', {type:type, id:asset.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('inventory_maintenance_' ~ type ~ '_' ~ asset.id) }}"><input type="hidden" name="operation" value="release">
+                <label>Freigabebericht <textarea name="reason" minlength="10" maxlength="2000" required></textarea></label>
+                <button class="btn btn-success">Nach technischer Prüfung freigeben</button>
+            </form>
+        {% endif %}
+    </section>
+    <section class="card card-body mb-3"><h2>Dokumente</h2>
+        <form method="post" enctype="multipart/form-data" action="{{ path('equipment_manager_inventory_document_upload', {type:type, id:asset.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('inventory_document_' ~ type ~ '_' ~ asset.id) }}">
+            <label>Nachweis (PDF, JPG, PNG; maximal 5 MB) <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" required></label>
+            <button class="btn btn-primary">Dokument ablegen</button>
+        </form>
+        <ul>{% for document in documents %}<li><a href="{{ path('equipment_manager_inventory_document', {id:document.id}) }}">{{ document.originalName }}</a> · {{ document.uploadedBy }} · {{ document.uploadedAt|date('d.m.Y') }}</li>{% endfor %}</ul>
+    </section>
+    <section><h2>Gerätehistorie</h2>
+        <ul>{% for event in record.history|reverse %}<li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.event }}: {{ event.description }}</li>{% else %}<li>Noch keine Einträge in der gemeinsamen Geräteakte.</li>{% endfor %}</ul>
+    </section>
+</main>
+{% endblock %}

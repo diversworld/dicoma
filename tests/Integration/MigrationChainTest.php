@@ -98,6 +98,40 @@ final class MigrationChainTest extends TestCase
         self::assertTrue($this->connection->createSchemaManager()->tablesExist(['team_training', 'tournament', 'tournament_entry', 'tournament_player', 'tournament_match', 'tournament_payment', 'tournament_document']));
     }
 
+    public function testEquipmentUpgradePreservesLoansMaintenanceAndUnknownTables(): void
+    {
+        $this->migrate('20261024150454');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Borrower']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => $person, 'membership_status' => 'active']);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('equipment_booking', [
+            'member_id' => $member, 'starts_at' => '2026-10-24 08:00:00', 'ends_at' => '2026-10-24 18:00:00',
+            'created_at' => '2026-10-23 12:00:00', 'status' => 'returned', 'notes' => 'Retain loan evidence', 'agreed_rental_fee_cents' => 500,
+        ]);
+        $booking = $this->connection->fetchAssociative('SELECT * FROM equipment_booking');
+        $this->connection->insert('tank', ['inventory' => 'KEEP-TANK', 'size' => 12, 'last_check_date' => '2026-01-01', 'serialnumber' => 'KEEP-SERIAL', 'club_id' => $club]);
+        $tank = (int) $this->connection->lastInsertId();
+        $this->connection->insert('tank_maintenance_order', [
+            'tank_id' => $tank, 'status' => 'open', 'description' => 'Keep original maintenance evidence', 'created_at' => '2026-10-24 12:00:00',
+        ]);
+        $order = $this->connection->fetchAssociative('SELECT * FROM tank_maintenance_order');
+        $this->connection->executeStatement('CREATE TABLE equipment_unmapped_legacy (id INT PRIMARY KEY, evidence VARCHAR(80))');
+        $this->connection->insert('equipment_unmapped_legacy', ['id' => 1, 'evidence' => 'Preserve unknown inventory data']);
+        $this->migrate('latest');
+        $afterBooking = $this->connection->fetchAssociative('SELECT * FROM equipment_booking');
+        $afterOrder = $this->connection->fetchAssociative('SELECT * FROM tank_maintenance_order');
+        self::assertSame($booking, array_intersect_key($afterBooking, $booking));
+        self::assertSame($order, array_intersect_key($afterOrder, $order));
+        self::assertSame(0, (int) $afterBooking['approval_required']);
+        self::assertNull($afterBooking['closed_at']);
+        self::assertSame('maintenance', $afterOrder['kind']);
+        self::assertNull($afterOrder['equipment_item_id']);
+        self::assertSame('Preserve unknown inventory data', $this->connection->fetchOne('SELECT evidence FROM equipment_unmapped_legacy'));
+        self::assertTrue($this->connection->createSchemaManager()->tablesExist(['equipment_asset_record', 'equipment_document', 'equipment_fill_charge']));
+    }
+
     public function testPersonNormalizationPreservesAllFieldsIdsAndAccountLinks(): void
     {
         $this->migrate('20261022130000');

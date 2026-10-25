@@ -49,6 +49,7 @@
 						<label class="form-label">Bemerkung</label>
 						<textarea class="form-control" name="notes" maxlength="2000"></textarea>
 					</div>
+                    <div class="col-12"><label>Vereinbarte Füllgebühr für diese Gruppe gesamt (EUR; 0 = kostenlos) <input name="fee" inputmode="decimal" required></label> <a href="{{ path('equipment_manager_fill_billing') }}">Füllgebühren und Zahlungen</a></div>
 					<div class="col-12 form-check ms-2">
 						<input class="form-check-input" type="checkbox" name="cylinder_check" value="1" id="cylinder_check" required>
 						<label class="form-check-label" for="cylinder_check">Kennzeichnung, Prüffrist, Zustand und zulässigen Fülldruck aller angeschlossenen Flaschen kontrolliert</label>
@@ -62,6 +63,7 @@
 					<input type="hidden" name="action" value="close">
 					<input type="hidden" name="session_id" value="{{ selected.id }}">
 					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_close') }}">
+					<label>Abschließende Betriebsstunden <input name="closing_hours" inputmode="decimal" required></label>
 					<button class="btn btn-outline-secondary">Füllabend abschließen</button>
 				</form>
 			{% endif %}

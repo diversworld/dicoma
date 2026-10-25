@@ -50,6 +50,40 @@ class EquipmentBooking
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $agreedRentalFeeCents = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $approvalRequired = false;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $approvedAt = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $approvedBy = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $closedAt = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $closedBy = null;
+
+    public function isApprovalRequired(): bool { return $this->approvalRequired; }
+    public function requireApproval(): void { $this->approvalRequired = true; $this->approvedAt = null; $this->approvedBy = null; }
+    public function getApprovedAt(): ?\DateTimeImmutable { return $this->approvedAt; }
+    public function getApprovedBy(): ?string { return $this->approvedBy; }
+    public function approve(string $actor): void
+    {
+        $this->approvedAt = new \DateTimeImmutable();
+        $this->approvedBy = mb_substr($actor, 0, 180);
+    }
+    public function getClosedAt(): ?\DateTimeImmutable { return $this->closedAt; }
+    public function getClosedBy(): ?string { return $this->closedBy; }
+    public function close(string $actor): void
+    {
+        if ($this->status !== 'returned') { throw new \DomainException('Buchung ist nicht vollständig zurückgegeben.'); }
+        $this->status = 'closed';
+        $this->closedAt = new \DateTimeImmutable();
+        $this->closedBy = mb_substr($actor, 0, 180);
+    }
+
     public function getAgreedRentalFeeCents(): ?int { return $this->agreedRentalFeeCents; }
     public function setAgreedRentalFeeCents(?int $cents): static
     {

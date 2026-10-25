@@ -15,6 +15,7 @@ final class EquipmentBookingService
         private readonly EntityManagerInterface $em,
         private readonly EquipmentAssetAvailability $availability,
         private readonly ValidatorInterface $validator,
+        private readonly EquipmentInventory $inventory,
     ) {}
 
     public function saveNew(EquipmentBooking $booking): void
@@ -42,7 +43,8 @@ final class EquipmentBookingService
             $candidates = array_values(array_filter([$line->getEquipmentItem(), $line->getRegulator(), $line->getTank()]));
             if (count($candidates) !== 1) { throw new \DomainException('Jede Position muss genau einen Gegenstand enthalten.'); }
             $asset = $candidates[0];
-            $key = get_class($asset).':'.$asset->getId();
+            $physical = EquipmentInventory::physicalAsset($asset);
+            $key = EquipmentInventory::field($physical).':'.$physical->getId();
             if (!$asset->getId() || isset($assets[$key])) { throw new \DomainException('Gegenstand doppelt oder nicht gespeichert.'); }
             $assets[$key] = $asset;
         }
@@ -50,28 +52,15 @@ final class EquipmentBookingService
         $this->em->wrapInTransaction(function () use ($booking, $assets, $clubId, $start, $end): void {
             foreach ($assets as $asset) {
                 $this->availability->assertAvailable($asset, $clubId, $start, $end);
+                if ($this->inventory->requiresApproval($asset)) { $booking->requireApproval(); }
             }
             // DICOMA_RENTAL_PRICE_SNAPSHOT_V1: snapshot all asset fees in cents.
             // Do not silently save a partial price if an asset has no valid fee.
             $totalCents = 0;
-            $complete = true;
             foreach ($booking->getItems() as $line) {
                 $asset = $line->getEquipmentItem() ?? $line->getRegulator() ?? $line->getTank();
-                if ($asset === null || !method_exists($asset, 'getRentalFee')) {
-                    $complete = false;
-                    break;
-                }
-                $fee = $asset->getRentalFee();
-                if (!is_string($fee) || !preg_match('/^\d{1,8}\.\d{2}$/D', $fee)) {
-                    $complete = false;
-                    break;
-                }
-                [$euros, $cents] = explode('.', $fee);
-                $totalCents += (int) $euros * 100 + (int) $cents;
+                $totalCents += EquipmentInventory::feeCents($asset);
                 if ($totalCents > 2147483647) { throw new \DomainException('Rental amount too large.'); }
-            }
-            if (!$complete) {
-                throw new \DomainException('Rental fee is missing or invalid for an asset. Please configure all fees before booking.');
             }
             $booking->setAgreedRentalFeeCents($totalCents);
             $this->em->persist($booking);

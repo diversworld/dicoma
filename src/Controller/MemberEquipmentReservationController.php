@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Controller;
 use App\Entity\{EquipmentItem,EquipmentCategory,Regulator,Tank,EquipmentBooking,EquipmentBookingItem,EquipmentReservation,User};
 use App\Service\EquipmentBookingService;
+use App\Service\EquipmentBookingWorkflow;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request,Response};
@@ -57,14 +58,16 @@ final class MemberEquipmentReservationController extends AbstractController
     }
 
     #[Route('/my/reservations/{id}/cancel', name: 'member_reservation_cancel', methods: ['POST'], requirements: ['id'=>'\d+'])]
-    public function cancel(int $id, Request $request, EntityManagerInterface $em): Response
+    public function cancel(int $id, Request $request, EntityManagerInterface $em, EquipmentBookingWorkflow $workflow): Response
     {
         $user=$this->getUser(); $member=$user instanceof User ? $user->getMember() : null;
         if (!$member || !$this->isCsrfTokenValid('member_reservation_cancel_'.$id,(string)$request->request->get('_token',''))) throw $this->createAccessDeniedException();
         $booking=$em->getRepository(EquipmentBooking::class)->find($id);
         if (!$booking || $booking->getMember()?->getId()!==$member->getId()) throw $this->createNotFoundException();
-        if ($booking->getStatus()!=='reserved' || $booking->getStartsAt()<=new \DateTimeImmutable()) { $this->addFlash('danger','Diese Buchung kann nicht storniert werden.'); }
-        else { $booking->setStatus('cancelled'); $em->flush(); $this->addFlash('success','Buchung storniert.'); }
+        try {
+            $workflow->cancel($id, $member->getClub()->getId(), $user->getUserIdentifier(), 'Vom Mitglied storniert', $member->getId());
+            $this->addFlash('success', 'Buchung storniert.');
+        } catch (\DomainException $e) { $this->addFlash('danger', $e->getMessage()); }
         return $this->redirectToRoute('member_reservations',[],Response::HTTP_SEE_OTHER);
     }
 }

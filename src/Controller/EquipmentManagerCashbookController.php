@@ -6,6 +6,7 @@ use App\Service\EquipmentCashGuard;
 use App\Entity\EquipmentBooking;
 use App\Entity\EquipmentCashPayout;
 use App\Entity\EquipmentRentalReceipt;
+use App\Entity\EquipmentFillCharge;
 use App\Entity\MemberTankCheckBooking;
 use App\Entity\TuvPaymentReceipt;
 use App\Entity\User;
@@ -28,7 +29,7 @@ final class EquipmentManagerCashbookController extends AbstractController
     #[Route('/equipment-manager/cashbook', name: 'equipment_manager_cashbook', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
     {
-        $clubId=$this->clubId(); $rows=[]; $totals=['tuv'=>0,'rental'=>0,'cash'=>0,'bank'=>0];
+        $clubId=$this->clubId(); $rows=[]; $totals=['tuv'=>0,'rental'=>0,'fill'=>0,'cash'=>0,'bank'=>0];
         $tuv=$em->getRepository(TuvPaymentReceipt::class)->createQueryBuilder('r')
             ->join('r.booking','b')->join('b.member','m')->join('m.club','c')
             ->where('c.id = :club')->setParameter('club',$clubId)->orderBy('r.collectedAt','DESC')->setMaxResults(500)->getQuery()->getResult();
@@ -40,6 +41,14 @@ final class EquipmentManagerCashbookController extends AbstractController
                 $rows[]=['type'=>$type,'receipt'=>$r]; $totals[$type]+=$r->getAmountCents();
                 $totals[$r->getMethod()]+=$r->getAmountCents();
             }
+        }
+        $fills=$em->getRepository(EquipmentFillCharge::class)->createQueryBuilder('r')
+                ->where('IDENTITY(r.club) = :club AND r.collectedAt IS NOT NULL')->setParameter('club',$clubId)
+                ->orderBy('r.collectedAt','DESC')->setMaxResults(500)->getQuery()->getResult();
+            foreach ($fills as $receipt) {
+                $rows[]=['type'=>'fill','receipt'=>$receipt];
+                $totals['fill']+=$receipt->getAmountCents();
+                $totals[$receipt->getMethod()]+=$receipt->getAmountCents();
         }
         // Auch echte Barauszahlungen gehören chronologisch ins Hauptjournal.
         $payouts=$em->getRepository(EquipmentCashPayout::class)->createQueryBuilder('p')
@@ -99,6 +108,13 @@ final class EquipmentManagerCashbookController extends AbstractController
         $db=$em->getConnection(); $db->beginTransaction();
         try {
             $guard->lockAndAssertOpen($em->getReference(Club::class,$clubId));
+            $em->refresh($booking, \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE);
+            if ($booking->getMember()?->getClub()?->getId() !== $clubId || !in_array($booking->getStatus(), ['partially_issued','issued','partially_returned','returned'], true)) {
+                throw new \DomainException('Buchung ist nicht zur Zahlungsverbuchung freigegeben.');
+            }
+            if ($booking->getAgreedRentalFeeCents() === null || $amount !== $booking->getAgreedRentalFeeCents()) {
+                throw new \DomainException('Betrag muss der festgeschriebenen Leihgebühr entsprechen; fehlenden Altpreis zuerst bestätigen.');
+            }
             if ($em->getRepository(EquipmentRentalReceipt::class)->findOneBy(['booking'=>$booking])) { throw new \DomainException('Zahlung bereits erfasst.'); }
             $em->persist(new EquipmentRentalReceipt($booking,$amount,$method,$actor,(string)$request->request->get('note','')));
             $em->flush(); $db->commit();

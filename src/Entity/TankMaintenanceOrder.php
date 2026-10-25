@@ -17,8 +17,25 @@ class TankMaintenanceOrder
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Tank::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
-    private Tank $tank;
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?Tank $tank = null;
+
+    #[ORM\ManyToOne(targetEntity: EquipmentItem::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?EquipmentItem $equipmentItem = null;
+
+    #[ORM\ManyToOne(targetEntity: Regulator::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?Regulator $regulator = null;
+
+    #[ORM\Column(length: 20, options: ['default' => 'maintenance'])]
+    private string $kind = 'maintenance';
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $responsible = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $openedBy = null;
 
     #[ORM\Column(length: 20)]
     private string $status = 'open';
@@ -38,19 +55,29 @@ class TankMaintenanceOrder
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $resolution = null;
 
-    public function __construct(Tank $tank, string $description)
+    public function __construct(EquipmentItem|Regulator|Tank $tank, string $description, string $kind = 'maintenance', ?string $responsible = null, ?string $actor = null)
     {
         $description = trim($description);
         if (mb_strlen($description) < 10) {
             throw new \DomainException('Die Wartungsbeschreibung muss mindestens 10 Zeichen enthalten.');
         }
-        $this->tank = $tank;
+        if (!in_array($kind, ['maintenance', 'repair', 'defect'], true)) { throw new \DomainException('Ungültige Auftragsart.'); }
+        if ($tank instanceof EquipmentItem) { $this->equipmentItem = $tank; }
+        elseif ($tank instanceof Regulator) { $this->regulator = $tank; }
+        else { $this->tank = $tank; }
+        $this->kind = $kind;
+        $this->responsible = $responsible;
+        $this->openedBy = $actor;
         $this->description = $description;
         $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int { return $this->id; }
-    public function getTank(): Tank { return $this->tank; }
+    public function getTank(): ?Tank { return $this->tank; }
+    public function getAsset(): EquipmentItem|Regulator|Tank { return $this->equipmentItem ?? $this->regulator ?? $this->tank; }
+    public function getKind(): string { return $this->kind; }
+    public function getResponsible(): ?string { return $this->responsible; }
+    public function getOpenedBy(): ?string { return $this->openedBy; }
     public function getStatus(): string { return $this->status; }
     public function getDescription(): string { return $this->description; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }

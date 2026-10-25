@@ -15,7 +15,7 @@ final class TankStatusWorkflow
 {
     public function __construct(private readonly EntityManagerInterface $em) {}
 
-    public function apply(int $tankId, string $operation, string $reason, string $actor): void
+    public function apply(int $tankId, string $operation, string $reason, string $actor, ?int $requiredClubId = null): void
     {
         $reason = trim($reason);
         if (mb_strlen($reason) < 10 || mb_strlen($reason) > 2000) {
@@ -25,10 +25,14 @@ final class TankStatusWorkflow
             throw new \DomainException('Unzulässige Statusänderung.');
         }
 
-        $this->em->wrapInTransaction(function () use ($tankId, $operation, $reason, $actor): void {
+        $this->em->wrapInTransaction(function () use ($tankId, $operation, $reason, $actor, $requiredClubId): void {
             $tank = $this->em->find(Tank::class, $tankId, LockMode::PESSIMISTIC_WRITE);
             if (!$tank) {
                 throw new \DomainException('Tauchflasche nicht gefunden.');
+            }
+            $this->em->refresh($tank, LockMode::PESSIMISTIC_WRITE);
+            if ($requiredClubId !== null && $tank->getClub()?->getId() !== $requiredClubId) {
+                throw new \DomainException('Flasche gehört nicht zum berechtigten Verein.');
             }
             if ($operation === 'release') {
                 $openOrder = $this->em->getRepository(TankMaintenanceOrder::class)

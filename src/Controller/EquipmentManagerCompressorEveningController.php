@@ -18,9 +18,10 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
  private function user():User {$u=$this->getUser();if (!$u instanceof User)throw $this->createAccessDeniedException();return $u;}
  private function hours(string $raw):?int {if (!preg_match('/^\d{1,6}([.,]\d)?$/D',$raw))return null;return (int)round((float)str_replace(',','.',$raw)*10);}
  #[Route('/equipment-manager/compressor-evenings',name:'equipment_manager_compressor_evenings',methods:['GET','POST'])]
- public function index(Request $request,EntityManagerInterface $em):Response {
+ public function index(Request $request,EntityManagerInterface $em,\App\Service\EquipmentFillingService $filling):Response {
   $club=$this->club($em);$action=(string)$request->request->get('action','');
   if ($request->isMethod('POST')) {
+   $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
    if (!$this->isCsrfTokenValid('compressor_evening_'.$action,(string)$request->request->get('_token','')))throw $this->createAccessDeniedException('CSRF');
    if ($action==='open') {
     $name=trim((string)$request->request->get('compressor',''));
@@ -40,7 +41,19 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
     $id=filter_var($request->request->get('session_id'),FILTER_VALIDATE_INT);
     $session=$id?$em->find(CompressorFillSession::class,$id):null;
     if (!$session||$session->getClub()->getId()!==$club->getId()||$session->getClosedAt())throw $this->createNotFoundException('Offener Fuellabend nicht gefunden.');
-    if ($action==='close') {$session->close();$em->flush();$this->addFlash('success','Fuellabend abgeschlossen.');return $this->redirectToRoute('equipment_manager_compressor_evenings',[],Response::HTTP_SEE_OTHER);}
+    if ($action==='close') {
+     $hours=$this->hours(trim($request->request->getString('closing_hours')));
+     try {
+      $em->wrapInTransaction(function () use ($em,$session,$club,$hours):void {
+       $em->refresh($session,\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE);
+       if ($session->getClub()->getId()!==$club->getId()||$session->getClosedAt())throw new \DomainException('Fuellabend ist bereits geschlossen oder gehoert nicht zum Verein.');
+       if ($hours===null||$hours<$session->getOpeningHoursTenths())throw new \DomainException('Abschliessende Betriebsstunden fehlen oder liegen vor dem Anfangsstand.');
+       $session->close($hours);
+      });
+      $this->addFlash('success','Fuellabend abgeschlossen.');
+     } catch (\DomainException $e) {$this->addFlash('danger',$e->getMessage());}
+     return $this->redirectToRoute('equipment_manager_compressor_evenings',['session'=>$session->getId()],Response::HTTP_SEE_OTHER);
+    }
     $pressure=filter_var($request->request->get('pressure'),FILTER_VALIDATE_INT);
     $notes=trim((string)$request->request->get('notes',''));
     $cylinders=[];$seen=[];$error=null;
@@ -59,15 +72,17 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
      }
      $volumeLiters=number_format((float)$volumeRaw,1,'.','');
      if ($name===''||mb_strlen($name)>100||isset($seen[mb_strtolower($name)])){$error='Flaschenkennungen fehlen, sind doppelt oder zu lang.';break;}
-     if ($tank && ($tank->getInspectionDueStatus()==='overdue'||$tank->getConditionStatus()==='defective')){$error='Eine Vereinsflasche ist nicht fuellbereit.';break;}
+     if ($tank && (!$tank->getNextCheckDate() || $tank->getNextCheckDate()->format('Y-m-d') < date('Y-m-d') || $tank->getConditionStatus() !== 'ready')){$error='Eine Vereinsflasche ist nicht fuellbereit.';break;}
      $seen[mb_strtolower($name)]=true;$cylinders[]=[$tank,$name,$volumeLiters];
     }
     if ($pressure===false||$pressure<1||$pressure>350||!$cylinders||mb_strlen($notes)>2000||$request->request->get('cylinder_check')!=='1')$error=$error?:'Druck, Flaschen oder Flaschenpruefung ungueltig.';
     if ($error)$this->addFlash('danger',$error);
     else {
-     $batch=new CompressorFillBatch($session,$this->user(),$pressure,$notes?:null);$em->persist($batch);
-     foreach($cylinders as $c)$em->persist(new CompressorFillCylinder($batch,$c[0],$c[1],$c[2]));
-     $em->flush();$this->addFlash('success',count($cylinders).' Flaschen mit gemeinsamem Enddruck von '.$pressure.' bar dokumentiert.');
+     $batch=new CompressorFillBatch($session,$this->user(),$pressure,$notes?:null);
+     $entries=[];foreach($cylinders as $c)$entries[]=new CompressorFillCylinder($batch,$c[0],$c[1],$c[2]);
+     try {$filling->save($club,$batch,$request->request->getString('fee'),$entries);}
+     catch (\DomainException $e) {$this->addFlash('danger',$e->getMessage());return $this->redirectToRoute('equipment_manager_compressor_evenings',['session'=>$session->getId()],Response::HTTP_SEE_OTHER);}
+     $this->addFlash('success',count($cylinders).' Flaschen mit gemeinsamem Enddruck von '.$pressure.' bar dokumentiert.');
      return $this->redirect($this->generateUrl('equipment_manager_compressor_evenings',['session'=>$session->getId()]).'#naechste-fuellung',Response::HTTP_SEE_OTHER);
     }
    } elseif ($action==='maintenance') {

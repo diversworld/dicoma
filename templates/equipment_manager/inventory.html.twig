@@ -1,0 +1,27 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Inventar | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>Inventar und Gerätewart</h1>
+    <nav aria-label="Inventarbereiche">
+        {% for key, label in {'equipment':'Ausrüstung', 'regulator':'Atemregler', 'tank':'Tauchflaschen'} %}
+            <a class="btn btn-outline-primary" href="{{ path('equipment_manager_inventory', {type:key}) }}">{{ label }}</a>
+        {% endfor %}
+    </nav>
+    <p>Inventarakte mit Eigentum, Lagerort, Prüfplanung, Wartung, Defekten und Dokumenten. {{ total }} Gegenstände in diesem Bereich.</p>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Inventar</th><th>Bezeichnung</th><th>Seriennummer</th><th>Kategorie</th><th>Zustand</th><th>Freigabe</th></tr></thead>
+        <tbody>{% for asset in assets %}
+            <tr>
+                <td><a href="{{ path('equipment_manager_inventory_detail', {type:type, id:asset.id}) }}">{{ type == 'tank' ? asset.inventory : asset.inventoryNumber }}</a></td>
+                <td>{{ type == 'equipment' ? asset.name : asset }}</td>
+                <td>{{ type == 'regulator' ? asset.firstStageSerial : asset.serialNumber }}</td>
+                <td>{{ type == 'equipment' ? asset.category : (type == 'tank' ? 'Tauchflasche' : 'Atemregler') }}</td>
+                <td>{{ asset.conditionStatus }}</td><td>{{ asset.lendable ? 'Ja' : 'Nein' }}</td>
+            </tr>
+        {% else %}<tr><td colspan="6">Keine Gegenstände vorhanden.</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if page > 1 %}<a href="{{ path('equipment_manager_inventory', {type:type, page:page - 1}) }}">Zurück</a>{% endif %}
+    {% if page * 50 < total %}<a href="{{ path('equipment_manager_inventory', {type:type, page:page + 1}) }}">Weiter</a>{% endif %}
+</main>
+{% endblock %}

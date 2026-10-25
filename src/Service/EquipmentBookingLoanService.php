@@ -16,6 +16,8 @@ final class EquipmentBookingLoanService
         private readonly EntityManagerInterface $em,
         private readonly EquipmentAssetAvailability $availability,
         private readonly TankConditionHistoryRecorder $historyRecorder,
+        private readonly EquipmentInventory $inventory,
+        private readonly EquipmentMaintenanceService $maintenance,
     ) {}
 
     public function change(int $bookingId, int $lineId, string $operation, ?string $condition = null, ?string $notes = null): void
@@ -25,6 +27,10 @@ final class EquipmentBookingLoanService
         }
         if ($operation === 'return' && !in_array($condition, ['ready', 'maintenance', 'damaged'], true)) {
             throw new \DomainException('Rueckgabezustand fehlt oder ist ungueltig.');
+        }
+        if ($notes !== null && mb_strlen($notes) > 2000) { throw new \DomainException('Rückgabenotiz ist zu lang.'); }
+        if ($operation === 'return' && $condition !== 'ready' && mb_strlen(trim($notes ?? '')) < 10) {
+            throw new \DomainException('Defekt oder Wartungsbedarf muss mit mindestens 10 Zeichen beschrieben werden.');
         }
 
         $this->em->wrapInTransaction(function () use ($bookingId, $lineId, $operation, $condition, $notes): void {
@@ -60,17 +66,33 @@ final class EquipmentBookingLoanService
             if (!$booking || !$line || $line->getBooking()?->getId() !== $booking->getId()) {
                 throw new \DomainException('Buchung oder zugehoerige Position nicht gefunden.');
             }
+            $this->em->refresh($booking, LockMode::PESSIMISTIC_WRITE);
+            $this->em->refresh($line, LockMode::PESSIMISTIC_WRITE);
             $assets = array_filter([$line->getEquipmentItem(), $line->getRegulator(), $line->getTank()]);
             if (count($assets) !== 1 || $line->getQuantity() !== 1) {
                 throw new \DomainException('Position muss genau einen Inventargegenstand enthalten.');
             }
             $asset = reset($assets);
-            $this->em->lock($asset, LockMode::PESSIMISTIC_WRITE);
+            $this->em->refresh(EquipmentInventory::physicalAsset($asset), LockMode::PESSIMISTIC_WRITE);
+            if (EquipmentInventory::physicalAsset($asset) !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
 
             if ($operation === 'issue') {
+                foreach ($booking->getItems() as $other) {
+                    $otherAsset = $other->getEquipmentItem() ?? $other->getRegulator() ?? $other->getTank();
+                    if ($other->getId() !== $lineId && $otherAsset && EquipmentInventory::physicalAsset($otherAsset) === EquipmentInventory::physicalAsset($asset)) {
+                        throw new \DomainException('Die physische Ausrüstung ist mehrfach in dieser Buchung enthalten.');
+                    }
+                }
+                if (($booking->isApprovalRequired() || $this->inventory->requiresApproval($asset)) && $booking->getApprovedAt() === null) {
+                    throw new \DomainException('Diese Buchung muss zuerst vom Gerätewart genehmigt werden.');
+                }
                 $memberClubId = $booking->getMember()?->getClub()?->getId();
                 if (!$memberClubId || !$booking->getStartsAt() || !$booking->getEndsAt()) {
                     throw new \DomainException('Verein oder Buchungszeitraum fehlt.');
+                }
+                $now = new \DateTimeImmutable();
+                if ($booking->getStartsAt() > $now || $booking->getEndsAt() <= $now) {
+                    throw new \DomainException('Ausgabe ist nur innerhalb des reservierten Zeitraums möglich.');
                 }
                 $this->availability->assertAvailable(
                     $asset, $memberClubId, $booking->getStartsAt(), $booking->getEndsAt(), $booking->getId()
@@ -78,28 +100,8 @@ final class EquipmentBookingLoanService
                 if ($line->getLoanStatus() !== 'reserved' || !in_array($booking->getStatus(), ['reserved', 'partially_issued', 'partially_returned'], true)) {
                     throw new \DomainException('Diese Position kann nicht ausgegeben werden.');
                 }
-                $end = $booking->getEndsAt();
-                if (!$end) { throw new \DomainException('Buchungsende fehlt.'); }
-                if ($line->getTank()) {
-                    if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready') {
-                        throw new \DomainException('Tauchflasche ist technisch gesperrt.');
-                    }
-                    $check = $line->getTank()->getNextCheckDate();
-                    if (!$check || $check < $end) {
-                        throw new \DomainException('Tauchflaschenpruefung ist nicht bis zum Mietende gueltig.');
-                    }
-                } else {
-                    if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready') {
-                        throw new \DomainException('Gegenstand ist nicht verleihfaehig.');
-                    }
-                    if ($line->getRegulator()) {
-                        $service = $line->getRegulator()->getNextServiceAt();
-                        if (!$service || $service < $end->setTime(0, 0)) {
-                            throw new \DomainException('Atemreglerrevision ist nicht bis zum Mietende gueltig.');
-                        }
-                    }
-                }
                 $line->markIssued(new \DateTimeImmutable());
+                $this->inventory->record($asset)->record('issued', 'Buchung #'.$bookingId, 'Position #'.$lineId.' ausgegeben.');
             } else {
                 if ($line->getLoanStatus() !== 'issued') {
                     throw new \DomainException('Nur ausgegebene Positionen koennen zurueckgenommen werden.');
@@ -112,7 +114,13 @@ final class EquipmentBookingLoanService
                 if ($condition !== 'ready') {
                     $asset->setConditionStatus((string) $condition);
                     $asset->setLendable(false);
+                    $physical = EquipmentInventory::physicalAsset($asset);
+                    if ($physical !== $asset) { $physical->setConditionStatus((string) $condition); $physical->setLendable(false); }
+                    if (!$this->maintenance->hasOpenOrder($asset)) {
+                        $this->em->persist(new \App\Entity\TankMaintenanceOrder($physical, (string) $notes, $condition === 'damaged' ? 'defect' : 'maintenance', 'Gerätewart', 'Buchung #'.$bookingId));
+                    }
                 }
+                $this->inventory->record($asset)->record('returned', 'Buchung #'.$bookingId, (string) $condition.': '.($notes ?? ''));
             }
 
             $statuses = array_map(

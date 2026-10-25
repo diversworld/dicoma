@@ -31,8 +31,9 @@ final class EquipmentManagerCashPayoutController extends AbstractController
         $db = $em->getConnection();
         $tuv = (int) $db->fetchOne("SELECT COALESCE(SUM(r.amount_cents),0) FROM tuv_payment_receipt r INNER JOIN member_tank_check_booking b ON b.id=r.booking_id INNER JOIN member m ON m.id=b.member_id WHERE m.club_id=:club AND r.method='cash'", ['club'=>$clubId]);
         $rental = (int) $db->fetchOne("SELECT COALESCE(SUM(r.amount_cents),0) FROM equipment_rental_receipt r INNER JOIN equipment_booking b ON b.id=r.booking_id INNER JOIN member m ON m.id=b.member_id WHERE m.club_id=:club AND r.method='cash'", ['club'=>$clubId]);
+        $fill = (int) $db->fetchOne("SELECT COALESCE(SUM(amount_cents),0) FROM equipment_fill_charge WHERE club_id=:club AND method='cash'", ['club'=>$clubId]);
         $out = (int) $db->fetchOne('SELECT COALESCE(SUM(amount_cents),0) FROM equipment_cash_payout WHERE club_id=:club', ['club'=>$clubId]);
-        return ['tuv'=>$tuv, 'rental'=>$rental, 'out'=>$out, 'available'=>$tuv+$rental-$out];
+        return ['tuv'=>$tuv, 'rental'=>$rental, 'fill'=>$fill, 'out'=>$out, 'available'=>$tuv+$rental+$fill-$out];
     }
 
     #[Route('/equipment-manager/cashbook/payouts', name: 'equipment_manager_cash_payouts', methods: ['GET'])]

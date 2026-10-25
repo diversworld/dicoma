@@ -102,8 +102,8 @@ class EquipmentReservation
     public function setConditionAtIssue(?string $value): static { $this->conditionAtIssue = $value; return $this; }
     public function getConditionAtReturn(): ?string { return $this->conditionAtReturn; }
     public function setConditionAtReturn(?string $value): static { $this->conditionAtReturn = $value; return $this; }
-    public function getReturnNotes(): ?string { return $this->returnNotes; }
-    public function setReturnNotes(?string $value): static { $this->returnNotes = $value; return $this; }
+    public function getReturnNotes(): ?string { return $this->returnedNotes; }
+    public function setReturnNotes(?string $value): static { $this->returnedNotes = $value; return $this; }
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $value): static { $this->notes = $value; return $this; }
 }

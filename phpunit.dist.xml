@@ -32,6 +32,7 @@
             <file>tests/Integration/Phase3MembershipHttpTest.php</file>
             <file>tests/Integration/Phase4TrainingHttpTest.php</file>
             <file>tests/Integration/Phase5CompetitionHttpTest.php</file>
+            <file>tests/Integration/Phase6EquipmentHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

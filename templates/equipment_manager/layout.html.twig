@@ -41,8 +41,10 @@
 <a href="{{ path('equipment_manager_dashboard') }}">Übersicht</a>
 <a href="{{ path('equipment_manager_tuv') }}">TÜV</a>
 <a href="{{ path('equipment_manager_loans') }}">Ausleihe</a>
+<a href="{{ path('equipment_manager_inventory') }}">Inventar und Wartung</a>
 <a href="{{ path('equipment_manager_cashbook') }}">Kasse</a>
 <a href="{{ path('equipment_manager_compressor_evenings') }}">Kompressorlogbuch</a>
+<a href="{{ path('equipment_manager_fill_billing') }}">Füllgebühren</a>
 {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('admin') }}">Verwaltung (EasyAdmin)</a>{% endif %}
 </nav></header>
 <div class="manager-main">

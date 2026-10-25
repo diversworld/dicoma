@@ -1,0 +1,23 @@
+{% extends 'equipment_manager/layout.html.twig' %}
+{% block title %}Füllgebühren | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>Abrechnung der Füllungen</h1>
+    <p>Bei der Füllung festgeschriebene Gebühr; Zahlung wird separat bestätigt. 0,00 € bedeutet ausdrücklich kostenlos. Altfüllungen ohne Gebührenfestlegung werden nicht nachträglich als bezahlt markiert.</p>
+    {% for category in ['success', 'danger'] %}{% for message in app.flashes(category) %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endfor %}
+    <table class="table"><thead><tr><th>Füllung</th><th>Gebühr</th><th>Zahlung</th></tr></thead><tbody>
+    {% for charge in charges %}
+        <tr><td>{{ charge.label }}</td><td>{{ (charge.amountCents / 100)|number_format(2, ',', '.') }} €</td><td>
+        {% if charge.collectedAt %}{{ charge.method == 'cash' ? 'Bar' : 'Überweisung' }} · {{ charge.collectedBy }} · {{ charge.collectedAt|date('d.m.Y H:i') }}
+        {% elseif charge.amountCents == 0 %}Kostenlos
+        {% else %}
+            <form method="post" action="{{ path('equipment_manager_fill_collect', {id:charge.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('fill_collect_' ~ charge.id) }}">
+                <label>Zahlungsart <select name="method"><option value="cash">Barzahlung</option><option value="bank">Überweisung</option></select></label>
+                <button class="btn btn-success">Zahlung bestätigen</button>
+            </form>
+        {% endif %}</td></tr>
+    {% else %}<tr><td colspan="3">Keine Füllgebühren erfasst.</td></tr>{% endfor %}
+    </tbody></table>
+</main>
+{% endblock %}

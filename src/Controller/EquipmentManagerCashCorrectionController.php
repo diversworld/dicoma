@@ -27,7 +27,7 @@ final class EquipmentManagerCashCorrectionController extends AbstractController
             $kind=(string)$request->request->get('kind','');
             $id=filter_var($request->request->get('reference_id'), FILTER_VALIDATE_INT);
             $reason=trim((string)$request->request->get('reason',''));
-            if (!in_array($kind,['tuv','rental','payout'],true) || !$id || $id<1 || mb_strlen($reason)<10 || mb_strlen($reason)>500) {
+            if (!in_array($kind,['tuv','rental','fill','payout'],true) || !$id || $id<1 || mb_strlen($reason)<10 || mb_strlen($reason)>500) {
                 $this->addFlash('danger','Art, Beleg-ID und Begründung (10–500 Zeichen) prüfen.');
                 return $this->redirectToRoute('equipment_manager_cash_corrections');
             }
@@ -37,6 +37,9 @@ final class EquipmentManagerCashCorrectionController extends AbstractController
                 if ($kind==='payout') {
                     $original=$db->fetchAssociative('SELECT p.amount_cents FROM equipment_cash_payout p WHERE p.id=:id AND p.club_id=:club', ['id'=>$id,'club'=>$clubId]);
                     $direction='in';
+                } elseif ($kind==='fill') {
+                    $original=$db->fetchAssociative("SELECT amount_cents FROM equipment_fill_charge WHERE id=:id AND club_id=:club AND method='cash'", ['id'=>$id,'club'=>$clubId]);
+                    $direction='out';
                 } else {
                     $table=$kind==='tuv'?'tuv_payment_receipt':'equipment_rental_receipt';
                     $booking=$kind==='tuv'?'member_tank_check_booking':'equipment_booking';

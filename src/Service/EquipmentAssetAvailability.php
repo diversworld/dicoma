@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\EquipmentBooking;
 use App\Entity\EquipmentBookingItem;
 use App\Entity\EquipmentItem;
 use App\Entity\EquipmentReservation;
@@ -13,114 +12,86 @@ use App\Entity\Tank;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** Checks one individually inventoried asset, under a transaction-held row lock. */
+/** The authoritative check serializes reservations, issue and maintenance on the asset row. */
 final class EquipmentAssetAvailability
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly EquipmentInventory $inventory,
+        private readonly EquipmentMaintenanceService $maintenance,
+        private readonly EquipmentRentalEligibility $eligibility,
+    ) {}
 
-    /** Non-locking preview only. saveNew() performs the authoritative locked check. */
-    public function isAvailablePreview(EquipmentItem|Regulator|Tank $asset, int $clubId, \DateTimeImmutable $start, \DateTimeImmutable $end): bool
-    {
-        if ($start >= $end || !$asset->getId() || $asset->getClub()?->getId() !== $clubId || !$asset->isLendable() || $asset->getConditionStatus() !== 'ready') return false;
-        if ($asset instanceof Tank) {
-            if (!$asset->getNextCheckDate() || $asset->getNextCheckDate()->format('Y-m-d') < $end->format('Y-m-d')) return false;
-            $field = 'tank';
-        } elseif ($asset instanceof Regulator) {
-            if (!$asset->getNextServiceAt() || $asset->getNextServiceAt()->format('Y-m-d') < $end->format('Y-m-d')) return false;
-            $field = 'regulator';
-        } else {
-            if ($asset->getStockType() !== 'individual' || $asset->getTotalQuantity() !== 1 || ($asset->getCategory() && !$asset->getCategory()->isActive())) return false;
-            $field = 'equipmentItem';
-        }
-        $count = (int) $this->em->createQueryBuilder()->select('COUNT(bi.id)')
-            ->from(EquipmentBookingItem::class, 'bi')->join('bi.booking', 'b')
-            ->where('bi.'.$field.' = :asset')
-            ->andWhere('(bi.loanStatus = :issued OR (bi.loanStatus = :reserved AND b.startsAt < :end AND b.endsAt > :start))')
-            ->setParameter('asset', $asset)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
-            ->setParameter('start', $start)->setParameter('end', $end)->getQuery()->getSingleScalarResult();
-        if ($count > 0) return false;
-        if ($asset instanceof EquipmentItem) {
-            $legacy = (int) $this->em->createQueryBuilder()->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
-                ->where('r.equipmentItem = :asset')
-                ->andWhere('(r.status = :issued OR (r.status = :reserved AND r.startsAt < :end AND r.endsAt > :start))')
-                ->setParameter('asset', $asset)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
-                ->setParameter('start', $start)->setParameter('end', $end)->getQuery()->getSingleScalarResult();
-            if ($legacy > 0) return false;
-        }
-        return true;
+    public function isAvailablePreview(
+        EquipmentItem|Regulator|Tank $asset, int $clubId, \DateTimeImmutable $start, \DateTimeImmutable $end,
+        ?int $excludeBookingId = null, ?int $excludeReservationId = null,
+    ): bool {
+        if ($start >= $end || !$asset->getId() || $asset->getClub()?->getId() !== $clubId) { return false; }
+        try { $this->assertEligible($asset, $end); }
+        catch (\DomainException) { return false; }
+        return $this->isFree($asset, $start, $end, $excludeBookingId, $excludeReservationId);
     }
 
     public function assertAvailable(
-        EquipmentItem|Regulator|Tank $asset,
-        int $clubId,
-        \DateTimeImmutable $start,
-        \DateTimeImmutable $end,
-        ?int $excludeBookingId = null
+        EquipmentItem|Regulator|Tank $asset, int $clubId, \DateTimeImmutable $start, \DateTimeImmutable $end,
+        ?int $excludeBookingId = null, ?int $excludeReservationId = null,
     ): void {
-        if ($start >= $end) {
-            throw new \DomainException('Der Reservierungszeitraum ist ungueltig.');
+        if ($start >= $end || !$asset->getId()) { throw new \DomainException('Inventargegenstand oder Zeitraum ist ungültig.'); }
+        $physical = EquipmentInventory::physicalAsset($asset);
+        $this->em->refresh($physical, LockMode::PESSIMISTIC_WRITE);
+        if ($physical !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
+        if ($asset->getClub()?->getId() !== $clubId) { throw new \DomainException('Gegenstand gehört nicht zum eigenen Verein.'); }
+        $this->assertEligible($asset, $end);
+        if (!$this->isFree($asset, $start, $end, $excludeBookingId, $excludeReservationId)) {
+            throw new \DomainException('Gegenstand ist bereits reserviert oder noch ausgegeben.');
         }
-        if (!$asset->getId()) {
-            throw new \DomainException('Der Inventargegenstand ist nicht gespeichert.');
-        }
-        $this->em->lock($asset, LockMode::PESSIMISTIC_WRITE);
-        if ($asset->getClub()?->getId() !== $clubId) {
-            throw new \DomainException('Der Gegenstand gehoert zu einem anderen Verein oder ist keinem Verein zugeordnet.');
-        }
-        if ($asset instanceof Tank) {
-            if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready') {
-                throw new \DomainException('Die Flasche ist technisch gesperrt.');
-            }
-            $check = $asset->getNextCheckDate();
-            if (!$check || $check->format('Y-m-d') < $end->format('Y-m-d')) {
-                throw new \DomainException('Die Flaschenpruefung ist nicht bis zum Reservierungsende gueltig.');
-            }
-            $field = 'tank';
-        } elseif ($asset instanceof Regulator) {
-            if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready') {
-                throw new \DomainException('Der Atemregler ist nicht verleihfaehig.');
-            }
-            $due = $asset->getNextServiceAt();
-            if (!$due || $due->format('Y-m-d') < $end->format('Y-m-d')) {
-                throw new \DomainException('Die Atemreglerrevision ist nicht bis zum Reservierungsende gueltig.');
-            }
-            $field = 'regulator';
-        } else {
-            if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready'
-                || $asset->getStockType() !== 'individual' || $asset->getTotalQuantity() !== 1) {
-                throw new \DomainException('Der Gegenstand ist nicht verleihfaehig.');
-            }
-            $field = 'equipmentItem';
-        }
+    }
 
-        $qb = $this->em->createQueryBuilder()
-            ->select('COUNT(bi.id)')
-            ->from(EquipmentBookingItem::class, 'bi')
-            ->join('bi.booking', 'b')
-            ->where('bi.'.$field.' = :asset')
-            ->andWhere('(bi.loanStatus = :issued OR (bi.loanStatus = :reserved AND b.startsAt < :end AND b.endsAt > :start))')
-            ->setParameter('asset', $asset)
-            ->setParameter('issued', 'issued')
-            ->setParameter('reserved', 'reserved')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end);
-        if ($excludeBookingId !== null) {
-            $qb->andWhere('b.id != :excluded')->setParameter('excluded', $excludeBookingId);
-        }
-        if ((int) $qb->getQuery()->getSingleScalarResult() > 0) {
-            throw new \DomainException('Dieser Gegenstand ist bereits reserviert oder noch ausgeliehen.');
+    public function assertEligible(EquipmentItem|Regulator|Tank $asset, \DateTimeImmutable $end): void
+    {
+        if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready' || $this->maintenance->hasOpenOrder($asset)) {
+            throw new \DomainException('Gegenstand ist technisch gesperrt oder in Wartung.');
         }
         if ($asset instanceof EquipmentItem) {
-            $legacy = (int) $this->em->createQueryBuilder()
-                ->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
-                ->where('r.equipmentItem = :asset')
-                ->andWhere('(r.status = :issued OR (r.status = :reserved AND r.startsAt < :end AND r.endsAt > :start))')
-                ->setParameter('asset', $asset)->setParameter('issued', 'issued')
-                ->setParameter('reserved', 'reserved')->setParameter('start', $start)->setParameter('end', $end)
-                ->getQuery()->getSingleScalarResult();
-            if ($legacy > 0) {
-                throw new \DomainException('Der Gegenstand ist durch eine Einzelreservierung belegt.');
+            $this->eligibility->assertEligible($asset, $end);
+            if (!$asset->getCategory()?->isActive()) { throw new \DomainException('Ausrüstungskategorie ist nicht aktiv.'); }
+            if ($asset->getTank() !== null) {
+                if ($asset->getTank()->getClub()?->getId() !== $asset->getClub()?->getId()) { throw new \DomainException('Verknüpfte Flasche gehört nicht zum Verein.'); }
+                $this->assertEligible($asset->getTank(), $end);
             }
         }
+        $due = $this->inventory->dueAt($asset);
+        $record = $this->inventory->findRecord($asset);
+        $required = $asset instanceof Tank || $asset instanceof Regulator || $record?->getInspectionIntervalMonths() !== null;
+        if (($required && $due === null) || ($due !== null && $due->format('Y-m-d') < $end->format('Y-m-d'))) {
+            throw new \DomainException('Prüfung oder Revision ist nicht bis zum Verleihende gültig.');
+        }
+    }
+
+    private function isFree(
+        EquipmentItem|Regulator|Tank $asset, \DateTimeImmutable $start, \DateTimeImmutable $end,
+        ?int $excludeBookingId, ?int $excludeReservationId,
+    ): bool {
+        $physical = EquipmentInventory::physicalAsset($asset);
+        $qb = $this->em->createQueryBuilder()->select('COUNT(bi.id)')
+            ->from(EquipmentBookingItem::class, 'bi')->join('bi.booking', 'b')
+            ->leftJoin('bi.equipmentItem', 'linked')
+            ->where($physical instanceof Tank ? '(bi.tank = :asset OR linked.tank = :asset)' : 'bi.'.EquipmentInventory::field($physical).' = :asset')
+            ->andWhere('(bi.loanStatus = :issued OR (bi.loanStatus = :reserved AND b.status != :cancelled AND b.startsAt < :end AND b.endsAt > :start))')
+            ->setParameter('asset', $physical)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
+            ->setParameter('cancelled', 'cancelled')->setParameter('start', $start)->setParameter('end', $end);
+        if ($excludeBookingId !== null) { $qb->andWhere('b.id != :excluded')->setParameter('excluded', $excludeBookingId); }
+        if ((int) $qb->getQuery()->getSingleScalarResult() > 0) { return false; }
+        if ($asset instanceof EquipmentItem || $physical instanceof Tank) {
+            $legacy = $this->em->createQueryBuilder()->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
+                ->join('r.equipmentItem', 'legacyItem')
+                ->where($physical instanceof Tank ? 'legacyItem.tank = :asset' : 'r.equipmentItem = :asset')
+                ->andWhere('(r.status = :issued OR (r.status = :reserved AND r.startsAt < :end AND r.endsAt > :start))')
+                ->setParameter('asset', $physical)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
+                ->setParameter('start', $start)->setParameter('end', $end);
+            if ($excludeReservationId !== null) { $legacy->andWhere('r.id != :excluded')->setParameter('excluded', $excludeReservationId); }
+            if ((int) $legacy->getQuery()->getSingleScalarResult() > 0) { return false; }
+        }
+        return true;
     }
 }

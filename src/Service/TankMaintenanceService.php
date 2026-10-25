@@ -23,7 +23,7 @@ final class TankMaintenanceService
             $this->assertClubScope($tank, $requiredClubId);
             $existing = $this->em->getRepository(TankMaintenanceOrder::class)->findOneBy(['tank' => $tank, 'status' => 'open']);
             if ($existing) { throw new \DomainException('Es existiert bereits ein offener Wartungsauftrag.'); }
-            $order = new TankMaintenanceOrder($tank, $description);
+            $order = new TankMaintenanceOrder($tank, $description, 'maintenance', $actor, $actor);
             $tank->setConditionStatus('maintenance');
             $tank->setLendable(false);
             $this->em->persist($order);
@@ -57,6 +57,7 @@ final class TankMaintenanceService
         $order = $this->em->find(TankMaintenanceOrder::class, $orderId);
         if (!$order) { throw new \DomainException('Wartungsauftrag nicht gefunden.'); }
         // Always acquire locks in the same order: tank first, order second.
+        if (!$order->getTank()) { throw new \DomainException('Wartungsauftrag gehört nicht zu einer Flasche.'); }
         $this->closeForTank($order->getTank()->getId(), $orderId, $resolution, $actor);
     }
 
