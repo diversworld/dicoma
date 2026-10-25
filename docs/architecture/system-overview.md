@@ -196,10 +196,11 @@ konfigurierbar:
 
 Für eine einheitliche Markenfarbe die gewünschten Akzentvariablen in
 `theme-variables.css` gemeinsam ändern; Kontrast sowie Hover-, Fokus- und
-Fehlerzustände mitprüfen. Die `--dw-palette-*`-/`--dw-rgba-*`-Variablen
-erhalten die vorhandenen weiteren Farbabstufungen, Schatten und Transparenzen.
-Auch diese Werte werden ausschließlich zentral gepflegt. Bereits vorhandene
-`--dw-admin-*`-Variablen bleiben als Bereichsanbindung erhalten;
+Fehlerzustände mitprüfen. Weitere Farben verwenden eine kompakte neutrale,
+blaue und semantische Status-Farbskala sowie gemeinsame Overlay- und
+Schattenvariablen. Ähnliche bisherige Einzelfarbtöne teilen sich einen
+Skalenwert. Bereits vorhandene `--dw-admin-*`-Variablen bleiben als
+Bereichsanbindung erhalten;
 `admin-theme.css` wird durch diese Änderung nicht zusätzlich aktiviert.
 
 Die sechs verbliebenen `style`-Attribute enthalten ausschließlich erforderliche

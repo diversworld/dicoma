@@ -4,7 +4,7 @@
     /* the accent color of buttons, links, switches, etc. Pick one with
        enough contrast on white, because it is also used for link text */
     --ea-primary: var(--dw-primary);
-    --ea-primary-foreground: var(--dw-palette-cccccc);
+    --ea-primary-foreground: var(--dw-neutral-300);
     /* the base of the spacing scale; increase it for a more spacious backend,
        decrease it for a more compact one. All paddings, margins, gaps and the
        height of buttons and switches are multiples of this value */

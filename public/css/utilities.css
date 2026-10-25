@@ -1,4 +1,4 @@
-.dw-calendar-cell-border { border-left: 1px !important; border-right: 1px !important; border-color: var(--dw-palette-cecece) !important; border-style: solid !important; }
+.dw-calendar-cell-border { border-left: 1px !important; border-right: 1px !important; border-color: var(--dw-neutral-300) !important; border-style: solid !important; }
 .dw-card-toolbar { height:auto !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:16px !important; flex-wrap:wrap !important; }
 .dw-equipment-toolbar { margin:18px 0 24px !important; }
 .dw-height-120px { height: 120px !important; }
@@ -31,13 +31,13 @@
 .dw-pointer { cursor:pointer !important; }
 .dw-pre-wrap { white-space: pre-wrap !important; }
 .dw-priority-high { background:var(--dw-danger-background) !important; color:var(--dw-danger) !important; }
-.dw-priority-medium { background:var(--dw-warning-background) !important; color:var(--dw-palette-92400e) !important; }
+.dw-priority-medium { background:var(--dw-warning-background) !important; color:var(--dw-amber-800) !important; }
 .dw-section-spacing { padding:2rem 0 !important; }
 .dw-status-note { display:block !important; width:100% !important; max-width:700px !important; margin:.5rem 0 1rem !important; }
 .dw-table-fixed { table-layout: fixed !important; }
 .dw-task-filter { display:grid !important; gap:.25rem !important; min-width:190px !important; }
 .dw-task-filters { display:flex !important; gap:.8rem !important; flex-wrap:wrap !important; align-items:end !important; }
-.dw-task-select { padding:.5rem !important; border:1px solid var(--dw-palette-c9d5e7) !important; border-radius:6px !important; }
+.dw-task-select { padding:.5rem !important; border:1px solid var(--dw-neutral-300) !important; border-radius:6px !important; }
 .dw-text-center { text-align: center !important; }
 .dw-text-right { text-align: right !important; }
 .dw-training-spacing { padding-top:2rem !important; padding-bottom:3rem !important; }

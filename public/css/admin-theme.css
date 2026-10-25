@@ -14,28 +14,28 @@ body.ea-dark-scheme {
     --dw-admin-link: var(--dw-admin-primary);
     --dw-admin-background: var(--dw-background);
     --dw-admin-surface: var(--dw-surface);
-    --dw-admin-text: var(--dw-palette-334155);
+    --dw-admin-text: var(--dw-neutral-800);
     --dw-admin-muted: var(--dw-muted);
     --dw-admin-border: var(--dw-border);
-    --dw-admin-hover: var(--dw-palette-f1f5f9);
+    --dw-admin-hover: var(--dw-neutral-100);
 
     /* Einzelne Bereiche koennen unabhaengig angepasst werden. */
     --dw-admin-header-bg: var(--dw-admin-background);
     --dw-admin-content-bg: var(--dw-admin-surface);
-    --dw-admin-sidebar-bg: var(--dw-palette-172554);
-    --dw-admin-sidebar-background: linear-gradient(145deg, var(--dw-palette-111827) 0%, var(--dw-palette-172554) 50%, var(--dw-palette-1d4ed8) 100%);
+    --dw-admin-sidebar-bg: var(--dw-blue-900);
+    --dw-admin-sidebar-background: linear-gradient(145deg, var(--dw-neutral-950) 0%, var(--dw-blue-900) 50%, var(--dw-blue-700) 100%);
     --dw-admin-sidebar-text: var(--dw-border);
-    --dw-admin-sidebar-heading: var(--dw-palette-93c5fd);
-    --dw-admin-sidebar-icon: var(--dw-palette-cbd5e1);
+    --dw-admin-sidebar-heading: var(--dw-blue-300);
+    --dw-admin-sidebar-icon: var(--dw-neutral-300);
     --dw-admin-sidebar-logo: var(--dw-surface);
     --dw-admin-sidebar-active-text: var(--dw-surface);
-    --dw-admin-sidebar-active-bg: var(--dw-rgba-255-255-255-0_12);
-    --dw-admin-sidebar-hover-bg: var(--dw-rgba-255-255-255-0_1);
+    --dw-admin-sidebar-active-bg: var(--dw-overlay-light);
+    --dw-admin-sidebar-hover-bg: var(--dw-overlay-light);
     --dw-admin-card-bg: var(--dw-admin-surface);
 
     /* Form und Layout */
     --dw-admin-radius: 16px;
-    --dw-admin-shadow: 0 12px 35px var(--dw-rgba-15-23-42-0_06);
+    --dw-admin-shadow: 0 12px 35px var(--dw-shadow-soft);
     --dw-admin-header-padding: var(--ea-sp-18) 0 var(--ea-sp-8);
     --dw-admin-content-padding-bottom: 2rem;
     --dw-admin-table-cell-padding: .85rem;
@@ -89,13 +89,13 @@ body.ea-dark-scheme {
  */
 body.ea-dark-scheme {
     color-scheme: dark;
-    --dw-admin-primary: var(--dw-palette-2563eb);
-    --dw-admin-link: var(--dw-palette-93c5fd);
-    --dw-admin-background: var(--dw-palette-1e293b);
-    --dw-admin-surface: var(--dw-palette-243449);
+    --dw-admin-primary: var(--dw-blue-600);
+    --dw-admin-link: var(--dw-blue-300);
+    --dw-admin-background: var(--dw-neutral-900);
+    --dw-admin-surface: var(--dw-neutral-900);
     --dw-admin-text: var(--dw-border);
-    --dw-admin-muted: var(--dw-palette-94a3b8);
-    --dw-admin-border: var(--dw-palette-475569);
-    --dw-admin-hover: var(--dw-palette-334155);
-    --dw-admin-shadow: 0 12px 35px var(--dw-rgba-15-23-42-0_2);
+    --dw-admin-muted: var(--dw-neutral-400);
+    --dw-admin-border: var(--dw-neutral-700);
+    --dw-admin-hover: var(--dw-neutral-800);
+    --dw-admin-shadow: 0 12px 35px var(--dw-shadow-strong);
 }

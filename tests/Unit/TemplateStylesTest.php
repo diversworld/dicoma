@@ -49,11 +49,15 @@ final class TemplateStylesTest extends TestCase
             preg_match_all('/(--[\w-]+)\s*:/', $source, $definitions);
             $declared = [...$declared, ...$definitions[1]];
             self::assertDoesNotMatchRegularExpression('/(--[\w-]+)\s*:\s*var\(\1\)/', $source, $path);
+            self::assertDoesNotMatchRegularExpression('/--dw-(?:palette|rgba)-/', $source, $path);
             if (basename($path) !== 'theme-variables.css') {
                 self::assertDoesNotMatchRegularExpression('/#[\da-f]{3,8}\b|\brgba?\(/i', $source, $path);
                 self::assertDoesNotMatchRegularExpression('/:\s*(white|black|red|blue|green)\b/', $source, $path);
             }
         }
+        $theme = $sources[self::ROOT . '/public/css/theme-variables.css'];
+        preg_match_all('/--dw-(?:neutral|blue|green|red|amber|pink|rose|cyan|social)-[\w-]+\s*:/', $theme, $colorTokens);
+        self::assertLessThanOrEqual(40, count($colorTokens[0]), 'The shared color scale should stay compact.');
         foreach ($sources as $path => $source) {
             preg_match_all('/var\((--dw-[\w-]+)/', $source, $references);
             foreach (array_unique($references[1]) as $reference) {

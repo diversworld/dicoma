@@ -6,14 +6,14 @@
 /* Standard: Light Mode */
 .member-center {
     --mc-bg: var(--dw-surface);
-    --mc-card: var(--dw-palette-f8fafc);
-    --mc-text: var(--dw-palette-17253b);
+    --mc-card: var(--dw-neutral-50);
+    --mc-text: var(--dw-neutral-900);
     --mc-muted: var(--dw-muted);
-    --mc-border: var(--dw-palette-dce3ec);
-    --mc-head: var(--dw-palette-eaf0f7);
+    --mc-border: var(--dw-neutral-200);
+    --mc-head: var(--dw-neutral-100);
     --mc-link: var(--dw-training-primary);
-    --mc-primary: var(--dw-palette-175cd3);
-    --mc-primary-hover: var(--dw-palette-1249aa);
+    --mc-primary: var(--dw-blue-600);
+    --mc-primary-hover: var(--dw-blue-800);
 
     max-width: 1400px;
     margin: 0 auto;
@@ -31,15 +31,15 @@
 [data-bs-theme="dark"] .member-center,
 [data-theme="dark"] .member-center,
 body.ea-dark-scheme .member-center {
-    --mc-bg: var(--dw-palette-151719);
-    --mc-card: var(--dw-palette-202328);
-    --mc-text: var(--dw-palette-f1f5f9);
-    --mc-muted: var(--dw-palette-a8b3c2);
-    --mc-border: var(--dw-palette-39414b);
-    --mc-head: var(--dw-palette-292f37);
-    --mc-link: var(--dw-palette-8bbcff);
-    --mc-primary: var(--dw-palette-3568e8);
-    --mc-primary-hover: var(--dw-palette-2455ca);
+    --mc-bg: var(--dw-neutral-950);
+    --mc-card: var(--dw-neutral-950);
+    --mc-text: var(--dw-neutral-100);
+    --mc-muted: var(--dw-neutral-400);
+    --mc-border: var(--dw-neutral-800);
+    --mc-head: var(--dw-neutral-900);
+    --mc-link: var(--dw-blue-300);
+    --mc-primary: var(--dw-blue-600);
+    --mc-primary-hover: var(--dw-blue-600);
 }
 
 /* Texte */
@@ -203,8 +203,8 @@ body.ea-dark-scheme .member-center {
 .member-center a.btn.btn-primary,
 .member-center a.btn.btn-primary:link,
 .member-center a.btn.btn-primary:visited {
-    background-color: var(--dw-palette-175cd3) !important;
-    border: 1px solid var(--dw-palette-175cd3) !important;
+    background-color: var(--dw-blue-600) !important;
+    border: 1px solid var(--dw-blue-600) !important;
     color: var(--dw-surface) !important;
     padding: 0.4rem 0.75rem;
     font-weight: 500;
@@ -213,8 +213,8 @@ body.ea-dark-scheme .member-center {
 
 .member-center a.btn.btn-primary:hover,
 .member-center a.btn.btn-primary:focus {
-    background-color: var(--dw-palette-1249aa) !important;
-    border-color: var(--dw-palette-1249aa) !important;
+    background-color: var(--dw-blue-800) !important;
+    border-color: var(--dw-blue-800) !important;
     color: var(--dw-surface) !important;
 }
 
@@ -247,7 +247,7 @@ body.ea-dark-scheme .member-center {
 
 /* Sichtbarer Tastaturfokus */
 .member-center a.btn:focus-visible {
-    outline: 2px solid var(--dw-palette-175cd3);
+    outline: 2px solid var(--dw-blue-600);
     outline-offset: 3px;
 }
 
@@ -263,8 +263,8 @@ body.ea-dark-scheme .member-center {
 [data-theme="dark"] .member-center a.btn.btn-outline-secondary,
 body.ea-dark-scheme .member-center a.btn.btn-outline-primary,
 body.ea-dark-scheme .member-center a.btn.btn-outline-secondary {
-    color: var(--dw-palette-b9d6ff) !important;
-    border-color: var(--dw-palette-719bdb) !important;
+    color: var(--dw-blue-300) !important;
+    border-color: var(--dw-blue-300) !important;
     background-color: transparent !important;
 }
 
@@ -276,8 +276,8 @@ body.ea-dark-scheme .member-center a.btn.btn-outline-secondary {
 body.ea-dark-scheme .member-center a.btn.btn-outline-primary:hover,
 body.ea-dark-scheme .member-center a.btn.btn-outline-secondary:hover {
     color: var(--dw-surface) !important;
-    background-color: var(--dw-palette-2455ca) !important;
-    border-color: var(--dw-palette-2455ca) !important;
+    background-color: var(--dw-blue-600) !important;
+    border-color: var(--dw-blue-600) !important;
 }
 
 /* Icons innerhalb der Schaltflächen */

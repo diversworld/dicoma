@@ -1,9 +1,9 @@
-body { font: 12px/1.4 Arial, sans-serif; color: var(--dw-palette-111111); margin: 22mm 12mm; }
+body { font: 12px/1.4 Arial, sans-serif; color: var(--dw-neutral-950); margin: 22mm 12mm; }
         h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { margin: 8px 0 18px; color: var(--dw-palette-444444); }
+        .meta { margin: 8px 0 18px; color: var(--dw-neutral-800); }
         table { border-collapse: collapse; width: 100%; }
-        th, td { padding: 5px 4px; border: 1px solid var(--dw-palette-888888); text-align: left; vertical-align: top; }
-        th { background: var(--dw-palette-eeeeee); }
+        th, td { padding: 5px 4px; border: 1px solid var(--dw-neutral-500); text-align: left; vertical-align: top; }
+        th { background: var(--dw-neutral-100); }
         .number { text-align: right; white-space: nowrap; }
         .small { font-size: 10px; }
         .actions { margin-bottom: 16px; }

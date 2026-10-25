@@ -34,7 +34,7 @@
 .hero-area p {
   font-size: 20px;
   line-height: 32px;
-  color: var(--dw-palette-f9f9f9);
+  color: var(--dw-neutral-50);
 }
 
 .template-list {
@@ -63,10 +63,10 @@
   font-size: 10px;
   text-transform: uppercase;
   font-weight: 700;
-  background: var(--dw-palette-4be6e6);
+  background: var(--dw-cyan-300);
 }
 .template-item a {
-  box-shadow: 0 15px 45px -9px var(--dw-rgba-0-0-0-0_25);
+  box-shadow: 0 15px 45px -9px var(--dw-shadow-strong);
   display: block;
 }
 .template-item a img {
@@ -78,7 +78,7 @@
   margin-bottom: 5px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--dw-palette-252525);
+  color: var(--dw-neutral-950);
   text-transform: uppercase;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .call-to-action {
-  background: var(--dw-palette-3483de);
+  background: var(--dw-blue-500);
   color: var(--dw-surface);
   padding: 80px 0;
 }
@@ -106,7 +106,7 @@
   font-size: 12px;
   display: inline-block;
   text-transform: uppercase;
-  color: var(--dw-palette-666666);
+  color: var(--dw-neutral-500);
 }
 
 #mouse-scroll {
@@ -189,7 +189,7 @@
   }
 }
 footer {
-  background: var(--dw-palette-01252d);
+  background: var(--dw-neutral-900);
   padding: 30px 0;
   color: var(--dw-surface);
 }
@@ -213,7 +213,7 @@ footer a:hover {
 }
 .overly:before {
   content: "";
-  background: var(--dw-rgba-0-0-0-0_51);
+  background: var(--dw-overlay-dark);
   position: absolute;
   top: 0;
   left: 0;

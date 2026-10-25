@@ -26,7 +26,7 @@ h2 {
 p,
 .btn {
   font-family: "Poppins", serif;
-  color: var(--dw-palette-777777);
+  color: var(--dw-neutral-500);
   font-size: 16px;
 }
 
@@ -43,11 +43,11 @@ a:hover {
 }
 
 .bg-gray {
-  background: var(--dw-palette-fafafa);
+  background: var(--dw-neutral-50);
 }
 
 .navigation {
-  background: var(--dw-palette-005599);
+  background: var(--dw-social-blue);
   padding: 20px 0;
 }
 .navigation .navbar {
@@ -65,24 +65,24 @@ a:hover {
   padding-top: 10px;
 }
 .navigation .navbar .navbar-nav > li > a {
-  color: var(--dw-palette-5c5c5c);
+  color: var(--dw-neutral-700);
   padding: 10px 15px;
   font-weight: 500;
   font-size: 14px;
   text-transform: uppercase;
 }
 .navigation .navbar .navbar-nav > li > a:hover, .navigation .navbar .navbar-nav > li > a:focus {
-  color: var(--dw-palette-4b4b4b);
+  color: var(--dw-neutral-700);
   background: transparent;
 }
 .navigation .navbar .dropdown-menu {
   border-radius: 0;
   border: none;
-  drop-shadow: 0 0 25px 0 var(--dw-rgba-0-0-0-0_08);
+  drop-shadow: 0 0 25px 0 var(--dw-shadow-soft);
 }
 .navigation .navbar .dropdown-menu a {
   font-weight: normal;
-  color: var(--dw-palette-808080);
+  color: var(--dw-neutral-500);
   padding: 10px 20px;
   transition: all 0.3s ease;
 }
@@ -118,7 +118,7 @@ a:hover {
 }
 .demos .block img {
   width: 100%;
-  box-shadow: 0 8px 25px 0 var(--dw-rgba-0-0-0-0_11);
+  box-shadow: 0 8px 25px 0 var(--dw-shadow-soft);
   border-radius: 8px;
   margin-bottom: 20px;
 }
@@ -135,7 +135,7 @@ a:hover {
 
 .elements .feature-item {
   border-radius: 6px;
-  box-shadow: 0 8px 25px 0 var(--dw-rgba-0-0-0-0_11);
+  box-shadow: 0 8px 25px 0 var(--dw-shadow-soft);
   padding: 20px 10px;
   text-align: center;
   margin-bottom: 20px;
@@ -152,11 +152,11 @@ a:hover {
 }
 .elements .feature-item p {
   font-size: 14px;
-  color: var(--dw-palette-808080);
+  color: var(--dw-neutral-500);
 }
 
 .call-to-action-landing {
-  background-color: var(--dw-palette-1a1b1f);
+  background-color: var(--dw-neutral-950);
 }
 .call-to-action-landing h2 {
   color: var(--dw-surface);
@@ -172,7 +172,7 @@ a:hover {
   background: var(--dw-public-primary);
 }
 .call-to-action-landing .btn-gray {
-  background: var(--dw-palette-2e7eed);
+  background: var(--dw-blue-500);
   color: var(--dw-surface);
 }
 /*# sourceMappingURL=landing-page.css.map */

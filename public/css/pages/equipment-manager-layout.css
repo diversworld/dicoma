@@ -1,8 +1,8 @@
 body{
-			background:var(--dw-palette-f5f7fa);color:var(--dw-text)
+			background:var(--dw-neutral-50);color:var(--dw-text)
 		}
 		.manager-header{
-			background:var(--dw-palette-102c48);color:var(--dw-surface);padding:1rem 0}
+			background:var(--dw-blue-950);color:var(--dw-surface);padding:1rem 0}
 			.manager-header a{
 				color:var(--dw-surface);text-decoration:none;margin-right:1.2rem
 			}
@@ -13,8 +13,8 @@ body{
 				margin-right:2rem}.manager-main{min-height:75vh
 			}
 			.manager-footer{
-				border-top:1px solid var(--dw-palette-dbe2eb);
-				padding:1rem 0;color:var(--dw-palette-63748a)
+				border-top:1px solid var(--dw-neutral-200);
+				padding:1rem 0;color:var(--dw-neutral-600)
 			}
 			.table-responsive{
 				overflow-x:auto

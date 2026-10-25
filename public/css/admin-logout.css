@@ -6,6 +6,6 @@
     color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
 .dicoma-admin-logout:hover, .dicoma-admin-logout:focus-visible {
-    background: var(--dropdown-link-hover-bg, var(--dw-rgba-127-127-127-0_12));
+    background: var(--dropdown-link-hover-bg, var(--dw-overlay-muted));
 }
 .dicoma-admin-logout i { width: 1.1rem; text-align: center; }
