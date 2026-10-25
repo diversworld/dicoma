@@ -38,12 +38,18 @@ final class EquipmentInventory
             if ($physical !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
         }
         if ($asset->getClub()?->getId() !== $clubId || self::physicalAsset($asset)->getClub()?->getId() !== $clubId) { throw new \DomainException('Inventargegenstand nicht im eigenen Verein.'); }
+        if ($lock && ($record = $this->findRecord($asset, true)) !== null) { $this->em->refresh($record, LockMode::PESSIMISTIC_READ); }
         return $asset;
     }
 
-    public function findRecord(EquipmentItem|Regulator|Tank $asset): ?EquipmentAssetRecord
+    public function findRecord(EquipmentItem|Regulator|Tank $asset, bool $currentRead = false): ?EquipmentAssetRecord
     {
         $asset = self::physicalAsset($asset);
+        if ($currentRead) {
+            return $this->em->getRepository(EquipmentAssetRecord::class)->createQueryBuilder('r')
+                ->where('r.'.self::field($asset).' = :asset')->setParameter('asset', $asset)
+                ->getQuery()->setLockMode(LockMode::PESSIMISTIC_READ)->getOneOrNullResult();
+        }
         return $this->em->getRepository(EquipmentAssetRecord::class)->findOneBy([self::field($asset) => $asset]);
     }
 
@@ -51,7 +57,10 @@ final class EquipmentInventory
     public function record(EquipmentItem|Regulator|Tank $asset): EquipmentAssetRecord
     {
         $asset = self::physicalAsset($asset);
-        $record = $this->findRecord($asset);
+        foreach ($this->em->getUnitOfWork()->getScheduledEntityInsertions() as $pending) {
+            if ($pending instanceof EquipmentAssetRecord && $pending->getAsset() === $asset) { return $pending; }
+        }
+        $record = $this->findRecord($asset, true);
         if ($record === null) {
             $record = new EquipmentAssetRecord($asset);
             $this->em->persist($record);
@@ -67,9 +76,11 @@ final class EquipmentInventory
         return $this->findRecord($asset)?->getNextInspectionAt();
     }
 
-    public function requiresApproval(EquipmentItem|Regulator|Tank $asset): bool
+    public function requiresApproval(EquipmentItem|Regulator|Tank $asset, bool $currentRead = false): bool
     {
-        return $this->findRecord($asset)?->isApprovalRequired() ?? false;
+        $record = $this->findRecord($asset, $currentRead);
+        if ($currentRead && $record !== null) { $this->em->refresh($record, LockMode::PESSIMISTIC_READ); }
+        return $record?->isApprovalRequired() ?? false;
     }
 
     public static function feeCents(EquipmentItem|Regulator|Tank $asset): int

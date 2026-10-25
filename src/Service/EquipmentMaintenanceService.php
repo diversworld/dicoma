@@ -40,6 +40,7 @@ final class EquipmentMaintenanceService
         $this->em->wrapInTransaction(function () use ($type, $id, $clubId, $orderId, $resolution, $actor): void {
             $asset = EquipmentInventory::physicalAsset($this->inventory->asset($type, $id, $clubId, true));
             $order = $this->em->find(TankMaintenanceOrder::class, $orderId, LockMode::PESSIMISTIC_WRITE);
+            if ($order) { $this->em->refresh($order, LockMode::PESSIMISTIC_WRITE); }
             if (!$order || EquipmentInventory::physicalAsset($order->getAsset()) !== $asset) { throw new \DomainException('Wartungsauftrag gehört nicht zum Gegenstand.'); }
             $order->close($actor, $resolution);
             $this->history($asset, 'maintenance_closed', $resolution, $actor);
@@ -96,31 +97,38 @@ final class EquipmentMaintenanceService
         self::text($reason);
         $this->em->wrapInTransaction(function () use ($type, $id, $clubId, $reason, $actor): void {
             $asset = EquipmentInventory::physicalAsset($this->inventory->asset($type, $id, $clubId, true));
-            if ($this->hasOpenOrder($asset)) { throw new \DomainException('Offenen Wartungsauftrag zuerst abschließen.'); }
-            $active = (int) $this->em->createQueryBuilder()->select('COUNT(i.id)')->from(EquipmentBookingItem::class, 'i')
-                ->leftJoin('i.equipmentItem', 'linked')
-                ->where(($asset instanceof Tank ? '(i.tank = :asset OR linked.tank = :asset)' : 'i.'.EquipmentInventory::field($asset).' = :asset').' AND i.loanStatus = :issued')
-                ->setParameter('asset', $asset)->setParameter('issued', 'issued')->getQuery()->getSingleScalarResult();
-            if ($asset instanceof EquipmentItem) {
-                $active += $this->em->getRepository(EquipmentReservation::class)->count(['equipmentItem' => $asset, 'status' => 'issued']);
-            } elseif ($asset instanceof Tank) {
-                $active += (int) $this->em->createQueryBuilder()->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
-                    ->join('r.equipmentItem', 'linked')->where('linked.tank = :asset AND r.status = :issued')
-                    ->setParameter('asset', $asset)->setParameter('issued', 'issued')->getQuery()->getSingleScalarResult();
-            }
-            if ($active > 0) { throw new \DomainException('Gegenstand ist noch ausgegeben.'); }
-            $due = $this->inventory->dueAt($asset);
-            $record = $this->inventory->findRecord($asset);
-            if ((($asset instanceof Tank || $asset instanceof Regulator || $record?->getInspectionIntervalMonths() !== null) && $due === null)
-                || ($due !== null && $due->format('Y-m-d') < date('Y-m-d'))) {
-                throw new \DomainException('Prüfung oder Revision fehlt oder ist abgelaufen.');
-            }
-            if ($asset instanceof EquipmentItem && $asset->getConditionStatus() === 'retired') {
-                throw new \DomainException('Ausgemusterte Ausrüstung kann nicht freigegeben werden.');
-            }
+            $this->assertReleasable($asset);
             $this->setTechnicalState($asset, 'ready', true);
             $this->history($asset, 'manual_release', $reason, $actor);
         });
+    }
+
+    /** The caller must hold the physical asset row lock. */
+    public function assertReleasable(EquipmentItem|Regulator|Tank $asset): void
+    {
+        $asset = EquipmentInventory::physicalAsset($asset);
+        if ($this->hasOpenOrder($asset)) { throw new \DomainException('Offenen Wartungsauftrag zuerst abschließen.'); }
+        $active = (int) $this->em->createQueryBuilder()->select('COUNT(i.id)')->from(EquipmentBookingItem::class, 'i')
+            ->leftJoin('i.equipmentItem', 'linked')
+            ->where(($asset instanceof Tank ? '(i.tank = :asset OR linked.tank = :asset)' : 'i.'.EquipmentInventory::field($asset).' = :asset').' AND i.loanStatus = :issued')
+            ->setParameter('asset', $asset)->setParameter('issued', 'issued')->getQuery()->getSingleScalarResult();
+        if ($asset instanceof EquipmentItem) {
+            $active += $this->em->getRepository(EquipmentReservation::class)->count(['equipmentItem' => $asset, 'status' => 'issued']);
+        } elseif ($asset instanceof Tank) {
+            $active += (int) $this->em->createQueryBuilder()->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
+                ->join('r.equipmentItem', 'linked')->where('linked.tank = :asset AND r.status = :issued')
+                ->setParameter('asset', $asset)->setParameter('issued', 'issued')->getQuery()->getSingleScalarResult();
+        }
+        if ($active > 0) { throw new \DomainException('Gegenstand ist noch ausgegeben.'); }
+        $due = $this->inventory->dueAt($asset);
+        $record = $this->inventory->findRecord($asset);
+        if ((($asset instanceof Tank || $asset instanceof Regulator || $record?->getInspectionIntervalMonths() !== null) && $due === null)
+            || ($due !== null && $due->format('Y-m-d') < date('Y-m-d'))) {
+            throw new \DomainException('Prüfung oder Revision fehlt oder ist abgelaufen.');
+        }
+        if ($asset instanceof EquipmentItem && $asset->getConditionStatus() === 'retired') {
+            throw new \DomainException('Ausgemusterte Ausrüstung kann nicht freigegeben werden.');
+        }
     }
 
     public function history(EquipmentItem|Regulator|Tank $asset, string $event, string $description, string $actor): void
@@ -132,7 +140,8 @@ final class EquipmentMaintenanceService
         }
     }
 
-    private function setTechnicalState(EquipmentItem|Regulator|Tank $asset, string $condition, bool $lendable): void
+    /** The caller must hold the physical asset row lock. */
+    public function setTechnicalState(EquipmentItem|Regulator|Tank $asset, string $condition, bool $lendable): void
     {
         $asset->setConditionStatus($condition);
         $asset->setLendable($lendable);

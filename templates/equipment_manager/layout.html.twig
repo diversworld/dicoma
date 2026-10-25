@@ -1,75 +1,90 @@
 <!doctype html>
 <html lang="{{ app.request.locale|default('de') }}">
-<head>
-<!-- Basic Page Needs
-    ================================================== -->
-    <meta charset="utf-8">
-    <meta charset="UTF-8">
-    <title>{% block title %}DICOMA · Gerätewart{% endblock %}</title>
-	<!-- Mobile Specific Metas
-    ================================================== -->
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Diversworld DiveCourseManager">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="author" content="Eckhard becker">
-    <meta name="theme-name" content="airspace">
-    <meta name="generator" content="Themefisher Airspace Template v1.0">
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}" />
-	<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-	
-	<!-- bootstrap.min css -->
-    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
-    <!-- Ionic Icon Css -->
-    <link rel="stylesheet" href="{{ asset('plugins/Ionicons/css/ionicons.min.css') }}">
-    <!-- animate.css -->
-    <link rel="stylesheet" href="{{ asset('plugins/animate-css/animate.css') }}">
-    <!-- Magnify Popup -->
-    <link rel="stylesheet" href="{{ asset('plugins/magnific-popup/magnific-popup.css') }}">
-    <!-- Slick CSS -->
-    <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
-	<!-- Main Stylesheet -->
-    <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
-	<link rel="stylesheet" href="{{ asset('css/pages/equipment-manager-layout.css') }}">
-</head>
-<body>
-<header class="manager-header"><nav class="container d-flex flex-wrap align-items-center gap-2" aria-label="Gerätewart-Navigation">
-<strong>DICOMA · GERÄTEWART</strong>
-<a href="{{ path('equipment_manager_dashboard') }}">Übersicht</a>
-<a href="{{ path('equipment_manager_tuv') }}">TÜV</a>
-<a href="{{ path('equipment_manager_loans') }}">Ausleihe</a>
-<a href="{{ path('equipment_manager_inventory') }}">Inventar und Wartung</a>
-<a href="{{ path('equipment_manager_cashbook') }}">Kasse</a>
-<a href="{{ path('equipment_manager_compressor_evenings') }}">Kompressorlogbuch</a>
-<a href="{{ path('equipment_manager_fill_billing') }}">Füllgebühren</a>
-{% if is_granted('ROLE_ADMIN') %}<a href="{{ path('admin') }}">Verwaltung (EasyAdmin)</a>{% endif %}
-</nav></header>
-<div class="manager-main">
-{% block body %}{% endblock %}
-</div>
-
-{% block footer %}
-<footer class="footer">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="footer-manu">
-                    Interner Gerätewartbereich · Zahlungen nur für den eigenen Verein
-                </div>
-                <p class="copyright mb-0">Copyright <script>document.write(new Date().getFullYear())</script> &copy; Designed & Developed by 
-					<a href="http://www.themefisher.com">Themefisher</a>. All rights reserved.</a>
-                </p>
+    <head>
+    <!-- Basic Page Needs
+        ================================================== -->
+        <meta charset="utf-8">
+        <meta charset="UTF-8">
+        <title>{% block title %}DICOMA · Gerätewart{% endblock %}</title>
+        <!-- Mobile Specific Metas
+        ================================================== -->
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="description" content="Diversworld DiveCourseManager">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+        <meta name="author" content="Eckhard becker">
+        <meta name="theme-name" content="airspace">
+        <meta name="generator" content="Themefisher Airspace Template v1.0">
+        <!-- Favicon -->
+        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}" />
+        <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        
+        <!-- bootstrap.min css -->
+        <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
+        <!-- Ionic Icon Css -->
+        <link rel="stylesheet" href="{{ asset('plugins/Ionicons/css/ionicons.min.css') }}">
+        <!-- animate.css -->
+        <link rel="stylesheet" href="{{ asset('plugins/animate-css/animate.css') }}">
+        <!-- Magnify Popup -->
+        <link rel="stylesheet" href="{{ asset('plugins/magnific-popup/magnific-popup.css') }}">
+        <!-- Slick CSS -->
+        <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
+        <!-- Main Stylesheet -->
+        <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/pages/equipment-manager-layout.css') }}">
+    </head>
+    <body>
+        <header class="manager-header">
+            <div class="ip-header-title container align-items-center">
+                <a class="navbar-brand" href="{{ path('app_home') }}">
+                    <img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250" alt="Diversworld">
+                </a>
+                <strong>DICOMA · GERÄTEWART</strong>
             </div>
+            <nav class="container d-flex flex-wrap align-items-center gap-2" aria-label="Gerätewart-Navigation">
+                <a class="navbar-brand" href="{{ path('app_home') }}">
+                    <img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250" alt="Diversworld">
+                </a>
+                
+                <a href="{{ path('equipment_manager_dashboard') }}">Übersicht</a>
+                <a href="{{ path('equipment_manager_tuv') }}">TÜV</a>
+                <a href="{{ path('equipment_manager_loans') }}">Ausleihe</a>
+                <a href="{{ path('equipment_manager_inventory') }}">Inventar und Wartung</a>
+                <a href="{{ path('equipment_manager_cashbook') }}">Kasse</a>
+                <a href="{{ path('equipment_manager_compressor_evenings') }}">Kompressorlogbuch</a>
+                <a href="{{ path('equipment_manager_fill_billing') }}">Füllgebühren</a>
+                {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('admin') }}">Verwaltung (EasyAdmin)</a>{% endif %}
+                <form method="post" action="{{ path('app_logout') }}" class="m-0">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-light" >Abmelden</button>
+                </form>
+            </nav>
+        </header>
+        <div class="manager-main">
+        {% block body %}{% endblock %}
         </div>
-    </div>
-</footer>
 
-{% endblock %}
+        {% block footer %}
+        <footer class="footer">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="footer-manu">
+                            Interner Gerätewartbereich · Zahlungen nur für den eigenen Verein
+                        </div>
+                        <p class="copyright mb-0">Copyright <script>document.write(new Date().getFullYear())</script> &copy; Designed & Developed by 
+                            <a href="http://www.themefisher.com">Themefisher</a>. All rights reserved.</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        {% endblock %}
 
-<script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
-<script src="{{ asset('plugins/bootstrap/bootstrap.min.js') }}"></script>
-{% block javascripts %}{% endblock %}
-</body></html>
+        <script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
+        <script src="{{ asset('plugins/bootstrap/bootstrap.min.js') }}"></script>
+        {% block javascripts %}{% endblock %}
+    </body>
+</html>

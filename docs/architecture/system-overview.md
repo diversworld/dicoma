@@ -1,4 +1,4 @@
-# Systemübersicht – Phase 2 bis 5
+# Systemübersicht – Phase 2 bis 6
 
 DICOMA bleibt eine bestehende Symfony-7.4-Anwendung mit Doctrine ORM 2, Twig, Symfony Security und EasyAdmin. Fachlogik bleibt in den vorhandenen Services, HTTP-Orchestrierung in den vorhandenen Controllern. MySQL/MariaDB ist die von der vorhandenen Migrationshistorie unterstützte Datenbank.
 
@@ -10,6 +10,113 @@ HTTP / Symfony Security / CSRF
 ```
 
 Personenstammdaten werden zentral gehalten; fachliche Mitgliedschaften, Benutzerkonto und Rollen bleiben getrennt. Siehe [Datenmodell](data-model.md) und [Rollenvertrag](roles-permissions.md).
+
+## Phase 6: Inventar, Gerätewart und Verleih
+
+Der operative Gerätewartbereich verbindet **Inventar und Wartung**,
+**Ausleihe**, **Kompressorlogbuch**, **Füllgebühren** und **Kasse**.
+Die bestehenden Stammdatentabellen für Ausrüstungsartikel, Atemregler
+und Vereinsflaschen bleiben erhalten. Eine gemeinsame Inventarakte
+ergänzt Eigentumsverhältnis, Eigentümer/Leihgeber, Lagerort,
+Anschaffungsdatum und -preis, Prüfintervall, Genehmigungspflicht,
+Dokumente und Gerätehistorie. Kategorien, Inventar- und Seriennummern
+bleiben bei den bestehenden Stammdaten. Die globalen Stammdaten-CRUDs
+bleiben Superadmin-only; operative Rechte werden nicht global erweitert.
+
+### Verleihprozess
+
+1. Mitglieder oder Verwaltung reservieren einzelne Inventargegenstände.
+   Die Verfügbarkeit wird vor dem Speichern und erneut vor Ausgabe
+   unter Datenbanksperren geprüft. Benachbarte Zeiträume dürfen sich
+   berühren; Überschneidungen nicht. Noch ausgegebene Positionen
+   blockieren unabhängig vom ursprünglichen Buchungsende.
+   Die verbindliche Belegungsprüfung verwendet aktuelle, sperrende
+   Lesezugriffe statt eines eventuell früher erzeugten
+   `REPEATABLE READ`-Snapshots. MariaDB-Snapshotkonflikte führen zu
+   einer ausdrücklichen Ablehnung mit Neuladehinweis, niemals zu
+   einer vermeintlich erfolgreichen Buchung.
+2. Die zusätzliche Gerätewart-Genehmigung ist **je Gegenstand
+   konfigurierbar**, standardmäßig nicht erforderlich. Die Buchung
+   merkt sich die Pflicht; die Ausgabe prüft auch die aktuelle
+   Inventarfreigabe. Ein nachträglich hinzugefügter
+   genehmigungspflichtiger Gegenstand hebt die Genehmigung auf.
+3. Ausgabe ist nur im reservierten Zeitraum möglich. Gesperrter
+   Zustand, fehlende Verleihfreigabe, offene Wartung, deaktivierte
+   Kategorie sowie fehlende oder nicht bis zum Rückgabetag gültige
+   vorgeschriebene Prüfung verhindern die Ausgabe. Sammelausgabe
+   erfolgt vollständig oder gar nicht.
+4. Die Summe der hinterlegten einmaligen Einzel-Leihgebühren wird bei
+   Buchung in ganzen Cent festgeschrieben. Weitere Positionen ergänzen
+   diesen Preis. Es wird kein neuer Tagestarif angenommen. Fehlende
+   Altpreise müssen ausdrücklich bestätigt werden, auch bei 0 EUR.
+   Die einmalige Bar-/Überweisungsverbuchung muss dem festgeschriebenen
+   Gesamtbetrag entsprechen; Teil- und Überzahlungen werden abgewiesen.
+5. Rückgabe erfasst Zustand und Bemerkung je Position. Schäden und
+   Wartungsbedarf benötigen eine Beschreibung, sperren den Gegenstand
+   und erzeugen einen technischen Auftrag mit Verantwortlichkeit.
+   Auftragsabschluss und technische Freigabe sind getrennte Schritte.
+6. **Strikter Abschluss:** Alle Positionen müssen zurückgegeben,
+   die festgeschriebene Gebühr bezahlt oder ausdrücklich kostenlos
+   sein. Ein beschädigt zurückgegebenes Gerät muss nach bearbeiteter
+   Wartung technisch freigegeben sein. Dokumentierte Bargeld-
+   Rückzahlungen werden bei der Zahlungsprüfung abgezogen.
+
+Stornierte Reservierungen belegen keine Verfügbarkeit mehr. Alte
+Einzelreservierungen bleiben als Historie erhalten und können noch
+zurückgenommen werden; Neuanlage führt in den konsolidierten Verleih.
+Genehmigungspflichtige, noch nicht ausgegebene Altreservierungen müssen
+dort neu angelegt werden. Eine mit einem allgemeinen Ausrüstungsartikel
+verknüpfte Vereinsflasche ist **ein physischer Gegenstand**, nicht zwei:
+Reservierungen, Sperren, Wartung, Inventarakte und Dokumente verwenden
+dieselbe Flaschenidentität.
+
+### Wartung und Nachweise
+
+Der vorhandene Flaschen-Wartungsauftrag unterstützt nun auch allgemeine
+Ausrüstung und Atemregler sowie Wartung, Reparatur und Defektmeldung.
+Prüfung/Revision speichert Durchführungsdatum, nächsten Termin und
+Prüfer-/Nachweistext. Ohne ausdrücklich eingegebenen nächsten Termin
+wird das hinterlegte Monatsintervall angewendet, am Monatsende auf
+den letzten gültigen Kalendertag begrenzt. Für Flaschen und Atemregler
+bleiben ihre bisherigen Prüf-/Revisionstermine maßgebend; allgemeine
+Ausrüstung nutzt den Termin ihrer Inventarakte.
+
+Die technische Freigabe verlangt abgeschlossene Aufträge, keine noch
+ausgegebene Ausrüstung und gültige vorgeschriebene Prüfungen.
+Ausgemusterte allgemeine Ausrüstung wird nicht automatisch reaktiviert.
+Historie und Berichte werden ergänzt, nicht durch eine Freigabe gelöscht.
+PDF-, JPG- und PNG-Nachweise bis 5 MiB nutzen die vorhandene private
+Dokumentenablage mit vereinsgeprüftem Attachment-Download, `nosniff`
+und ohne öffentlichen Cache.
+
+### Flaschen, Füllungen und Kasse
+
+Die bestehende Flaschenverwaltung einschließlich TÜV-Prüfgebühren,
+Wartung und Abrechnung bleibt integriert und über die Inventarakte
+erreichbar. Einzel- und Gruppenfüllungen benötigen zusätzlich
+`ROLE_COMPRESSOR_OPERATOR` im Gerätewartbereich. Vereinsflaschen
+brauchen einen einsatzbereiten Zustand, eine gültige Flaschenprüfung
+und dürfen keinen offenen Wartungsauftrag haben. Eine fehlende
+Verleihfreigabe allein verbietet keine Füllung. Externe Flaschen
+behalten ihre manuell bestätigte Sicherheitsprüfung.
+
+Jede neue Einzel- oder Gruppenfüllung hält eine **ausdrücklich
+vereinbarte Gesamtfüllgebühr** fest; 0 bedeutet kostenlos.
+Es wird kein größenabhängiger Tarif erfunden. Füllung und Gebührenbeleg
+werden atomar gespeichert. Doppelte Vereinsflaschen in einer Gruppe
+und Füllungen in geschlossenen Füllabenden werden abgewiesen.
+Der Abschluss hält den abschließenden Betriebsstundenzähler fest und
+ist mit Gruppenfüllungen über dieselbe Datenbanksperre serialisiert.
+
+Bar-/Überweisungszahlungen für Füllungen erscheinen einmalig in
+Hauptjournal, Tagesauswertung und CSV. Barzahlungen fließen außerdem
+in Kassenbestand, Auszahlungen und Tagesabschluss samt Bewegungshash
+ein. Rückzahlungen sind separate Kassenkorrekturen; Originalbelege
+bleiben erhalten. Historische Füllungen erhalten nicht nachträglich
+erfundene Gebühren. Die Schadensbearbeitung erfolgt technisch über
+Defekt-/Reparaturauftrag und Freigabe; eine automatische Berechnung
+von Schadenersatz oder eine neue Schadenersatzbuchhaltung wird nicht
+eingeführt.
 
 ## Phase 5: Mannschaften und Turniere
 

@@ -27,7 +27,7 @@
     <div class="card shadow-sm mb-3"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
       <strong>Buchung #{{ booking.id }}</strong>
       <span>{{ booking.startsAt|date('d.m.Y') }} – {{ booking.endsAt|date('d.m.Y') }}</span>
-      <span class="badge bg-secondary">{{ {'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert'}[booking.status] ?? booking.status }}</span>
+      <span class="badge bg-secondary">{{ {'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[booking.status] ?? booking.status }}</span>
     </div><div class="card-body">
       {# DICOMA_CHECKOUT_WORKSPACE_V1 #}
       {% if not app.request.query.get('checkout') %}
@@ -85,6 +85,8 @@
           am {{ payment.collectedAt|date('d.m.Y H:i') }}
           <span class="d-block small">Kassiert von: {{ payment.collectedBy }}</span>
         </div>
+      {% elseif booking.agreedRentalFeeCents is null %}
+        <p class="text-warning">Vereinbarte Leihgebühr vor der Zahlung oder dem Abschluss ausdrücklich bestätigen; 0 bedeutet kostenlos.</p>
       {% elseif expectedCents == 0 and not missingFee %}
         <p class="text-muted">Kostenloser Verleih; keine Zahlung erforderlich.</p>
       {% elseif booking.status in ['partially_issued','issued','partially_returned','returned'] %}
@@ -130,7 +132,7 @@
                 <option value="ready">In Ordnung</option><option value="maintenance">Wartung erforderlich</option><option value="damaged">Beschädigt</option>
               </select>
               <label class="visually-hidden" for="notes-{{ line.id }}">Bemerkung</label>
-              <input id="notes-{{ line.id }}" class="form-control form-control-sm mb-2" name="notes" maxlength="1000" placeholder="Bemerkung (optional)">
+              <input id="notes-{{ line.id }}" class="form-control form-control-sm mb-2" name="notes" maxlength="2000" placeholder="Bei Schaden / Wartung mindestens 10 Zeichen, sonst optional">
               <button class="btn btn-sm btn-success" type="submit">Rücknahme bestätigen</button>
             </form>
           {% else %}<span class="text-muted">Keine Aktion</span>{% endif %}

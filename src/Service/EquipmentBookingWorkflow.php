@@ -60,10 +60,10 @@ final class EquipmentBookingWorkflow
                 $physical = EquipmentInventory::physicalAsset($asset);
                 $this->em->refresh($physical, LockMode::PESSIMISTIC_WRITE);
                 if ($physical !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
-                if ($line->getReturnCondition() !== 'ready' && ($asset->getConditionStatus() !== 'ready' || !$asset->isLendable() || $this->maintenance->hasOpenOrder($asset))) {
+                if ($asset->getConditionStatus() !== 'ready' || !$asset->isLendable() || $this->maintenance->hasOpenOrder($asset)) {
                     throw new \DomainException('Schadens-/Wartungsbearbeitung zuerst abschließen und Gegenstand freigeben.');
                 }
-                if ($line->getReturnCondition() !== 'ready' && ($physical->getConditionStatus() !== 'ready' || !$physical->isLendable())) {
+                if ($physical->getConditionStatus() !== 'ready' || !$physical->isLendable()) {
                     throw new \DomainException('Schadens-/Wartungsbearbeitung zuerst abschließen und Gegenstand freigeben.');
                 }
             }

@@ -30,7 +30,8 @@ final class EquipmentLoanService
             }
             $clubId = $reservation->getMember()?->getClub()?->getId();
             if (!$clubId || !$reservation->getStartsAt() || !$reservation->getEndsAt()) { throw new \DomainException('Mitglied oder Zeitraum fehlt.'); }
-            if ($this->inventory->requiresApproval($item)) { throw new \DomainException('Genehmigungspflichtige Altreservierung stornieren und im konsolidierten Verleih neu anlegen.'); }
+            $this->em->refresh(EquipmentInventory::physicalAsset($item), LockMode::PESSIMISTIC_WRITE);
+            if ($this->inventory->requiresApproval($item, true)) { throw new \DomainException('Genehmigungspflichtige Altreservierung stornieren und im konsolidierten Verleih neu anlegen.'); }
             $now = new \DateTimeImmutable();
             if ($reservation->getStartsAt() > $now || $reservation->getEndsAt() <= $now) { throw new \DomainException('Ausgabe ist nur innerhalb des reservierten Zeitraums möglich.'); }
             $this->availability->assertAvailable($item, $clubId, $reservation->getStartsAt(), $reservation->getEndsAt(), null, $reservation->getId());

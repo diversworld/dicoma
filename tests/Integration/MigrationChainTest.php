@@ -132,6 +132,62 @@ final class MigrationChainTest extends TestCase
         self::assertTrue($this->connection->createSchemaManager()->tablesExist(['equipment_asset_record', 'equipment_document', 'equipment_fill_charge']));
     }
 
+    #[DataProvider('equipmentBookingKinds')]
+    public function testEquipmentAvailabilityUsesCurrentReadAfterAnEarlierSnapshot(string $kind, bool $snapshotIsolation): void
+    {
+        $mariaDb = str_contains($this->connection->fetchOne('SELECT VERSION()'), 'MariaDB');
+        if ($snapshotIsolation && !$mariaDb) { self::markTestSkipped('MariaDB-specific snapshot isolation mode.'); }
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Concurrent', 'lastname' => 'Borrower']);
+        $this->connection->insert('member', ['club_id' => $clubId, 'person_id' => (int) $this->connection->lastInsertId(), 'membership_status' => 'active']);
+        $memberId = (int) $this->connection->lastInsertId();
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $reader = DriverManager::getConnection($this->connection->getParams());
+        $em = EntityManager::create($reader, $config);
+        $club = $em->find(\App\Entity\Club::class, $clubId);
+        $category = (new \App\Entity\EquipmentCategory())->setClub($club)->setCode('concurrent')->setName('Concurrent stock');
+        $item = (new \App\Entity\EquipmentItem())->setClub($club)->setCategory($category)->setName('Concurrent mask')->setInventoryNumber('LOCK-001');
+        $em->persist($category); $em->persist($item); $em->flush();
+        $inventory = new \App\Service\EquipmentInventory($em);
+        $maintenance = new \App\Service\EquipmentMaintenanceService($em, $inventory);
+        $availability = new \App\Service\EquipmentAssetAvailability($em, $inventory, $maintenance, new \App\Service\EquipmentRentalEligibility());
+        $writer = DriverManager::getConnection($this->connection->getParams());
+        self::assertSame(0, $reader->getTransactionNestingLevel());
+        if ($mariaDb) { $reader->executeStatement('SET SESSION innodb_snapshot_isolation = '.($snapshotIsolation ? '1' : '0')); }
+        $reader->setTransactionIsolation(\Doctrine\DBAL\TransactionIsolationLevel::REPEATABLE_READ);
+        self::assertSame('REPEATABLE-READ', $reader->fetchOne($mariaDb ? 'SELECT @@session.tx_isolation' : 'SELECT @@session.transaction_isolation'));
+        $reader->beginTransaction();
+        try {
+            self::assertSame('Migration test', $reader->fetchOne('SELECT name FROM club WHERE id = ?', [$clubId]));
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM equipment_booking_item'));
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM equipment_reservation'));
+            $period = ['starts_at' => '2026-11-01 08:00:00', 'ends_at' => '2026-11-01 18:00:00'];
+            if ($kind === 'modern') {
+                $writer->insert('equipment_booking', $period + ['member_id' => $memberId, 'created_at' => '2026-10-25 12:00:00', 'status' => 'reserved', 'approval_required' => 0]);
+                $writer->insert('equipment_booking_item', ['booking_id' => (int) $writer->lastInsertId(), 'equipment_item_id' => $item->getId(), 'quantity' => 1, 'loan_status' => 'reserved']);
+            } else {
+                $writer->insert('equipment_reservation', $period + ['member_id' => $memberId, 'equipment_item_id' => $item->getId(), 'quantity' => 1, 'status' => 'reserved']);
+            }
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM '.($kind === 'modern' ? 'equipment_booking_item' : 'equipment_reservation')), 'The reader must still hold its earlier repeatable-read snapshot.');
+            $this->expectExceptionMessage($snapshotIsolation ? 'Verfügbarkeit wurde gleichzeitig verändert.' : 'Gegenstand ist bereits reserviert oder noch ausgegeben.');
+            $availability->assertAvailable($item, $clubId, new \DateTimeImmutable($period['starts_at']), new \DateTimeImmutable($period['ends_at']));
+        } finally {
+            $reader->rollBack();
+            $writer->close();
+            $reader->close();
+        }
+    }
+
+    public static function equipmentBookingKinds(): iterable
+    {
+        yield 'modern booking current read' => ['modern', false];
+        yield 'legacy reservation current read' => ['legacy', false];
+        yield 'modern booking snapshot conflict' => ['modern', true];
+        yield 'legacy reservation snapshot conflict' => ['legacy', true];
+    }
+
     public function testPersonNormalizationPreservesAllFieldsIdsAndAccountLinks(): void
     {
         $this->migrate('20261022130000');

@@ -151,7 +151,7 @@
 					<div>
 						<strong>Buchung #{{ b.id }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }} 
 							<span class="badge {{ b.status == 'reserved' ? 'bg-primary' : (b.status == 'cancelled' ? 'bg-secondary' : 'bg-success') }}">
-								{{ {'reserved':'Reserviert – Ausgabe ausstehend','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurückgegeben','returned':'Zurückgegeben','cancelled':'Storniert'}[b.status] ?? b.status }}
+								{{ {'reserved':'Reserviert – Ausgabe ausstehend','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurückgegeben','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[b.status] ?? b.status }}
 							</span>
 						<ul class="small mb-0 mt-2">
 							{% for line in b.items %}

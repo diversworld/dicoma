@@ -55,7 +55,7 @@
                 <li class="nav-item">
                     <form method="post" action="{{ path('app_logout') }}" class="m-0">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-                        <button type="submit" class="nav-link dw-navigation-button" >Abmelden</button>
+                        <button type="submit" class="btn btn-sm btn-outline-light" >Abmelden</button>
                     </form>
                 </li>
             {% endif %}

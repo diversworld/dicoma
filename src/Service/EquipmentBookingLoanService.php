@@ -83,7 +83,7 @@ final class EquipmentBookingLoanService
                         throw new \DomainException('Die physische Ausrüstung ist mehrfach in dieser Buchung enthalten.');
                     }
                 }
-                if (($booking->isApprovalRequired() || $this->inventory->requiresApproval($asset)) && $booking->getApprovedAt() === null) {
+                if (($booking->isApprovalRequired() || $this->inventory->requiresApproval($asset, true)) && $booking->getApprovedAt() === null) {
                     throw new \DomainException('Diese Buchung muss zuerst vom Gerätewart genehmigt werden.');
                 }
                 $memberClubId = $booking->getMember()?->getClub()?->getId();

@@ -43,12 +43,12 @@ final class EquipmentManagerCashbookController extends AbstractController
             }
         }
         $fills=$em->getRepository(EquipmentFillCharge::class)->createQueryBuilder('r')
-                ->where('IDENTITY(r.club) = :club AND r.collectedAt IS NOT NULL')->setParameter('club',$clubId)
-                ->orderBy('r.collectedAt','DESC')->setMaxResults(500)->getQuery()->getResult();
-            foreach ($fills as $receipt) {
-                $rows[]=['type'=>'fill','receipt'=>$receipt];
-                $totals['fill']+=$receipt->getAmountCents();
-                $totals[$receipt->getMethod()]+=$receipt->getAmountCents();
+            ->where('IDENTITY(r.club) = :club AND r.collectedAt IS NOT NULL')->setParameter('club',$clubId)
+            ->orderBy('r.collectedAt','DESC')->setMaxResults(500)->getQuery()->getResult();
+        foreach ($fills as $receipt) {
+            $rows[]=['type'=>'fill','receipt'=>$receipt];
+            $totals['fill']+=$receipt->getAmountCents();
+            $totals[$receipt->getMethod()]+=$receipt->getAmountCents();
         }
         // Auch echte Barauszahlungen gehören chronologisch ins Hauptjournal.
         $payouts=$em->getRepository(EquipmentCashPayout::class)->createQueryBuilder('p')

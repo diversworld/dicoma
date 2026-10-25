@@ -37,17 +37,22 @@ final class EquipmentAssetAvailability
         ?int $excludeBookingId = null, ?int $excludeReservationId = null,
     ): void {
         if ($start >= $end || !$asset->getId()) { throw new \DomainException('Inventargegenstand oder Zeitraum ist ungültig.'); }
-        $physical = EquipmentInventory::physicalAsset($asset);
-        $this->em->refresh($physical, LockMode::PESSIMISTIC_WRITE);
-        if ($physical !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
-        if ($asset->getClub()?->getId() !== $clubId) { throw new \DomainException('Gegenstand gehört nicht zum eigenen Verein.'); }
-        $this->assertEligible($asset, $end);
-        if (!$this->isFree($asset, $start, $end, $excludeBookingId, $excludeReservationId)) {
-            throw new \DomainException('Gegenstand ist bereits reserviert oder noch ausgegeben.');
+        try {
+            $physical = EquipmentInventory::physicalAsset($asset);
+            $this->em->refresh($physical, LockMode::PESSIMISTIC_WRITE);
+            if ($physical !== $asset) { $this->em->refresh($asset, LockMode::PESSIMISTIC_WRITE); }
+            if ($asset->getClub()?->getId() !== $clubId) { throw new \DomainException('Gegenstand gehört nicht zum eigenen Verein.'); }
+            $this->assertEligible($asset, $end, true);
+            if (!$this->isFree($asset, $start, $end, $excludeBookingId, $excludeReservationId, true)) {
+                throw new \DomainException('Gegenstand ist bereits reserviert oder noch ausgegeben.');
+            }
+        } catch (\Doctrine\DBAL\Exception\DriverException $e) {
+            if ($e->getCode() !== 1020 && !$e instanceof \Doctrine\DBAL\Exception\RetryableException) { throw $e; }
+            throw new \DomainException('Verfügbarkeit wurde gleichzeitig verändert. Bitte neu laden und erneut versuchen.', 0, $e);
         }
     }
 
-    public function assertEligible(EquipmentItem|Regulator|Tank $asset, \DateTimeImmutable $end): void
+    public function assertEligible(EquipmentItem|Regulator|Tank $asset, \DateTimeImmutable $end, bool $currentRead = false): void
     {
         if (!$asset->isLendable() || $asset->getConditionStatus() !== 'ready' || $this->maintenance->hasOpenOrder($asset)) {
             throw new \DomainException('Gegenstand ist technisch gesperrt oder in Wartung.');
@@ -57,11 +62,12 @@ final class EquipmentAssetAvailability
             if (!$asset->getCategory()?->isActive()) { throw new \DomainException('Ausrüstungskategorie ist nicht aktiv.'); }
             if ($asset->getTank() !== null) {
                 if ($asset->getTank()->getClub()?->getId() !== $asset->getClub()?->getId()) { throw new \DomainException('Verknüpfte Flasche gehört nicht zum Verein.'); }
-                $this->assertEligible($asset->getTank(), $end);
+                $this->assertEligible($asset->getTank(), $end, $currentRead);
             }
         }
-        $due = $this->inventory->dueAt($asset);
-        $record = $this->inventory->findRecord($asset);
+        $record = $this->inventory->findRecord($asset, $currentRead);
+        if ($currentRead && $record !== null) { $this->em->refresh($record, LockMode::PESSIMISTIC_READ); }
+        $due = $asset instanceof EquipmentItem && $asset->getTank() === null ? $record?->getNextInspectionAt() : $this->inventory->dueAt($asset);
         $required = $asset instanceof Tank || $asset instanceof Regulator || $record?->getInspectionIntervalMonths() !== null;
         if (($required && $due === null) || ($due !== null && $due->format('Y-m-d') < $end->format('Y-m-d'))) {
             throw new \DomainException('Prüfung oder Revision ist nicht bis zum Verleihende gültig.');
@@ -70,27 +76,33 @@ final class EquipmentAssetAvailability
 
     private function isFree(
         EquipmentItem|Regulator|Tank $asset, \DateTimeImmutable $start, \DateTimeImmutable $end,
-        ?int $excludeBookingId, ?int $excludeReservationId,
+        ?int $excludeBookingId, ?int $excludeReservationId, bool $currentRead = false,
     ): bool {
         $physical = EquipmentInventory::physicalAsset($asset);
-        $qb = $this->em->createQueryBuilder()->select('COUNT(bi.id)')
+        $qb = $this->em->createQueryBuilder()->select('bi.id')
             ->from(EquipmentBookingItem::class, 'bi')->join('bi.booking', 'b')
             ->leftJoin('bi.equipmentItem', 'linked')
             ->where($physical instanceof Tank ? '(bi.tank = :asset OR linked.tank = :asset)' : 'bi.'.EquipmentInventory::field($physical).' = :asset')
             ->andWhere('(bi.loanStatus = :issued OR (bi.loanStatus = :reserved AND b.status != :cancelled AND b.startsAt < :end AND b.endsAt > :start))')
             ->setParameter('asset', $physical)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
-            ->setParameter('cancelled', 'cancelled')->setParameter('start', $start)->setParameter('end', $end);
+            ->setParameter('cancelled', 'cancelled')->setParameter('start', $start)->setParameter('end', $end)
+            ->setMaxResults(1);
         if ($excludeBookingId !== null) { $qb->andWhere('b.id != :excluded')->setParameter('excluded', $excludeBookingId); }
-        if ((int) $qb->getQuery()->getSingleScalarResult() > 0) { return false; }
+        $query = $qb->getQuery();
+        // Asset locks alone do not refresh a previously established REPEATABLE READ snapshot.
+        if ($currentRead) { $query->setLockMode(LockMode::PESSIMISTIC_READ); }
+        if ($query->getOneOrNullResult() !== null) { return false; }
         if ($asset instanceof EquipmentItem || $physical instanceof Tank) {
-            $legacy = $this->em->createQueryBuilder()->select('COUNT(r.id)')->from(EquipmentReservation::class, 'r')
+            $legacy = $this->em->createQueryBuilder()->select('r.id')->from(EquipmentReservation::class, 'r')
                 ->join('r.equipmentItem', 'legacyItem')
                 ->where($physical instanceof Tank ? 'legacyItem.tank = :asset' : 'r.equipmentItem = :asset')
                 ->andWhere('(r.status = :issued OR (r.status = :reserved AND r.startsAt < :end AND r.endsAt > :start))')
                 ->setParameter('asset', $physical)->setParameter('issued', 'issued')->setParameter('reserved', 'reserved')
-                ->setParameter('start', $start)->setParameter('end', $end);
+                ->setParameter('start', $start)->setParameter('end', $end)->setMaxResults(1);
             if ($excludeReservationId !== null) { $legacy->andWhere('r.id != :excluded')->setParameter('excluded', $excludeReservationId); }
-            if ((int) $legacy->getQuery()->getSingleScalarResult() > 0) { return false; }
+            $query = $legacy->getQuery();
+            if ($currentRead) { $query->setLockMode(LockMode::PESSIMISTIC_READ); }
+            if ($query->getOneOrNullResult() !== null) { return false; }
         }
         return true;
     }

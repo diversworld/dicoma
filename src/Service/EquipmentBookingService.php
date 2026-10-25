@@ -52,7 +52,7 @@ final class EquipmentBookingService
         $this->em->wrapInTransaction(function () use ($booking, $assets, $clubId, $start, $end): void {
             foreach ($assets as $asset) {
                 $this->availability->assertAvailable($asset, $clubId, $start, $end);
-                if ($this->inventory->requiresApproval($asset)) { $booking->requireApproval(); }
+                if ($this->inventory->requiresApproval($asset, true)) { $booking->requireApproval(); }
             }
             // DICOMA_RENTAL_PRICE_SNAPSHOT_V1: snapshot all asset fees in cents.
             // Do not silently save a partial price if an asset has no valid fee.

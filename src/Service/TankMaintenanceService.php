@@ -6,13 +6,12 @@ namespace App\Service;
 
 use App\Entity\Tank;
 use App\Entity\TankMaintenanceOrder;
-use App\Entity\TankConditionHistory;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class TankMaintenanceService
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(private readonly EntityManagerInterface $em, private readonly EquipmentMaintenanceService $maintenance) {}
 
     public function open(int $tankId, string $description, string $actor, ?int $requiredClubId = null): int
     {
@@ -20,14 +19,13 @@ final class TankMaintenanceService
         return $this->em->wrapInTransaction(function () use ($tankId, $description, $actor, $requiredClubId): int {
             $tank = $this->em->find(Tank::class, $tankId, LockMode::PESSIMISTIC_WRITE);
             if (!$tank) { throw new \DomainException('Tauchflasche nicht gefunden.'); }
+            $this->em->refresh($tank, LockMode::PESSIMISTIC_WRITE);
             $this->assertClubScope($tank, $requiredClubId);
-            $existing = $this->em->getRepository(TankMaintenanceOrder::class)->findOneBy(['tank' => $tank, 'status' => 'open']);
-            if ($existing) { throw new \DomainException('Es existiert bereits ein offener Wartungsauftrag.'); }
+            if ($this->maintenance->hasOpenOrder($tank)) { throw new \DomainException('Es existiert bereits ein offener Wartungsauftrag.'); }
             $order = new TankMaintenanceOrder($tank, $description, 'maintenance', $actor, $actor);
-            $tank->setConditionStatus('maintenance');
-            $tank->setLendable(false);
+            $this->maintenance->setTechnicalState($tank, 'maintenance', false);
             $this->em->persist($order);
-            $this->em->persist(new TankConditionHistory($tank, 'maintenance_opened', 'maintenance', false, sprintf('[%s] %s', $actor, trim($description))));
+            $this->maintenance->history($tank, 'maintenance_opened', trim($description), $actor);
             $this->em->flush();
             return $order->getId();
         });
@@ -39,16 +37,15 @@ final class TankMaintenanceService
         $this->em->wrapInTransaction(function () use ($tankId, $orderId, $resolution, $actor, $requiredClubId): void {
             $tank = $this->em->find(Tank::class, $tankId, LockMode::PESSIMISTIC_WRITE);
             if (!$tank) { throw new \DomainException('Tauchflasche nicht gefunden.'); }
+            $this->em->refresh($tank, LockMode::PESSIMISTIC_WRITE);
             $this->assertClubScope($tank, $requiredClubId);
             $order = $this->em->find(TankMaintenanceOrder::class, $orderId, LockMode::PESSIMISTIC_WRITE);
-            if (!$order || $order->getTank()->getId() !== $tankId) {
+            if ($order) { $this->em->refresh($order, LockMode::PESSIMISTIC_WRITE); }
+            if (!$order || EquipmentInventory::physicalAsset($order->getAsset()) !== $tank) {
                 throw new \DomainException('Wartungsauftrag gehört nicht zu dieser Flasche.');
             }
             $order->close($actor, $resolution);
-            $this->em->persist(new TankConditionHistory(
-                $tank, 'maintenance_closed', $tank->getConditionStatus(), $tank->isLendable(),
-                sprintf('[%s] %s', $actor, trim($resolution)),
-            ));
+            $this->maintenance->history($tank, 'maintenance_closed', trim($resolution), $actor);
         });
     }
 

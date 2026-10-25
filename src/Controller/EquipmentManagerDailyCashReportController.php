@@ -77,13 +77,13 @@ final class EquipmentManagerDailyCashReportController extends AbstractController
             }
         }
         $fills=$em->getRepository(EquipmentFillCharge::class)->createQueryBuilder('r')
-                ->where('IDENTITY(r.club) = :club AND r.collectedAt >= :start AND r.collectedAt < :end')
-                ->setParameter('club',$clubId)->setParameter('start',$start)->setParameter('end',$end)
-                ->getQuery()->getResult();
-            foreach ($fills as $receipt) {
-                $rows[]=['type'=>'fill','receipt'=>$receipt];
-                $summary['fill']+=$receipt->getAmountCents();
-                $summary[$receipt->getMethod()]+=$receipt->getAmountCents();
+            ->where('IDENTITY(r.club) = :club AND r.collectedAt >= :start AND r.collectedAt < :end')
+            ->setParameter('club',$clubId)->setParameter('start',$start)->setParameter('end',$end)
+            ->getQuery()->getResult();
+        foreach ($fills as $receipt) {
+            $rows[]=['type'=>'fill','receipt'=>$receipt];
+            $summary['fill']+=$receipt->getAmountCents();
+            $summary[$receipt->getMethod()]+=$receipt->getAmountCents();
         }
         $payouts = $em->getRepository(EquipmentCashPayout::class)->createQueryBuilder('p')
             ->where('p.club = :club')->andWhere('p.paidAt >= :start')->andWhere('p.paidAt < :end')

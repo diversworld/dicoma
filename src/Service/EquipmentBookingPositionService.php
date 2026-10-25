@@ -87,7 +87,7 @@ final class EquipmentBookingPositionService
             $total += EquipmentInventory::feeCents($asset);
             if ($total > 2147483647) { throw new \DomainException('Leihgebühr ist zu hoch.'); }
             $booking->setAgreedRentalFeeCents($total);
-            if ($this->inventory->requiresApproval($asset)) { $booking->requireApproval(); }
+            if ($this->inventory->requiresApproval($asset, true)) { $booking->requireApproval(); }
 
             $line = new EquipmentBookingItem();
             if ($asset instanceof EquipmentItem) {

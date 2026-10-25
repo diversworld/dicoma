@@ -37,6 +37,8 @@ use App\Service\EquipmentReservationService;
 use App\Service\EquipmentLoanService;
 use App\Service\PrivateMemberDocumentStorage;
 use App\Service\TankFillingEligibility;
+use App\Service\TankMaintenanceService;
+use App\Service\TankStatusWorkflow;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Doctrine\ORM\Tools\SchemaValidator;
@@ -217,6 +219,20 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         $this->client->request('GET', '/equipment-manager/inventory/tank/'.$tank->getId()); self::assertResponseIsSuccessful();
     }
 
+    public function testFirstInspectionCreatesExactlyOneAssetRecordWithHistory(): void
+    {
+        $item = $this->item('FIRST-INSPECTION');
+        $performed = new \DateTimeImmutable('today');
+        $next = $performed->modify('+1 year');
+        static::getContainer()->get(EquipmentMaintenanceService::class)->inspect(
+            'equipment', $item->getId(), $this->club->getId(), $performed->format('Y-m-d'), $next->format('Y-m-d'), 'First inspection with test evidence', 'technician',
+        );
+        self::assertSame(1, $this->em->getRepository(EquipmentAssetRecord::class)->count(['equipmentItem' => $item]));
+        $record = $this->em->getRepository(EquipmentAssetRecord::class)->findOneBy(['equipmentItem' => $item]);
+        self::assertSame($next->format('Y-m-d'), $record->getNextInspectionAt()->format('Y-m-d'));
+        self::assertCount(1, $record->getHistory());
+    }
+
     public function testLinkedCylinderMaintenanceAndReleaseUseOnePhysicalIdentity(): void
     {
         $tank = $this->tank('CYL-LINKED');
@@ -236,6 +252,36 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         static::getContainer()->get(EquipmentBookingLoanService::class)->issueAll($booking->getId());
         $this->expectExceptionMessage('Gegenstand ist noch ausgegeben.');
         $maintenance->release('tank', $tank->getId(), $this->club->getId(), 'Release must not bypass loan', 'technician');
+    }
+
+    public function testExistingTankActionsShareMaintenanceHistoryAndPhysicalLoanGuards(): void
+    {
+        $tank = $this->tank('TANK-OLD-ACTIONS');
+        $alias = $this->item('ALIAS-OLD-ACTIONS'); $alias->setTank($tank); $this->em->flush();
+        $old = static::getContainer()->get(TankMaintenanceService::class);
+        $order = $old->open($tank->getId(), 'Valve needs scheduled repair', 'technician', $this->club->getId());
+        self::assertFalse($alias->isLendable());
+        $old->closeForTank($tank->getId(), $order, 'Valve serviced and verified', 'technician', $this->club->getId());
+        $workflow = static::getContainer()->get(TankStatusWorkflow::class);
+        $workflow->apply($tank->getId(), 'release', 'Technical check completed', 'technician', $this->club->getId());
+        self::assertTrue($alias->isLendable());
+        self::assertCount(3, $this->em->getRepository(EquipmentAssetRecord::class)->findOneBy(['tank' => $tank])->getHistory());
+        $booking = $this->booking($alias);
+        static::getContainer()->get(EquipmentBookingLoanService::class)->issueAll($booking->getId());
+        $this->expectExceptionMessage('Gegenstand ist noch ausgegeben.');
+        $workflow->apply($tank->getId(), 'release', 'Must not release a loaned tank', 'technician', $this->club->getId());
+    }
+
+    public function testReadyReturnCannotCloseWithOpenMaintenance(): void
+    {
+        $item = $this->item('READY-OPEN-ORDER', '0.00');
+        $booking = $this->booking($item);
+        $loans = static::getContainer()->get(EquipmentBookingLoanService::class);
+        $loans->issueAll($booking->getId());
+        $loans->change($booking->getId(), $booking->getItems()->first()->getId(), 'return', 'ready');
+        $this->em->persist(new TankMaintenanceOrder($item, 'Unresolved maintenance despite ready return')); $this->em->flush();
+        $this->expectExceptionMessage('Schadens-/Wartungsbearbeitung zuerst abschließen');
+        static::getContainer()->get(EquipmentBookingWorkflow::class)->close($booking->getId(), $this->club->getId(), 'manager');
     }
 
     public function testAdjacentReservationsAreAllowedAndOverlapsRejected(): void

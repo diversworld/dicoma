@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\EquipmentReservation;
-use App\Entity\EquipmentBookingItem;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class EquipmentReservationService
@@ -30,7 +28,6 @@ final class EquipmentReservationService
         $this->em->wrapInTransaction(function () use ($reservation): void {
             $item = $reservation->getEquipmentItem();
             if (!$item || !$item->getId()) { throw new \DomainException('Ungültiger Inventarartikel.'); }
-            $this->em->lock($item, LockMode::PESSIMISTIC_WRITE);
             $clubId = $reservation->getMember()?->getClub()?->getId();
             if (!$clubId || !$reservation->getStartsAt() || !$reservation->getEndsAt()) { throw new \DomainException('Mitglied oder Zeitraum fehlt.'); }
             $this->availability->assertAvailable($item, $clubId, $reservation->getStartsAt(), $reservation->getEndsAt(), null, $reservation->getId());

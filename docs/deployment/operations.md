@@ -1,4 +1,67 @@
-# Betrieb und Wiederherstellung – Phase 2 bis 5
+# Betrieb und Wiederherstellung – Phase 2 bis 6
+
+## Phase 6: Migration und Aktivierungsgrenze
+
+`Version20261025140000` erweitert bestehende Verleihbuchungen um
+Genehmigung und Abschluss sowie bestehende Flaschen-Wartungsaufträge
+um allgemeine Ausrüstung, Atemregler, Auftragsart und Verantwortliche.
+Neu sind `equipment_asset_record`, `equipment_document` und
+`equipment_fill_charge`. Bestehende Buchungen, Flaschen, Prüfungen,
+Wartungsberichte und Belege bleiben erhalten. Unbekannte
+Bestandstabellen werden nicht entfernt; ein destruktives `down`
+ist zum Schutz der Nachweise gesperrt.
+
+**Diese Änderung führt keine produktive Migration oder Freigabe aus.**
+Vor Aktivierung gelten dieselben Snapshot-, Wiederherstellungs- und
+Freigabeschritte wie unten für Phase 5. Erst nach ausdrücklicher
+Zielprüfung und Freigabe im vorgesehenen Wartungsfenster:
+
+```bash
+APP_ENV=prod php bin/console doctrine:migrations:status
+APP_ENV=prod php bin/console doctrine:migrations:migrate --dry-run --no-interaction
+APP_ENV=prod php bin/console doctrine:migrations:migrate --no-interaction
+APP_ENV=prod php bin/console doctrine:schema:validate
+```
+
+Die Befehle sind Betriebshinweise, keine Bestätigung einer Ausführung.
+Danach Migrationsstand, Bestandsdaten, PHP-8.4-Prod-Cache und gezielt
+den zuständigen PHP-FPM-Prozess prüfen. Neue Ansichten nicht vor
+dem Schema aktivieren. Private Inventardokumente gehören in dieselbe
+geschützte Sicherung wie die bestehenden privaten Nachweise.
+
+In isolierten SQLite-HTTP-Tests werden der Verleihprozess einschließlich
+Genehmigung, Gebühren, Zustandsprüfung, Reparatur und Abschluss,
+Überschneidungen, Altreservierungen, gemeinsame Flaschenidentität,
+Prüfintervalle, Dokumente, Vereinsgrenzen und CSRF geprüft.
+Fülltests prüfen beide Eingabesurfaces, technische Sperren und
+Prüffristen, Füllberechtigung, Gruppenabschluss sowie genaue
+Gebührensummen in Journal, Tagesauswertung, CSV, Kassenbestand
+und Kassenkorrektur. MariaDB-Tests erzeugen ausschließlich zufällig
+benannte, danach wieder gelöschte Testdatenbanken und vergleichen
+Neuinstallation mit Mapping sowie Bestandswerte vor/nach dem Upgrade.
+Zusätzliche Tests mit zwei unabhängigen Datenbankverbindungen prüfen
+moderne und alte Reservierungen bei bereits geöffnetem
+`REPEATABLE READ`-Snapshot, jeweils mit und ohne MariaDBs
+Snapshot-Isolationsmodus. Die Modi werden nur auf der jeweiligen
+Testverbindung eingestellt, nicht global oder produktiv.
+
+Verifiziert mit PHP 8.4: **173 Unit-/isolierte Tests mit 2955 Assertions**
+sowie **sechs MariaDB-Migrations-/Isolationstests mit 52 Assertions**
+erfolgreich. Container-Lint, alle 27 betroffenen Twig-Templates,
+PHP-Syntax und `git diff --check` sind ebenfalls erfolgreich.
+
+Für die Regression mit der vorhandenen DDEV-Weblaufzeit:
+
+```bash
+docker exec ddev-dicoma-web php vendor/bin/phpunit --testsuite unit,isolated
+```
+
+Der vorhandene Migrationsketten-Test benötigt separat
+`MIGRATION_TEST_DATABASE_URL` zum **isolierten** MySQL-/MariaDB-Testserver
+mit Berechtigung zum Erzeugen eigener Testdatenbanken. Niemals
+Produktionszugangsdaten als Testziel verwenden. Fachliche
+Kompatibilitäts- und Preisregeln stehen in der
+[Phase-6-Systemübersicht](../architecture/system-overview.md#phase-6-inventar-gerätewart-und-verleih).
 
 ## Phase 5: Migration und Aktivierungsgrenze
 

@@ -7,9 +7,10 @@ namespace App\Controller;
 use App\Entity\EquipmentBooking;
 use App\Entity\EquipmentBookingItem;
 use App\Entity\EquipmentRentalReceipt;
-use Doctrine\DBAL\LockMode;
 use App\Entity\User;
 use App\Service\EquipmentBookingLoanService;
+use App\Service\EquipmentBookingWorkflow;
+use App\Service\EquipmentInventory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -93,7 +94,7 @@ final class EquipmentManagerLoanController extends AbstractController
             }
         }
         // DICOMA_RENTAL_FEE_PREVIEW_V1
-        // Geldbeträge ausschließlich in Cent addieren; Flaschen besitzen hier keinen hinterlegten Leihpreis.
+        // Altpreise dienen nur der Vorschau und müssen vor der Zahlung bestätigt werden.
         $rentalFeePreview = [];
         $rentalFeeMissing = [];
         foreach ($bookings as $booking) {
@@ -102,13 +103,10 @@ final class EquipmentManagerLoanController extends AbstractController
             foreach ($booking->getItems() as $line) {
                 $asset = $line->getEquipmentItem() ?? $line->getRegulator() ?? $line->getTank();
                 if ($asset !== null) {
-                    $fee = $asset->getRentalFee();
-                    if (!preg_match('/^\d{1,8}\.\d{2}$/D', $fee)) {
+                    try { $cents += EquipmentInventory::feeCents($asset); }
+                    catch (\DomainException) {
                         $missing = true;
-                        continue;
                     }
-                    [$euros, $centPart] = explode('.', $fee);
-                    $cents += (int) $euros * 100 + (int) $centPart;
                 }
             }
             // DICOMA_USE_AGREED_FEE_V1: historical bookings remain dynamic.
@@ -126,7 +124,7 @@ final class EquipmentManagerLoanController extends AbstractController
     }
 
     #[Route('/equipment-manager/loans/{bookingId}/cancel', name: 'equipment_manager_loan_cancel', methods: ['POST'], requirements: ['bookingId' => '\d+'])]
-    public function cancel(int $bookingId, Request $request, EntityManagerInterface $em): Response
+    public function cancel(int $bookingId, Request $request, EquipmentBookingWorkflow $workflow): Response
     {
         $clubId = $this->clubId();
         if (!$this->isCsrfTokenValid('loan_cancel_'.$bookingId, (string) $request->request->get('_token', ''))) {
@@ -138,26 +136,7 @@ final class EquipmentManagerLoanController extends AbstractController
             return $this->redirectToRoute('equipment_manager_loans', [], Response::HTTP_SEE_OTHER);
         }
         try {
-            $em->wrapInTransaction(function () use ($em, $bookingId, $clubId, $reason): void {
-                $booking = $em->find(EquipmentBooking::class, $bookingId, LockMode::PESSIMISTIC_WRITE);
-                if (!$booking || $booking->getMember()?->getClub()?->getId() !== $clubId) {
-                    throw new \DomainException('Buchung nicht gefunden oder anderer Verein.');
-                }
-                if ($booking->getStatus() !== 'reserved') {
-                    throw new \DomainException('Nur vollständig reservierte Buchungen können storniert werden.');
-                }
-                foreach ($booking->getItems() as $line) {
-                    if ($line->getLoanStatus() !== 'reserved') {
-                        throw new \DomainException('Mindestens ein Gegenstand wurde bereits ausgegeben.');
-                    }
-                }
-                if ($em->getRepository(EquipmentRentalReceipt::class)->findOneBy(['booking' => $booking])) {
-                    throw new \DomainException('Es ist bereits eine Zahlung erfasst. Bitte zunächst die Rückzahlung über die Kassenkorrektur klären.');
-                }
-                $booking->setStatus('cancelled');
-                $booking->setNotes(trim(($booking->getNotes() ? $booking->getNotes()."\n" : '').'Storniert am '.(new \DateTimeImmutable())->format('d.m.Y H:i').' durch Gerätewart: '.$reason));
-                $em->flush();
-            });
+            $workflow->cancel($bookingId, $clubId, $this->getUser()->getUserIdentifier(), $reason);
             $this->addFlash('success', 'Reservierung #'.$bookingId.' wurde storniert.');
         } catch (\DomainException $e) {
             $this->addFlash('danger', $e->getMessage());

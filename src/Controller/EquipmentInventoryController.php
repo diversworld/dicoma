@@ -75,8 +75,15 @@ final class EquipmentInventoryController extends AbstractController
             ->getForm();
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $em->wrapInTransaction(function () use ($inventory, $asset, $type, $id, $record, $em): void {
+            $submitted = clone $record;
+            $em->wrapInTransaction(function () use ($inventory, $asset, $type, $id, $submitted, $em): void {
                 $inventory->asset($type, $id, $this->clubId(), true);
+                $record = $inventory->record($asset);
+                if ($record->getId() !== null) { $em->refresh($record, \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE); }
+                $record->setOwnership($submitted->getOwnership())->setOwnerName($submitted->getOwnerName())
+                    ->setLocation($submitted->getLocation())->setPurchasedAt($submitted->getPurchasedAt())
+                    ->setPurchasePriceCents($submitted->getPurchasePriceCents())->setInspectionIntervalMonths($submitted->getInspectionIntervalMonths())
+                    ->setNextInspectionAt($submitted->getNextInspectionAt())->setApprovalRequired($submitted->isApprovalRequired());
                 $record->record('inventory_updated', $this->getUser()->getUserIdentifier(), 'Stammdaten, Lagerort oder Prüfplanung aktualisiert.');
                 if ($asset instanceof EquipmentItem) { $asset->setPurchasedAt($record->getPurchasedAt()); }
                 elseif ($asset instanceof Tank) { $asset->setBuyDate($record->getPurchasedAt()); }

@@ -395,16 +395,15 @@ class DashboardController extends AbstractDashboardController
             ]),
 
             MenuItem::subMenu('Ausrüstung & Verleih', 'fa fa-toolbox')->setPermission('ROLE_SUPER_ADMIN')->setSubItems([
-                MenuItem::linkTo(EquipmentItemCrudController::class, 'Inventar', 'fa fa-boxes-stacked')
+                MenuItem::linkTo(EquipmentItemCrudController::class, 'Equipment', 'fa fa-boxes-stacked')
                     ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(RegulatorCrudController::class, 'Atemregler', 'fa fa-gauge')
                     ->setPermission('ROLE_SUPER_ADMIN'),
-                MenuItem::linkTo(EquipmentReservationCrudController::class, 'Einzelreservierungen', 'fa fa-hand-holding')
+				MenuItem::linkTo(TankCrudController::class, 'Vereinsflaschen', 'fa fa-gauge')
                     ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(EquipmentBookingCrudController::class, 'Sammelreservierungen', 'fa fa-layer-group')
                     ->setPermission('ROLE_SUPER_ADMIN'),
-				MenuItem::linkTo(TankCrudController::class, 'Vereinsflaschen', 'fa fa-gauge')
-                    ->setPermission('ROLE_SUPER_ADMIN'),
+
             ]),
 
             MenuItem::subMenu('Flaschenprüfungen (TÜV)', 'fa fa-clipboard-check')->setPermission('ROLE_SUPER_ADMIN')->setSubItems([

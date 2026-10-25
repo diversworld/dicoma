@@ -1,20 +1,57 @@
 <!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}DICOMA · Ausbilder{% endblock %}</title>
-<link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
-<link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
-<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
-<link rel="stylesheet" href="{{ asset('css/pages/instructor-portal-layout.css') }}">
-</head><body>
+<html lang="de">
+<head>
+<!-- Basic Page Needs
+    ================================================== -->
+    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>{% block title %}DICOMA · Ausbilder{% endblock %}</title>
+	<!-- Mobile Specific Metas
+    ================================================== -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Diversworld DiveCourseManager">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="author" content="Eckhard becker">
+    <meta name="theme-name" content="airspace">
+    <meta name="generator" content="Themefisher Airspace Template v1.0">
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}" />
+	<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+	
+	<!-- bootstrap.min css -->
+    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
+    <!-- Ionic Icon Css -->
+    <link rel="stylesheet" href="{{ asset('plugins/Ionicons/css/ionicons.min.css') }}">
+    <!-- animate.css -->
+    <link rel="stylesheet" href="{{ asset('plugins/animate-css/animate.css') }}">
+    <!-- Magnify Popup -->
+    <link rel="stylesheet" href="{{ asset('plugins/magnific-popup/magnific-popup.css') }}">
+    <!-- Slick CSS -->
+    <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
+	<!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/pages/instructor-portal-layout.css') }}">
+</head>
+
+</head>
+<body>
 <header class="ip-header"><nav class="container" aria-label="Ausbilderportal">
-<strong>DICOMA · AUSBILDER</strong>
-<a href="{{ path('instructor_portal_dashboard') }}">Übersicht</a>
-<a href="{{ path('instructor_portal_tasks') }}">Meine Aufgaben</a>
-<a href="{{ path('member_portal_dashboard') }}">Mitgliederbereich</a>
-<form class="dw-inline" method="post" action="{{ path('app_logout') }}" >
-<input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-<button class="btn btn-sm btn-outline-light">Abmelden</button></form>
+    <div class="ip-header-title container align-items-center">
+        <a class="navbar-brand" href="{{ path('app_home') }}">
+            <img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250" alt="Diversworld">
+        </a>
+        <strong>DICOMA · AUSBILDER</strong>
+    </div>
+    <a href="{{ path('instructor_portal_dashboard') }}">Übersicht</a>
+    <a href="{{ path('instructor_portal_tasks') }}">Meine Aufgaben</a>
+    <a href="{{ path('member_portal_dashboard') }}">Mitgliederbereich</a>
+    <form class="dw-inline" method="post" action="{{ path('app_logout') }}" >
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+    <button class="btn btn-sm btn-outline-light">Abmelden</button></form>
 </nav></header>
 <main class="ip-main"><div class="container">
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-info">{{ message }}</div>{% endfor %}{% endfor %}
