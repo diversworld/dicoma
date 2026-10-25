@@ -5,6 +5,18 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     bilder_ordner: '%kernel.project_dir%/public/images/kurse'
+    env(SITE_THEME): 'airspace'
+    env(PUBLIC_SITE_CLUB_ID): '0'
+    site.themes:
+        airspace:
+            layout: 'themes/airspace/layout.html.twig'
+            stylesheets:
+                - 'plugins/bootstrap/bootstrap.min.css'
+                - 'plugins/Ionicons/css/ionicons.min.css'
+                - 'plugins/animate-css/animate.css'
+                - 'plugins/magnific-popup/magnific-popup.css'
+                - 'plugins/slick/slick.css'
+                - 'css/style.css'
 
 services:
     # default configuration for services in *this* file
@@ -24,5 +36,12 @@ services:
     App\Security\AppCustomAuthenticator:
         arguments:
             $logger: '@logger'
+    App\Service\SiteTheme:
+        arguments:
+            $name: '%env(SITE_THEME)%'
+            $themes: '%site.themes%'
+    App\Service\PublicWebsite:
+        arguments:
+            $clubId: '%env(int:PUBLIC_SITE_CLUB_ID)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

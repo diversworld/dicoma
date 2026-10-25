@@ -1,5 +1,62 @@
 # Betrieb und Wiederherstellung – Phase 2 bis 6 und Phase 8
 
+## Airspace-Theme und öffentliche Redaktion
+
+Die additive Migration `Version20261025190000` ergänzt
+`website_publication`. Bestehende Mitglieder-, Kurs-, Turnier- und
+Thekendienstdaten werden nicht verändert oder automatisch veröffentlicht.
+Ein destruktiver Rückbau ist zum Schutz der redaktionellen Nachweise
+gesperrt. **Es wurde keine produktive Migration durchgeführt.** Vor
+Freigabe Snapshot, Zielkontrolle, Migrations-Dry-run, ausdrückliche
+Freigabe und Schema-/Cacheprüfung wie unten beschrieben durchführen.
+Neue Redaktionsansichten erst nach dem Schema bereitstellen.
+
+In der lokalen Umgebungskonfiguration ausdrücklich setzen:
+
+```dotenv
+SITE_THEME=airspace
+PUBLIC_SITE_CLUB_ID=123
+```
+
+`123` ist nur ein Beispiel: die vorhandene ID des gewünschten Website-
+Vereins verwenden. Es wird absichtlich kein Verein automatisch ausgewählt.
+Standard `0` deaktiviert die neue Redaktion und lässt die neuen
+öffentlichen Inhaltslisten leer. Eine nicht existierende konfigurierte
+Vereins-ID ist ein ausdrücklicher Konfigurationsfehler. Das bisherige
+Kursportal bleibt ohne Website-Konfiguration unverändert; nach
+Konfiguration wird das öffentliche Kursangebot auf den Website-Verein
+begrenzt. Nach Änderungen den passenden Umgebungscache erneuern.
+
+Vorstand erhält Redaktionsrechte durch die Rollenhierarchie. Alternativ
+`ROLE_PRESS_OFFICER` über die bestehende Benutzer-/Rollenverwaltung
+vergeben; die betroffene Person muss dem Website-Verein zugeordnet sein.
+Unter `/editorial` Artikel oder Veranstaltungen anlegen und zunächst als
+Entwurf speichern. Nur freigegebene Beiträge werden ab dem gewählten
+Zeitpunkt öffentlich. Veröffentlichung zurückziehen: Beitrag bearbeiten,
+Freigabe abwählen, speichern. Kein Cronjob für zeitgesteuerte Sichtbarkeit
+erforderlich. Veranstaltungstexte und Termine sind redaktionelle Angaben;
+Quelländerungen übernehmen keine internen Daten automatisch. Abgesagte
+oder auf Entwurf gesetzte Quellen werden nicht mehr öffentlich angezeigt.
+
+Neue Themes unter `site.themes` registrieren und per `SITE_THEME`
+auswählen; Struktur und Blockvertrag stehen in der
+[Systemübersicht](../architecture/system-overview.md#austauschbares-airspace-theme-und-öffentliche-redaktion).
+Airspace verwendet vorhandene lokale Themefisher-Assets, die MIT-Lizenz
+liegt unter `public/themes/airspace/LICENSE`. Bootstrap-Primärfarben
+werden zentral auf `#003366` abgebildet, nicht in Vendor-Dateien geändert.
+
+Validierung: vollständige Unit-/isolierte Regression mit **256 Tests,
+3827 Assertions** erfolgreich. Die abschließende gezielte Prüfung nach
+Kurskatalog-/Portalergänzungen umfasst **34 Tests, 1015 Assertions**.
+Zwei MariaDB-Tests für Neuinstallation/Mapping und nichtdestruktives
+Redaktionsupgrade bestehen mit **14 Assertions**, ausschließlich auf
+zufällig benannten Testdatenbanken. Alle **227 Twig-Templates**,
+Container-Lint, die drei geänderten YAML-Konfigurationen und PHP-Syntax
+sind geprüft. Eine synthetische Browser-Vorschau bestätigt die Airspace-
+Darstellung, mobile Navigation bei 390 Pixeln und die berechnete
+Primärbuttonfarbe `rgb(0, 51, 102)`. Es wurden keine echten Artikel,
+öffentlichen Veranstaltungen oder E-Mails angelegt beziehungsweise versandt.
+
 ## Phase 8: Migration und Benachrichtigungen
 
 `Version20261025170000` ergänzt ausschließlich neun neue Tabellen für
@@ -65,6 +122,22 @@ Es wurde kein tatsächlicher E-Mail-Versand ausgelöst.
 Die Phase-8-HTTP-Tests verwenden ausschließlich synthetische Daten in
 SQLite im Arbeitsspeicher und Mailer-Mocks. Migrationsprüfungen verwenden
 zufällig benannte, danach gelöschte MariaDB-Testdatenbanken.
+
+Verifiziert mit PHP 8.4: **235 Unit-/isolierte Tests mit 3484 Assertions**
+erfolgreich, davon **62 Phase-8-Tests mit 517 Assertions**. Zusätzlich
+**zehn MariaDB-Migrations-/Isolationstests mit 90 Assertions** erfolgreich:
+Neuinstallation, Bestandserhalt und konkurrierende Verleih-/Dienstbelegungen
+bei älterem `REPEATABLE READ`-Snapshot, mit und ohne MariaDB-Snapshotmodus.
+Die neuen Kalenderabläufe prüfen echte Links/Formulare, exakte Serientage,
+inklusive Enddatum, atomare Konfliktablehnung und sichtbare Einteilungen.
+Der Monatskalender wurde außerdem mit synthetischer HTML-Vorschau im
+Browser bei Desktop- und 390-Pixel-Mobilbreite geprüft; keine Produktivdaten.
+Container-Lint, 17 betroffene Twig-Templates, Security-YAML und PHP-Syntax
+sind erfolgreich. Für die vollständige Regression:
+
+```bash
+docker exec ddev-dicoma-web php vendor/bin/phpunit --testsuite unit,isolated
+```
 
 ## Phase 6: Migration und Aktivierungsgrenze
 

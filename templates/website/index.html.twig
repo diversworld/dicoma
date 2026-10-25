@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}{{ kind == 'event' ? 'Veranstaltungen' : 'Aktuelles' }} | DICOMA{% endblock %}
+{% block body %}
+<main class="container section">
+    <h1>{{ kind == 'event' ? 'Kommende Veranstaltungen' : 'Aktuelles aus dem Verein' }}</h1>
+    {% include 'website/_cards.html.twig' %}
+</main>
+{% endblock %}

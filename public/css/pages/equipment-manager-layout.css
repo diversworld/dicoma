@@ -2,7 +2,7 @@ body{
 			background:var(--dw-neutral-50);color:var(--dw-text)
 		}
 		.manager-header{
-			background:var(--dw-blue-950);color:var(--dw-surface);padding:1rem 0}
+			background:var(--dw-primary);color:var(--dw-surface);padding:1rem 0}
 			.manager-header a{
 				color:var(--dw-surface);text-decoration:none;margin-right:1.2rem
 			}

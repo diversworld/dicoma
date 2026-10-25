@@ -1,4 +1,6 @@
 twig:
+    globals:
+        site_theme: '@App\Service\SiteTheme'
     default_path: '%kernel.project_dir%/templates'
     date:
         format: 'd.m.Y H:i'

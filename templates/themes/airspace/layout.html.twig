@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="{{ app.request.locale }}">
+<head>
+    <!-- Basic Page Needs
+    ================================================== -->
+    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>{% block title %}Dive Course manager!{% endblock %}</title>
+
+    <!-- Mobile Specific Metas
+    ================================================== -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Diversworld DiveCourseManager">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="author" content="Eckhard becker">
+    <meta name="theme-name" content="airspace">
+    <meta name="generator" content="Themefisher Airspace Template v1.0">
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}" />
+
+    <!-- Place the first <script> tag in your HTML's <head> -->
+    <script src="{{ asset('js/tinymce/tinymce.min.js') }}" referrerpolicy="origin"></script>
+    {% set editorLocale = {'de': 'de', 'fr': 'fr_FR', 'es': 'es'}[app.request.locale]|default('en') %}
+    <script>
+      tinymce.init({
+          selector: 'textarea:not([data-plain-text])',
+          language: {{ editorLocale|json_encode(15)|raw }},
+          {% if editorLocale != 'en' %}
+          language_url: {{ asset('js/tinymce/langs/' ~ editorLocale ~ '.js')|json_encode(15)|raw }},
+          {% endif %}
+          convert_unsafe_embeds : false
+      });
+    </script>
+    {% include 'themes/_assets.html.twig' %}
+    {% block stylesheets %}{% endblock %}
+</head>
+    <body data-site-theme="{{ site_theme.name }}">
+        {% include 'includes/_header.html.twig' %}
+        {% block hero %}
+            {% include 'includes/_slider.html.twig' %}
+        {% endblock %}
+
+        {% block body %}{% endblock %}
+
+        {% include 'includes/_footer.html.twig' %}
+
+        <!--Scroll to top-->
+        <div id="scroll-to-top" class="scroll-to-top">
+            <span class="icon ion-ios-arrow-up"></span>
+        </div>
+        {% block javascripts %}
+        <!--
+        Essential Scripts
+        =====================================-->
+            <!-- Main jQuery -->
+            <script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
+            <!-- Ionicons -->
+            <script type="module" src="{{ asset('plugins/Ionicons/js/ionicons.esm.js') }}"></script>
+            <!-- Bootstrap 3.1 -->
+            <script src="{{ asset('plugins/bootstrap/bootstrap.min.js') }}"></script>
+            <!-- slick Carousel -->
+            <script src="{{ asset('plugins/slick/slick.min.js') }}"></script>
+            <script src="{{ asset('plugins/magnific-popup/jquery.magnific-popup.min.js') }}"></script>
+            <!-- filter -->
+            <script src="{{ asset('plugins/shuffle/shuffle.min.js') }}"></script>
+            <script src="{{ asset('plugins/SyoTimer/jquery.syotimer.min.js') }}"></script>
+            <script src="{{ asset('plugins/google-map/map.js') }}"></script>
+            <script src="{{ asset('js/script.js') }}"></script>
+
+            <!-- Place the following <script> tags before the closing </body> tag -->
+            <script>
+                const form = document.querySelector('form');
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        if (window.tinymce && typeof window.tinymce.triggerSave === 'function') {
+                            window.tinymce.triggerSave();
+                        }
+                    });
+                }
+            </script>
+        {% endblock %}
+    </body>
+</html>

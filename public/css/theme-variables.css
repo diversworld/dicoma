@@ -1,12 +1,12 @@
 /* Shared application theme. Keep colors here; consumers use semantic tokens. */
 :root {
     --dw-background: #f4f7fb;
-    --dw-bootstrap-primary: #007bff;
-    --dw-bootstrap-primary-hover: #0069d9;
-    --dw-bootstrap-primary-hover-border: #0062cc;
-    --dw-bootstrap-primary-active: #0062cc;
-    --dw-bootstrap-primary-active-border: #005cbf;
-    --dw-bootstrap-primary-focus: rgba(38, 143, 255, .5);
+    --dw-bootstrap-primary: var(--dw-primary);
+    --dw-bootstrap-primary-hover: var(--dw-blue-950);
+    --dw-bootstrap-primary-hover-border: var(--dw-blue-950);
+    --dw-bootstrap-primary-active: var(--dw-blue-950);
+    --dw-bootstrap-primary-active-border: var(--dw-blue-950);
+    --dw-bootstrap-primary-focus: var(--dw-overlay-accent);
     --dw-on-primary: #ffffff;
     --dw-black: #000000;
     --dw-border: #e2e8f0;
@@ -18,7 +18,7 @@
     --dw-success: #167446;
     --dw-surface: #ffffff;
     --dw-text: #172b4d;
-    --dw-training-primary: #1556ae;
+    --dw-training-primary: var(--dw-primary);
     --dw-warning: #a45309;
     --dw-warning-background: #fef3c7;
 

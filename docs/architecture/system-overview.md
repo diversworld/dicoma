@@ -11,11 +11,79 @@ HTTP / Symfony Security / CSRF
 
 Personenstammdaten werden zentral gehalten; fachliche Mitgliedschaften, Benutzerkonto und Rollen bleiben getrennt. Siehe [Datenmodell](data-model.md) und [Rollenvertrag](roles-permissions.md).
 
+## Austauschbares Airspace-Theme und öffentliche Redaktion
+
+Das vorhandene Themefisher-[Airspace-Bootstrap-Theme](https://github.com/themefisher/airspace-bootstrap/)
+ist als Standardtheme `airspace` integriert. Die bereits vorhandenen lokalen
+Bootstrap-4-/Airspace-Assets werden weiterverwendet, nicht mit einer zweiten
+Bootstrap-Version vermischt. Der MIT-Lizenztext liegt unter
+`public/themes/airspace/LICENSE`; der Themefisher-Nachweis bleibt erhalten.
+Die gemeinsame Primärfarbe ist **#003366**, einschließlich Bootstrap-
+Primärbuttons, öffentlichem Frontend und Funktionsportalen.
+
+`SiteTheme` wählt ausschließlich registrierte Themes aus `site.themes`
+in `config/services.yaml`. `SITE_THEME=airspace` ist die Voreinstellung.
+`templates/base.html.twig` ist nur der stabile Einstieg und erbt das
+konfigurierte Layout; die Airspace-Implementierung liegt unter
+`templates/themes/airspace/`. Gemeinsame Assets werden durch
+`templates/themes/_assets.html.twig` eingebunden. Mitgliederbereich,
+Gerätewart-, Ausbilder-, Ausbildungsbewertungs- und Thekendienstportal
+verwenden dieselbe Auswahl, behalten jedoch ihre Fachnavigation und
+Berechtigungsgrenzen. Auch die Mannschafts-/Turnieransichten ohne
+Adminrolle verwenden das Theme; Adminansichten bleiben in EasyAdmin.
+EasyAdmin und druckbare Ausbildungsnachweise
+behalten ihre eigenen Layouts.
+
+Ein neues Theme erhält einen eigenen Layoutpfad und eine registrierte
+Stylesheetliste. Das Layout muss die bestehenden Blöcke `title`,
+`stylesheets`, `hero`, `body` und `javascripts` unterstützen und die
+gemeinsamen Assets einbinden. Portalspezifische Layouts/CSS bleiben getrennt.
+Neue Themes müssen mit der vorhandenen Bootstrap-4-Komponentenstruktur
+kompatibel sein oder einen expliziten, getesteten Komponentenadapter
+mitbringen; ein beliebiger Austausch der Bootstrap-Hauptversion ist
+kein unterstützter Konfigurationswechsel. Unbekannte Theme-Namen scheitern
+ausdrücklich statt unbemerkt auf Airspace zurückzufallen.
+
+### Veröffentlichungen
+
+Der neue Bereich `/editorial` ist Vorstand und `ROLE_PRESS_OFFICER`
+(Pressewart) des konfigurierten Website-Vereins vorbehalten. Es gibt keine
+globale Vereinssuche oder automatische Veröffentlichung bestehender
+Fachdaten. `PUBLIC_SITE_CLUB_ID` bestimmt den Website-Verein. Ohne
+Konfiguration bleiben neue öffentliche Inhaltslisten leer und die
+Redaktion ist mit ausdrücklichem Konfigurationshinweis gesperrt.
+Bei gesetztem Website-Verein wird auch das öffentliche Kursangebot
+auf diesen Verein begrenzt.
+
+`WebsitePublication` speichert Artikel oder ausdrücklich kuratierte
+Veranstaltungsankündigungen mit Titel, Kurztext, Text, Entwurf/Freigabe
+und Veröffentlichungszeitpunkt. Veranstaltungen benötigen öffentlichen
+Ort sowie Beginn/Ende. Optional ist genau ein freigegebener eigener
+Tauchkurs oder ein Turnier verknüpfbar. Termine und Texte werden redaktionell
+festgelegt, nicht aus internen Beschreibungen kopiert. Absage, Entwurfsstatus
+oder Vereinswechsel einer Quelle blendet die Ankündigung bei jedem
+öffentlichen Abruf aus. Thekendienste und Diensteinteilungen werden
+ausdrücklich nicht veröffentlicht.
+
+Die Startseite zeigt aktuelle Artikel und kommende Veranstaltungen.
+`/articles`, `/events` und `/news/{id}` sind ohne Anmeldung lesbar;
+Entwürfe, noch nicht fällige Freigaben und fremde Vereinsinhalte liefern
+keine Detailansicht. Redaktionelle Texte sind bewusst reiner Text und
+werden HTML-escaped ausgegeben. Schreibvorgänge verwenden Symfony Forms,
+CSRF, Vereinsprüfung und Versionsschutz gegen veraltete Formulare.
+Eine Freigabe lässt sich durch erneutes Speichern als Entwurf zurückziehen;
+Änderungen behalten einen Bearbeiter-/Zeit-/Freigabenachweis.
+
 ## Phase 8: Thekendienstverwaltung
 
 Der Bereich `/bar-duty` integriert Mitglieder, die neue Funktionsrolle
 `ROLE_BAR_MANAGER`, den gemeinsamen Vereinskalender und einen persönlichen
-Nachrichtenbereich. Schichtdefinitionen legen Ort, Uhrzeit, Dauer und
+Nachrichtenbereich. Alle Thekendienstansichten verwenden ein eigenständiges
+Portal mit eigener Kopfzeile, Bereichsnavigation und Abmeldung, unabhängig
+vom öffentlichen Mitgliederlayout und von EasyAdmin. Auch Admins bleiben
+im Thekendienstportal; der Rückweg zur Verwaltung ist ausdrücklich verlinkt.
+Mitglieder sehen nur die für sie freigegebenen Navigationsziele.
+Schichtdefinitionen legen Ort, Uhrzeit, Dauer und
 Kapazität fest; geplante Schichten übernehmen diese Werte als historischen
 Stand. Definitionen lassen sich deaktivieren, bestehende Dienste bleiben
 erhalten. Anmeldungen, Zuweisungen und Übergaben prüfen aktive Mitgliedschaft,

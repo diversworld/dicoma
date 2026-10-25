@@ -22,11 +22,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class CourseRegistrationController extends AbstractController
 {
     #[Route('/my-training/courses', name: 'frontend_course_registration_index', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): Response
+    public function index(EntityManagerInterface $em, \App\Service\PublicWebsite $website): Response
     {
         $user = $this->getUser();
         $person = $user instanceof User ? $user->getPerson() : null;
-        $courses = $em->getRepository(Courses::class)->findBy(['status' => CourseStatus::OPEN], ['id' => 'DESC']);
+        $criteria = ['status' => CourseStatus::OPEN];
+        if (($websiteClub = $website->club()) !== null) { $criteria['club'] = $websiteClub; }
+        $courses = $em->getRepository(Courses::class)->findBy($criteria, ['id' => 'DESC']);
         $registrations = $person === null ? [] : $em->getRepository(CourseParticipant::class)->findBy(['person' => $person]);
         $registered = [];
         foreach ($registrations as $registration) {

@@ -63,6 +63,45 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
     }
 
+    #[DataProvider('portalRoles')]
+    public function testDedicatedPortalIsUsedForEveryRoleAndDutyPage(string $role, bool $management): void
+    {
+        $user = $this->account('portal-user', [$role]);
+        $shift = $this->shift('+3 days');
+        $this->login($user);
+        $urls = ['/bar-duty', '/bar-duty/'.$shift->getId()];
+        if ($management) { $urls = [...$urls, '/bar-duty/plan', '/bar-duty/settings', '/bar-duty/report']; }
+        foreach ($urls as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorExists('body[data-bar-duty-portal]');
+            self::assertSelectorTextContains('header', 'Thekendienstportal');
+            self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty"]');
+            self::assertSelectorExists('form[method="post"][action="/logout"] input[name="_csrf_token"]');
+            self::assertSelectorExists('link[href="/css/pages/bar-duty-portal.css"]');
+            self::assertSelectorNotExists('aside.sidebar');
+            self::assertSelectorNotExists('#frontendNavbar');
+            if ($management) {
+                self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty/plan"]');
+                self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty/report"]');
+            } else {
+                self::assertSelectorNotExists('a[href="/bar-duty/plan"]');
+                self::assertSelectorNotExists('a[href="/bar-duty/settings"]');
+                self::assertSelectorNotExists('a[href="/bar-duty/report"]');
+            }
+        }
+        $this->client->request('GET', '/bar-duty');
+        self::assertSelectorExists('link[href="/css/pages/admin-calendar-index.css"]');
+    }
+
+    public static function portalRoles(): iterable
+    {
+        yield 'member' => [User::ROLE_MEMBER, false];
+        yield 'bar manager' => [User::ROLE_BAR_MANAGER, true];
+        yield 'admin' => [User::ROLE_ADMIN, true];
+        yield 'superadmin' => [User::ROLE_SUPER_ADMIN, true];
+    }
+
     public function testSelfSignupCannotAssignAnotherMemberAndCapacityIsEnforced(): void
     {
         $shift = $this->shift('+3 days', 1);

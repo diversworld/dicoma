@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}Beitrag bearbeiten | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>{{ publication.id ? 'Beitrag bearbeiten' : 'Artikel / Veranstaltung erstellen' }}</h1>
+    <p>Texte werden als reiner Text veröffentlicht, HTML wird nicht ausgeführt. Bei Veranstaltungen öffentliche Termine und Ort ausdrücklich angeben. Optional einen eigenen freigegebenen Kurs oder ein Turnier zuordnen; interne Daten werden nicht kopiert. Wird die Quelle abgesagt oder zum Entwurf, verschwindet die Ankündigung automatisch.</p>
+    {{ form_start(form) }}{{ form_widget(form) }}
+    <button class="btn btn-main" type="submit">Beitrag speichern</button>
+    {{ form_end(form) }}
+    <p><a href="{{ path('website_editorial') }}">Zurück zur Redaktion</a></p>
+    {% if publication.id %}
+        <details><summary>Änderungsnachweis</summary><ul>{% for entry in publication.history %}
+            <li>{{ entry.at|date('d.m.Y H:i') }} · {{ entry.actor }} · {{ entry.published ? 'Freigegeben' : 'Entwurf' }} · {{ entry.title }}</li>
+        {% endfor %}</ul></details>
+    {% endif %}
+</main>
+{% endblock %}

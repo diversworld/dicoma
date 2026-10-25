@@ -9,6 +9,8 @@
     <div class="collapse navbar-collapse ml-auto" id="frontendNavbar">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item"><a class="nav-link" href="{{ path('app_home') }}">Startseite</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ path('website_articles') }}">Aktuelles</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ path('website_events') }}">Veranstaltungen</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ path('membership_application_clubs') }}">Mitglied werden</a></li>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="frontendCoursesMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tauchkurse</a>
@@ -25,6 +27,9 @@
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Anmelden</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
             {% else %}
+                {% if is_granted('ROLE_PRESS_OFFICER') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ path('website_editorial') }}">Redaktion</a></li>
+                {% endif %}
                 <li class="nav-item"><a class="nav-link" href="{{ path('training_portal') }}">Ausbildungsportal</a></li>
                 {% if is_granted('ROLE_MEMBER') %}
                     
@@ -36,7 +41,7 @@
                             <li><a class="dropdown-item" href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></li>
 							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
                             <li><a class="dropdown-item" href="{{ path('member_reservations') }}">Ausrüstung reservieren</a></li>
-                            <li><a class="dropdown-item" href="{{ path('bar_duty') }}">Thekendienst und Stundenkonto</a></li>
+                            <li><a class="dropdown-item" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
                             <li><a class="dropdown-item" href="{{ path('club_calendar') }}">Vereinskalender</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a></li>
@@ -52,7 +57,7 @@
                     <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>
                 {% endif %}
                 {% if is_granted('ROLE_BAR_MANAGER') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekenleitung</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
                 {% endif %}
                 {% if is_granted('ROLE_ADMIN') %}
                     <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>

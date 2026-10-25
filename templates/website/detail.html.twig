@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}{{ publication.title }} | DICOMA{% endblock %}
+{% block body %}
+<main class="container section"><article>
+    <h1>{{ publication.title }}</h1>
+    <p class="lead">{{ publication.summary }}</p>
+    {% if publication.kind == 'event' %}<p><time datetime="{{ publication.startsAt|date('c') }}">{{ publication.startsAt|date('d.m.Y H:i') }}</time> – {{ publication.endsAt|date('d.m.Y H:i') }} · {{ publication.location }}</p>{% endif %}
+    <div>{{ publication.body|nl2br }}</div>
+    {% if publication.course %}<p><a class="btn btn-main" href="{{ path('frontend_course_registration_index') }}">Zum Kursangebot</a></p>{% endif %}
+    <p><a href="{{ path(publication.kind == 'event' ? 'website_events' : 'website_articles') }}">Zurück zur Übersicht</a></p>
+</article></main>
+{% endblock %}

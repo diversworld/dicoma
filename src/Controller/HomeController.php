@@ -13,11 +13,12 @@ use Symfony\Component\Routing\Annotation\Route;
 class HomeController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    public function index(): Response
+    public function index(\App\Service\PublicWebsite $website): Response
     {
 
         return $this->render('home/index.html.twig', [
-            'controller_name' => 'HomeController',
+            'articles' => array_slice($website->publications('article'), 0, 6),
+            'events' => array_slice($website->publications('event', true), 0, 6),
         ]);
     }
 }

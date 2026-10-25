@@ -1,0 +1,6 @@
+<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
+{% for stylesheet in site_theme.stylesheets %}
+    <link rel="stylesheet" href="{{ asset(stylesheet) }}">
+{% endfor %}
+<link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
+<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">

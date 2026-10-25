@@ -6,6 +6,7 @@ security:
         ROLE_TRAINING_MANAGER:
             - ROLE_INSTRUCTOR
         ROLE_BOARD:
+            - ROLE_PRESS_OFFICER
             - ROLE_BAR_MANAGER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
@@ -65,6 +66,10 @@ security:
         # Öffentlich erreichbare Bereiche
         # ---------------------------------------------------------
 
+        - { path: ^/$, roles: PUBLIC_ACCESS }
+        - { path: ^/(?:articles|events)$, roles: PUBLIC_ACCESS }
+        - { path: ^/news/\d+$, roles: PUBLIC_ACCESS }
+        - { path: ^/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }

@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}DiCoMa – Verwaltung{% endblock %}</title>
-<link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
-<link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
+{% include 'themes/_assets.html.twig' %}
 <link rel="stylesheet" href="{{ asset('css/pages/training-assessment-layout.css') }}">
 {% block stylesheets %}{% endblock %}
 </head>
-<body>
+<body data-site-theme="{{ site_theme.name }}">
 <header class="site-header">
 <a class="brand" href="{{ path('instructor_portal_tasks') }}">DiCoMa</a>
 <nav class="nav" aria-label="Verwaltung">

@@ -33,8 +33,9 @@ final class TemplateStylesTest extends TestCase
                 self::assertFileExists(self::ROOT . '/public/css/' . $link, $path);
             }
             if (str_contains($source, '<html')) {
-                self::assertStringContainsString("asset('css/theme-variables.css')", $source, $path);
-                self::assertStringContainsString("asset('css/utilities.css')", $source, $path);
+                $assets = str_contains($source, "include 'themes/_assets.html.twig'") ? file_get_contents(self::ROOT.'/templates/themes/_assets.html.twig') : $source;
+                self::assertStringContainsString("asset('css/theme-variables.css')", $assets, $path);
+                self::assertStringContainsString("asset('css/utilities.css')", $assets, $path);
             }
         }
     }
@@ -56,6 +57,8 @@ final class TemplateStylesTest extends TestCase
             }
         }
         $theme = $sources[self::ROOT . '/public/css/theme-variables.css'];
+        self::assertMatchesRegularExpression('/--dw-primary:\s*#003366\s*;/', $theme);
+        self::assertStringContainsString('--dw-bootstrap-primary: var(--dw-primary)', $theme);
         preg_match_all('/--dw-(?:neutral|blue|green|red|amber|pink|rose|cyan|social)-[\w-]+\s*:/', $theme, $colorTokens);
         self::assertLessThanOrEqual(40, count($colorTokens[0]), 'The shared color scale should stay compact.');
         foreach ($sources as $path => $source) {
@@ -67,9 +70,10 @@ final class TemplateStylesTest extends TestCase
         $controller = file_get_contents(self::ROOT . '/src/Controller/Admin/DashboardController.php');
         self::assertStringContainsString("addCssFile('css/theme-variables.css')", $controller);
         self::assertStringContainsString("addCssFile('css/utilities.css')", $controller);
-        foreach (['base.html.twig', 'equipment_manager/layout.html.twig', 'instructor_portal/layout.html.twig'] as $layout) {
-            self::assertStringContainsString("asset('css/bootstrap-theme.css')", file_get_contents(self::ROOT . '/templates/' . $layout));
+        foreach (['themes/airspace/layout.html.twig', 'equipment_manager/layout.html.twig', 'instructor_portal/layout.html.twig', 'bar_duty/layout.html.twig', 'training/assessment_layout.html.twig'] as $layout) {
+            self::assertStringContainsString("include 'themes/_assets.html.twig'", file_get_contents(self::ROOT . '/templates/' . $layout));
         }
+        self::assertStringContainsString("asset('css/bootstrap-theme.css')", file_get_contents(self::ROOT.'/templates/themes/_assets.html.twig'));
     }
 
     /** @return list<string> */

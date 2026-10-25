@@ -5,6 +5,7 @@ Die vereinsgebundenen Adminrechte und die hier beschriebenen Superadmin-Beschrä
 | Rolle | Bedeutung |
 |---|---|
 | `ROLE_USER` | Basis eines Benutzerkontos; begründet keine Vereinsmitgliedschaft. |
+| `ROLE_PRESS_OFFICER` | Pressewart: Artikel und öffentliche Veranstaltungsankündigungen im konfigurierten Website-Verein pflegen und freigeben; vom Vorstand geerbt. Keine sonstigen Adminrechte. |
 | `ROLE_MEMBER` | Abgeleitet aus vorhandenem Member-Profil, nicht leerem Verein, Status `ACTIVE` und fehlendem Austrittsdatum. |
 | Funktionsrollen | Ausbilder, Gerätewart, Kompressorbediener, Kassenwart und Vorstand werden ausdrücklich vergeben. Sie machen ein inaktives Mitglied nicht automatisch aktiv. |
 | `ROLE_ADMIN` | Verwaltung im Verein von `User.member.club`; ohne gültigen Kontext keine vereinsbezogenen Verwaltungsdaten. |
@@ -15,6 +16,16 @@ Ein in der Datenbank gespeichertes `ROLE_MEMBER` allein gewährt keine Mitglieds
 Separat geschützte Ausbilder- und Gerätewartportalrouten erhalten die passende Funktionsrolle als Zugangsvoraussetzung, auch wenn keine aktive Mitgliedschaft mehr besteht. Die jeweiligen Controller müssen zusätzlich den benötigten Personen-/Vereinsbezug prüfen. Mitgliederspezifische Routen wie `/my` bleiben solchen Konten ohne aktive Mitgliedschaft verwehrt.
 
 ## Verbindliche Objektprüfung
+
+Die Redaktion `/editorial` verlangt `ROLE_PRESS_OFFICER` und denselben
+Verein wie `PUBLIC_SITE_CLUB_ID`. Vorstand, Admin und Superadmin erben
+die Rolle, aber auch Superadmins umgehen in diesem Bereich nicht die
+Website-Vereinsgrenze. Die Rolle kann separat an einen Pressewart vergeben
+werden; aktive Mitgliedsrechte oder EasyAdmin-Zugang werden dadurch nicht
+zusätzlich verliehen. Nur eigene freigegebene Kurse/Turniere sind als
+öffentliche Veranstaltung verknüpfbar. Gewöhnliche Mitglieder,
+Thekenleitung und Ausbilder ohne Redaktionsrolle können keine Artikel
+oder Veranstaltungsankündigungen erstellen oder freigeben.
 
 - Routenrollen ersetzen keine Objektberechtigung.
 - Member-/Kurs-Voter vergleichen persistierte Vereins-IDs.

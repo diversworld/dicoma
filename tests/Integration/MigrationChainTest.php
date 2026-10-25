@@ -119,6 +119,24 @@ final class MigrationChainTest extends TestCase
         $this->migrate('20261025140000');
     }
 
+    public function testPublishingUpgradeDoesNotExposeOrChangeExistingClubData(): void
+    {
+        $this->migrate('20261025170000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Editor']);
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => (int) $this->connection->lastInsertId(), 'membership_status' => 'active']);
+        $members = $this->connection->fetchAllAssociative('SELECT * FROM member');
+        $this->connection->executeStatement('CREATE TABLE publishing_unknown_legacy (id INT PRIMARY KEY, evidence VARCHAR(80))');
+        $this->connection->insert('publishing_unknown_legacy', ['id' => 1, 'evidence' => 'Keep private existing records']);
+        $this->migrate('latest');
+        self::assertSame($members, $this->connection->fetchAllAssociative('SELECT * FROM member'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM website_publication'));
+        self::assertSame('Keep private existing records', $this->connection->fetchOne('SELECT evidence FROM publishing_unknown_legacy'));
+        $this->assertSchemaMatchesMapping();
+        $this->expectException(IrreversibleMigration::class);
+        $this->migrate('20261025170000');
+    }
+
     #[DataProvider('barDutySnapshotModes')]
     public function testBarDutyCapacityUsesCurrentReadAfterAnEarlierSnapshot(bool $snapshotIsolation): void
     {

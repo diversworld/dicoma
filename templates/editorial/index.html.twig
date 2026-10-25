@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}Redaktion | DICOMA{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>Redaktion: Artikel und Veranstaltungen</h1>
+    <p>Nur freigegebene Beiträge des Website-Vereins werden ab dem gewählten Zeitpunkt öffentlich. Interne Notizen, Teilnehmer und Diensteinteilungen werden niemals übernommen.</p>
+    {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
+    <p><a class="btn btn-main" href="{{ path('website_editorial_new') }}">Artikel / Veranstaltung erstellen</a> <a href="{{ path('website_articles') }}">Öffentliche Artikel</a> · <a href="{{ path('website_events') }}">Öffentliche Veranstaltungen</a></p>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Titel</th><th>Typ</th><th>Freigabe</th><th>Öffentlich ab</th><th>Aktion</th></tr></thead>
+        <tbody>{% for publication in publications %}<tr>
+            <td>{{ publication.title }}</td><td>{{ publication.kind == 'article' ? 'Artikel' : 'Veranstaltung' }}</td>
+            <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td><td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
+            <td><a href="{{ path('website_editorial_edit', {id:publication.id}) }}">Bearbeiten / Freigabe ändern</a></td>
+        </tr>{% else %}<tr><td colspan="5">Noch keine Beiträge.</td></tr>{% endfor %}</tbody>
+    </table></div>
+</main>
+{% endblock %}

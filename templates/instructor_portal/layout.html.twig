@@ -18,27 +18,12 @@
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}" />
 	<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 	
-	<!-- bootstrap.min css -->
-    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
-    <!-- Ionic Icon Css -->
-    <link rel="stylesheet" href="{{ asset('plugins/Ionicons/css/ionicons.min.css') }}">
-    <!-- animate.css -->
-    <link rel="stylesheet" href="{{ asset('plugins/animate-css/animate.css') }}">
-    <!-- Magnify Popup -->
-    <link rel="stylesheet" href="{{ asset('plugins/magnific-popup/magnific-popup.css') }}">
-    <!-- Slick CSS -->
-    <link rel="stylesheet" href="{{ asset('plugins/slick/slick.css') }}">
-	<!-- Main Stylesheet -->
-    <link rel="stylesheet" href="{{ asset('css/theme-variables.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-theme.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/utilities.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/bootstrap/bootstrap.min.css') }}">
+    {% include 'themes/_assets.html.twig' %}
     <link rel="stylesheet" href="{{ asset('css/pages/instructor-portal-layout.css') }}">
 </head>
 
 </head>
-<body>
+<body data-site-theme="{{ site_theme.name }}">
 <header class="ip-header"><nav class="container" aria-label="Ausbilderportal">
     <div class="ip-header-title container align-items-center">
         <a class="navbar-brand" href="{{ path('app_home') }}">

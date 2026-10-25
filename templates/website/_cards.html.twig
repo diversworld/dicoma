@@ -1,0 +1,10 @@
+<div class="row">
+{% for publication in publications %}
+    <article class="col-md-6 mb-4"><div class="block">
+        <h3><a href="{{ path('website_publication', {id:publication.id}) }}">{{ publication.title }}</a></h3>
+        {% if publication.kind == 'event' %}<p><time datetime="{{ publication.startsAt|date('c') }}">{{ publication.startsAt|date('d.m.Y H:i') }}</time> – {{ publication.endsAt|date('d.m.Y H:i') }} · {{ publication.location }}</p>{% else %}<p>{{ publication.publishAt|date('d.m.Y') }}</p>{% endif %}
+        <p>{{ publication.summary }}</p>
+        <a class="btn btn-small" href="{{ path('website_publication', {id:publication.id}) }}">Weiterlesen</a>
+    </div></article>
+{% else %}<div class="col-12"><p>Derzeit keine veröffentlichten {{ kind == 'event' ? 'Veranstaltungen' : 'Artikel' }}.</p></div>{% endfor %}
+</div>

@@ -1,0 +1,32 @@
+.bar-duty-portal {
+    background: var(--dw-neutral-50);
+    color: var(--dw-text);
+}
+.bar-duty-header {
+    background: var(--dw-primary);
+    color: var(--dw-surface);
+    padding: 1rem 0;
+}
+.bar-duty-header a {
+    color: var(--dw-surface);
+    text-decoration: none;
+}
+.bar-duty-header a:hover {
+    text-decoration: underline;
+}
+.bar-duty-header a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+}
+.bar-duty-header img {
+    max-width: 100%;
+    height: auto;
+}
+.bar-duty-portal main {
+    min-height: 70vh;
+}
+.bar-duty-footer {
+    border-top: 1px solid var(--dw-neutral-200);
+    padding: 1rem 0;
+    color: var(--dw-neutral-600);
+}

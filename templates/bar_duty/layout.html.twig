@@ -1,25 +1,42 @@
-{% extends is_granted('ROLE_ADMIN') ? '@EasyAdmin/page/content.html.twig' : 'base.html.twig' %}
-{% block title %}Thekendienst | DICOMA{% endblock %}
-{% block content_title %}Thekendienst im Vereinsheim{% endblock %}
-{% block stylesheets %}{% endblock %}
-{% block head_stylesheets %}{{ parent() }}{{ block('stylesheets') }}{% endblock %}
-{% block hero %}{% endblock %}
-{% block body %}
-    {% if is_granted('ROLE_ADMIN') %}{{ parent() }}{% else %}{{ block('main') }}{% endif %}
-{% endblock %}
-{% block main %}
-<main class="container py-4">
-    {% if not is_granted('ROLE_ADMIN') %}<h1>Thekendienst im Vereinsheim</h1>{% endif %}
-    <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Thekendienst">
-        <a class="btn btn-outline-primary" href="{{ path('bar_duty') }}">Dienstkalender und mein Konto</a>
+<!doctype html>
+<html lang="{{ app.request.locale|default('de') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Thekendienstportal | DICOMA{% endblock %}</title>
+    <link rel="shortcut icon" href="{{ asset('images/favicon.ico') }}">
+    {% include 'themes/_assets.html.twig' %}
+    <link rel="stylesheet" href="{{ asset('css/pages/bar-duty-portal.css') }}">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body class="bar-duty-portal" data-bar-duty-portal data-site-theme="{{ site_theme.name }}">
+<header class="bar-duty-header">
+    <div class="container d-flex flex-wrap align-items-center gap-3 mb-3">
+        <a href="{{ path('bar_duty') }}" aria-label="Thekendienstportal – Startseite"><img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250" alt="DICOMA"></a>
+        <strong>DICOMA · Thekendienstportal</strong>
+    </div>
+    <nav class="container d-flex flex-wrap align-items-center gap-3" aria-label="Thekendienstportal">
+        <a href="{{ path('bar_duty') }}">Dienstkalender und mein Konto</a>
         {% if manager %}
-            <a class="btn btn-outline-primary" href="{{ path('bar_duty_plan') }}">Veranstaltung / Serie eintragen</a>
-            <a class="btn btn-outline-primary" href="{{ path('bar_duty_settings') }}">Vorlagen und Pflichtstunden</a>
-            <a class="btn btn-outline-primary" href="{{ path('bar_duty_report') }}">Stundenkonten und Auswertung</a>
+            <a href="{{ path('bar_duty_plan') }}">Veranstaltung / Serie eintragen</a>
+            <a href="{{ path('bar_duty_settings') }}">Vorlagen und Pflichtstunden</a>
+            <a href="{{ path('bar_duty_report') }}">Stundenkonten und Thekenkassen</a>
         {% endif %}
-        <a class="btn btn-outline-primary" href="{{ path('club_calendar') }}">Gemeinsamer Kalender</a>
+        <a href="{{ path('club_calendar') }}">Gemeinsamer Kalender</a>
+        {% if is_granted('ROLE_MEMBER') %}<a href="{{ path('member_portal_dashboard') }}">Mitgliederbereich</a>{% endif %}
+        {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('admin') }}">Verwaltung (EasyAdmin)</a>{% endif %}
+        <form method="post" action="{{ path('app_logout') }}" class="m-0">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+            <button type="submit" class="btn btn-sm btn-outline-light">Abmelden</button>
+        </form>
     </nav>
+</header>
+<main class="container py-4">
+    <h1>Thekendienst im Vereinsheim</h1>
     {% for type in ['success', 'danger'] %}{% for message in app.flashes(type) %}<div role="status" class="alert alert-{{ type }}">{{ message }}</div>{% endfor %}{% endfor %}
     {% block duty_body %}{% endblock %}
 </main>
-{% endblock %}
+<footer class="bar-duty-footer"><div class="container">Thekendienstportal · Dienste, Stundenkonten und separate Thekenkasse im eigenen Verein</div></footer>
+{% block javascripts %}{% endblock %}
+</body>
+</html>
