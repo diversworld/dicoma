@@ -1,0 +1,44 @@
+{% extends 'bar_duty/layout.html.twig' %}
+{% import 'bar_duty/_forms.html.twig' as f %}
+{% block duty_body %}
+<h2>Schichtdefinitionen</h2>
+<form class="card card-body mb-3" method="post" action="{{ path('bar_duty_action', {operation:'define', id:0}) }}">
+    {{ f.token('define', 0) }}
+    <label>Titel <input class="form-control" name="title" maxlength="120" required></label>
+    <label>Ort <input class="form-control" name="location" maxlength="180" required></label>
+    <label>Beginn <input class="form-control" type="time" name="time" required></label>
+    <label>Dauer (Minuten, höchstens 24 Stunden) <input class="form-control" type="number" name="minutes" min="1" max="1440" required></label>
+    <label>Plätze <input class="form-control" type="number" name="capacity" min="1" max="50" required></label>
+    <button class="btn btn-primary mt-2">Schichtdefinition erstellen</button>
+</form>
+<p>Definitionen werden beim Planen in die Schicht kopiert. Historische Schichten bleiben unverändert; geänderte Abläufe erhalten eine neue Definition.</p>
+{% for definition in definitions %}
+    <article class="card card-body mb-3">
+        <h3>{{ definition.title }}</h3><p>{{ definition.location }} · {{ definition.startTime }} · {{ definition.durationMinutes }} Minuten · {{ definition.capacity }} Plätze · {{ definition.active ? 'Aktiv' : 'Deaktiviert' }}</p>
+        {% if definition.active %}
+            <form class="d-flex flex-wrap gap-2 mb-2" method="post" action="{{ path('bar_duty_action', {operation:'schedule', id:definition.id}) }}">
+                {{ f.token('schedule', definition.id) }}<label>Diensttag <input type="date" name="date" required></label><button class="btn btn-primary">Schicht planen</button>
+            </form>
+            <form method="post" action="{{ path('bar_duty_action', {operation:'deactivate', id:definition.id}) }}">{{ f.token('deactivate', definition.id) }}<button class="btn btn-outline-danger">Definition deaktivieren</button></form>
+        {% endif %}
+    </article>
+{% else %}<p>Noch keine Schichtdefinitionen.</p>{% endfor %}
+<h2>Pflichtstunden und getrennte Thekenkasse</h2>
+<form method="get" class="mb-3"><label>Kalenderjahr <input type="number" name="year" min="2000" max="2100" value="{{ year }}" required></label><button class="btn btn-secondary">Jahr auswählen</button></form>
+<form class="card card-body mb-3" method="post" action="{{ path('bar_duty_action', {operation:'policy', id:0}) }}">
+    {{ f.token('policy', 0) }}<input type="hidden" name="year" value="{{ year }}">
+    <p>Regel für {{ year }}. {{ policy ? 'Bereits konfiguriert.' : 'Noch nicht konfiguriert; es wird keine Pflicht automatisch angenommen.' }}</p>
+    <label>Pflichtminuten je Mitglied (0 = ausdrücklich keine Pflicht) <input class="form-control" type="number" name="minutes" min="0" max="60000" value="{{ policy ? policy.requiredMinutes : '' }}" required></label>
+    <label><input type="checkbox" name="cash" value="1" {{ policy and policy.cashEnabled ? 'checked' : '' }}> Separate Thekenkasse für Schichten dieses Jahres aktivieren</label>
+    <p class="small">Keine Verbindung zur Gerätewartkasse. Jede Schicht führt einen eigenen dokumentierten Anfangsbestand und Kassenabschluss. Deaktivierung verhindert neue Kassen; bereits eröffnete Kassen bleiben abschließbar.</p>
+    {{ f.reason() }}<button class="btn btn-primary">Jahresregel speichern</button>
+</form>
+{% if policy %}<details class="mb-3"><summary>Änderungshistorie der Jahresregel</summary><ul>{% for event in policy.history %}<li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.minutes }} Minuten · Kasse {{ event.cash ? 'aktiviert' : 'deaktiviert' }} · {{ event.reason }}</li>{% endfor %}</ul></details>{% endif %}
+<h2>Individuelle Pflicht / Ausnahme {{ year }}</h2>
+<form class="card card-body" method="post" action="{{ path('bar_duty_action', {operation:'exception', id:0}) }}">
+    {{ f.token('exception', 0) }}<input type="hidden" name="year" value="{{ year }}">
+    <label>Mitglied <select class="form-control" name="member" required>{% for member in members %}<option value="{{ member.id }}">{{ member }}</option>{% endfor %}</select></label>
+    <label>Abweichende Pflichtminuten (0 = befreit, leer = wieder Vereinsregel) <input class="form-control" type="number" name="minutes" min="0" max="60000"></label>
+    {{ f.reason() }}<button class="btn btn-primary">Ausnahme begründet speichern</button>
+</form>
+{% endblock %}

@@ -6,6 +6,7 @@ security:
         ROLE_TRAINING_MANAGER:
             - ROLE_INSTRUCTOR
         ROLE_BOARD:
+            - ROLE_BAR_MANAGER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
             - ROLE_COMPRESSOR_OPERATOR

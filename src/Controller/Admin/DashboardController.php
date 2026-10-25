@@ -362,6 +362,7 @@ class DashboardController extends AbstractDashboardController
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
 
             MenuItem::section('Tägliche Verwaltung'),
+            MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'bar_duty')->setPermission('ROLE_BAR_MANAGER'),
 
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')->setSubItems([
                 MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),

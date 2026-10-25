@@ -1,0 +1,82 @@
+{% extends 'bar_duty/layout.html.twig' %}
+{% import 'bar_duty/_forms.html.twig' as f %}
+{% block stylesheets %}{{ parent() }}<link rel="stylesheet" href="{{ asset('css/pages/admin-calendar-index.css') }}">{% endblock %}
+{% block duty_body %}
+<section class="course-calendar mb-4" data-bar-duty-calendar>
+    <h2>Dienstkalender {{ month|date('m/Y') }}</h2>
+    <form method="get" action="{{ path('bar_duty') }}" class="d-flex flex-wrap gap-2 mb-3">
+        <label>Monat <input type="month" name="month" value="{{ month|date('Y-m') }}" required></label><button class="btn btn-primary">Kalender anzeigen</button>
+        <a class="btn btn-secondary" href="{{ path('bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
+        <a class="btn btn-secondary" href="{{ path('bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
+    </form>
+    <p>Veranstaltung anklicken, um den Thekendienst zu übernehmen. Die eingeteilten Mitglieder und noch freien Plätze stehen direkt im Kalender.</p>
+    {% if manager %}<p><a class="btn btn-primary" href="{{ path('bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.</p>{% endif %}
+    <div class="scroll"><table class="month">
+        <caption>Veranstaltungen und Thekendienste {{ month|date('m/Y') }}</caption>
+        <thead><tr>{% for weekday in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for week in weeks %}<tr>{% for day in week %}
+            <td class="{{ day.currentMonth ? '' : 'outside' }}" data-calendar-date="{{ day.date|date('Y-m-d') }}">
+                <time datetime="{{ day.date|date('Y-m-d') }}"><strong>{{ day.date|date('d.m.') }}</strong></time>
+                {% if manager and day.date >= date('today') %}<div><a href="{{ path('bar_duty_plan', {date:day.date|date('Y-m-d')}) }}">Veranstaltung eintragen</a></div>{% endif %}
+                {% for shift in day.shifts %}
+                    {% set assigned = roster[shift.id] %}
+                    <a class="event{{ shift.status == 'open' and assigned|length < shift.capacity ? ' incomplete' : '' }}" href="{{ path('bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
+                        <strong>{{ shift.title }}</strong>
+                        <small>{{ shift.startsAt|date('H:i') }} – {{ shift.endsAt|date('d.m.') != shift.startsAt|date('d.m.') ? shift.endsAt|date('d.m. H:i') : shift.endsAt|date('H:i') }} · {{ shift.location }}</small>
+                        <small>{{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status] }}</small>
+                        {% if shift.status != 'cancelled' %}
+                            <span>Dienst: {% for assignment in assigned %}{{ assignment.member }}{{ assignment.member.id == app.user.member.id ? ' (du)' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}Noch niemand eingeteilt{% endfor %}</span>
+                            <small>{{ assigned|length }} / {{ shift.capacity }} besetzt{% if shift.status == 'open' %} · {{ shift.capacity - assigned|length }} frei{% endif %}</small>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </td>
+        {% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+<section class="card card-body mb-4">
+    <h2>Mein Dienststundenkonto {{ account.year }}</h2>
+    <p>Pflicht: <strong>{{ account.required is null ? 'Nicht konfiguriert' : (account.required / 60)|number_format(2, ',', '.') ~ ' h' }}</strong> ·
+       Bestätigt: <strong>{{ (account.earned / 60)|number_format(2, ',', '.') }} h</strong> ·
+       Geplant, nicht gutgeschrieben: {{ (account.planned / 60)|number_format(2, ',', '.') }} h ·
+       Offen: {{ account.remaining is null ? 'Nicht berechenbar' : (account.remaining / 60)|number_format(2, ',', '.') ~ ' h' }}</p>
+    <p class="small">Gutschrift erst nach bestätigter Anwesenheit. Maßgeblich ist das Jahr des Schichtbeginns; kein automatischer Übertrag ins Folgejahr.</p>
+    {% if account.exception %}<p>Individuelle Pflicht: {{ account.exception.requiredMinutes is null ? 'Vereinsregel gilt wieder' : account.exception.requiredMinutes ~ ' Minuten' }}. Begründung: {{ (account.exception.history|last).reason }}</p>{% endif %}
+</section>
+<section class="mb-4"><h2>Meine Einteilungen {{ account.year }}</h2>
+    <ul>{% for assignment in account.assignments %}<li><a href="{{ path('bar_duty_shift', {id:assignment.shift.id}) }}">{{ assignment.shift.startsAt|date('d.m.Y H:i') }} · {{ assignment.shift.title }}</a> ·
+        {{ {'pending':'Anwesenheit offen', 'present':'Anwesend', 'absent':'Abwesend'}[assignment.attendance] }} · {{ assignment.creditedMinutes }} bestätigte Minuten</li>
+        {% else %}<li>Noch keine Einteilungen.</li>{% endfor %}</ul>
+</section>
+<section class="mb-4"><h2>Tausch und Vertretung</h2>
+    <p>Bis zur Annahme bleibt die bisherige Einteilung gültig. Eine Zustimmung der Thekenleitung ist nicht erforderlich.</p>
+    {% for exchange in exchanges %}
+        <article class="card card-body mb-2">
+            <h3>Anfrage #{{ exchange.id }} · {{ exchange.counterpart ? 'Diensttausch' : 'Vertretung' }}</h3>
+            <p>{{ exchange.source.member }} → {{ exchange.target }} · {{ exchange.source.shift.startsAt|date('d.m.Y H:i') }} · {{ exchange.source.shift.title }} ·
+                {% if exchange.counterpart %}Gegendienst: {{ exchange.counterpart.shift.startsAt|date('d.m.Y H:i') }} · {{ exchange.counterpart.shift.title }} · {% endif %}
+                {{ {'pending':'Offen', 'accepted':'Angenommen', 'declined':'Abgelehnt', 'withdrawn':'Zurückgezogen'}[exchange.status] }}</p>
+            {% if exchange.status == 'pending' %}
+                <div class="d-flex flex-wrap gap-2">
+                {% if exchange.target.id == app.user.member.id %}
+                    {% for op, label in {'accept':'Tausch / Vertretung annehmen', 'decline':'Anfrage ablehnen'} %}
+                        <form method="post" action="{{ path('bar_duty_action', {operation:op, id:exchange.id}) }}">{{ f.token(op, exchange.id) }}<button class="btn btn-outline-primary">{{ label }}</button></form>
+                    {% endfor %}
+                {% else %}
+                    <form method="post" action="{{ path('bar_duty_action', {operation:'retract', id:exchange.id}) }}">{{ f.token('retract', exchange.id) }}<button class="btn btn-outline-danger">Anfrage zurückziehen</button></form>
+                {% endif %}</div>
+            {% endif %}
+        </article>
+    {% else %}<p>Keine Anfragen.</p>{% endfor %}
+</section>
+<section><h2>Meine Benachrichtigungen (letzte 100)</h2>
+    {% for notification in notifications %}
+        <article class="border rounded p-3 mb-2">
+            <h3>{{ notification.readAt ? '' : 'Neu: ' }}{{ notification.subject }}</h3>
+            <p>{{ notification.createdAt|date('d.m.Y H:i') }} · {{ notification.body }}</p>
+            <a href="{{ path('bar_duty_shift', {id:notification.shift.id}) }}">Aktuellen Dienst anzeigen</a>
+            {% if not notification.readAt %}<form method="post" action="{{ path('bar_duty_action', {operation:'read', id:notification.id}) }}">{{ f.token('read', notification.id) }}<button class="btn btn-sm btn-outline-secondary">Als gelesen markieren</button></form>{% endif %}
+        </article>
+    {% else %}<p>Keine Benachrichtigungen.</p>{% endfor %}
+</section>
+{% endblock %}

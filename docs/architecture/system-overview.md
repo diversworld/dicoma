@@ -1,4 +1,4 @@
-# Systemübersicht – Phase 2 bis 6
+# Systemübersicht – Phase 2 bis 6 und Phase 8
 
 DICOMA bleibt eine bestehende Symfony-7.4-Anwendung mit Doctrine ORM 2, Twig, Symfony Security und EasyAdmin. Fachlogik bleibt in den vorhandenen Services, HTTP-Orchestrierung in den vorhandenen Controllern. MySQL/MariaDB ist die von der vorhandenen Migrationshistorie unterstützte Datenbank.
 
@@ -10,6 +10,81 @@ HTTP / Symfony Security / CSRF
 ```
 
 Personenstammdaten werden zentral gehalten; fachliche Mitgliedschaften, Benutzerkonto und Rollen bleiben getrennt. Siehe [Datenmodell](data-model.md) und [Rollenvertrag](roles-permissions.md).
+
+## Phase 8: Thekendienstverwaltung
+
+Der Bereich `/bar-duty` integriert Mitglieder, die neue Funktionsrolle
+`ROLE_BAR_MANAGER`, den gemeinsamen Vereinskalender und einen persönlichen
+Nachrichtenbereich. Schichtdefinitionen legen Ort, Uhrzeit, Dauer und
+Kapazität fest; geplante Schichten übernehmen diese Werte als historischen
+Stand. Definitionen lassen sich deaktivieren, bestehende Dienste bleiben
+erhalten. Anmeldungen, Zuweisungen und Übergaben prüfen aktive Mitgliedschaft,
+bekanntes Eintritts-/Kündigungsdatum, freie Plätze und Überschneidungen.
+Direkt angrenzende Dienste sind zulässig.
+
+Der **Monatskalender** zeigt Veranstaltungen pro Tag einschließlich
+eingeteilter Namen und freier Plätze. Mitglieder öffnen die Veranstaltung
+per Klick und melden sich dort für den Dienst an. Die Thekenleitung kann
+direkt am Kalendertag Veranstaltungen mit Titel, Ort, Beginn, Dienstdauer
+und Personalbedarf eintragen. Der Kalender verwendet die vorhandenen
+Kalenderstile und ist auf kleinen Bildschirmen horizontal scrollbar.
+
+Clubabende lassen sich als **wöchentliche oder zweiwöchentliche Serie**
+an ausgewählten Wochentagen zwischen ausdrücklich angegebenem Beginn
+und einschließlich Enddatum planen. Die Woche des Beginns ist die erste
+Serienwoche. Es werden nur die passenden Tage innerhalb der Grenzen
+angelegt, jeweils zur gewählten Uhrzeit; kein unbegrenzter Hintergrundlauf.
+Alle Termine einer Anfrage werden atomar angelegt. Eine identische aktive
+Vorlage wird wiederverwendet; ein bereits vorhandener Termin verhindert
+die gesamte Neuanlage. Einzelne Serientermine bleiben separat absagbar,
+ohne die übrigen Termine oder deren Einteilungen zu verändern.
+
+Alle Änderungen werden vereinsweise durch eine Datenbanksperre serialisiert.
+Verbindliche Belegungsprüfungen lesen den aktuellen Datenbankstand unter
+Sperre statt einen alten `REPEATABLE READ`-Snapshot. Konflikte werden
+ausdrücklich abgewiesen. Tausch und Vertretung ändern die Einteilung erst
+nach Zustimmung der betroffenen Zielperson, ohne zusätzliche Freigabe der
+Thekenleitung. Beidseitige Wechsel sind atomar; bei Konflikten bleiben
+sämtliche ursprünglichen Einteilungen erhalten. Rücknahme und Absage
+ziehen offene Anfragen zurück.
+
+### Dienststunden und Auswertung
+
+Pflichtminuten werden **je Verein und Kalenderjahr** ausdrücklich festgelegt.
+Individuelle begründete Ausnahmen ersetzen diese Regel: `0` bedeutet
+Befreiung, ein leerer Wert stellt die Vereinsregel wieder her. Fehlende
+Jahresregeln werden als unbekannt angezeigt, nicht als Nullpflicht.
+Geplante Stunden werden nicht gutgeschrieben. Erst die Thekenleitung
+bestätigt nach Schichtende Anwesenheit und tatsächliche Minuten; Abwesenheit
+hat immer null Minuten. Korrekturen ersetzen die aktuelle Gutschrift mit
+zusätzlichem Historieneintrag. Ein abgeschlossener Dienst ist unveränderlich.
+Maßgeblich ist das Jahr des Schichtbeginns; **kein automatischer Übertrag**.
+Eigene Konten sind persönlich, die vereinsweite Jahresauswertung und
+CSV-Exporte nur für die Thekenleitung sichtbar.
+
+### Eigenständige Thekenkasse
+
+Die Jahresregel kann die separate Thekenkasse aktivieren. Jede Schicht
+besitzt höchstens eine eigene Kasse mit ausdrücklich gezähltem Anfangsbestand,
+Einnahmen, Ausgaben und nachvollziehbaren Gegenbuchungen. Beträge sind ganze
+Cent; negative Bestände, mehrfaches Stornieren und fremde Belege werden
+verhindert. Ein Abschluss speichert Soll-/Istbestand, Bearbeiter, Zeitpunkt
+und Bewegungshash; Differenzen benötigen eine Begründung. Danach sind keine
+Änderungen möglich. Stundenabschluss und Kassenabschluss sind unabhängig;
+ein Kassenabschluss bleibt auch nach Stundenabschluss möglich. Eine
+eröffnete Kasse verhindert die Schichtabsage. Es gibt **keine Vermischung mit
+der Gerätewartkasse** und keine automatische Verrechnung von Pflichtstunden.
+Die Jahresauswertung verlinkt offene/abgeschlossene Kassen und deren Journal.
+
+### Benachrichtigungen
+
+Einteilung, Rücknahme, Anfrage, Entscheidung, bestätigte Stunden und Absage
+erzeugen private Portalnachrichten. `app:bar-duty:remind --hours=48` ergänzt
+idempotente Erinnerungen für noch aktive, kommende Dienste. E-Mail ist ein
+explizit aktivierter zusätzlicher Versandkanal, nicht Voraussetzung für das
+Portal. Versandzustände und Wiederanlauf sind im
+[Betriebshandbuch](../deployment/operations.md#phase-8-migration-und-benachrichtigungen)
+beschrieben.
 
 ## Phase 6: Inventar, Gerätewart und Verleih
 

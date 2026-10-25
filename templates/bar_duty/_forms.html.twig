@@ -1,0 +1,8 @@
+{% macro token(operation, id) %}
+    <input type="hidden" name="_token" value="{{ csrf_token('bar_duty_' ~ operation ~ '_' ~ id) }}">
+{% endmacro %}
+{% macro reason() %}
+    <label class="d-block mb-2">Begründung / Nachweis (10–500 Zeichen)
+        <input class="form-control" name="reason" minlength="10" maxlength="500" required>
+    </label>
+{% endmacro %}

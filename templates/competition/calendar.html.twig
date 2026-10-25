@@ -1,7 +1,7 @@
 {% extends 'competition/layout.html.twig' %}
 {% block competition_title %}{{ 'Veranstaltungskalender'|trans }}{% endblock %}
 {% block competition_body %}
-<p class="text-muted">{{ 'Gemeinsame Ansicht aus Tauchausbildung, Mannschaftstraining und Turnieren. Termine werden ausschließlich im jeweiligen Fachmodul gepflegt.'|trans }}</p>
+<p class="text-muted">{{ 'Gemeinsame Ansicht aus Tauchausbildung, Mannschaftstraining, Turnieren und Thekendiensten. Termine werden ausschließlich im jeweiligen Fachmodul gepflegt.'|trans }}</p>
 <form method="get" action="{{ path('club_calendar') }}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
 <div><label for="calendar-month">{{ 'Monat'|trans }}</label><input id="calendar-month" class="form-control" type="month" name="month" value="{{ month|date('Y-m') }}" required></div>
 <button class="btn btn-primary">{{ 'Anzeigen'|trans }}</button>

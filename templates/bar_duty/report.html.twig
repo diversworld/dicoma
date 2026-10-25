@@ -1,0 +1,20 @@
+{% extends 'bar_duty/layout.html.twig' %}
+{% block duty_body %}
+<h2>Dienststundenkonten {{ year }}</h2>
+<form method="get" class="mb-3"><label>Jahr <input name="year" type="number" min="2000" max="2100" value="{{ year }}" required></label><button class="btn btn-primary">Auswertung anzeigen</button> <a href="{{ path('bar_duty_report_csv', {year:year}) }}">CSV herunterladen</a></form>
+<p>Alle Angaben in Minuten. Planung ist keine Gutschrift. Individuelle Pflicht 0 bedeutet Befreiung; fehlende Jahresregel ist keine automatische Befreiung.</p>
+<div class="table-responsive"><table class="table table-striped">
+    <thead><tr><th>Mitglied</th><th>Pflicht</th><th>Bestätigt</th><th>Geplant</th><th>Offen</th><th>Saldo</th><th>Abwesend</th><th>Ausnahme</th></tr></thead><tbody>
+    {% for row in accounts %}<tr><td>{{ row.member }}</td><td>{{ row.required ?? 'Nicht konfiguriert' }}</td><td>{{ row.earned }}</td><td>{{ row.planned }}</td><td>{{ row.remaining ?? '—' }}</td><td>{{ row.balance ?? '—' }}</td><td>{{ row.absent }}</td>
+        <td>{% if row.exception %}<details><summary>{{ row.exception.requiredMinutes is null ? 'Vereinsregel' : row.exception.requiredMinutes ~ ' Minuten' }}</summary><ul>{% for event in row.exception.history %}<li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.minutes is null ? 'Vereinsregel' : event.minutes }} · {{ event.reason }}</li>{% endfor %}</ul></details>{% else %}Keine{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="8">Keine Mitglieder oder Dienstnachweise.</td></tr>{% endfor %}</tbody>
+</table></div>
+<h2>Separate Thekenkassen {{ year }}</h2>
+<p>Unabhängig von Stundenkonten und Gerätewartkasse; jeder Kassensturz gehört zu genau einer Schicht.</p>
+<ul>{% for session in cashSessions %}
+    <li><a href="{{ path('bar_duty_shift', {id:session.shift.id}) }}">{{ session.shift.startsAt|date('d.m.Y H:i') }} · {{ session.shift.title }}</a> ·
+        {{ session.closedAt ? 'Abgeschlossen' : 'Offen' }}
+        {% if session.closedAt %} · Soll {{ (session.expectedCents / 100)|number_format(2, ',', '.') }} EUR · Ist {{ (session.countedCents / 100)|number_format(2, ',', '.') }} EUR{% endif %}
+        · <a href="{{ path('bar_duty_cash_csv', {id:session.id}) }}">Kassenjournal CSV</a></li>
+{% else %}<li>Keine Thekenkassen in diesem Jahr.</li>{% endfor %}</ul>
+{% endblock %}

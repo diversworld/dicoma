@@ -243,9 +243,11 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $ordinary = $this->account('ordinary', User::ROLE_MEMBER);
         $this->client->loginUser($ordinary);
-        foreach (['/admin/teams', '/admin/tournaments', '/admin/calendar'] as $url) {
+        foreach (['/admin/teams', '/admin/tournaments'] as $url) {
             $this->client->request('GET', $url); self::assertResponseStatusCodeSame(403);
         }
+        $this->client->request('GET', '/admin/calendar'); self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('[data-event-key="tournament-'.$tournament->getId().'"]');
         $contextless = $this->account('contextless-admin', User::ROLE_ADMIN);
         $contextless->setMember(null); $this->em->flush();
         $this->client->loginUser($contextless);

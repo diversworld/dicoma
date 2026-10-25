@@ -36,6 +36,8 @@
                             <li><a class="dropdown-item" href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></li>
 							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
                             <li><a class="dropdown-item" href="{{ path('member_reservations') }}">Ausrüstung reservieren</a></li>
+                            <li><a class="dropdown-item" href="{{ path('bar_duty') }}">Thekendienst und Stundenkonto</a></li>
+                            <li><a class="dropdown-item" href="{{ path('club_calendar') }}">Vereinskalender</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a></li>
                             <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kurse buchen</a></li>
@@ -48,6 +50,9 @@
                 {% endif %}
                 {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
                     <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>
+                {% endif %}
+                {% if is_granted('ROLE_BAR_MANAGER') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekenleitung</a></li>
                 {% endif %}
                 {% if is_granted('ROLE_ADMIN') %}
                     <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>

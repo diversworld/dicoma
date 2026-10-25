@@ -59,6 +59,35 @@ Teilnehmer- und Berechtigungsnachweise anderer Mannschaften bleiben
 deren Betreuung und dem Veranstalter vorbehalten; offene Ausschreibungen
 zeigen keine Kontaktdaten oder Spielerlisten.
 
+## Ergänzung Phase 8
+
+`ROLE_BAR_MANAGER` (Thekenleitung) ist eine gesondert vergebbare Funktionsrolle.
+Vorstand, Admin und Superadmin erben sie. Alle Thekendienstoperationen bleiben
+auf `User.member.club` begrenzt; auch Superadmin erhält hier keinen
+vereinsübergreifenden Datenzugriff oder eine globale Mitgliedersuche.
+Ein Profil und Verein sind zwingend. Die Funktionsrolle erlaubt die
+Verwaltung auch ohne aktive Mitgliedschaft, nicht jedoch die eigene
+Diensteinteilung ohne aktive Mitgliedschaft.
+
+| Aufgabe | Berechtigung |
+|---|---|
+| Dienstkalender, vereinsinterne Einteilung und gemeinsame Kalenderansicht | Aktive Vereinsmitglieder und Thekenleitung |
+| Für einen Dienst anmelden, eigenen Dienst zurückziehen | Aktives Mitglied; freie Kapazität und keine Terminüberschneidung |
+| Tausch / Vertretung anbieten | Ausschließlich die eingeteilte Person |
+| Anfrage annehmen / ablehnen | Ausschließlich die angefragte Person; keine Leitungsfreigabe |
+| Anfrage zurückziehen | Ausschließlich die anfragende Person |
+| Veranstaltungen direkt im Kalender und Wochen-/Zweiwochenserien anlegen | Thekenleitung im eigenen Verein |
+| Schichtdefinition, Zuweisung, Absage, Anwesenheit und Abschluss | Thekenleitung im eigenen Verein |
+| Jahrespflicht, individuelle Ausnahmen, Gesamtauswertung und CSV | Thekenleitung im eigenen Verein |
+| Separate Thekenkasse einschließlich Gegenbuchung und Abschluss | Thekenleitung im eigenen Verein |
+| Eigenes Stundenkonto und Nachrichten | Ausschließlich die betreffende Person |
+
+Alle Mutationen verlangen POST, operations-/objektgebundenes CSRF und
+erneute Objektprüfung. Andere Mitglieder sehen keine fremden Stundenkonten,
+Nachrichten, Begründungshistorien oder Kassenbelege. Die Kalenderfreigabe für
+aktive Mitglieder erweitert **keine** Mannschafts-, Turnier- oder
+Ausbildungsberechtigungen; deren bisherige Projektionsfilter bleiben bestehen.
+
 ## Betriebsfolge
 
 Vor Freigabe müssen die Vereine betroffene Konten mit fehlendem Profil, fehlendem Verein, inaktivem Status oder Austrittsdatum prüfen. Diese Konten verlieren bewusst Mitgliedsrechte. Ein Funktionskonto benötigt für echte Mitgliedsrechte zusätzlich eine aktive Mitgliedschaft.

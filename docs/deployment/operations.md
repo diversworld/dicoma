@@ -1,4 +1,70 @@
-# Betrieb und Wiederherstellung – Phase 2 bis 6
+# Betrieb und Wiederherstellung – Phase 2 bis 6 und Phase 8
+
+## Phase 8: Migration und Benachrichtigungen
+
+`Version20261025170000` ergänzt ausschließlich neun neue Tabellen für
+Thekendienste und deren eigenständige Kasse. Mitglieder, Gerätewartkasse
+und unbekannte Bestandstabellen werden nicht verändert. Es werden weder
+Pflichtstunden noch historische Kassenbestände erfunden. Der Rückbau ist
+zum Schutz von Anwesenheits-, Zustimmungs- und Finanznachweisen gesperrt.
+**Keine produktive Migration oder Aktivierung wurde ausgeführt.**
+Snapshot, Zielprüfung, Dry-run, Freigabe und Schema-/Cacheprüfung folgen
+denselben unten beschriebenen Regeln wie für Phase 6.
+
+Vor Nutzung Thekenleitung zuweisen und je Verein/Jahr die Pflichtminuten
+festlegen; optionale Thekenkasse ausdrücklich aktivieren. Auch null Minuten
+sind eine bewusste Regel. Individuelle Ausnahmen erfordern eine Begründung.
+Bestehende Jahre werden nicht automatisch kopiert und Salden nicht übertragen.
+
+Die Planung erfolgt im Monatskalender: Veranstaltung öffnen und selbst
+anmelden; Namen und freie Plätze sind bereits in der Kalenderzelle sichtbar.
+Die Thekenleitung trägt über einen Tag Einzelveranstaltungen oder
+Clubabend-Serien ein. Serien benötigen Enddatum und Wochentage, wahlweise
+wöchentlich oder alle zwei Wochen ab der Woche des Startdatums. Die
+Anlage ist atomar; identische bestehende Termine führen zur Ablehnung
+statt zu Duplikaten oder einer unvollständigen Serie. Absagen einzelner
+Serientermine betreffen nicht die übrigen Veranstaltungen.
+
+Interne Erinnerungen können beispielsweise stündlich erzeugt werden:
+
+```bash
+APP_ENV=prod php bin/console app:bar-duty:remind --hours=48
+```
+
+Der Befehl versendet keine E-Mails. Wiederholung erzeugt je Einteilung
+höchstens eine Erinnerung; ersetzte und abgesagte Dienste erhalten keine
+neue Erinnerung. Bereits gespeicherte Ereignisse bleiben historische
+Nachrichten; die aktuelle Portaleinteilung ist verbindlich.
+
+E-Mail wird nur mit gültiger `BAR_DUTY_MAIL_FROM`, eingerichteter
+`MAILER_DSN` und ausdrücklichem `--send` aktiviert:
+
+```bash
+APP_ENV=prod php bin/console app:bar-duty:send --send --limit=100
+APP_ENV=prod php bin/console app:bar-duty:send --send --retry --limit=100
+```
+
+Ohne `--send` erfolgt keinerlei Versand. `--retry` verarbeitet ausschließlich
+fehlgeschlagene Nachrichten, nicht bereits versandte. Fehlerhafte Empfänger
+und Transportfehler werden als `failed` mit Fehlergrund gespeichert und
+führen zu einem Fehler-Exitcode. Eine lokale Prozesssperre und ein unter
+Datenbanksperre gespeicherter Anspruch (`sending`) verhindern parallelen
+Doppelversand. Die SMTP-Übertragung liegt bewusst außerhalb einer langen
+Datenbanktransaktion.
+
+Bei Prozessabbruch oder Datenbankfehler nach Versand kann der Zustand
+`sending` verbleiben. Dies wird beim nächsten Aufruf ausdrücklich gemeldet
+(Fehler-Exitcode), **nicht automatisch erneut versendet**. Zuständige
+Administration muss die betroffenen IDs mit Transport-/Providerprotokollen
+abgleichen und den Zustand erst nach geklärtem Zustellergebnis kontrolliert
+auf `sent` beziehungsweise `failed` berichtigen; bei Unsicherheit nicht
+zurücksetzen. SMTP und Datenbank bieten keine gemeinsame Exactly-once-
+Transaktion. Der private Portalposteingang bleibt unabhängig davon nutzbar.
+Es wurde kein tatsächlicher E-Mail-Versand ausgelöst.
+
+Die Phase-8-HTTP-Tests verwenden ausschließlich synthetische Daten in
+SQLite im Arbeitsspeicher und Mailer-Mocks. Migrationsprüfungen verwenden
+zufällig benannte, danach gelöschte MariaDB-Testdatenbanken.
 
 ## Phase 6: Migration und Aktivierungsgrenze
 

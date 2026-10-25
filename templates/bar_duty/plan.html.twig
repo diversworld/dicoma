@@ -1,0 +1,31 @@
+{% extends 'bar_duty/layout.html.twig' %}
+{% import 'bar_duty/_forms.html.twig' as f %}
+{% block duty_body %}
+<h2>Veranstaltung mit Thekendienst eintragen</h2>
+<p>Einzelveranstaltungen und regelmäßige Clubabende erscheinen direkt im Dienstkalender. Mitglieder öffnen dort die Veranstaltung und tragen sich selbst ein.</p>
+<form class="card card-body mb-3" method="post" action="{{ path('bar_duty_action', {operation:'plan', id:0}) }}">
+    {{ f.token('plan', 0) }}
+    <label>Veranstaltung <input class="form-control" name="title" maxlength="120" placeholder="Zum Beispiel: Clubabend" required></label>
+    <label>Ort <input class="form-control" name="location" maxlength="180" required></label>
+    <label>Veranstaltungstag / Serienbeginn <input class="form-control" type="date" name="date" value="{{ date|date('Y-m-d') }}" required></label>
+    <label>Beginn des Thekendienstes <input class="form-control" type="time" name="time" value="19:00" required></label>
+    <label>Dauer des Thekendienstes in Minuten <input class="form-control" type="number" name="minutes" min="1" max="1440" value="180" required></label>
+    <label>Benötigte Personen je Termin <input class="form-control" type="number" name="capacity" min="1" max="50" value="1" required></label>
+    <fieldset class="mb-3">
+        <legend>Einzeltermin oder Serie</legend>
+        <label>Wiederholung <select class="form-control" name="recurrence">
+            <option value="once">Einmalig</option><option value="weekly">Wöchentlich</option><option value="fortnightly">Alle zwei Wochen</option>
+        </select></label>
+        <label>Serienende einschließlich (bei Wiederholung erforderlich) <input class="form-control" type="date" name="until"></label>
+        <p>Für Serien die gewünschten Wochentage auswählen. Die Woche des Serienbeginns ist die erste Serienwoche; bei zweiwöchentlicher Wiederholung wird jede zweite Kalenderwoche ausgelassen.</p>
+        <div class="d-flex flex-wrap gap-3">
+            {% for number, label in {1:'Montag', 2:'Dienstag', 3:'Mittwoch', 4:'Donnerstag', 5:'Freitag', 6:'Samstag', 7:'Sonntag'} %}
+                <label><input type="checkbox" name="weekdays[]" value="{{ number }}" {{ date|date('N') == number ? 'checked' : '' }}> {{ label }}</label>
+            {% endfor %}
+        </div>
+        <p class="small">Beginn und Ende begrenzen die Serie. Bereits vorhandene identische Termine verhindern die gesamte Anlage; es werden keine Teilserien gespeichert. Einzelne Termine lassen sich anschließend unabhängig absagen.</p>
+    </fieldset>
+    <button class="btn btn-primary">Veranstaltung / Serie im Kalender anlegen</button>
+</form>
+<a href="{{ path('bar_duty', {month:date|date('Y-m')}) }}">Zurück zum Dienstkalender</a>
+{% endblock %}

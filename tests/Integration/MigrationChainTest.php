@@ -98,6 +98,80 @@ final class MigrationChainTest extends TestCase
         self::assertTrue($this->connection->createSchemaManager()->tablesExist(['team_training', 'tournament', 'tournament_entry', 'tournament_player', 'tournament_match', 'tournament_payment', 'tournament_document']));
     }
 
+    public function testBarDutyUpgradePreservesMembersAndEquipmentCashWithoutInventedObligations(): void
+    {
+        $this->migrate('20261025140000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Member']);
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => (int) $this->connection->lastInsertId(), 'membership_status' => 'active']);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM member');
+        $this->connection->executeStatement('CREATE TABLE bar_unmapped_legacy (id INT PRIMARY KEY, evidence VARCHAR(80))');
+        $this->connection->insert('bar_unmapped_legacy', ['id' => 1, 'evidence' => 'Keep existing club cash records']);
+        $cashBefore = $this->connection->fetchAllAssociative('SELECT * FROM equipment_cash_payout');
+        $this->migrate('latest');
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM member'));
+        self::assertSame($cashBefore, $this->connection->fetchAllAssociative('SELECT * FROM equipment_cash_payout'));
+        self::assertSame('Keep existing club cash records', $this->connection->fetchOne('SELECT evidence FROM bar_unmapped_legacy'));
+        foreach (['bar_duty_policy', 'bar_duty_requirement', 'bar_shift_definition', 'bar_shift', 'bar_duty_assignment', 'bar_duty_exchange', 'bar_duty_notification', 'bar_cash_session', 'bar_cash_entry'] as $table) {
+            self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM '.$table));
+        }
+        $this->expectException(IrreversibleMigration::class);
+        $this->migrate('20261025140000');
+    }
+
+    #[DataProvider('barDutySnapshotModes')]
+    public function testBarDutyCapacityUsesCurrentReadAfterAnEarlierSnapshot(bool $snapshotIsolation): void
+    {
+        $mariaDb = str_contains($this->connection->fetchOne('SELECT VERSION()'), 'MariaDB');
+        if ($snapshotIsolation && !$mariaDb) { self::markTestSkipped('MariaDB-specific snapshot isolation.'); }
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $memberIds = [];
+        foreach (['Reader', 'Writer'] as $name) {
+            $this->connection->insert('person', ['firstname' => $name, 'lastname' => 'Synthetic']);
+            $this->connection->insert('member', ['club_id' => $clubId, 'person_id' => (int) $this->connection->lastInsertId(), 'membership_status' => 'active']);
+            $memberIds[] = (int) $this->connection->lastInsertId();
+        }
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $reader = DriverManager::getConnection($this->connection->getParams());
+        $writer = DriverManager::getConnection($this->connection->getParams());
+        $em = EntityManager::create($reader, $config);
+        $club = $em->find(\App\Entity\Club::class, $clubId);
+        $member = $em->find(\App\Entity\Member::class, $memberIds[0]);
+        $definition = new \App\Entity\BarShiftDefinition($club, 'Snapshot service', 'Clubhouse', '18:00', 120, 1);
+        $shift = new \App\Entity\BarShift($definition, new \DateTimeImmutable('+3 days'));
+        $em->persist($definition); $em->persist($shift); $em->flush();
+        $user = (new \App\Entity\User())->setUser('snapshot-reader')->setMember($member);
+        $security = $this->createStub(\Symfony\Bundle\SecurityBundle\Security::class);
+        $security->method('getUser')->willReturn($user); $security->method('isGranted')->willReturn(true);
+        $workflow = new \App\Service\BarDutyWorkflow($em, new \App\Service\BarDutyAccess($security));
+        if ($mariaDb) { $reader->executeStatement('SET SESSION innodb_snapshot_isolation = '.($snapshotIsolation ? '1' : '0')); }
+        $reader->setTransactionIsolation(\Doctrine\DBAL\TransactionIsolationLevel::REPEATABLE_READ);
+        $reader->beginTransaction();
+        try {
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM bar_duty_assignment'));
+            $writer->insert('bar_duty_assignment', ['shift_id' => $shift->getId(), 'member_id' => $memberIds[1], 'status' => 'active', 'attendance' => 'pending', 'credited_minutes' => 0, 'history' => '[]']);
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM bar_duty_assignment'), 'The earlier reader snapshot must not see the concurrent assignment.');
+            try {
+                $workflow->assign($shift->getId(), $memberIds[0]);
+                self::fail('A stale repeatable-read snapshot must not permit overbooking.');
+            } catch (\DomainException $e) {
+                self::assertStringContainsString($snapshotIsolation ? 'Gleichzeitige Änderung' : 'vollständig besetzt', $e->getMessage());
+            }
+            self::assertSame(1, (int) $writer->fetchOne('SELECT COUNT(*) FROM bar_duty_assignment'));
+            self::assertSame(0, (int) $writer->fetchOne('SELECT COUNT(*) FROM bar_duty_notification'));
+        } finally {
+            if ($reader->isTransactionActive()) { $reader->rollBack(); }
+            $reader->close(); $writer->close();
+        }
+    }
+
+    public static function barDutySnapshotModes(): iterable
+    {
+        yield 'current read' => [false]; yield 'snapshot conflict' => [true];
+    }
+
     public function testEquipmentUpgradePreservesLoansMaintenanceAndUnknownTables(): void
     {
         $this->migrate('20261024150454');

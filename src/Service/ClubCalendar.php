@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Schedule;
+use App\Entity\BarShift;
 use App\Entity\TeamTraining;
 use App\Entity\Tournament;
 use App\Enum\TournamentStatus;
@@ -25,6 +26,17 @@ final class ClubCalendar
     public function events(\DateTimeImmutable $from, \DateTimeImmutable $until): array
     {
         $events = [];
+        $user = $this->security->getUser();
+        $club = $user instanceof \App\Entity\User ? $user->getMember()?->getClub() : null;
+        if ($club !== null && ($this->security->isGranted('ROLE_BAR_MANAGER') || $user->getMember()->isActiveMember())) {
+            foreach ($this->em->getRepository(BarShift::class)->createQueryBuilder('s')
+                ->where('s.club = :club AND s.status != :cancelled AND s.startsAt < :until AND s.endsAt > :from')
+                ->setParameter('club', $club)->setParameter('cancelled', 'cancelled')->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $shift) {
+                $events[] = ['key' => 'bar-duty-'.$shift->getId(), 'kind' => 'Thekendienst', 'title' => $shift->getTitle(),
+                    'start' => $shift->getStartsAt(), 'end' => $shift->getEndsAt(), 'location' => $shift->getLocation(),
+                    'url' => $this->urls->generate('bar_duty_shift', ['id' => $shift->getId()])];
+            }
+        }
         foreach ($this->em->getRepository(TeamTraining::class)->createQueryBuilder('s')->addSelect('t')
             ->join('s.team', 't')->where('s.startsAt < :until AND s.endsAt > :from AND s.cancelled = false')
             ->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $session) {

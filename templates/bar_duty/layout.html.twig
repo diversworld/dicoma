@@ -1,0 +1,25 @@
+{% extends is_granted('ROLE_ADMIN') ? '@EasyAdmin/page/content.html.twig' : 'base.html.twig' %}
+{% block title %}Thekendienst | DICOMA{% endblock %}
+{% block content_title %}Thekendienst im Vereinsheim{% endblock %}
+{% block stylesheets %}{% endblock %}
+{% block head_stylesheets %}{{ parent() }}{{ block('stylesheets') }}{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+    {% if is_granted('ROLE_ADMIN') %}{{ parent() }}{% else %}{{ block('main') }}{% endif %}
+{% endblock %}
+{% block main %}
+<main class="container py-4">
+    {% if not is_granted('ROLE_ADMIN') %}<h1>Thekendienst im Vereinsheim</h1>{% endif %}
+    <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Thekendienst">
+        <a class="btn btn-outline-primary" href="{{ path('bar_duty') }}">Dienstkalender und mein Konto</a>
+        {% if manager %}
+            <a class="btn btn-outline-primary" href="{{ path('bar_duty_plan') }}">Veranstaltung / Serie eintragen</a>
+            <a class="btn btn-outline-primary" href="{{ path('bar_duty_settings') }}">Vorlagen und Pflichtstunden</a>
+            <a class="btn btn-outline-primary" href="{{ path('bar_duty_report') }}">Stundenkonten und Auswertung</a>
+        {% endif %}
+        <a class="btn btn-outline-primary" href="{{ path('club_calendar') }}">Gemeinsamer Kalender</a>
+    </nav>
+    {% for type in ['success', 'danger'] %}{% for message in app.flashes(type) %}<div role="status" class="alert alert-{{ type }}">{{ message }}</div>{% endfor %}{% endfor %}
+    {% block duty_body %}{% endblock %}
+</main>
+{% endblock %}
