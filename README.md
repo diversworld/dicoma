@@ -138,10 +138,12 @@ locale-rendered JavaScript and rich-text editor translations.
 
 #### Role-aware portals and navigation
 
-After login, `/portal` is the shared entry point for guests, members and staff.
-Personal training and the read-only `/calendar` stay in the frontend even for
-administrators; course and team management stay in their protected backend
-areas. Existing functional portals include a common portal/website switch.
+The shared login sends members to `/my`, guests to `/training`, and purely
+administrative roles to their authorized EasyAdmin entry point. Explicit
+instructor/equipment roles retain the frontend entry even with administrative roles.
+All frontend roles use the same configured theme. Personal training, equipment,
+instructor work and bar-duty self-service stay in the frontend; administration
+stays in EasyAdmin. Neither area's navigation links into the other area.
 Stored login target paths and CSRF-protected POST logout are preserved.
 
 The public `/club` and `/contact` pages use the active club explicitly selected

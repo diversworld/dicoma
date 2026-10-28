@@ -1,5 +1,34 @@
 # Phase-2-Prüfbericht
 
+## Navigations- und Schichtkassenprüfung vom 28.10.2026
+
+Maßgeblich ist der präzisierte [Navigationsvertrag](../phase11-portals.md):
+ein Frontendtheme, rollenabhängige Frontendmenüs und getrennte EasyAdmin-
+Navigation ohne gegenseitige Bereichslinks. Reine Verwaltungsrollen erhalten
+nach gemeinsamer Anmeldung ihr Backendziel. Die bestehende Mitgliederseite
+bleibt gestalterisch erhalten.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Vollständige Unit-/isolierte Regression | **296 Tests, 5.346 Assertions**, erfolgreich; Laufzeit 10:24 Minuten, PHP 8.5 in DDEV, keine übersprungenen Tests. |
+| Abschließende Navigations-/Stylesheetregression | **42 Tests, 2.297 Assertions**, erfolgreich nach der letzten Ausbilder-Layoutkorrektur. Enthält ergänzte echte Anmeldungen und gespeicherte Zielpfade. Überlappt die Gesamtsuite; Ergebnisse nicht addieren. |
+| Anmeldung und Navigation | Mitglied, Ausbilder, Gerätewart, Vorstand/Admin, Ausbildungsleitung, Kursverwaltung, Clubheimverwaltung, Pressewart und Mehrfachrolle; Bereichsprüfung von Links/Formularzielen, gemeinsame Frontendrahmen, erreichbare Funktionsseiten und beide Bewertungsansichten. |
+| Eigene Schichtkasse | Öffnen, Buchen, Gegenbuchung, CSV und Abschluss; unveränderlicher Abschluss; fremde Kasse, entzogene Einteilung, bestätigte Abwesenheit, ehemalige Mitgliedschaft, fremder Verein und Leitungsrolle ohne eigene Frontendeinteilung verweigert. |
+| Eigene Datenprojektionen | Buchungsübersicht enthält keine fremden TÜV-Buchungen; Ausbilderkurse werden nach Verein und Kurs-/Terminzuordnung gefiltert. |
+| Technische Prüfungen | Alle **232 Twig-Templates**, Test- und Prod-Container, **23 YAML-Dateien**, vier Übersetzungskataloge sowie PHP-Syntax der letzten Controller-/Serviceänderungen und `git diff --check` erfolgreich. |
+| Browser | Öffentliche Navigation bei **320, 390, 768, 1024 und 1440 Pixeln** ohne horizontalen Seitenüberlauf; keine Backendlinks. Mobiles Menü per Tastatur geöffnet, `aria-expanded=true`, Anmeldung sichtbar. Keine angemeldeten Browser-Fixtures im Geschäftsbestand angelegt. |
+
+Die Buchungsübersicht weist ausdrücklich darauf hin, dass Veranstaltungs-
+anmeldungen noch fehlen. Clubreisen, globale Suche und weitere Fachlücken
+stehen in der [aktuellen Matrix](../analysis/feature-matrix.md) und im
+[Umsetzungsplan](../analysis/implementation-roadmap.md). Diese Teilphase ist
+keine vollständige Master-Specification-Abnahme.
+
+Die HTTP-Schreibtests verwenden synthetische SQLite-In-Memory-Daten und den
+Null-Mailer. Keine Abhängigkeitsinstallation, Migration oder Veränderung von
+Geschäftsdaten. MariaDB-Konkurrenztests und produktive Betriebsabnahme wurden
+in dieser Navigationsphase nicht erneut ausgeführt.
+
 ## Korrektur: EasyAdmin-Mitgliederverwaltung vom 24.10.2026
 
 Der Menüeintrag „Mitgliedschaften und Beiträge“ führte zunächst zwar auf eine geschützte Verwaltungsroute, deren Templates erbten jedoch vom öffentlichen Frontend. Direkte Folgelinks hatten außerdem keinen EasyAdmin-Dashboard-Kontext. Diese Darstellung wurde durch die bisherigen reinen Formular-/Statusprüfungen nicht erkannt.

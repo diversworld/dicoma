@@ -44,7 +44,7 @@ final class TrainingUnitBatchController extends AbstractController
         $course = $schedule->getCourses();
         // Authorization applies equally to GET, assessment POST and booking sync POST.
         $this->denyAccessUnlessGranted(TrainingAssessmentVoter::ASSESS, $schedule);
-        $isAdmin = $request->attributes->get('_route') === 'admin_training_results_batch';
+        $isAdmin = (bool) $request->attributes->get('routeCreatedByEasyAdmin');
         $returnRoute = (string) $request->attributes->get('_route');
 
         // Explizite, CSRF-geschuetzte Synchronisierung ohne Aenderung vorhandener Buchungen.

@@ -14,8 +14,10 @@ Vereinsmodell ergänzt. Die nachfolgenden Fachmodule sind damit ausdrücklich
 
 - Aktuelle statt historischer Funktionsmatrix verwenden.
 - Defekte Frontend-Layoutvererbung reparieren.
-- Einheitlicher Einstieg, Login-Ziel und Portalwechsel für Gäste, Mitglieder
-  und unabhängige Funktionsrollen.
+- Gemeinsame Anmeldung mit rollenabhängigem Ziel; getrennte Navigation ohne
+  Bereichswechsel, ein gemeinsames Frontendtheme.
+- Eigene Buchungsübersicht und Ausbilderkurse; aktive eingeteilte Mitglieder
+  bedienen die Kasse ihrer eigenen Schicht, Clubheimverwaltung bleibt Backend.
 - Self-Service/Kalender von Verwaltungsoberflächen trennen; tatsächliche
   Objektberechtigungen unverändert serverseitig durchsetzen.
 - Isolierte Regression der bestehenden Module ausführen, Abweichungen offen

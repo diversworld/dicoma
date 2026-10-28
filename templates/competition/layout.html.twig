@@ -3,9 +3,12 @@
     {% if is_granted('ROLE_ADMIN') %}{{ parent() }}{% else %}
         <aside class="sidebar" data-competition-navigation>
             <nav class="p-3" aria-label="{{ 'Mannschaften und Turniere'|trans }}">
+                {% if competitionStaff is not defined or competitionStaff %}
                 <h2 class="h5">{{ 'Mannschaften und Turniere'|trans }}</h2>
                 <p><a href="{{ path('competition_teams') }}">{{ 'Meine Mannschaften'|trans }}</a></p>
                 <p><a href="{{ path('competition_tournaments') }}">{{ 'Turniere'|trans }}</a></p>
+                {% endif %}
+                {% if is_granted('ROLE_BAR_MANAGER') %}<p><a href="{{ path('admin_portal_bar_duty') }}">Clubheimverwaltung</a></p>{% endif %}
                 <p><a href="{{ path('club_calendar') }}">{{ 'Veranstaltungskalender'|trans }}</a></p>
             </nav>
         </aside>
@@ -14,8 +17,10 @@
 {% block content_title %}{% block competition_title %}{{ 'Mannschaften und Turniere'|trans }}{% endblock %}{% endblock %}
 {% block main %}
     <nav class="d-flex flex-wrap gap-3 mb-4" aria-label="{{ 'Bereichsnavigation'|trans }}">
+        {% if competitionStaff is not defined or competitionStaff %}
         <a href="{{ path('competition_teams') }}">{{ 'Mannschaften'|trans }}</a>
         <a href="{{ path('competition_tournaments') }}">{{ 'Turniere'|trans }}</a>
+        {% endif %}
         <a href="{{ path('club_calendar') }}">{{ 'Veranstaltungskalender'|trans }}</a>
     </nav>
     {% block competition_body %}{% endblock %}

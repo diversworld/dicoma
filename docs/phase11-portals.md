@@ -1,73 +1,83 @@
-# Portal- und Navigationskonsolidierung
+# Frontend und EasyAdmin: Navigationsvertrag
 
-Stand: 28.10.2026. Dies ist eine abgeschlossene technische Teilphase der
+Stand: 28.10.2026, nach fachlicher Präzisierung. Dies ist eine Teilphase der
 Master Specification, keine Vollständigkeitsfreigabe sämtlicher Fachmodule.
+Der zunächst vorgesehene gemeinsame Portalwechsel wurde ausdrücklich verworfen.
 
-## Einstiege
+## Anmeldung und Darstellungsgrenzen
 
-| Bereich | Route | Darstellung / Voraussetzung |
-|---|---|---|
-| Gemeinsamer Einstieg | `/portal`, optional `/portal/en`, `/portal/fr`, `/portal/es` | Angemeldete Konten; persönliche und administrative Angebote getrennt |
-| Persönliche Ausbildung | `/training` | Eigene Teilnahmen im Frontend, auch für Personal |
-| Ausbildungsverwaltung | `/admin/training` | Vorhandene Kursrechte und Vereinszuordnung, Backend |
-| Persönlicher Kalender | `/calendar` | Vorhandene Kalenderberechtigung, Frontend auch für Admins |
-| Kompatibler Verwaltungskalender | `/admin/calendar` | Identische Datenprojektion; Admins im Backend, bisher berechtigte Mitglieder in Leseansicht |
-| Sportverwaltung | `/admin/teams`, `/admin/tournaments` | `CompetitionAccess`; Backend auch für zugeordnete Mannschaftsbetreuung |
-| Vereinsinformationen | `/club` | Öffentlich, nur aktiver konfigurierter Website-Verein |
-| Kontakt | `/contact` | Öffentlich, Organisationskontakt ohne interne Notizen oder Personenlisten |
+Eine gemeinsame Anmeldung, aber zwei getrennte Arbeitsbereiche:
 
-Die bestehenden Gerätewart-, Ausbilder-, Thekendienst-, Redaktions- und
-EasyAdmin-Einstiege bleiben erhalten. Alle erhalten einen gemeinsamen Rückweg
-zur Portalübersicht und zur öffentlichen Website. Ein direkter Aufruf wird
-weiterhin im Fachcontroller und gegebenenfalls durch Voter/Services geprüft.
+- Mitglieder landen unter `/my`, Gäste unter `/training`.
+- Reine Verwaltungsrollen landen in ihrem EasyAdmin-Bereich: Vorstand/Admin
+  im Dashboard, Ausbildungsleitung in der Ausbildungsübersicht, Kursverwaltung
+  in `/admin/training`, Clubheimverwaltung in `/admin/bar-duty`, Pressewart in
+  der Redaktion und Mannschaftsbetreuung in der Sportverwaltung.
+- Explizit vergebene Ausbilder-/Gerätewartfunktionen behalten bei Mehrfachrollen
+  den Frontendeinstieg. Geerbte Funktionen machen reine Admins nicht zu
+  Frontendmitarbeitern.
+- Gespeicherte geschützte Zielpfade bleiben vorrangig. Logout bleibt
+  CSRF-geschützter POST.
+- Das Frontend verlinkt nicht ins Backend; das Backend nicht ins Frontend.
+  Direkte URLs bleiben unabhängig davon durch Rollen und Objektprüfungen gesichert.
+- `/portal` ist nur eine zusätzliche persönliche Frontendübersicht, kein
+  Bereichswechsler.
 
-## Navigation und Login
+Alle Frontendseiten erben `base.html.twig` und damit das konfigurierte
+`SiteTheme`. Auch Ausbilder, Gerätewart und Thekendienst verwenden diesen
+Rahmen; nur das Menü ändert sich. Die vorhandene Mitgliederseite bleibt
+gestalterisch erhalten. EasyAdmin verwendet unabhängig von der Kontorolle
+seinen eigenen Rahmen.
 
-`PortalNavigation` ist die gemeinsame Quelle für Header, Footer und
-Portalübersicht. Menüs haben eindeutige IDs, keine leeren Verwaltungsgruppen,
-übersetzte Labels und aktive Seitenkennzeichnung. Gäste finden Ausbildung,
-Fortschritt, Anwesenheit und eigene Anmeldungen, ohne künstliche Mitgliedschaft.
-Eine Funktionsrolle ohne aktive Mitgliedschaft erhält nur die mit ihrem
-Vereinskontext tatsächlich erreichbaren Einstiege.
+## Frontendnavigation
 
-Login-Fallback, Form-Login-Konfiguration und erneuter Aufruf von `/login`
-verwenden `/portal`. Ein vor dem Login gespeicherter geschützter Zielpfad
-bleibt vorrangig. Logout bleibt ein CSRF-geschützter POST.
+| Gruppe | Funktionen |
+|---|---|
+| Öffentlich | Startseite, Verein, Kontakt, Aktuelles, Veranstaltungen, Kursangebot, Mitgliedsantrag |
+| Mitglied | Dashboard, Meine Daten, Meine Mitgliedschaft, Meine Ausrüstung, Meine Buchungen, Meine Kurse; weitere vorhandene Ausbildungs-/Reservierungsfunktionen |
+| Ausbilder | Meine zugeordneten Kurse, Ausbilder Dashboard, Meine Aufgaben |
+| Gerätewart | Übersicht, TÜV Prüfung, Equipmentverleih, Inventar/Wartung, Kasse, Kompressorlogbuch, Füllgebühren |
+| Thekendienst | Dienstkalender und mein Konto, Thekenkasse, Gemeinsamer Kalender |
 
-Die öffentlichen Vereins-/Kontaktseiten verwenden die bestehenden Felder des
-über `PUBLIC_SITE_CLUB_ID` ausgewählten Vereins. Mit dieser Konfiguration sind
-Beschreibung und Organisationskontakt öffentlich. `notes`, Personen-/Kontodaten
-und fremde Vereine werden niemals angezeigt. Ist kein aktiver Website-Verein
-konfiguriert, fehlen die Menüeinträge und die beiden direkten Seiten liefern
-404. Die Redaktion und deren Veröffentlichungsregeln bleiben unverändert.
+`PortalNavigation` bündelt öffentliche und rollenabhängige Frontendlinks.
+Die Buchungsübersicht zeigt eigene TÜV-Buchungen und Einstiege zu vorhandenen
+Reservierungen/Kursanmeldungen. Veranstaltungsbuchungen sind dort ausdrücklich
+als noch nicht verfügbar gekennzeichnet; Ankündigungen sind keine Buchungsfunktion.
 
-## Layout und Responsive-Verhalten
+## Clubheimverwaltung und eigene Thekenkasse
 
-`base.html.twig` erbt wieder vom konfigurierten `SiteTheme`. Die zuvor leere
-Basis hatte unter anderem Startseite, Registrierung und Login unbenutzbar
-gemacht. Frontendseiten erhalten kein EasyAdmin-Layout allein aufgrund der
-Benutzerrolle; Verwaltungsansichten verwenden keinen öffentlichen Seitenrahmen.
+Dieselbe Fachimplementierung erhält unter `/admin/bar-duty` expliziten
+EasyAdmin-Kontext. Backendnavigation, Formulare, Exporte und Redirects behalten
+diesen Pfad. Planung, Serien, Vorlagen, Pflichtstunden, Anwesenheit und
+Gesamtauswertungen sind im Frontend auch für Leitungsrollen gesperrt.
 
-Die zusätzliche, auf die öffentliche Navigation begrenzte CSS-Datei
-`public/css/pages/portal-navigation.css` lässt lange Menüs auf Desktopbreiten
-umbrechen, begrenzt das Logo auf kleinen Geräten und macht Tastaturfokus
-sichtbar. Sie verändert keine Vendor-Dateien und verwendet vorhandene
-Farbvariablen. Als neue Komponente ist sie auch bei bereits gecachtem
-allgemeinem Anwendungsstylesheet verfügbar.
+Aktive Mitglieder dürfen im Frontend ausschließlich Kassen ihrer eigenen
+aktiven Einteilung bedienen. Zurückgezogene/ersetzte Einteilungen, bestätigte
+Abwesenheit, inaktive Mitgliedschaft und fremde Vereine verleihen keinen
+Zugriff. Die Berechtigung wird beim Aufruf und innerhalb der Transaktion
+erneut geprüft. Die Leitungsrolle allein erlaubt keine Frontendkasse ohne
+eigene Einteilung; die Backendverwaltung bleibt möglich.
 
-## Tests und Betrieb
+Centgenaue Buchführung, Verbot negativer Bestände, Gegenbuchungen,
+Jahresfreischaltung, Abschlussnachweis und unveränderliche abgeschlossene
+Kassen bleiben bestehen. Die Thekenkasse bleibt von der Gerätewartkasse getrennt.
 
-`PortalNavigationHttpTest` prüft reale HTTP-Zugriffe mit synthetischen Konten,
-nicht nur die Existenz von Links: Gäste, ehemalige/aktive Mitglieder,
-unabhängige Kursverwaltung/Ausbilder/Gerätewart/Thekenleitung/Pressewart,
-Vorstand, Admin/Superadmin ohne Vereinskontext, Mehrfachrollen und zugeordnete
-Mannschaftsführung. Alle angebotenen Einstiegslinks werden tatsächlich geöffnet.
-Zusätzliche Tests sichern fremde Redaktion, verweigerte Direktaufrufe,
-Zielpfade, CSRF-Logout, Sprachwechsel und Frontend-/Backendgrenzen ab.
+## Kalender und öffentliche Informationen
 
-Öffentliche Vereinsinformationen werden gegen fremde Daten, interne Notizen,
-unsichere Websiteadressen und HTML-Inhalte getestet. Bestehende Layout- und
-Fachtests bleiben Teil der Regression.
+`/calendar` bleibt Frontend; `/admin/calendar` bleibt Backend. Eine gemeinsame
+Projektion vermeidet doppelte Termine. Frontendkalendereinträge verlinken
+nicht in Verwaltungsseiten.
+
+`/club` und `/contact` veröffentlichen nur Organisationsdaten des aktiven,
+über `PUBLIC_SITE_CLUB_ID` ausgewählten Vereins. Keine internen Notizen oder
+Personenlisten; nur HTTP(S)-Websiteadressen werden verlinkt. Ohne konfigurierten
+aktiven Verein fehlen Links und direkte Aufrufe liefern 404.
+
+## Validierung und verbleibender Umfang
+
+Die HTTP-Regression prüft gemeinsame Themes, bereichstreue Links/Formulare,
+Loginziele, erreichbare Funktionsseiten und eigene/fremde Thekenkassen.
+Bestehende Fachtests sichern Buchhaltung, Dienste und Vereinsgrenzen ab.
 
 ```sh
 ddev exec "php8.5 vendor/bin/phpunit --testsuite unit,isolated --no-progress --display-errors --display-skipped"
@@ -78,6 +88,6 @@ php tests/translation_health.php lint:translations
 
 Keine Abhängigkeitsänderung, Datenmigration oder Veränderung produktiver
 Geschäftsdaten erforderlich. Ergebnisse und Grenzen stehen im
-[Prüfbericht](testing/test-report.md). Noch fehlende Geschäftsprozesse stehen
-in der [aktuellen Matrix](analysis/feature-matrix.md) und im
-[Umsetzungsplan](analysis/implementation-roadmap.md).
+[Prüfbericht](testing/test-report.md). Veranstaltungsanmeldungen, Clubreisen
+und weitere noch fehlende Geschäftsprozesse bleiben im
+[Umsetzungsplan](analysis/implementation-roadmap.md) ausdrücklich offen.

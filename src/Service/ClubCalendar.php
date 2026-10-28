@@ -34,7 +34,8 @@ final class ClubCalendar
                 ->setParameter('club', $club)->setParameter('cancelled', 'cancelled')->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $shift) {
                 $events[] = ['key' => 'bar-duty-'.$shift->getId(), 'kind' => 'Thekendienst', 'title' => $shift->getTitle(),
                     'start' => $shift->getStartsAt(), 'end' => $shift->getEndsAt(), 'location' => $shift->getLocation(),
-                    'url' => $this->urls->generate(($backend ? 'admin_portal_' : '').'bar_duty_shift', ['id' => $shift->getId()])];
+                    'url' => !$backend || $this->security->isGranted('ROLE_BAR_MANAGER')
+                        ? $this->urls->generate(($backend ? 'admin_portal_' : '').'bar_duty_shift', ['id' => $shift->getId()]) : null];
             }
         }
         foreach ($this->em->getRepository(TeamTraining::class)->createQueryBuilder('s')->addSelect('t')

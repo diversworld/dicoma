@@ -1,5 +1,5 @@
 {% extends 'instructor_portal/layout.html.twig' %}
-{% block body %}
+{% block instructor_body %}
 <h1>Mein Ausbilder-Dashboard</h1><p>Deine zugewiesenen Ausbildungstermine und offenen Aufgaben.</p>
 <div class="row">
 {% for title, number in {'Anstehende Termine':totals.upcoming,'Offene Anwesenheiten':totals.attendance,'Offene Bewertungen':totals.assessments,'Nachholbedarf':totals.makeup} %}

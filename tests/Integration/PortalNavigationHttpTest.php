@@ -68,6 +68,38 @@ final class PortalNavigationHttpTest extends WebTestCase
         yield 'explicit frontend and backend role' => [[User::ROLE_ADMIN, User::ROLE_INSTRUCTOR], '/my'];
     }
 
+    #[DataProvider('credentialLogins')]
+    public function testCredentialLoginUsesRoleDestinationAndPreservesSavedTarget(array $roles, ?string $savedTarget, string $expected): void
+    {
+        $user = $this->account('credential-login', $roles);
+        $user->setPassword(static::getContainer()->get(\Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface::class)->hashPassword($user, 'Synthetic-Test-Password-2026!'));
+        $this->em->flush();
+        if ($savedTarget !== null) {
+            $this->client->request('GET', $savedTarget);
+            self::assertResponseRedirects('/login');
+        }
+        $crawler = $this->client->request('GET', '/login');
+        $this->client->submit($crawler->filter('form')->form(), [
+            '_username' => 'credential-login', '_password' => 'Synthetic-Test-Password-2026!',
+        ]);
+        if ($savedTarget !== null) {
+            self::assertSame($expected, parse_url($this->client->getResponse()->headers->get('Location'), PHP_URL_PATH));
+        } else {
+            self::assertResponseRedirects($expected);
+        }
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        $this->assertNoAreaCrossing(str_starts_with($expected, '/admin'));
+    }
+
+    public static function credentialLogins(): iterable
+    {
+        yield 'pure administrator' => [[User::ROLE_ADMIN], null, '/admin'];
+        yield 'frontend instructor' => [[User::ROLE_INSTRUCTOR], null, '/my'];
+        yield 'saved personal destination' => [[], '/my/bookings', '/my/bookings'];
+        yield 'saved backend destination' => [[User::ROLE_BAR_MANAGER], '/admin/bar-duty/settings', '/admin/bar-duty/settings'];
+    }
+
     #[DataProvider('frontendPages')]
     public function testAllFrontendRolesKeepTheSameThemeAndNeverLinkToBackend(string $path): void
     {
@@ -128,13 +160,16 @@ final class PortalNavigationHttpTest extends WebTestCase
         self::assertNotNull($session);
         $this->postCash('cash-book', $session->getId(), ['direction' => 'in', 'amount' => '2.50', 'reason' => 'Drinks paid during own shift', 'reference' => 'OWN-1']);
         self::assertResponseRedirects('/bar-duty', 303);
-        self::assertSame(250, $this->em->getRepository(BarCashEntry::class)->findOneBy([])->getAmountCents());
+        $income = $this->em->getRepository(BarCashEntry::class)->findOneBy([]);
+        self::assertSame(250, $income->getAmountCents());
+        $this->postCash('cash-reverse', $session->getId(), ['entry' => $income->getId(), 'reason' => 'Correction of own shift cash receipt']);
+        self::assertSame(2, $this->em->getRepository(BarCashEntry::class)->count([]));
         $this->client->request('GET', '/bar-duty/cash/'.$session->getId().'.csv');
         self::assertResponseIsSuccessful();
-        $this->postCash('cash-close', $session->getId(), ['amount' => '12.50', 'reason' => 'Counted drawer after own service']);
+        $this->postCash('cash-close', $session->getId(), ['amount' => '10.00', 'reason' => 'Counted drawer after own service']);
         self::assertNotNull($this->em->find(BarCashSession::class, $session->getId())->getClosedAt());
         $this->postCash('cash-book', $session->getId(), ['direction' => 'in', 'amount' => '1', 'reason' => 'Must not change closed cash', 'reference' => 'OWN-2']);
-        self::assertSame(1, $this->em->getRepository(BarCashEntry::class)->count([]));
+        self::assertSame(2, $this->em->getRepository(BarCashEntry::class)->count([]));
         $this->postCash('cash-open', $foreignShift->getId(), ['amount' => '0', 'reason' => 'Must not open an unassigned shift']);
         self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($stranger);
@@ -144,6 +179,92 @@ final class PortalNavigationHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $this->postCash('cash-book', $session->getId(), ['direction' => 'in', 'amount' => '1']);
         self::assertResponseStatusCodeSame(403);
+    }
+
+    #[DataProvider('cashAccessRevocations')]
+    public function testCashAccessRequiresCurrentActiveAssignmentAndClub(string $case): void
+    {
+        $user = $this->account('cashier', $case === 'unassigned-manager' ? [User::ROLE_BAR_MANAGER] : []);
+        $definition = new BarShiftDefinition($this->club, 'Restricted service', 'Clubhouse', '18:00', 180, 2);
+        $shift = new BarShift($definition, new \DateTimeImmutable('tomorrow 18:00'));
+        $assignment = new BarDutyAssignment($shift, $user->getMember(), 'fixture');
+        if ($case === 'cancelled') { $assignment->cancel('fixture', 'Withdrawn before the planned service'); }
+        if ($case === 'absent') { $assignment->confirm('absent', 0, 'Confirmed absence from service', 'fixture'); }
+        if ($case === 'former') { $user->getMember()->setMembershipStatus(MembershipStatus::FORMER); }
+        if ($case === 'foreign-club') {
+            $other = (new Club())->setName('Other club');
+            $this->em->persist($other);
+            $user->getMember()->setClub($other);
+        }
+        foreach ([$definition, $shift] as $entity) { $this->em->persist($entity); }
+        if ($case !== 'unassigned-manager') { $this->em->persist($assignment); }
+        $this->em->flush();
+        $this->client->loginUser($user);
+        $this->postCash('cash-open', $shift->getId(), ['amount' => '0', 'reason' => 'Must not open unauthorized cash']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, $this->em->getRepository(BarCashSession::class)->count([]));
+    }
+
+    public static function cashAccessRevocations(): iterable
+    {
+        foreach (['cancelled', 'absent', 'former', 'foreign-club', 'unassigned-manager'] as $case) { yield $case => [$case]; }
+    }
+
+    public function testInstructorSeesOnlyOwnClubAndAssignedCoursesWithFrontendAssessment(): void
+    {
+        $instructor = $this->account('instructor', [User::ROLE_INSTRUCTOR]);
+        $other = $this->account('other-instructor', [User::ROLE_INSTRUCTOR]);
+        $foreignClub = (new Club())->setName('Foreign training club');
+        $this->em->persist($foreignClub);
+        $courses = [];
+        foreach (['Own lead course', 'Own session course', 'Other instructor course', 'Foreign club course'] as $title) {
+            $course = (new \App\Entity\Courses())->setTitle($title)->setCategory('beginner')
+                ->setClub($title === 'Foreign club course' ? $foreignClub : $this->club)
+                ->setLeadInstructor($title === 'Other instructor course' ? $other->getMember() : $instructor->getMember());
+            if ($title === 'Own session course') { $course->setLeadInstructor($other->getMember()); }
+            $this->em->persist($course); $courses[$title] = $course;
+        }
+        $session = (new \App\Entity\Schedule())->setTitle('Assigned training session')
+            ->setInstructor($instructor->getMember())->setCourses($courses['Own session course']);
+        $this->em->persist($session); $this->em->flush();
+        $this->client->loginUser($instructor);
+        $this->client->request('GET', '/instructor-portal/courses');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('main', 'Own lead course');
+        self::assertSelectorTextContains('main', 'Own session course');
+        self::assertSelectorTextNotContains('main', 'Other instructor course');
+        self::assertSelectorTextNotContains('main', 'Foreign club course');
+        $this->assertNoAreaCrossing(false);
+        $this->client->request('GET', '/my-training/assess/'.$session->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#frontendNavbar');
+        $this->assertNoAreaCrossing(false);
+        $this->client->request('GET', '/admin/training/assess/'.$session->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorNotExists('#frontendNavbar');
+        $this->assertNoAreaCrossing(true);
+    }
+
+    public function testBookingsOverviewContainsOnlyOwnBookings(): void
+    {
+        $user = $this->account('own-booking');
+        $other = $this->account('foreign-booking');
+        $check = (new \App\Entity\TankCheck())->setCheckDate(new \DateTime('tomorrow'));
+        $this->em->persist($check);
+        $bookings = [];
+        foreach ([$user, $other] as $account) {
+            $booking = (new \App\Entity\MemberTankCheckBooking())->setMember($account->getMember())->setTankCheck($check);
+            $this->em->persist($booking); $bookings[] = $booking;
+        }
+        $this->em->flush();
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/my/bookings');
+        self::assertResponseIsSuccessful();
+        $router = static::getContainer()->get('router');
+        self::assertSelectorExists('main a[href="'.$router->generate('member_tank_check_booking_detail', ['id' => $bookings[0]->getId()]).'"]');
+        self::assertSelectorNotExists('main a[href="'.$router->generate('member_tank_check_booking_detail', ['id' => $bookings[1]->getId()]).'"]');
+        $this->assertNoAreaCrossing(false);
     }
 
     private function postCash(string $operation, int $id, array $data): void

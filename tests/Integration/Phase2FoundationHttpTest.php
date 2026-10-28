@@ -248,12 +248,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             foreach (array_unique([...$menuUrls, ...$shortcuts]) as $url) {
                 $this->client->request('GET', $url);
                 self::assertResponseIsSuccessful('Visible navigation target: ' . $url);
-                if (parse_url($url, PHP_URL_PATH) === '/bar-duty' || $this->client->getRequest()->query->get('routeName') === 'bar_duty') {
-                    self::assertSelectorExists('[data-bar-duty-portal]');
-                    self::assertSelectorNotExists('aside.sidebar');
-                } else {
-                    self::assertSelectorExists('aside.sidebar', 'Administration layout expected for '.$url);
-                }
+                self::assertSelectorExists('aside.sidebar', 'Administration layout expected for '.$url);
             }
         }
     }

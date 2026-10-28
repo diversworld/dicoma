@@ -45,17 +45,17 @@ Geschäftsprozesse.
 Der deklarierte PHP-Mindeststand und die höhere PHPUnit-Testlaufzeitanforderung
 müssen getrennt betrachtet werden.
 
-### Entwurf der ersten Konsolidierungsphase
+### Verbindliche Konsolidierung nach Navigationspräzisierung
 
 1. Konfigurierte Frontend-Layoutvererbung wiederherstellen.
-2. Einen geschützten Einstieg `/portal` für alle Konten einführen.
+2. Gemeinsame Anmeldung: Mitglieder ins Frontend, reine Verwaltungsrollen ins Backend.
 3. Navigationsangebote in einem Service aus den vorhandenen Rollen und
    Fachberechtigungen ableiten; keine neue Berechtigungslogik in Twig.
 4. Gast-/Mitglieder-Self-Service von Verwaltungsportalen trennen. Bestehende
    Controller- und Objektprüfungen bleiben maßgeblich; Menüs ersetzen sie nicht.
 5. Login und erneuten Aufruf der Login-Seite auf denselben Einstieg ausrichten;
    gespeicherte geschützte Zielpfade weiterhin beachten.
-6. Einen gemeinsamen Portal-/Website-Rückweg in allen Layouts anbieten.
+6. Keine gegenseitigen Frontend-/Backendlinks; alle Frontendfunktionen verwenden dasselbe Theme.
 7. Sportverwaltung auch für berechtigte Nichtadmins im Backendlayout rendern;
    Mitgliederkalender als eigenständige Leseansicht ohne Sportverwaltungslinks.
 8. Änderungen mit rollen- und objektbezogenen HTTP-Tests, Layouttests und

@@ -78,13 +78,13 @@ final class Phase8BarDutyHttpTest extends WebTestCase
             self::assertResponseIsSuccessful();
             self::assertSelectorExists('[data-bar-duty-portal]');
             self::assertSelectorExists('form[method="post"][action="/logout"] input[name="_csrf_token"]');
-            self::assertSelectorExists('link[href="/css/pages/bar-duty-portal.css"]');
             if ($management) {
                 self::assertSelectorExists('aside.sidebar');
                 self::assertSelectorNotExists('#frontendNavbar');
                 self::assertSelectorExists('nav[aria-label="Clubheimverwaltung"] a[href="/admin/bar-duty/plan"]');
                 self::assertSelectorExists('nav[aria-label="Clubheimverwaltung"] a[href="/admin/bar-duty/report"]');
             } else {
+                self::assertSelectorExists('link[href="/css/pages/bar-duty-portal.css"]');
                 self::assertSelectorNotExists('aside.sidebar');
                 self::assertSelectorExists('#frontendNavbar');
                 self::assertSelectorNotExists('a[href="/bar-duty/plan"]');
@@ -258,8 +258,14 @@ final class Phase8BarDutyHttpTest extends WebTestCase
     public function testMembersCannotInvokeManagementOperations(string $operation): void
     {
         $shift = $this->shift('+3 days');
+        $id = $shift->getId();
+        if (in_array($operation, ['cash-book', 'cash-reverse', 'cash-close'], true)) {
+            $session = new BarCashSession($shift, 0, 'fixture', 'Synthetic initial float');
+            $this->em->persist($session); $this->em->flush();
+            $id = $session->getId();
+        }
         $this->login($this->alice);
-        $this->post($operation, $shift->getId(), ['year' => date('Y'), 'minutes' => '0', 'capacity' => '1', 'member' => $this->bob->getMember()->getId(), 'reason' => 'Must not permit role escalation', 'amount' => '0'], 403);
+        $this->post($operation, $id, ['year' => date('Y'), 'minutes' => '0', 'capacity' => '1', 'member' => $this->bob->getMember()->getId(), 'reason' => 'Must not permit role escalation', 'amount' => '0'], 403);
     }
     public static function managerOperations(): iterable
     {
@@ -499,7 +505,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
     public function testManagerEntersEventOnCalendarDayAndMemberClicksItToSignUp(): void
     {
         $date = new \DateTimeImmutable('+3 days');
-        $crawler = $this->client->request('GET', '/bar-duty?month='.$date->format('Y-m'));
+        $crawler = $this->client->request('GET', '/admin/bar-duty?month='.$date->format('Y-m'));
         self::assertResponseIsSuccessful();
         self::assertCount(7, $crawler->filter('[data-bar-duty-calendar] thead th'));
         $cell = $crawler->filter('[data-calendar-date="'.$date->format('Y-m-d').'"]');
@@ -508,7 +514,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $this->client->submitForm('Veranstaltung / Serie im Kalender anlegen', [
             'title' => 'Clubhouse summer party', 'location' => 'Club garden', 'time' => '18:30', 'minutes' => '180', 'capacity' => '2',
         ]);
-        self::assertResponseRedirects('/bar-duty?month='.$date->format('Y-m'), 303);
+        self::assertResponseRedirects('/admin/bar-duty?month='.$date->format('Y-m'), 303);
         $shift = $this->em->getRepository(BarShift::class)->findOneBy([]);
         self::assertSame('Clubhouse summer party', $shift->getTitle());
         $this->login($this->alice);

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Service;
 
-use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift};
+use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, Member};
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
@@ -14,9 +14,12 @@ final class BarCashWorkflow
     public function canUse(BarShift $shift, bool $management = true): bool
     {
         $member = $this->access->member();
+        if ($this->em->getConnection()->isTransactionActive()) {
+            $member = $this->duty->locked(Member::class, $member->getId());
+        }
         if ($shift->getClub()->getId() !== $member->getClub()?->getId()) { return false; }
         if ($management && $this->access->isManager()) { return true; }
-        if (!$member->isActiveMember()) { return false; }
+        if (!$member->isActiveMember() || $shift->getStatus() === 'cancelled') { return false; }
         $criteria = ['shift' => $shift, 'member' => $member, 'status' => 'active'];
         $assignment = $this->em->getConnection()->isTransactionActive()
             ? $this->duty->one(BarDutyAssignment::class, $criteria)
@@ -84,8 +87,9 @@ final class BarCashWorkflow
     private function session(int $id, bool $management): BarCashSession
     {
         $session = $this->duty->locked(BarCashSession::class, $id); $this->access->ownsClub($session->getShift()->getClub());
-        $this->requireAccess($session->getShift(), $management);
-        if ($session->getShift()->getStatus() === 'cancelled') { throw new \DomainException('Schicht ist abgesagt.'); }
+        $shift = $this->duty->shift($session->getShift()->getId());
+        $this->requireAccess($shift, $management);
+        if ($shift->getStatus() === 'cancelled') { throw new \DomainException('Schicht ist abgesagt.'); }
         if ($session->getClosedAt() !== null) { throw new \DomainException('Thekenkasse ist unveränderlich abgeschlossen.'); }
         return $session;
     }

@@ -31,14 +31,17 @@ Statische Routenprüfung, isolierte HTTP-Tests, echte Staging-HTTP-Tests und fac
 ## ADR-07 – Portalnavigation ist keine neue Berechtigungsinstanz
 
 Stand: 28.10.2026. `PortalNavigation` bündelt öffentliche und persönliche
-Menüangebote sowie Verwaltungsportale. Der Service verwendet die bestehenden
+Menüangebote sowie rollenabhängige Frontendfunktionen. Der Service verwendet die bestehenden
 Rollen, Vereinszuordnungen und Fachprüfungen (`CompetitionAccess`,
 `PublicWebsite`), ersetzt aber keine Controller-/Voter-Prüfung.
 Eine Mitgliedschaft ist keine Voraussetzung für unabhängig vergebene
 Funktionsrollen. Ohne den vom Ziel benötigten Vereinskontext wird kein
 unbenutzbarer Einstieg angeboten.
 
-`/portal` ist der gemeinsame Login-Fallback für Gäste, Mitglieder und Personal.
+Der gemeinsame Login führt Mitglieder nach `/my`, Gäste nach `/training` und
+reine Verwaltungsrollen zu ihrem EasyAdmin-Einstieg. Explizite Ausbilder-/
+Gerätewartfunktionen behalten bei Mehrfachrollen den Frontendeinstieg.
+`/portal` bleibt eine optionale persönliche Übersicht ohne Verwaltungslinks.
 Gespeicherte Zielpfade haben weiterhin Vorrang. Die gemeinsame Plattform bleibt
 ein Symfony-Monolith mit getrennten Darstellungen, keine neue SPA-/API-Architektur.
 
@@ -49,14 +52,16 @@ Mitgliederkalender unter `/calendar` bleiben auch für Admins im Frontend.
 Kursverwaltung liegt unter `/admin/training`, Sportverwaltung unter
 `/admin/teams` und `/admin/tournaments`, auch für berechtigte Nichtadmins im
 Backend. Der bestehende `/admin/calendar` samt EasyAdmin-Kurzaufruf bleibt
-kompatibel: für Admins mit Backendrahmen, für bisher zugelassene Mitglieder
-weiterhin als Leseansicht ohne Sportverwaltungsmenü.
+kompatibel und verwendet durchgehend den Backendrahmen.
 Es gibt keine kopierten Kalenderdaten und keine zweite Fachimplementierung.
 
-Gerätewart-, Ausbilder- und Thekendienstportale behalten ihre fachlichen Layouts
-und erhalten denselben Portal-/Website-Rückweg. Die öffentliche Website bietet
-angemeldetem Personal nur den Wechsel in einen freigegebenen Verwaltungsbereich,
-keine administrativen Formulare oder Schreibaktionen im öffentlichen Menü.
+Alle Frontendseiten einschließlich Gerätewart, Ausbilder und Thekendienst
+erben dasselbe konfigurierte Theme. Nur die Navigation erweitert sich nach Rolle.
+Frontend und Backend bieten keine gegenseitigen Navigationslinks. Die
+Clubheimverwaltung liegt unter `/admin/bar-duty`; Planung, Vorlagen,
+Pflichtstunden und Gesamtauswertung sind im Frontend auch für Leitungsrollen
+gesperrt. Aktive eingeteilte Mitglieder dürfen nur die Kasse ihrer eigenen
+Schicht bedienen. Finanzregeln und unveränderliche Abschlüsse bleiben erhalten.
 
 ## ADR-09 – Öffentliche Vereinsdaten nur aus dem konfigurierten Verein
 

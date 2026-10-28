@@ -28,7 +28,7 @@ final class ClubCalendarController extends AbstractController
         if (!is_string($value) || !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $value)) { throw $this->createNotFoundException('Ungültiger Monat.'); }
         $from = \DateTimeImmutable::createFromFormat('!Y-m-d', $value . '-01');
         if (!$from || $from->format('Y-m') !== $value) { throw $this->createNotFoundException('Ungültiger Monat.'); }
-        return $this->render('competition/calendar.html.twig', ['month' => $from,
+        return $this->render('competition/calendar.html.twig', ['month' => $from, 'competitionStaff' => $access->isStaff(),
             'events' => $calendar->events($from, $from->modify('first day of next month'), (bool) $request->attributes->get('routeCreatedByEasyAdmin'))]);
     }
 }

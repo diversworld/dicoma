@@ -11,7 +11,7 @@ Die vereinsgebundenen Adminrechte und die hier beschriebenen Superadmin-Beschrä
 | `ROLE_ADMIN` | Verwaltung im Verein von `User.member.club`; ohne gültigen Kontext keine vereinsbezogenen Verwaltungsdaten. |
 | `ROLE_SUPER_ADMIN` | Bewusst vereinsübergreifende Verwaltung einschließlich zentraler Personen und Benutzer-/Rollenverwaltung. |
 
-Ein in der Datenbank gespeichertes `ROLE_MEMBER` allein gewährt keine Mitgliedsrechte. `getStoredRoles()` erhält die ursprünglichen Rollendaten; `getRoles()` berechnet die effektive direkte Rollenliste. `ROLE_MEMBER` wird nicht über die Funktionsrollen-Hierarchie vererbt. Die bestehenden fachlichen Hierarchien Vorstand -> Funktionsrollen, Admin -> Vorstand/Kassenwart und Superadmin -> Admin bleiben erhalten.
+Ein in der Datenbank gespeichertes `ROLE_MEMBER` allein gewährt keine Mitgliedsrechte. `getStoredRoles()` erhält die ursprünglichen Rollendaten; `getRoles()` berechnet die effektive direkte Rollenliste. `ROLE_MEMBER` wird nicht über die Funktionsrollen-Hierarchie vererbt. Vorstand erbt entsprechend der bestätigten Vereinsverwaltungsaufgabe `ROLE_ADMIN`; Admin erbt die Funktionsrollen einschließlich Kassenwart, Superadmin erbt Admin. Es gibt keinen Vererbungszyklus.
 
 Separat geschützte Ausbilder- und Gerätewartportalrouten erhalten die passende Funktionsrolle als Zugangsvoraussetzung, auch wenn keine aktive Mitgliedschaft mehr besteht. Die jeweiligen Controller müssen zusätzlich den benötigten Personen-/Vereinsbezug prüfen. Mitgliederspezifische Routen wie `/my` bleiben solchen Konten ohne aktive Mitgliedschaft verwehrt.
 
@@ -31,8 +31,9 @@ Die EasyAdmin-Navigation bietet berechtigten Nutzern einen Einstieg unter
 „Website & Redaktion“. Auch ein Pressewart ohne `ROLE_ADMIN` kann ausschließlich
 die Redaktionsrouten innerhalb des EasyAdmin-Backends öffnen; die Redaktionsrolle
 verleiht keinen Zugriff auf andere Backend-Routen. Anonyme Besucher erhalten
-keinen Redaktionslink. Angemeldete Berechtigte des Website-Vereins erreichen
-die Redaktion über die ausdrücklich getrennte Gruppe „Verwaltungsportale“.
+keinen Redaktionslink. Reine Pressewarte des Website-Vereins gelangen nach
+gemeinsamer Anmeldung direkt in die Redaktion. Das Frontend enthält keine
+Backendlinks; EasyAdmin enthält keine Links zu öffentlichen/Self-Service-Seiten.
 
 - Routenrollen ersetzen keine Objektberechtigung.
 - Member-/Kurs-Voter vergleichen persistierte Vereins-IDs.
@@ -100,10 +101,10 @@ Diensteinteilung ohne aktive Mitgliedschaft.
 | Tausch / Vertretung anbieten | Ausschließlich die eingeteilte Person |
 | Anfrage annehmen / ablehnen | Ausschließlich die angefragte Person; keine Leitungsfreigabe |
 | Anfrage zurückziehen | Ausschließlich die anfragende Person |
-| Veranstaltungen direkt im Kalender und Wochen-/Zweiwochenserien anlegen | Thekenleitung im eigenen Verein |
-| Schichtdefinition, Zuweisung, Absage, Anwesenheit und Abschluss | Thekenleitung im eigenen Verein |
-| Jahrespflicht, individuelle Ausnahmen, Gesamtauswertung und CSV | Thekenleitung im eigenen Verein |
-| Separate Thekenkasse einschließlich Gegenbuchung und Abschluss | Thekenleitung im eigenen Verein |
+| Veranstaltungen direkt im Kalender und Wochen-/Zweiwochenserien anlegen | Thekenleitung im eigenen Verein, ausschließlich Backend `/admin/bar-duty` |
+| Schichtdefinition, Zuweisung, Absage, Anwesenheit und Abschluss | Thekenleitung im eigenen Verein, ausschließlich Backend |
+| Jahrespflicht, individuelle Ausnahmen, Gesamtauswertung und CSV | Thekenleitung im eigenen Verein, ausschließlich Backend |
+| Separate Thekenkasse einschließlich Gegenbuchung und Abschluss | Backend: Thekenleitung im eigenen Verein; Frontend: aktives Mitglied mit eigener aktiver, nicht als abwesend bestätigter Einteilung dieser Schicht |
 | Eigenes Stundenkonto und Nachrichten | Ausschließlich die betreffende Person |
 
 Alle Mutationen verlangen POST, operations-/objektgebundenes CSRF und
