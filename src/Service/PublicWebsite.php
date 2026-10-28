@@ -23,12 +23,23 @@ final class PublicWebsite
 
     public function editorialClub(): Club
     {
-        $user = $this->security->getUser();
         $club = $this->club();
-        if (!$this->security->isGranted(User::ROLE_PRESS_OFFICER) || !$user instanceof User || $club === null || $user->getMember()?->getClub()?->getId() !== $club->getId()) {
+        if ($club === null || !$this->canManageEditorial()) {
             throw new AccessDeniedException('Redaktion nur für Vorstand/Pressewart des konfigurierten Website-Vereins. PUBLIC_SITE_CLUB_ID prüfen.');
         }
+
         return $club;
+    }
+
+    public function canManageEditorial(): bool
+    {
+        $user = $this->security->getUser();
+        $club = $this->club();
+
+        return $this->security->isGranted(User::ROLE_PRESS_OFFICER)
+            && $user instanceof User
+            && $club !== null
+            && $user->getMember()?->getClub()?->getId() === $club->getId();
     }
 
     public function visible(WebsitePublication $publication): bool

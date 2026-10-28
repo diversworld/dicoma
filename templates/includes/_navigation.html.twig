@@ -27,12 +27,26 @@
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Anmelden</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
             {% else %}
-                {% if is_granted('ROLE_PRESS_OFFICER') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('website_editorial') }}">Redaktion</a></li>
-                {% endif %}
-                <li class="nav-item"><a class="nav-link" href="{{ path('training_portal') }}">Ausbildungsportal</a></li>
                 {% if is_granted('ROLE_MEMBER') %}
-                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Verwaltungsportale</a>
+                        <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>
+                            {% endif %}
+                            {% if is_granted('ROLE_INSTRUCTOR') %}
+                                <li class="nav-item"><a class="nav-link" href="{{ path('instructor_portal_dashboard') }}">Ausbilderportal</a></li>
+                            {% endif %}
+                            {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
+                                <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>
+                            {% endif %}
+                            {% if is_granted('ROLE_BAR_MANAGER') %}
+                                <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if is_granted('ROLE_MEMBER') %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Mein Bereich</a>
                         <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
@@ -49,18 +63,6 @@
                             <li><a class="dropdown-item" href="{{ path('frontend_course_registrations') }}">Meine Kursanmeldungen</a></li>
                         </ul>
                     </li>
-                {% endif %}
-                {% if is_granted('ROLE_INSTRUCTOR') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('instructor_portal_dashboard') }}">Ausbilderportal</a></li>
-                {% endif %}
-                {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>
-                {% endif %}
-                {% if is_granted('ROLE_BAR_MANAGER') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
-                {% endif %}
-                {% if is_granted('ROLE_ADMIN') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>
                 {% endif %}
                 <li class="nav-item">
                     <form method="post" action="{{ path('app_logout') }}" class="m-0">

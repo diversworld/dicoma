@@ -69,7 +69,6 @@ security:
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/(?:articles|events)$, roles: PUBLIC_ACCESS }
         - { path: ^/news/\d+$, roles: PUBLIC_ACCESS }
-        - { path: ^/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
@@ -97,6 +96,7 @@ security:
 
         - { path: ^/admin/(?:teams|tournaments|calendar)(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/training(?:/|$), roles: [ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_COURSE_ADMIN] }
+        - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }
 

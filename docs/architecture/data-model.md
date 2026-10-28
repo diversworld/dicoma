@@ -19,6 +19,8 @@
 
 Eine Person kann mehrere Vereinsmitgliedschaften haben, aber pro nicht leerem Verein nur eine. Höchstens ein Konto verweist auf dieselbe Person. Der bestehende `User.member`-Verweis bezeichnet weiterhin die Mitgliedschaft des aktiven Berechtigungskontexts; ein Vereinswechseldialog ist nicht neu implementiert.
 
+Die EasyAdmin-Ansichten bilden diese Trennung ebenfalls ab: „Mitglieder“ zeigt Mitgliedschaften samt verknüpften Personenstammdaten; „Nichtmitglieder und Gäste“ enthält ausschließlich Personen ohne irgendeine Mitgliedschaft. Eine Mitgliedsidentität wird nicht zusätzlich in der Personenliste angezeigt. Direkte Detail- und Bearbeitungsaufrufe solcher Identitäten sind ebenfalls gesperrt; Stammdaten werden im Mitgliederprofil bearbeitet. Der zugrunde liegende Personen-/Mitgliedschaftsbezug bleibt unverändert erhalten.
+
 Konto-E-Mail und Personen-Kontakt-E-Mail sind fachlich getrennt: Eine Änderung von Kontaktdaten darf nicht stillschweigend die verifizierte Anmelde-/Reset-Adresse verändern. Bei Neuregistrierung werden beide zunächst mit derselben Adresse initialisiert.
 
 ## Kompatibilität

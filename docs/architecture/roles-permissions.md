@@ -17,7 +17,7 @@ Separat geschützte Ausbilder- und Gerätewartportalrouten erhalten die passende
 
 ## Verbindliche Objektprüfung
 
-Die Redaktion `/editorial` verlangt `ROLE_PRESS_OFFICER` und denselben
+Die Backend-Redaktion `/admin/{_locale}/editorial` verlangt `ROLE_PRESS_OFFICER` und denselben
 Verein wie `PUBLIC_SITE_CLUB_ID`. Vorstand, Admin und Superadmin erben
 die Rolle, aber auch Superadmins umgehen in diesem Bereich nicht die
 Website-Vereinsgrenze. Die Rolle kann separat an einen Pressewart vergeben
@@ -26,6 +26,12 @@ zusätzlich verliehen. Nur eigene freigegebene Kurse/Turniere sind als
 öffentliche Veranstaltung verknüpfbar. Gewöhnliche Mitglieder,
 Thekenleitung und Ausbilder ohne Redaktionsrolle können keine Artikel
 oder Veranstaltungsankündigungen erstellen oder freigeben.
+
+Die EasyAdmin-Navigation bietet berechtigten Nutzern einen Einstieg unter
+„Website & Redaktion“. Auch ein Pressewart ohne `ROLE_ADMIN` kann ausschließlich
+die Redaktionsrouten innerhalb des EasyAdmin-Backends öffnen; die Redaktionsrolle
+verleiht keinen Zugriff auf andere Backend-Routen. Die öffentliche Navigation
+enthält keinen Redaktionslink.
 
 - Routenrollen ersetzen keine Objektberechtigung.
 - Member-/Kurs-Voter vergleichen persistierte Vereins-IDs.

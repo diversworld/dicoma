@@ -34,6 +34,12 @@ Adminrolle verwenden das Theme; Adminansichten bleiben in EasyAdmin.
 EasyAdmin und druckbare Ausbildungsnachweise
 behalten ihre eigenen Layouts.
 
+Die Airspace-CSS- und JavaScript-Dateien werden aus
+`public/themes/airspace/` geladen. Die vorhandenen Dateien in `public/css/`
+sind manuell gepflegte DICOMA-Überschreibungen und bleiben unverändert; wo
+das gemeinsame Theme-Layout sie einbindet, kommen sie nach dem Airspace-CSS.
+Sie werden nicht als Ersatz oder Quelle für die Airspace-Basisdateien verwendet.
+
 Ein neues Theme erhält einen eigenen Layoutpfad und eine registrierte
 Stylesheetliste. Das Layout muss die bestehenden Blöcke `title`,
 `stylesheets`, `hero`, `body` und `javascripts` unterstützen und die
@@ -46,9 +52,13 @@ ausdrücklich statt unbemerkt auf Airspace zurückzufallen.
 
 ### Veröffentlichungen
 
-Der neue Bereich `/editorial` ist Vorstand und `ROLE_PRESS_OFFICER`
-(Pressewart) des konfigurierten Website-Vereins vorbehalten. Es gibt keine
-globale Vereinssuche oder automatische Veröffentlichung bestehender
+Die Redaktion liegt ausschließlich im EasyAdmin-Backend unter
+`/admin/{_locale}/editorial` und ist Vorstand sowie `ROLE_PRESS_OFFICER`
+(Pressewart) des konfigurierten Website-Vereins vorbehalten. Ihr Backend-
+Menüpunkt führt direkt in diese Verwaltung; in der öffentlichen Navigation
+gibt es keinen Redaktionslink. Ein Pressewart ohne Adminrolle darf nur die
+Redaktionsrouten im Backend aufrufen, nicht das übrige EasyAdmin. Es gibt
+keine globale Vereinssuche oder automatische Veröffentlichung bestehender
 Fachdaten. `PUBLIC_SITE_CLUB_ID` bestimmt den Website-Verein. Ohne
 Konfiguration bleiben neue öffentliche Inhaltslisten leer und die
 Redaktion ist mit ausdrücklichem Konfigurationshinweis gesperrt.

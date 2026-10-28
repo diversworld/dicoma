@@ -1,0 +1,28 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}Website-Redaktion{% endblock %}
+
+{% block main %}
+    <p>Hier werden öffentliche Artikel und Veranstaltungsankündigungen des konfigurierten Website-Vereins verwaltet. Interne Notizen, Teilnehmerlisten und Diensteinteilungen werden nicht veröffentlicht.</p>
+    <section class="card mb-4" aria-labelledby="editorial-steps">
+        <div class="card-body">
+            <h2 id="editorial-steps" class="h5">So veröffentlichen Sie Inhalte</h2>
+            <ol class="mb-2">
+                <li>„Artikel / Veranstaltung erstellen“ wählen und Typ, Titel, Kurzbeschreibung und öffentlichen Text ausfüllen.</li>
+                <li>Bei Veranstaltungen Beginn, Ende und öffentlichen Ort ergänzen. Veröffentlichungszeitpunkt festlegen; optional einen freigegebenen Kurs oder ein Turnier verknüpfen.</li>
+                <li>„Zur Veröffentlichung freigeben“ aktivieren und speichern. Ohne Freigabe bleibt der Beitrag ein Entwurf. Eine Freigabe zu einem späteren Zeitpunkt wird automatisch dann sichtbar.</li>
+            </ol>
+            <p class="mb-0">Freigegebene Artikel erscheinen unter <a href="{{ path('website_articles') }}">Aktuelles</a> und auf der Startseite; Veranstaltungen unter <a href="{{ path('website_events') }}">Veranstaltungen</a>. Änderungen oder das Zurücknehmen der Freigabe erfolgen über „Bearbeiten / Freigabe ändern“.</p>
+        </div>
+    </section>
+    {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
+    <p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Artikel / Veranstaltung erstellen</a></p>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Titel</th><th>Typ</th><th>Freigabe</th><th>Öffentlich ab</th><th>Aktion</th></tr></thead>
+        <tbody>{% for publication in publications %}<tr>
+            <td>{{ publication.title }}</td><td>{{ publication.kind == 'article' ? 'Artikel' : 'Veranstaltung' }}</td>
+            <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td><td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
+            <td><a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a></td>
+        </tr>{% else %}<tr><td colspan="5">Noch keine Beiträge.</td></tr>{% endfor %}</tbody>
+    </table></div>
+{% endblock %}

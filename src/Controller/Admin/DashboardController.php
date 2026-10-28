@@ -23,6 +23,7 @@ use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
+use App\Entity\WebsitePublication;
 use App\Enum\CourseStatus;
 use App\Controller\Admin\MemberCrudController;
 use App\Security\Voter\MemberManagementVoter;
@@ -33,7 +34,9 @@ use App\Controller\Admin\MemberTankCheckBooking;
 use App\Controller\Admin\EquipmentBookingCrudController;
 use App\Controller\Admin\MemberTankCheckBookingCrudController;
 use App\Service\TankInspectionOverview;
+use App\Service\PublicWebsite;
 use App\Repository\MemberQualificationRepository;
+use App\Form\WebsitePublicationType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -48,7 +51,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Form\FormError;
 use App\Service\TuvMessageRenderer;
+use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use \Doctrine\ORM\EntityManagerInterface;
@@ -93,7 +98,8 @@ class DashboardController extends AbstractDashboardController
 	public function __construct(
 		private readonly MemberQualificationRepository $memberQualificationRepository, 
 		private readonly AdminUrlGenerator $adminUrlGenerator,
-        private readonly EntityManagerInterface $em
+        private readonly EntityManagerInterface $em,
+        private readonly PublicWebsite $publicWebsite
 	) {
 	}
 	
@@ -236,6 +242,73 @@ class DashboardController extends AbstractDashboardController
             ->addCssFile('css/utilities.css');
 	}
 
+    #[AdminRoute(path: '/editorial', name: 'website_editorial', options: ['methods' => ['GET']])]
+    public function websiteEditorial(PublicWebsite $website): Response
+    {
+        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
+
+        return $this->render('admin/editorial/index.html.twig', [
+            'publications' => $this->em->getRepository(WebsitePublication::class)
+                ->findBy(['club' => $website->editorialClub()], ['id' => 'DESC']),
+        ]);
+    }
+
+    #[AdminRoute(path: '/editorial/new', name: 'website_editorial_new', options: ['methods' => ['GET', 'POST']])]
+    public function newWebsitePublication(Request $request, PublicWebsite $website): Response
+    {
+        return $this->renderWebsitePublicationForm($request, $website);
+    }
+
+    #[AdminRoute(path: '/editorial/{entityId}/edit', name: 'website_editorial_edit', options: ['methods' => ['GET', 'POST'], 'requirements' => ['entityId' => '\d+']])]
+    public function editWebsitePublication(
+        Request $request,
+        PublicWebsite $website,
+        int $entityId
+    ): Response {
+        return $this->renderWebsitePublicationForm($request, $website, $entityId);
+    }
+
+    private function renderWebsitePublicationForm(
+        Request $request,
+        PublicWebsite $website,
+        ?int $entityId = null
+    ): Response {
+        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
+        $club = $website->editorialClub();
+        $publication = $entityId === null
+            ? new WebsitePublication($club)
+            : $this->em->getRepository(WebsitePublication::class)->findOneBy(['id' => $entityId, 'club' => $club]);
+        if ($publication === null) {
+            throw $this->createNotFoundException();
+        }
+
+        $form = $this->createForm(WebsitePublicationType::class, $publication, ['club' => $club]);
+        $form->handleRequest($request);
+        $conflict = false;
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                if ($entityId !== null && (string) $form->get('version')->getData() !== (string) $publication->getVersion()) {
+                    throw new \DomainException('Der Beitrag wurde inzwischen geändert. Bitte neu laden.');
+                }
+                $publication->record($this->getUser()->getUserIdentifier());
+                $this->em->persist($publication);
+                $this->em->flush();
+                $this->addFlash('success', $publication->isPublished()
+                    ? 'Beitrag freigegeben. Sichtbar ab dem Veröffentlichungszeitpunkt, sofern die verknüpfte Veranstaltung freigegeben ist.'
+                    : 'Entwurf gespeichert; nicht öffentlich sichtbar.');
+
+                return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+            } catch (OptimisticLockException|\DomainException) {
+                $form->addError(new FormError('Gleichzeitige Änderung: Bitte den Beitrag neu laden. Nicht gespeichert.'));
+                $conflict = true;
+            }
+        }
+
+        return $this->render('admin/editorial/edit.html.twig', [
+            'form' => $form,
+            'publication' => $publication,
+        ], new Response(status: $conflict ? 409 : ($form->isSubmitted() ? 422 : 200)));
+    }
 
     // DICOMA invoice settings EasyAdmin integration v1
     #[AdminRoute(path: '/invoice-settings', name: 'invoice_settings_overview')]
@@ -357,9 +430,22 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            return [
+                MenuItem::section('Website & Redaktion'),
+                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
+                    ->setPermission('ROLE_PRESS_OFFICER'),
+            ];
+        }
+
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
+            ...($this->publicWebsite->canManageEditorial() ? [
+                MenuItem::section('Website & Redaktion'),
+                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
+                    ->setPermission('ROLE_PRESS_OFFICER'),
+            ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),
             MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'bar_duty')->setPermission('ROLE_BAR_MANAGER'),
@@ -367,7 +453,7 @@ class DashboardController extends AbstractDashboardController
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')->setSubItems([
                 MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
                 MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
-                MenuItem::linkTo(PersonCrudController::class, 'Personen und Gäste', 'fa fa-address-book')
+                MenuItem::linkTo(PersonCrudController::class, 'Nichtmitglieder und Gäste', 'fa fa-address-book')
                     ->setPermission('ROLE_SUPER_ADMIN'),
                 MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card')
                     ->setPermission('ROLE_SUPER_ADMIN'),

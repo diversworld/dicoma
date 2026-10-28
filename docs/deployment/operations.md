@@ -30,8 +30,11 @@ begrenzt. Nach Änderungen den passenden Umgebungscache erneuern.
 Vorstand erhält Redaktionsrechte durch die Rollenhierarchie. Alternativ
 `ROLE_PRESS_OFFICER` über die bestehende Benutzer-/Rollenverwaltung
 vergeben; die betroffene Person muss dem Website-Verein zugeordnet sein.
-Unter `/editorial` Artikel oder Veranstaltungen anlegen und zunächst als
-Entwurf speichern. Nur freigegebene Beiträge werden ab dem gewählten
+Artikel und Veranstaltungen werden im Backend unter
+`/admin/{_locale}/editorial` verwaltet. Auch Pressewarte ohne Adminrolle
+erhalten ausschließlich Zugriff auf diese Redaktionsseiten, nicht auf das
+übrige EasyAdmin. Die öffentliche Navigation enthält keinen Redaktionslink.
+Beiträge zunächst als Entwurf speichern. Nur freigegebene Beiträge werden ab dem gewählten
 Zeitpunkt öffentlich. Veröffentlichung zurückziehen: Beitrag bearbeiten,
 Freigabe abwählen, speichern. Kein Cronjob für zeitgesteuerte Sichtbarkeit
 erforderlich. Veranstaltungstexte und Termine sind redaktionelle Angaben;

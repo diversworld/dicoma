@@ -11,12 +11,12 @@ parameters:
         airspace:
             layout: 'themes/airspace/layout.html.twig'
             stylesheets:
-                - 'plugins/bootstrap/bootstrap.min.css'
-                - 'plugins/Ionicons/css/ionicons.min.css'
-                - 'plugins/animate-css/animate.css'
-                - 'plugins/magnific-popup/magnific-popup.css'
-                - 'plugins/slick/slick.css'
-                - 'css/style.css'
+                - 'themes/airspace/plugins/bootstrap/bootstrap.min.css'
+                - 'themes/airspace/plugins/Ionicons/css/ionicons.min.css'
+                - 'themes/airspace/plugins/animate-css/animate.css'
+                - 'themes/airspace/plugins/magnific-popup/magnific-popup.css'
+                - 'themes/airspace/plugins/slick/slick.css'
+                - 'themes/airspace/css/style.css'
 
 services:
     # default configuration for services in *this* file

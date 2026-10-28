@@ -143,8 +143,13 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $this->client->request('GET', $this->adminUrl(PersonCrudController::class));
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'GuestIdentity');
+        self::assertSelectorTextNotContains('body', 'SuperIdentity');
         $this->client->request('GET', $this->adminUrl(PersonCrudController::class, Crud::PAGE_EDIT, $guest->getId()));
         self::assertResponseIsSuccessful();
+        $this->client->request('GET', $this->adminUrl(PersonCrudController::class, Crud::PAGE_EDIT, $super->getMember()->getPerson()->getId()));
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', $this->adminUrl(PersonCrudController::class, Crud::PAGE_DETAIL, $super->getMember()->getPerson()->getId()));
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testGuestMembershipCreationAndEditingReuseTheOriginalIdentityAndAccount(): void
