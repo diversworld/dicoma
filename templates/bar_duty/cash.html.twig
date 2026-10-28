@@ -1,0 +1,10 @@
+{% extends 'bar_duty/layout.html.twig' %}
+{% block duty_body %}
+<h2>Thekenkasse</h2>
+<p>Du kannst ausschließlich die Kasse deiner aktiven eigenen Einteilung bedienen. Abgeschlossene Kassen bleiben unveränderlich.</p>
+<ul>
+{% for assignment in assignments %}
+    <li><a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id: assignment.shift.id}) }}#thekenkasse">{{ assignment.shift.startsAt|date('d.m.Y H:i') }} · {{ assignment.shift.title }}</a></li>
+{% else %}<li>Keine aktive eigene Diensteinteilung vorhanden.</li>{% endfor %}
+</ul>
+{% endblock %}

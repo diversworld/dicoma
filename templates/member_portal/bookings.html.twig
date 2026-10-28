@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Meine Buchungen'|trans }} | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>{{ 'Meine Buchungen'|trans }}</h1>
+    <h2>TÜV</h2>
+    <ul>{% for booking in bookings %}
+        <li><a href="{{ path('member_tank_check_booking_detail', {id: booking.id}) }}">{{ booking.tankCheck.checkDate|date('d.m.Y') }} · #{{ booking.id }}</a>
+            {% include 'member_portal/_booking_status.html.twig' with {status: booking.status} only %}
+        </li>
+    {% else %}<li>Noch keine TÜV-Anmeldungen vorhanden.</li>{% endfor %}</ul>
+    <h2>Ausrüstung</h2>
+    <a href="{{ path('member_reservations') }}">Meine Ausrüstungsreservierungen</a>
+    <h2>{{ 'Meine Kurse'|trans }}</h2>
+    <a href="{{ path('frontend_course_registrations') }}">{{ 'Meine Kursanmeldungen'|trans }}</a>
+    <h2>Veranstaltungen</h2>
+    <p>Veranstaltungsanmeldungen sind noch nicht verfügbar.</p>
+    <a href="{{ path('website_events') }}">Veröffentlichte Veranstaltungen</a>
+</main>
+{% endblock %}

@@ -70,9 +70,11 @@ final class TemplateStylesTest extends TestCase
         $controller = file_get_contents(self::ROOT . '/src/Controller/Admin/DashboardController.php');
         self::assertStringContainsString("addCssFile('css/theme-variables.css')", $controller);
         self::assertStringContainsString("addCssFile('css/utilities.css')", $controller);
-        foreach (['themes/airspace/layout.html.twig', 'equipment_manager/layout.html.twig', 'instructor_portal/layout.html.twig', 'bar_duty/layout.html.twig', 'training/assessment_layout.html.twig'] as $layout) {
-            self::assertStringContainsString("include 'themes/_assets.html.twig'", file_get_contents(self::ROOT . '/templates/' . $layout));
+        self::assertStringContainsString("include 'themes/_assets.html.twig'", file_get_contents(self::ROOT . '/templates/themes/airspace/layout.html.twig'));
+        foreach (['equipment_manager/layout.html.twig', 'instructor_portal/layout.html.twig', 'training/assessment_layout.html.twig'] as $layout) {
+            self::assertStringContainsString("extends 'base.html.twig'", file_get_contents(self::ROOT . '/templates/' . $layout));
         }
+        self::assertStringContainsString(": 'base.html.twig'", file_get_contents(self::ROOT . '/templates/bar_duty/layout.html.twig'));
         self::assertStringContainsString("asset('css/bootstrap-theme.css')", file_get_contents(self::ROOT.'/templates/themes/_assets.html.twig'));
     }
 

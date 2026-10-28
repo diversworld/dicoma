@@ -25,7 +25,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 
     private $logger;
 
-    public function __construct(private UrlGeneratorInterface $urlGenerator, LoggerInterface $logger)
+    public function __construct(private UrlGeneratorInterface $urlGenerator, LoggerInterface $logger, private readonly \App\Service\PortalNavigation $navigation)
     {
         $this->urlGenerator = $urlGenerator;
         $this->logger = $logger;
@@ -58,7 +58,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
             return new RedirectResponse($targetPath);
         }
 
-        return new RedirectResponse($this->urlGenerator->generate('app_courses_index'));
+        return new RedirectResponse($this->urlGenerator->generate($this->navigation->getLoginRoute()));
     }
 
     protected function getLoginUrl(Request $request): string

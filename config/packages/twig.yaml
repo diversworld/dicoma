@@ -1,6 +1,7 @@
 twig:
     globals:
         site_theme: '@App\Service\SiteTheme'
+        portal_navigation: '@App\Service\PortalNavigation'
     default_path: '%kernel.project_dir%/templates'
     date:
         format: 'd.m.Y H:i'

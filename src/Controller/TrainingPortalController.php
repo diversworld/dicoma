@@ -48,15 +48,18 @@ final class TrainingPortalController extends AbstractController
     ) {}
 
     #[Route('/training', name: 'training_portal', methods: ['GET'])]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $user = $this->account();
         $mine = $user->getPerson() === null ? [] : $this->em->getRepository(CourseParticipant::class)->findBy(['person' => $user->getPerson()], ['id' => 'DESC']);
         $staffCourses = [];
         $club = $user->getMember()?->getClub();
-        $candidates = $this->isGranted('ROLE_SUPER_ADMIN')
-            ? $this->em->getRepository(Courses::class)->findBy([], ['id' => 'DESC'])
-            : ($club === null ? [] : $this->em->getRepository(Courses::class)->findBy(['club' => $club], ['id' => 'DESC']));
+        $candidates = [];
+        if ($request->attributes->get('routeCreatedByEasyAdmin')) {
+            $candidates = $this->isGranted('ROLE_SUPER_ADMIN')
+                ? $this->em->getRepository(Courses::class)->findBy([], ['id' => 'DESC'])
+                : ($club === null ? [] : $this->em->getRepository(Courses::class)->findBy(['club' => $club], ['id' => 'DESC']));
+        }
         foreach ($candidates as $course) {
             if ($this->canViewCourse($course)) { $staffCourses[] = $course; }
         }

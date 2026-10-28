@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+{% set contact = app.request.attributes.get('_route') == 'website_contact' %}
+{% block title %}{{ (contact ? 'Kontakt' : 'Unser Verein')|trans }} | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container section" data-public-club>
+    <h1>{{ (contact ? 'Kontakt' : 'Unser Verein')|trans }}</h1>
+    <h2>{{ club.name }}</h2>
+    {% if not contact %}
+        {% if club.description %}<div>{{ club.description|nl2br }}</div>{% endif %}
+        {% if club.association %}<p>{{ 'Verband'|trans }}: {{ club.association }}</p>{% endif %}
+        <p><a href="{{ path('website_contact') }}">{{ 'Kontakt'|trans }}</a> · <a href="{{ path('membership_application_clubs') }}">{{ 'Mitglied werden'|trans }}</a></p>
+    {% else %}
+        {% if club.street or club.city %}
+            <address>
+                {% if club.street %}{{ club.street }}<br>{% endif %}
+                {{ club.postalCode }} {{ club.city }}<br>{{ club.country }}
+            </address>
+        {% endif %}
+        {% if club.email %}<p>{{ 'E-Mail'|trans }}: <a href="mailto:{{ club.email }}">{{ club.email }}</a></p>{% endif %}
+        {% if club.phone %}<p>{{ 'Telefon'|trans }}: {{ club.phone }}</p>{% endif %}
+        {% if club.website %}
+            <p>{{ 'Website'|trans }}:
+                {% if websiteUrl %}<a href="{{ websiteUrl }}" rel="noopener noreferrer">{{ club.website }}</a>{% else %}{{ club.website }}{% endif %}
+            </p>
+        {% endif %}
+        {% if not club.street and not club.city and not club.email and not club.phone and not club.website %}
+            <p>{{ 'Für diesen Verein sind noch keine öffentlichen Kontaktdaten hinterlegt.'|trans }}</p>
+        {% endif %}
+        <a href="{{ path('website_club') }}">{{ 'Unser Verein'|trans }}</a>
+    {% endif %}
+</main>
+{% endblock %}

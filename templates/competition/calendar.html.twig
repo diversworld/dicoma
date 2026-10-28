@@ -1,15 +1,30 @@
-{% extends 'competition/layout.html.twig' %}
+{% extends app.request.attributes.get('routeCreatedByEasyAdmin') ? 'competition/layout.html.twig' : 'base.html.twig' %}
+{% set calendar_backend = app.request.attributes.get('routeCreatedByEasyAdmin') %}
+{% set calendar_route = app.request.attributes.get('_route') == 'member_calendar' ? 'member_calendar' : 'club_calendar' %}
+{% block title %}{{ 'Veranstaltungskalender'|trans }}{% endblock %}
 {% block competition_title %}{{ 'Veranstaltungskalender'|trans }}{% endblock %}
-{% block competition_body %}
+{% block hero %}{% endblock %}
+{% block body %}
+    {% if calendar_backend %}
+        {{ parent() }}
+    {% else %}
+        <main class="container py-4">
+            <h1>{{ 'Veranstaltungskalender'|trans }}</h1>
+            {{ block('calendar_content') }}
+        </main>
+    {% endif %}
+{% endblock %}
+{% block competition_body %}{{ block('calendar_content') }}{% endblock %}
+{% block calendar_content %}
 <p class="text-muted">{{ 'Gemeinsame Ansicht aus Tauchausbildung, Mannschaftstraining, Turnieren und Thekendiensten. Termine werden ausschließlich im jeweiligen Fachmodul gepflegt.'|trans }}</p>
-<form method="get" action="{{ path('club_calendar') }}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+<form method="get" action="{{ path(calendar_route) }}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
 <div><label for="calendar-month">{{ 'Monat'|trans }}</label><input id="calendar-month" class="form-control" type="month" name="month" value="{{ month|date('Y-m') }}" required></div>
 <button class="btn btn-primary">{{ 'Anzeigen'|trans }}</button>
-<a class="btn btn-secondary" href="{{ path('club_calendar', {month: month|date_modify('-1 month')|date('Y-m')}) }}">{{ 'Vorheriger Monat'|trans }}</a>
-<a class="btn btn-secondary" href="{{ path('club_calendar', {month: month|date_modify('+1 month')|date('Y-m')}) }}">{{ 'Nächster Monat'|trans }}</a>
+<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('-1 month')|date('Y-m')}) }}">{{ 'Vorheriger Monat'|trans }}</a>
+<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('+1 month')|date('Y-m')}) }}">{{ 'Nächster Monat'|trans }}</a>
 </form>
 <div class="table-responsive"><table class="table" data-club-calendar><thead><tr><th>{{ 'Beginn'|trans }}</th><th>{{ 'Ende'|trans }}</th><th>{{ 'Bereich'|trans }}</th><th>{{ 'Veranstaltung'|trans }}</th><th>{{ 'Ort'|trans }}</th></tr></thead><tbody>
-{% for event in events %}<tr data-event-key="{{ event.key }}"><td>{{ event.start|date('d.m.Y H:i') }}</td><td>{{ event.end ? event.end|date('d.m.Y H:i') : '—' }}</td><td>{{ event.kind|trans }}</td><td><a href="{{ event.url }}">{{ event.title }}</a></td><td>{{ event.location }}</td></tr>
+{% for event in events %}<tr data-event-key="{{ event.key }}"><td>{{ event.start|date('d.m.Y H:i') }}</td><td>{{ event.end ? event.end|date('d.m.Y H:i') : '—' }}</td><td>{{ event.kind|trans }}</td><td>{% if event.url %}<a href="{{ event.url }}">{{ event.title }}</a>{% else %}{{ event.title }}{% endif %}</td><td>{{ event.location }}</td></tr>
 {% else %}<tr><td colspan="5">{{ 'Keine sichtbaren Veranstaltungen in diesem Monat.'|trans }}</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}

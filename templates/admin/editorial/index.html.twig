@@ -12,7 +12,7 @@
                 <li>Bei Veranstaltungen Beginn, Ende und öffentlichen Ort ergänzen. Veröffentlichungszeitpunkt festlegen; optional einen freigegebenen Kurs oder ein Turnier verknüpfen.</li>
                 <li>„Zur Veröffentlichung freigeben“ aktivieren und speichern. Ohne Freigabe bleibt der Beitrag ein Entwurf. Eine Freigabe zu einem späteren Zeitpunkt wird automatisch dann sichtbar.</li>
             </ol>
-            <p class="mb-0">Freigegebene Artikel erscheinen unter <a href="{{ path('website_articles') }}">Aktuelles</a> und auf der Startseite; Veranstaltungen unter <a href="{{ path('website_events') }}">Veranstaltungen</a>. Änderungen oder das Zurücknehmen der Freigabe erfolgen über „Bearbeiten / Freigabe ändern“.</p>
+            <p class="mb-0">Freigegebene Artikel erscheinen unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Änderungen oder das Zurücknehmen der Freigabe erfolgen über „Bearbeiten / Freigabe ändern“.</p>
         </div>
     </section>
     {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}

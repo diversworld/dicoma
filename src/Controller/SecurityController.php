@@ -10,10 +10,10 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends AbstractController
 {
     #[Route(path: '/login', name: 'app_login')]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    public function login(AuthenticationUtils $authenticationUtils, \App\Service\PortalNavigation $navigation): Response
     {
         if ($this->getUser()) {
-             return $this->redirectToRoute($this->isGranted('ROLE_MEMBER') ? 'app_schedule_index' : 'app_courses_index');
+             return $this->redirectToRoute($navigation->getLoginRoute());
         }
 
         // get the login error if there is one

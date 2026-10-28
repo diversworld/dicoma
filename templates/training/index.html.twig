@@ -10,7 +10,7 @@
 {% else %}<li>Noch keine Kursanmeldung vorhanden. Die Teilnahme ist auch ohne Vereinsmitgliedschaft möglich.</li>{% endfor %}
 </ul>
 {% endif %}
-{% if is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
+{% if training_route_prefix and (is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN')) %}
     <h2>{% if is_granted('ROLE_TRAINING_MANAGER') %}Ausbildungsleitung{% elseif is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}Kursverwaltung{% else %}Ausbilder: Meine Kurse{% endif %}</h2>
     {% if is_granted('ROLE_TRAINING_MANAGER') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
         <p><a class="btn btn-primary" href="{{ path('admin_portal_training_course_new') }}">Kurs anlegen</a></p>

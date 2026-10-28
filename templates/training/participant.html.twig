@@ -45,7 +45,7 @@
 <p>Der Terminplan ist noch nicht freigegeben.</p>
 {% endif %}
 {% if participant.certificateNumber %}
-    <p><a href="{{ path('training_certificate', {id: participant.id}) }}">Bescheinigung / Brevetierungsdaten drucken</a></p>
+    <p><a href="{{ path(training_route_prefix ~ 'training_certificate', {id: participant.id}) }}">Bescheinigung / Brevetierungsdaten drucken</a></p>
 {% endif %}
 {% if participant.archivedAt %}
     <p>Ausbildungsnachweise archiviert am {{ participant.archivedAt|date('d.m.Y H:i') }}.</p>

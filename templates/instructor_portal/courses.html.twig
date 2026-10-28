@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Meine Kurse'|trans }} | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>{{ 'Meine Kurse'|trans }}</h1>
+    {% for course in courses %}
+        <section class="card card-body mb-4">
+            <h2>{{ course.title }}</h2>
+            <p>{{ course.status.label() }} · {{ course.category }}</p>
+            <ul>{% for session in course.schedule %}
+                {% if is_granted('TRAINING_ASSESS', session) %}
+                    <li>{{ session.startDate ? session.startDate|date('d.m.Y') : '' }} {{ session.title }}
+                        <a href="{{ path('instructor_training_assess', {id: session.id}) }}">Anwesenheit und Prüfungsergebnisse erfassen</a>
+                    </li>
+                {% endif %}
+            {% else %}<li>Noch keine Termine vorhanden.</li>{% endfor %}</ul>
+        </section>
+    {% else %}<p>Keine zugeordneten Kurse.</p>{% endfor %}
+</main>
+{% endblock %}

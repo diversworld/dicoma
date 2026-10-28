@@ -92,9 +92,9 @@ final class Phase2FoundationHttpTest extends WebTestCase
             '_username' => 'guest-registration',
             '_password' => 'Test-Password-Only-2026!',
         ]);
-        self::assertResponseRedirects('/courses/');
+        self::assertResponseRedirects('/training');
         $this->client->request('GET', '/login');
-        self::assertResponseRedirects('/courses/');
+        self::assertResponseRedirects('/training');
         $this->client->request('GET', '/my');
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/de');

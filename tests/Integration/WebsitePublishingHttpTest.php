@@ -37,6 +37,54 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->member = $this->account('member', []);
     }
 
+    public function testClubAndContactArePublicScopedAndNeverExposeInternalNotesOrUnsafeMarkup(): void
+    {
+        $this->club->setDescription('Public description <script>alert(1)</script>');
+        $this->club->setEmail('club@example.invalid')->setPhone('0123456')
+            ->setStreet('Club street 1')->setPostalCode('00123')->setCity('Club city')
+            ->setWebsite('javascript:alert(1)')->setNotes('Private board notes');
+        $other = (new Club())->setName('Foreign club')->setDescription('Foreign description')->setEmail('foreign@example.invalid');
+        $this->em->persist($other);
+        $this->em->flush();
+        foreach (['/club', '/contact'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('[data-public-club]', 'Website club');
+            self::assertSelectorTextNotContains('body', 'Private board notes');
+            self::assertSelectorTextNotContains('body', 'Foreign description');
+            self::assertSelectorTextNotContains('body', 'foreign@example.invalid');
+            self::assertSelectorNotExists('main script');
+            self::assertSelectorNotExists('a[href^="javascript:"]');
+            self::assertSelectorExists('#frontendNavbar a[href="/club"]');
+            self::assertSelectorExists('footer a[href="/contact"]');
+        }
+        self::assertSelectorTextContains('address', '00123');
+        self::assertSelectorExists('a[href="mailto:club@example.invalid"]');
+        $this->em->find(Club::class, $this->club->getId())->setWebsite('https://club.example.invalid');
+        $this->em->flush();
+        $this->client->request('GET', '/contact');
+        self::assertSelectorExists('a[href="https://club.example.invalid"][rel="noopener noreferrer"]');
+    }
+
+    public function testInactiveOrUnconfiguredClubHasNoPublicInformationPageOrNavigationEntry(): void
+    {
+        $this->club->setActive(false);
+        $this->em->flush();
+        foreach (['/club', '/contact'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#frontendNavbar a[href="/club"]');
+        self::assertSelectorNotExists('footer a[href="/contact"]');
+        $_ENV['PUBLIC_SITE_CLUB_ID'] = $_SERVER['PUBLIC_SITE_CLUB_ID'] = '0';
+        putenv('PUBLIC_SITE_CLUB_ID=0');
+        static::getContainer()->get('kernel')->reboot(null);
+        $this->client->request('GET', '/club');
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testPressCanDraftPublishEditAndWithdrawArticleWithoutAdminRights(): void
     {
         $this->client->loginUser($this->press);

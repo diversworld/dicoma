@@ -3,7 +3,7 @@
 {% set booking = entity.instance %}
 <div class="container-fluid px-0">
     <h2 class="h4">Reservierung #{{ booking.id }}</h2>
-    <p><a href="{{ path('equipment_manager_loans', {status:'all', checkout:booking.id}) }}">Genehmigung, Zahlung und Abschluss im Gerätewartbereich</a></p>
+    <p>Genehmigung, Zahlung und Abschluss im Gerätewartbereich</p>
     {% set reservedCount = 0 %}
     {% set issuedCount = 0 %}
     {% set returnedCount = 0 %}

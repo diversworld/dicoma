@@ -14,7 +14,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class BarDutyController extends AbstractController
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly BarDutyAccess $access) {}
+    public function __construct(private readonly EntityManagerInterface $em, private readonly BarDutyAccess $access, private readonly \Symfony\Component\HttpFoundation\RequestStack $requests) {}
+
+    private function backend(): bool
+    {
+        return (bool) $this->requests->getCurrentRequest()?->attributes->get('routeCreatedByEasyAdmin');
+    }
+
+    private function route(string $name): string { return ($this->backend() ? 'admin_portal_' : '').$name; }
+
+    private function requireManagement(): void
+    {
+        if (!$this->backend()) { throw $this->createAccessDeniedException('Verwaltung ausschließlich im Backend.'); }
+        $this->access->requireManager();
+    }
 
     #[Route('/bar-duty', name: 'bar_duty', methods: ['GET'])]
     public function index(Request $request, BarDutyAccounts $accounts): Response
@@ -40,17 +53,32 @@ final class BarDutyController extends AbstractController
             $days[] = ['date' => $day, 'currentMonth' => $day->format('Y-m') === $month->format('Y-m'), 'shifts' => $byDay[$day->format('Y-m-d')] ?? []];
         }
         return $this->render('bar_duty/index.html.twig', [
-            'month' => $month, 'weeks' => array_chunk($days, 7), 'roster' => $roster, 'manager' => $this->access->isManager(),
+            'month' => $month, 'weeks' => array_chunk($days, 7), 'roster' => $roster, 'manager' => $this->backend() && $this->access->isManager(),
             'account' => $accounts->account($this->access->member(), (int) $month->format('Y')),
             'notifications' => $this->em->getRepository(BarDutyNotification::class)->findBy(['member' => $this->access->member()], ['id' => 'DESC'], 100),
             'exchanges' => $this->exchanges(),
         ]);
     }
 
+    #[Route('/bar-duty/cash', name: 'bar_duty_cash', methods: ['GET'])]
+    public function cash(): Response
+    {
+        $member = $this->access->member();
+        if (!$member->isActiveMember()) { throw $this->createAccessDeniedException('Aktive Mitgliedschaft erforderlich.'); }
+        return $this->render('bar_duty/cash.html.twig', [
+            'manager' => false,
+            'assignments' => $this->em->getRepository(BarDutyAssignment::class)->createQueryBuilder('a')
+                ->join('a.shift', 's')->addSelect('s')
+                ->where('a.member = :member AND a.status = :active AND a.attendance != :absent AND s.status != :cancelled')
+                ->setParameter('member', $member)->setParameter('active', 'active')->setParameter('absent', 'absent')
+                ->setParameter('cancelled', 'cancelled')->orderBy('s.startsAt', 'DESC')->getQuery()->getResult(),
+        ]);
+    }
+
     #[Route('/bar-duty/plan', name: 'bar_duty_plan', methods: ['GET'])]
     public function plan(Request $request): Response
     {
-        $this->access->requireManager();
+        $this->requireManagement();
         try { $date = BarDutyWorkflow::date($request->query->getString('date', date('Y-m-d'))); }
         catch (\DomainException) { throw $this->createNotFoundException('Ungültiger Veranstaltungstag.'); }
         return $this->render('bar_duty/plan.html.twig', ['manager' => true, 'date' => $date]);
@@ -59,7 +87,7 @@ final class BarDutyController extends AbstractController
     #[Route('/bar-duty/settings', name: 'bar_duty_settings', methods: ['GET'])]
     public function settings(Request $request): Response
     {
-        $this->access->requireManager(); $year = $this->year($request);
+        $this->requireManagement(); $year = $this->year($request);
         return $this->render('bar_duty/settings.html.twig', [
             'manager' => true, 'year' => $year, 'policy' => $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->access->club(), 'year' => $year]),
             'definitions' => $this->em->getRepository(BarShiftDefinition::class)->findBy(['club' => $this->access->club()], ['id' => 'DESC']),
@@ -70,7 +98,7 @@ final class BarDutyController extends AbstractController
     #[Route('/bar-duty/report', name: 'bar_duty_report', methods: ['GET'])]
     public function report(Request $request, BarDutyAccounts $accounts): Response
     {
-        $this->access->requireManager(); $year = $this->year($request);
+        $this->requireManagement(); $year = $this->year($request);
         $sessions = $this->em->getRepository(BarCashSession::class)->createQueryBuilder('c')->join('c.shift', 's')->addSelect('s')
             ->where('s.club = :club AND s.startsAt >= :start AND s.startsAt < :end')->setParameter('club', $this->access->club())
             ->setParameter('start', new \DateTimeImmutable($year.'-01-01'))->setParameter('end', new \DateTimeImmutable(($year + 1).'-01-01'))
@@ -81,7 +109,7 @@ final class BarDutyController extends AbstractController
     #[Route('/bar-duty/report.csv', name: 'bar_duty_report_csv', methods: ['GET'])]
     public function reportCsv(Request $request, BarDutyAccounts $accounts): Response
     {
-        $this->access->requireManager(); $year = $this->year($request);
+        $this->requireManagement(); $year = $this->year($request);
         $rows = [['Mitglied-ID', 'Mitglied', 'Jahr', 'Pflichtminuten', 'Bestätigte Minuten', 'Geplante Minuten', 'Offene Minuten', 'Saldo Minuten', 'Abwesende Dienste']];
         foreach ($accounts->report($this->access->club(), $year) as $row) {
             $rows[] = [$row['member']->getId(), (string) $row['member'], $year, $row['required'] ?? 'Nicht konfiguriert', $row['earned'], $row['planned'], $row['remaining'] ?? '', $row['balance'] ?? '', $row['absent']];
@@ -94,14 +122,15 @@ final class BarDutyController extends AbstractController
     {
         $shift = $this->em->find(BarShift::class, $id);
         if (!$shift || $shift->getClub()->getId() !== $this->access->club()->getId()) { throw $this->createNotFoundException(); }
-        $manager = $this->access->isManager();
-        $session = $manager ? $this->em->getRepository(BarCashSession::class)->findOneBy(['shift' => $shift]) : null;
+        $manager = $this->backend() && $this->access->isManager();
+        $cashAccess = $cash->canUse($shift, $this->backend());
+        $session = $cashAccess ? $this->em->getRepository(BarCashSession::class)->findOneBy(['shift' => $shift]) : null;
         $counterparts = $this->em->getRepository(BarDutyAssignment::class)->createQueryBuilder('a')->join('a.shift', 's')->addSelect('s')
             ->where('s.club = :club AND s.status = :open AND s.startsAt > :now AND a.status = :active')
             ->setParameter('club', $this->access->club())->setParameter('open', 'open')->setParameter('active', 'active')->setParameter('now', new \DateTimeImmutable())
             ->orderBy('s.startsAt', 'ASC')->getQuery()->getResult();
         return $this->render('bar_duty/shift.html.twig', [
-            'shift' => $shift, 'manager' => $manager, 'members' => $this->members(true), 'counterparts' => $counterparts,
+            'shift' => $shift, 'manager' => $manager, 'cashAccess' => $cashAccess, 'members' => $this->members(true), 'counterparts' => $counterparts,
             'assignments' => $this->em->getRepository(BarDutyAssignment::class)->findBy(['shift' => $shift], ['id' => 'ASC']),
             'session' => $session, 'cashEntries' => $session ? $cash->entries($session) : [], 'cashBalance' => $session ? $cash->balance($session) : 0,
         ]);
@@ -110,9 +139,9 @@ final class BarDutyController extends AbstractController
     #[Route('/bar-duty/cash/{id}.csv', name: 'bar_duty_cash_csv', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function cashCsv(int $id, BarCashWorkflow $cash): Response
     {
-        $this->access->requireManager();
         $session = $this->em->find(BarCashSession::class, $id);
         if (!$session || $session->getShift()->getClub()->getId() !== $this->access->club()->getId()) { throw $this->createNotFoundException(); }
+        $cash->requireAccess($session->getShift(), $this->backend());
         $rows = [['Thekenkasse', $id, 'Schicht', $session->getShift()->getId()], ['Anfangsbestand Cent', $session->getOpeningCents()],
             ['Beleg-ID', 'Zeit', 'Betrag Cent', 'Grund', 'Referenz', 'Bearbeiter', 'Korrektur von']];
         foreach ($cash->entries($session) as $entry) {
@@ -130,8 +159,14 @@ final class BarDutyController extends AbstractController
     {
         $this->access->user();
         if (!$this->isCsrfTokenValid('bar_duty_'.$operation.'_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
-        if (in_array($operation, ['plan', 'define', 'deactivate', 'schedule', 'policy', 'exception', 'assign', 'attendance', 'complete', 'cancel', 'cash-open', 'cash-book', 'cash-reverse', 'cash-close'], true)) {
-            $this->access->requireManager();
+        if (in_array($operation, ['plan', 'define', 'deactivate', 'schedule', 'policy', 'exception', 'assign', 'attendance', 'complete', 'cancel'], true)) {
+            $this->requireManagement();
+        }
+        if (str_starts_with($operation, 'cash-')) {
+            $shift = $operation === 'cash-open' ? $this->em->find(BarShift::class, $id)
+                : $this->em->find(BarCashSession::class, $id)?->getShift();
+            if ($shift === null) { throw $this->createNotFoundException(); }
+            $cash->requireAccess($shift, $this->backend());
         }
         $p = $request->request;
         $target = null;
@@ -157,10 +192,10 @@ final class BarDutyController extends AbstractController
                 case 'attendance': $duty->attendance($id, $p->getString('attendance'), self::integer($p->getString('minutes')), $p->getString('reason')); break;
                 case 'complete': $duty->finish($id, 'completed', $p->getString('reason')); $target = $id; break;
                 case 'cancel': $duty->finish($id, 'cancelled', $p->getString('reason')); $target = $id; break;
-                case 'cash-open': $cash->open($id, $p->getString('amount'), $p->getString('reason')); $target = $id; break;
-                case 'cash-book': $cash->book($id, $p->getString('direction'), $p->getString('amount'), $p->getString('reason'), $p->getString('reference')); break;
-                case 'cash-reverse': $cash->reverse($id, self::integer($p->getString('entry')), $p->getString('reason')); break;
-                case 'cash-close': $cash->close($id, $p->getString('amount'), $p->getString('reason')); break;
+                case 'cash-open': $cash->open($id, $p->getString('amount'), $p->getString('reason'), $this->backend()); $target = $id; break;
+                case 'cash-book': $cash->book($id, $p->getString('direction'), $p->getString('amount'), $p->getString('reason'), $p->getString('reference'), $this->backend()); break;
+                case 'cash-reverse': $cash->reverse($id, self::integer($p->getString('entry')), $p->getString('reason'), $this->backend()); break;
+                case 'cash-close': $cash->close($id, $p->getString('amount'), $p->getString('reason'), $this->backend()); break;
                 case 'read':
                     $duty->transaction(function () use ($duty, $id): void {
                         $row = $duty->locked(BarDutyNotification::class, $id);
@@ -170,10 +205,10 @@ final class BarDutyController extends AbstractController
             }
             $this->addFlash('success', $planned === null ? 'Thekendienstvorgang gespeichert.' : count($planned).' Veranstaltungstermin(e) mit Thekendienst angelegt.');
         } catch (\DomainException $e) { $this->addFlash('danger', $e->getMessage()); }
-        if ($planned !== null) { return $this->redirectToRoute('bar_duty', ['month' => $planned[0]->getStartsAt()->format('Y-m')], Response::HTTP_SEE_OTHER); }
-        if ($operation === 'plan') { return $this->redirectToRoute('bar_duty_plan', [], Response::HTTP_SEE_OTHER); }
-        if ($target !== null) { return $this->redirectToRoute('bar_duty_shift', ['id' => $target], Response::HTTP_SEE_OTHER); }
-        return $this->redirectToRoute(in_array($operation, ['define', 'deactivate', 'policy', 'exception'], true) ? 'bar_duty_settings' : 'bar_duty', [], Response::HTTP_SEE_OTHER);
+        if ($planned !== null) { return $this->redirectToRoute($this->route('bar_duty'), ['month' => $planned[0]->getStartsAt()->format('Y-m')], Response::HTTP_SEE_OTHER); }
+        if ($operation === 'plan') { return $this->redirectToRoute($this->route('bar_duty_plan'), [], Response::HTTP_SEE_OTHER); }
+        if ($target !== null) { return $this->redirectToRoute($this->route('bar_duty_shift'), ['id' => $target], Response::HTTP_SEE_OTHER); }
+        return $this->redirectToRoute($this->route(in_array($operation, ['define', 'deactivate', 'policy', 'exception'], true) ? 'bar_duty_settings' : 'bar_duty'), [], Response::HTTP_SEE_OTHER);
     }
 
     private function exchanges(): array

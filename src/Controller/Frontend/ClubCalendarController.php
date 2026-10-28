@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Admin;
+namespace App\Controller\Frontend;
 
+use App\Controller\Admin\DashboardController;
 use App\Service\ClubCalendar;
 use App\Service\CompetitionAccess;
 use App\Service\BarDutyAccess;
@@ -16,7 +17,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class ClubCalendarController extends AbstractController
 {
-    #[Route('/admin/calendar', name: 'club_calendar', methods: ['GET'])]
+    #[Route('/calendar', name: 'member_calendar', methods: ['GET'])]
+    #[Route('/admin/calendar', name: 'club_calendar', defaults: DashboardController::ROUTE_DEFAULTS, methods: ['GET'])]
     public function index(Request $request, ClubCalendar $calendar, CompetitionAccess $access, BarDutyAccess $barAccess): Response
     {
         $access->require($access->isStaff() || ($this->getUser() instanceof \App\Entity\User
@@ -27,6 +29,6 @@ final class ClubCalendarController extends AbstractController
         $from = \DateTimeImmutable::createFromFormat('!Y-m-d', $value . '-01');
         if (!$from || $from->format('Y-m') !== $value) { throw $this->createNotFoundException('Ungültiger Monat.'); }
         return $this->render('competition/calendar.html.twig', ['month' => $from,
-            'events' => $calendar->events($from, $from->modify('first day of next month'))]);
+            'events' => $calendar->events($from, $from->modify('first day of next month'), (bool) $request->attributes->get('routeCreatedByEasyAdmin'))]);
     }
 }

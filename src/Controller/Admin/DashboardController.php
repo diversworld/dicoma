@@ -383,7 +383,9 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/training-overview', name: 'training_overview')]
     public function trainingOverview(EntityManagerInterface $em): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_TRAINING_MANAGER')) {
+            throw $this->createAccessDeniedException();
+        }
         $courses = array_filter($em->getRepository(Courses::class)->findAll(),
             fn (Courses $course): bool => $this->isGranted(\App\Security\Voter\CourseManagementVoter::MANAGE, $course));
         $rows = [];
@@ -448,7 +450,7 @@ class DashboardController extends AbstractDashboardController
             ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),
-            MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'bar_duty')->setPermission('ROLE_BAR_MANAGER'),
+            MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'admin_portal_bar_duty')->setPermission('ROLE_BAR_MANAGER'),
 
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')->setSubItems([
                 MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),

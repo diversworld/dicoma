@@ -1,26 +1,60 @@
-# DICOMA – Priorisierte Roadmap (Entwurf, keine Implementierungsfreigabe)
+# DICOMA – aktualisierter Umsetzungsplan
 
-## Gate 0: Analyse abschließen
-1. Abhängigkeiten und Laufzeitumgebung reproduzieren.
-2. `debug:router`, Doctrine-Mapping und Migration-Status prüfen.
-3. Authentifizierung, Voter und Zugriff auf Dateien und Installationsrouten manuell sowie automatisiert prüfen.
-4. Kritische Geschäftsprozesse Ende-zu-Ende nachverfolgen und die Matrix auf vollständig/teilweise/fehlend/defekt umstellen.
-5. Mit Testdatenbestand Tests und Migrationsprobe ausführen.
+Stand: 28.10.2026. Der Auftraggeber hat den phasenweisen Gesamtumfang gewählt.
+Funktionierende Prozesse bleiben erhalten; keine neue Plattform und keine
+produktive Migration ohne gesonderte Ausführungsfreigabe.
 
-## Paket A – Sicherheit und Datenintegrität (kritisch)
-Installationsschutz, Zugriffskontrolle, Club-Isolation, sensible Dokumente, Zahlungs-/Kassenintegrität, Konkurrenz bei Reservierungen.
+## 1. Konsolidierung und aktuelle Bestandsprüfung
 
-## Paket B – Zentrales Domänenmodell (hoch)
-Person/Benutzer/Mitgliedschaft/Gast-Beziehungen, gemeinsame Berechtigungs- und Kalenderkonventionen; Bestand vor Änderung prüfen.
+Umsetzung: [Portal-Teilphase](../phase11-portals.md). Bestehende Analyseberichte
+sind als historisch gekennzeichnet und um aktuelle Befunde ergänzt.
+Öffentliche Vereinsinformationen/Kontakt wurden zusätzlich mit dem bestehenden
+Vereinsmodell ergänzt. Die nachfolgenden Fachmodule sind damit ausdrücklich
+**noch nicht implementiert oder abgenommen**.
 
-## Paket C – Bestehende Kernmodule stabilisieren (hoch)
-Mitglieder, Ausbildung, Ausrüstung, Flaschen, Gerätewartkasse; vollständige Prozessketten und Tests.
+- Aktuelle statt historischer Funktionsmatrix verwenden.
+- Defekte Frontend-Layoutvererbung reparieren.
+- Einheitlicher Einstieg, Login-Ziel und Portalwechsel für Gäste, Mitglieder
+  und unabhängige Funktionsrollen.
+- Self-Service/Kalender von Verwaltungsoberflächen trennen; tatsächliche
+  Objektberechtigungen unverändert serverseitig durchsetzen.
+- Isolierte Regression der bestehenden Module ausführen, Abweichungen offen
+  dokumentieren. Kein Schemawechsel für reine Navigation.
 
-## Paket D – Weitere Fachmodule (mittel)
-Mannschaften/Turniere, Thekendienste, Veranstaltungen, Clubreisen.
+## 2. Veranstaltungen
 
-## Paket E – Portal-/Querschnittsfunktionen
-Portale, Benachrichtigungen, Dokumente, globale Suche, Auswertungen, Barrierearmut.
+Aufbauend auf vorhandenen Ankündigungen, aber mit eigenständigem Fachprozess:
+Vereins-/öffentliche Sichtbarkeit, Anmeldung an `Person`, Kapazität und
+Warteliste mit Transaktion/Sperre, Anmeldefrist, Gebühren, Zahlungen, Storno,
+Teilnehmerrechte, Dokumente, Erinnerungen und Kalenderprojektion.
+Verknüpfte Kurse/Turniere behalten ihre eigenen Anmeldeprozesse; keine
+doppelten Teilnehmer-/Kalenderdaten.
 
-## Freigabekriterien
-Vor Implementierung: dokumentierte Architekturentscheidung, konkrete Dateiliste, Migrationsplan, Sicherheitsmodell, Tests, Rückfallstrategie und ausdrückliche Freigabe.
+Abnahme: gleichzeitige Buchung des letzten Platzes, Nachrücken, doppelte
+Zahlung, fremde Teilnehmerliste, fehlender CSRF-Schutz, Absage und Erstattung.
+
+## 3. Clubreisen
+
+Eigenes Fachmodell für Reise, Personenteilnahme und Leistungen;
+Qualifikations-/Tauchtauglichkeitsprüfung mit Datenminimierung, Unterkunft und
+Transport, Ausrüstung, Anzahlungen/Restzahlungen/Zusatzkosten/Erstattungen,
+Dokumente und Kalender. Vorhandene Personen, Qualifikationen und
+Ausrüstungsservices wiederverwenden.
+
+Abnahme: Gast/Mitglied, fehlende Voraussetzung, Warteliste, Fristen,
+Reisestorno, nachvollziehbare Erstattung, Dokument- und Vereinsgrenzen.
+
+## 4. Querschnitt und Vorstandsprozesse
+
+Gemeinsamer berechtigungsgesteuerter Dokumenteneinstieg, ereignisbasierte
+Benachrichtigungen/Inbox, globale Suche, Rollenberichte sowie fehlende
+Vorstandsaufgaben/Beschlüsse. Erst vorhandene Fachautorisierung wiederverwenden,
+danach Quellen integrieren; keine neue globale Leseberechtigung.
+
+## 5. Fach- und Betriebsabnahme
+
+Je Modul alle Kriterien der Master Specification gegen konkrete Methoden und
+Tests abnehmen. MariaDB-Konkurrenz-/Migrationstests, Bestandsupgrade,
+Datei-/Datenbankwiederherstellung, responsive Browserprüfung,
+Datenschutz-/Aufbewahrungskonzept und freigegebenes Release separat nachweisen.
+Ein erfolgreiches SQLite-Schema oder einzelner HTTP-Test ersetzt diese Gates nicht.

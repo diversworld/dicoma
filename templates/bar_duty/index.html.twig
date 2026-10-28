@@ -4,23 +4,23 @@
 {% block duty_body %}
 <section class="course-calendar mb-4" data-bar-duty-calendar>
     <h2>Dienstkalender {{ month|date('m/Y') }}</h2>
-    <form method="get" action="{{ path('bar_duty') }}" class="d-flex flex-wrap gap-2 mb-3">
+    <form method="get" action="{{ path(duty_route_prefix ~ 'bar_duty') }}" class="d-flex flex-wrap gap-2 mb-3">
         <label>Monat <input type="month" name="month" value="{{ month|date('Y-m') }}" required></label><button class="btn btn-primary">Kalender anzeigen</button>
-        <a class="btn btn-secondary" href="{{ path('bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
-        <a class="btn btn-secondary" href="{{ path('bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
+        <a class="btn btn-secondary" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
+        <a class="btn btn-secondary" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
     </form>
     <p>Veranstaltung anklicken, um den Thekendienst zu übernehmen. Die eingeteilten Mitglieder und noch freien Plätze stehen direkt im Kalender.</p>
-    {% if manager %}<p><a class="btn btn-primary" href="{{ path('bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.</p>{% endif %}
+    {% if manager %}<p><a class="btn btn-primary" href="{{ path(duty_route_prefix ~ 'bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.</p>{% endif %}
     <div class="scroll"><table class="month">
         <caption>Veranstaltungen und Thekendienste {{ month|date('m/Y') }}</caption>
         <thead><tr>{% for weekday in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
         <tbody>{% for week in weeks %}<tr>{% for day in week %}
             <td class="{{ day.currentMonth ? '' : 'outside' }}" data-calendar-date="{{ day.date|date('Y-m-d') }}">
                 <time datetime="{{ day.date|date('Y-m-d') }}"><strong>{{ day.date|date('d.m.') }}</strong></time>
-                {% if manager and day.date >= date('today') %}<div><a href="{{ path('bar_duty_plan', {date:day.date|date('Y-m-d')}) }}">Veranstaltung eintragen</a></div>{% endif %}
+                {% if manager and day.date >= date('today') %}<div><a href="{{ path(duty_route_prefix ~ 'bar_duty_plan', {date:day.date|date('Y-m-d')}) }}">Veranstaltung eintragen</a></div>{% endif %}
                 {% for shift in day.shifts %}
                     {% set assigned = roster[shift.id] %}
-                    <a class="event{{ shift.status == 'open' and assigned|length < shift.capacity ? ' incomplete' : '' }}" href="{{ path('bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
+                    <a class="event{{ shift.status == 'open' and assigned|length < shift.capacity ? ' incomplete' : '' }}" href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
                         <strong>{{ shift.title }}</strong>
                         <small>{{ shift.startsAt|date('H:i') }} – {{ shift.endsAt|date('d.m.') != shift.startsAt|date('d.m.') ? shift.endsAt|date('d.m. H:i') : shift.endsAt|date('H:i') }} · {{ shift.location }}</small>
                         <small>{{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status] }}</small>
@@ -44,7 +44,7 @@
     {% if account.exception %}<p>Individuelle Pflicht: {{ account.exception.requiredMinutes is null ? 'Vereinsregel gilt wieder' : account.exception.requiredMinutes ~ ' Minuten' }}. Begründung: {{ (account.exception.history|last).reason }}</p>{% endif %}
 </section>
 <section class="mb-4"><h2>Meine Einteilungen {{ account.year }}</h2>
-    <ul>{% for assignment in account.assignments %}<li><a href="{{ path('bar_duty_shift', {id:assignment.shift.id}) }}">{{ assignment.shift.startsAt|date('d.m.Y H:i') }} · {{ assignment.shift.title }}</a> ·
+    <ul>{% for assignment in account.assignments %}<li><a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:assignment.shift.id}) }}">{{ assignment.shift.startsAt|date('d.m.Y H:i') }} · {{ assignment.shift.title }}</a> ·
         {{ {'pending':'Anwesenheit offen', 'present':'Anwesend', 'absent':'Abwesend'}[assignment.attendance] }} · {{ assignment.creditedMinutes }} bestätigte Minuten</li>
         {% else %}<li>Noch keine Einteilungen.</li>{% endfor %}</ul>
 </section>
@@ -60,10 +60,10 @@
                 <div class="d-flex flex-wrap gap-2">
                 {% if exchange.target.id == app.user.member.id %}
                     {% for op, label in {'accept':'Tausch / Vertretung annehmen', 'decline':'Anfrage ablehnen'} %}
-                        <form method="post" action="{{ path('bar_duty_action', {operation:op, id:exchange.id}) }}">{{ f.token(op, exchange.id) }}<button class="btn btn-outline-primary">{{ label }}</button></form>
+                        <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:op, id:exchange.id}) }}">{{ f.token(op, exchange.id) }}<button class="btn btn-outline-primary">{{ label }}</button></form>
                     {% endfor %}
                 {% else %}
-                    <form method="post" action="{{ path('bar_duty_action', {operation:'retract', id:exchange.id}) }}">{{ f.token('retract', exchange.id) }}<button class="btn btn-outline-danger">Anfrage zurückziehen</button></form>
+                    <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'retract', id:exchange.id}) }}">{{ f.token('retract', exchange.id) }}<button class="btn btn-outline-danger">Anfrage zurückziehen</button></form>
                 {% endif %}</div>
             {% endif %}
         </article>
@@ -74,8 +74,8 @@
         <article class="border rounded p-3 mb-2">
             <h3>{{ notification.readAt ? '' : 'Neu: ' }}{{ notification.subject }}</h3>
             <p>{{ notification.createdAt|date('d.m.Y H:i') }} · {{ notification.body }}</p>
-            <a href="{{ path('bar_duty_shift', {id:notification.shift.id}) }}">Aktuellen Dienst anzeigen</a>
-            {% if not notification.readAt %}<form method="post" action="{{ path('bar_duty_action', {operation:'read', id:notification.id}) }}">{{ f.token('read', notification.id) }}<button class="btn btn-sm btn-outline-secondary">Als gelesen markieren</button></form>{% endif %}
+            <a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:notification.shift.id}) }}">Aktuellen Dienst anzeigen</a>
+            {% if not notification.readAt %}<form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'read', id:notification.id}) }}">{{ f.token('read', notification.id) }}<button class="btn btn-sm btn-outline-secondary">Als gelesen markieren</button></form>{% endif %}
         </article>
     {% else %}<p>Keine Benachrichtigungen.</p>{% endfor %}
 </section>

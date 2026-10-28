@@ -13,6 +13,24 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class PublicWebsiteController extends AbstractController
 {
+    #[Route('/club', name: 'website_club', methods: ['GET'])]
+    #[Route('/contact', name: 'website_contact', methods: ['GET'])]
+    public function club(PublicWebsite $website): Response
+    {
+        $club = $website->club();
+        if ($club === null || !$club->isActive()) {
+            throw $this->createNotFoundException('Kein öffentlicher Verein konfiguriert.');
+        }
+        $url = $club->getWebsite();
+        $safeUrl = $url !== null && filter_var($url, FILTER_VALIDATE_URL) !== false
+            && in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true);
+
+        return $this->render('website/club.html.twig', [
+            'club' => $club,
+            'websiteUrl' => $safeUrl ? $url : null,
+        ]);
+    }
+
     #[Route('/articles', name: 'website_articles', methods: ['GET'])]
     #[Route('/events', name: 'website_events', methods: ['GET'])]
     public function index(\Symfony\Component\HttpFoundation\Request $request, PublicWebsite $website): Response

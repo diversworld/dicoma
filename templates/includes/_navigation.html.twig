@@ -1,75 +1,49 @@
-{# Frontend-Navigation. Keine administrativen Schreibaktionen im Frontend-Menue. #}
-<nav class="navbar navbar-expand-lg p-0" aria-label="Hauptnavigation">
+{% set navigation = portal_navigation.links %}
+{% set current_route = app.request.attributes.get('_route') %}
+<nav class="navbar navbar-expand-lg p-0" aria-label="{{ 'Hauptnavigation'|trans }}">
     <a class="navbar-brand" href="{{ path('app_home') }}">
         <img src="{{ asset('images/Diversworld-Wort-Logo-ws.png') }}" width="250" alt="Diversworld">
     </a>
-    <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#frontendNavbar" aria-controls="frontendNavbar" aria-expanded="false" aria-label="Navigation umschalten">
-        <span class="ion-android-menu"></span>
+    <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#frontendNavbar" aria-controls="frontendNavbar" aria-expanded="false" aria-label="{{ 'Navigation umschalten'|trans }}">
+        <span class="ion-android-menu" aria-hidden="true"></span>
     </button>
     <div class="collapse navbar-collapse ml-auto" id="frontendNavbar">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item"><a class="nav-link" href="{{ path('app_home') }}">Startseite</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ path('website_articles') }}">Aktuelles</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ path('website_events') }}">Veranstaltungen</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ path('membership_application_clubs') }}">Mitglied werden</a></li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="frontendCoursesMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tauchkurse</a>
-                <ul class="dropdown-menu" aria-labelledby="frontendCoursesMenu">
-                    <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kursangebot</a></li>
-                    {% if is_granted('ROLE_MEMBER') %}
-                        <li><a class="dropdown-item" href="{{ path('app_schedule_index') }}">Kurstermine</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_schedule_calendar', {'month': 'now'|date('m')}) }}">Kurskalender</a></li>
-                    {% endif %}
-
-                </ul>
-            </li>
-            {% if app.user is null %}
-                <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Anmelden</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">Registrieren</a></li>
-            {% else %}
-                {% if is_granted('ROLE_MEMBER') %}
+            {% for item in portal_navigation.publicLinks %}
+                <li class="nav-item">
+                    <a class="nav-link{{ current_route == item.route ? ' active' : '' }}" href="{{ path(item.route) }}"{% if current_route == item.route %} aria-current="page"{% endif %}>{{ item.label|trans }}</a>
+                </li>
+            {% endfor %}
+            {% if app.user %}
+                {% if navigation.personal %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Verwaltungsportale</a>
-                        <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
-                            {% if is_granted('ROLE_ADMIN') %}
-                                <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">Verwaltung</a></li>
-                            {% endif %}
-                            {% if is_granted('ROLE_INSTRUCTOR') %}
-                                <li class="nav-item"><a class="nav-link" href="{{ path('instructor_portal_dashboard') }}">Ausbilderportal</a></li>
-                            {% endif %}
-                            {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}
-                                <li class="nav-item"><a class="nav-link" href="{{ path('equipment_manager_dashboard') }}">Gerätewart</a></li>
-                            {% endif %}
-                            {% if is_granted('ROLE_BAR_MANAGER') %}
-                                <li class="nav-item"><a class="nav-link" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
-                            {% endif %}
+                        <button class="nav-link dropdown-toggle btn" type="button" id="frontendPersonalMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ 'Mein Bereich'|trans }}</button>
+                        <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="frontendPersonalMenu">
+                            {% for item in navigation.personal %}
+                                <li><a class="dropdown-item" href="{{ path(item.route) }}"{% if current_route == item.route %} aria-current="page"{% endif %}>{{ item.label|trans }}</a></li>
+                            {% endfor %}
                         </ul>
                     </li>
                 {% endif %}
-                {% if is_granted('ROLE_MEMBER') %}
+                {% for label, links in navigation.roles %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="frontendMemberMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Mein Bereich</a>
-                        <ul class="dropdown-menu" aria-labelledby="frontendMemberMenu">
-                            <li><a class="dropdown-item" href="{{ path('member_portal_dashboard') }}">Mein Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_profile') }}">Meine Daten</a></li>
-                            <li><a class="dropdown-item" href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></li>
-							<li><a class="dropdown-item" href="{{ path('member_equipment_index') }}">Meine Ausrüstung</a></li>
-                            <li><a class="dropdown-item" href="{{ path('member_reservations') }}">Ausrüstung reservieren</a></li>
-                            <li><a class="dropdown-item" href="{{ path('bar_duty') }}">Thekendienstportal</a></li>
-                            <li><a class="dropdown-item" href="{{ path('club_calendar') }}">Vereinskalender</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_my_training_progress') }}">Meine Ausbildung</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_my_training_attendance') }}">Meine Anwesenheit</a></li>
-                            <li><a class="dropdown-item" href="{{ path('frontend_course_registration_index') }}">Kurse buchen</a></li>
-                            <li><a class="dropdown-item" href="{{ path('frontend_course_registrations') }}">Meine Kursanmeldungen</a></li>
+                        <button class="nav-link dropdown-toggle btn" type="button" id="frontendRoleMenu{{ loop.index }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ label|trans }}</button>
+                        <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="frontendRoleMenu{{ loop.index }}">
+                            {% for item in links %}
+                                <li><a class="dropdown-item" href="{{ path(item.route) }}">{{ item.label|trans }}</a></li>
+                            {% endfor %}
                         </ul>
                     </li>
-                {% endif %}
+                {% endfor %}
                 <li class="nav-item">
                     <form method="post" action="{{ path('app_logout') }}" class="m-0">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-                        <button type="submit" class="btn btn-sm btn-outline-light" >Abmelden</button>
+                        <button type="submit" class="btn btn-sm btn-outline-light">{{ 'Abmelden'|trans }}</button>
                     </form>
                 </li>
+            {% else %}
+                <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">{{ 'Anmelden'|trans }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">{{ 'Registrieren'|trans }}</a></li>
             {% endif %}
         </ul>
     </div>

@@ -6,14 +6,13 @@ security:
         ROLE_TRAINING_MANAGER:
             - ROLE_INSTRUCTOR
         ROLE_BOARD:
+            - ROLE_ADMIN
+        ROLE_ADMIN:
             - ROLE_PRESS_OFFICER
             - ROLE_BAR_MANAGER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
             - ROLE_COMPRESSOR_OPERATOR
-
-        ROLE_ADMIN:
-            - ROLE_BOARD
             - ROLE_TREASURER
 
         ROLE_SUPER_ADMIN:
@@ -47,7 +46,7 @@ security:
                 check_path: app_login
                 username_parameter: _username
                 password_parameter: _password
-                default_target_path: app_schedule_index
+                default_target_path: app_portal
 
             logout:
                 path: app_logout
@@ -68,12 +67,16 @@ security:
 
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/(?:articles|events)$, roles: PUBLIC_ACCESS }
+        - { path: ^/(?:club|contact)$, roles: PUBLIC_ACCESS }
         - { path: ^/news/\d+$, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/verify/email$, roles: PUBLIC_ACCESS }
         - { path: ^/membership/apply(?:/|$), roles: PUBLIC_ACCESS }
+        - { path: ^/portal(?:/|$), roles: ROLE_USER }
+        - { path: ^/calendar$, roles: ROLE_USER }
+        - { path: ^/bar-duty(?:/|$), roles: ROLE_USER }
         - { path: ^/my-training/courses$, roles: PUBLIC_ACCESS }
         - { path: ^/my-training/(?:assess|tasks)(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/my-training(?:/|$), roles: ROLE_USER }
@@ -96,6 +99,9 @@ security:
 
         - { path: ^/admin/(?:teams|tournaments|calendar)(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/training(?:/|$), roles: [ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_COURSE_ADMIN] }
+        - { path: ^/admin/training-overview(?:/|$), roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
+        - { path: ^/admin/(?:de|en|fr|es)/training-overview$, roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
+        - { path: ^/admin/bar-duty(?:/|$), roles: ROLE_BAR_MANAGER }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }

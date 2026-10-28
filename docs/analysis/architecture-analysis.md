@@ -1,5 +1,68 @@
 # DICOMA – Architektur-Bestandsaufnahme
 
+## Aktueller Abgleich vom 28.10.2026
+
+Maßstab: die zum Auftrag beigefügte Master Specification mit 24 Abschnitten.
+Der unten folgende ZIP-Befund ist historisch und beschreibt **nicht** den
+aktuellen Entwicklungsstand. Die aktuelle Arbeitskopie wurde unmittelbar
+an Controllern, Services, Entities, Routing, Templates und HTTP-Tests geprüft.
+
+- Bestehender Symfony-7-/Doctrine-ORM-2-/EasyAdmin-4-Monolith mit Twig;
+  kein separater SPA-Client und keine Notwendigkeit für ein neues Framework.
+- Öffentliche Website und persönlicher Self-Service erben `base.html.twig`.
+  Diese Datei ist im Ausgangsstand leer. Zwei isolierte HTTP-Tests und
+  `SiteThemeTest` reproduzieren die leeren Antworten bzw. fehlenden Formulare.
+- Das konfigurierbare `SiteTheme` und `themes/airspace/layout.html.twig`
+  existieren bereits; die fehlende Vererbung muss wiederhergestellt werden.
+- EasyAdmin-CRUDs, Fachcontroller und getrennte Gerätewart-, Ausbildungs-,
+  Sport- und Thekendienstportale sind vorhanden. Physische Controllerordner
+  allein beschreiben nicht die Berechtigungsgrenze: `config/routes.yaml`
+  versieht Backendrouten mit EasyAdmin-Kontext; Voter und Fachservices prüfen
+  zusätzlich Rolle, Verein, Zuordnung und Objektzugriff.
+- Mitglieder, Ausbildung einschließlich Gästen, Mannschaften/Turniere,
+  Geräteverwaltung und Thekendienste besitzen integrierte Workflows und
+  isolierte HTTP-Tests. Sie sind nicht allein wegen ihrer Dateiexistenz abgenommen.
+- Website-Veranstaltungen sind redaktionelle Ankündigungen, kein vollständiger
+  Anmeldeprozess. Ein Clubreisemodell, globale Suche und ein gemeinsamer
+  Benachrichtigungseingang fehlen.
+- Es gibt mehrere abweichende Login-Ziele und doppelte bzw. unvollständige
+  Navigationsgruppen. Gäste und Funktionsrollen ohne aktive Mitgliedschaft
+  erhalten nicht alle für sie freigegebenen Einstiege.
+- Tests laufen mit `ddev exec php8.5`: das Host-PHP hat kein `pdo_sqlite`;
+  DDEVs Standard-PHP 8.4 erfüllt die installierte PHPUnit-13-Anforderung nicht.
+  Isolierte Tests verwenden ausschließlich eine SQLite-In-Memory-Datenbank.
+
+### Aktuelles Inventar und Lockfile
+
+Dateizählung einschließlich fachlicher Unterverzeichnisse: 96 Entity-PHP-Dateien,
+135 Controller-PHP-Dateien (einschließlich Traits), 56 Service-PHP-Dateien,
+26 Repository-PHP-Dateien, 230 Twig-Dateien, 133 Migrationsdateien und
+50 PHP-Dateien unter `tests`. Diese Dateizahlen sind keine Zahl abgenommener
+Geschäftsprozesse.
+
+`composer show --locked --direct` bestätigt unter anderem Symfony Framework
+7.4.21, Doctrine ORM 2.20.13, EasyAdmin 4.29.16, Twig 3.30.0 und PHPUnit 13.4.3.
+Der deklarierte PHP-Mindeststand und die höhere PHPUnit-Testlaufzeitanforderung
+müssen getrennt betrachtet werden.
+
+### Entwurf der ersten Konsolidierungsphase
+
+1. Konfigurierte Frontend-Layoutvererbung wiederherstellen.
+2. Einen geschützten Einstieg `/portal` für alle Konten einführen.
+3. Navigationsangebote in einem Service aus den vorhandenen Rollen und
+   Fachberechtigungen ableiten; keine neue Berechtigungslogik in Twig.
+4. Gast-/Mitglieder-Self-Service von Verwaltungsportalen trennen. Bestehende
+   Controller- und Objektprüfungen bleiben maßgeblich; Menüs ersetzen sie nicht.
+5. Login und erneuten Aufruf der Login-Seite auf denselben Einstieg ausrichten;
+   gespeicherte geschützte Zielpfade weiterhin beachten.
+6. Einen gemeinsamen Portal-/Website-Rückweg in allen Layouts anbieten.
+7. Sportverwaltung auch für berechtigte Nichtadmins im Backendlayout rendern;
+   Mitgliederkalender als eigenständige Leseansicht ohne Sportverwaltungslinks.
+8. Änderungen mit rollen- und objektbezogenen HTTP-Tests, Layouttests und
+   Browserkontrolle prüfen. Diese Phase benötigt keine Datenmigration.
+
+## Historische ZIP-Bestandsaufnahme
+
 Quelle: `dicoma2110.zip`, statische Analyse; keine produktiven Dateien verändert.
 
 ## Technologie

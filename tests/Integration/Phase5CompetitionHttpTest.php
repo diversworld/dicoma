@@ -222,7 +222,9 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         $this->client->loginUser($trainer);
         $this->client->request('GET', '/admin/teams/' . $this->team->getId());
         self::assertResponseIsSuccessful(); self::assertSelectorExists('[data-competition-navigation]');
-        self::assertSelectorExists('body[data-site-theme="airspace"]');
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorNotExists('body[data-site-theme]');
+        self::assertSelectorNotExists('#frontendNavbar');
         $managedAssignment = $this->em->find(TeamMember::class, $assignment->getId());
         $managedAssignment->setLeftAt(new \DateTime('yesterday')); $this->em->flush();
         $this->client->request('GET', '/admin/teams/' . $this->team->getId()); self::assertResponseStatusCodeSame(403);

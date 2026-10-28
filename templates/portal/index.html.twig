@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ 'Portalübersicht'|trans }} | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block stylesheets %}{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/pages/member-portal-dashboard.css') }}">
+{% endblock %}
+{% block body %}
+<main class="member-portal" data-portal-overview>
+    <div class="container">
+        <h1>{{ 'Portalübersicht'|trans }}</h1>
+        <p>{{ 'Mein Bereich'|trans }}</p>
+        <div class="row">
+            <section class="col-md-6 mb-4" aria-labelledby="personal-portals">
+                <div class="mp-card">
+                    <h2 id="personal-portals">{{ 'Mein Bereich'|trans }}</h2>
+                    <ul data-personal-links>
+                        {% for item in portals.personal %}
+                            <li class="mp-row"><a href="{{ path(item.route) }}">{{ item.label|trans }}</a></li>
+                        {% else %}
+                            <li>{{ 'Keine persönlichen Funktionen verfügbar. Bitte die Kontozuordnung mit der Vereinsverwaltung klären.'|trans }}</li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{{ path('frontend_course_registration_index') }}">{{ 'Kursangebot'|trans }}</a>
+                </div>
+            </section>
+            {% for label, links in portals.roles %}
+                <section class="col-md-6 mb-4" aria-labelledby="role-section-{{ loop.index }}">
+                    <div class="mp-card">
+                        <h2 id="role-section-{{ loop.index }}">{{ label|trans }}</h2>
+                        <ul>
+                            {% for item in links %}
+                                <li class="mp-row"><a href="{{ path(item.route) }}">{{ item.label|trans }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}

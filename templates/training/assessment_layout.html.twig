@@ -1,33 +1,11 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}DiCoMa – Verwaltung{% endblock %}</title>
-{% include 'themes/_assets.html.twig' %}
-<link rel="stylesheet" href="{{ asset('css/pages/training-assessment-layout.css') }}">
-{% block stylesheets %}{% endblock %}
-</head>
-<body data-site-theme="{{ site_theme.name }}">
-<header class="site-header">
-<a class="brand" href="{{ path('instructor_portal_tasks') }}">DiCoMa</a>
-<nav class="nav" aria-label="Verwaltung">
-<a href="{{ path('instructor_portal_tasks') }}">Ausbildungsaufgaben</a>
-{% block navigation %}{% endblock %}
-{% if app.user %}
-<form action="{{ path('app_logout') }}" method="post" class="logout-form">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-<button type="submit" class="btn">Abmelden</button>
-</form>
-{% endif %}
-</nav>
-</header>
-<main>
-{% for type, messages in app.flashes %}
-{% for message in messages %}<div class="flash flash-{{ type|e('html_attr') }}" role="status">{{ message }}</div>{% endfor %}
-{% endfor %}
-{% block admin_body %}{% endblock %}
+{% extends 'base.html.twig' %}
+{% block title %}DICOMA · Ausbildung{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}
+    {% endfor %}
+    {% block admin_body %}{% endblock %}
 </main>
-{% block javascripts %}{% endblock %}
-</body>
-</html>
+{% endblock %}

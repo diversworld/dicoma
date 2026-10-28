@@ -1,5 +1,32 @@
 # DICOMA – Sicherheitsanalyse (vorläufig)
 
+## Aktueller Berechtigungsvertrag, 28.10.2026
+
+Die folgende Konfigurationskopie ist historisch und darf nicht zur aktuellen
+Rollenbewertung verwendet werden. Maßgeblich ist `config/packages/security.yaml`.
+Funktionsrollen erben **keine** aktive Mitgliedschaft. `User::getRoles()` leitet
+`ROLE_MEMBER` aus der tatsächlichen Mitgliedschaft ab. Gäste behalten `ROLE_USER`.
+Vorhandene Fachservices/Voter prüfen zusätzlich Vereins- und Objektzuordnungen.
+`InstallationGuard` und der persistente Installationsabschluss schützen das
+Setup; der historische Kommentar „später absichern“ ist kein aktueller Befund.
+
+In der Konsolidierung sind insbesondere zu prüfen:
+
+- `/portal` nur für angemeldete Konten, ohne Daten fremder Personen oder Vereine.
+- Kein Verwaltungslink allein aufgrund einer Mitgliedschaft; keine versteckte
+  Voraussetzung `ROLE_MEMBER` für unabhängig vergebene Funktionsrollen.
+- Redaktion nur für Berechtigte des konfigurierten Website-Vereins.
+- Sportverwaltung weiterhin durch `CompetitionAccess`, Ausbildung weiterhin
+  durch Kursvoter/Zuordnungen geschützt.
+- Rückwege in Website und persönliche Bereiche ohne zusätzliche Zugriffsrechte.
+- Login behält geschützte Zielpfade bei; Logout bleibt CSRF-geschütztes POST.
+- Nichtberechtigte Direktaufrufe müssen auch bei fehlendem Menü abgewiesen werden.
+
+Dies ist eine Architektur-/Berechtigungsprüfung im Rahmen des Soll-Ist-Abgleichs,
+kein vollständiger Penetrationstest oder Nachweis der DSGVO-/Produktionsreife.
+
+## Historischer Ausgangsbefund
+
 Statische Sichtung; kein Penetrationstest und keine Laufzeitprüfung.
 
 ## Security-Konfiguration

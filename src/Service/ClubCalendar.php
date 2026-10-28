@@ -23,7 +23,7 @@ final class ClubCalendar
         private readonly UrlGeneratorInterface $urls,
     ) {}
 
-    public function events(\DateTimeImmutable $from, \DateTimeImmutable $until): array
+    public function events(\DateTimeImmutable $from, \DateTimeImmutable $until, bool $backend = true): array
     {
         $events = [];
         $user = $this->security->getUser();
@@ -34,7 +34,7 @@ final class ClubCalendar
                 ->setParameter('club', $club)->setParameter('cancelled', 'cancelled')->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $shift) {
                 $events[] = ['key' => 'bar-duty-'.$shift->getId(), 'kind' => 'Thekendienst', 'title' => $shift->getTitle(),
                     'start' => $shift->getStartsAt(), 'end' => $shift->getEndsAt(), 'location' => $shift->getLocation(),
-                    'url' => $this->urls->generate('bar_duty_shift', ['id' => $shift->getId()])];
+                    'url' => $this->urls->generate(($backend ? 'admin_portal_' : '').'bar_duty_shift', ['id' => $shift->getId()])];
             }
         }
         foreach ($this->em->getRepository(TeamTraining::class)->createQueryBuilder('s')->addSelect('t')
@@ -44,7 +44,7 @@ final class ClubCalendar
             $events[] = ['key' => 'training-' . $session->getId(), 'kind' => 'Mannschaftstraining',
                 'title' => $session->getTeam()->getName() . ': ' . $session->getTitle(), 'start' => $session->getStartsAt(),
                 'end' => $session->getEndsAt(), 'location' => $session->getLocation(),
-                'url' => $this->urls->generate('competition_team', ['id' => $session->getTeam()->getId()])];
+                'url' => $backend ? $this->urls->generate('competition_team', ['id' => $session->getTeam()->getId()]) : null];
         }
         foreach ($this->em->getRepository(Tournament::class)->createQueryBuilder('t')
             ->where('t.startsAt < :until AND t.endsAt > :from AND t.status IN (:statuses)')
@@ -53,7 +53,7 @@ final class ClubCalendar
             if (!$this->access->viewsTournament($tournament)) { continue; }
             $events[] = ['key' => 'tournament-' . $tournament->getId(), 'kind' => 'Turnier',
                 'title' => $tournament->getName(), 'start' => $tournament->getStartsAt(), 'end' => $tournament->getEndsAt(),
-                'location' => $tournament->getLocation(), 'url' => $this->urls->generate('competition_tournament', ['id' => $tournament->getId()])];
+                'location' => $tournament->getLocation(), 'url' => $backend ? $this->urls->generate('competition_tournament', ['id' => $tournament->getId()]) : null];
         }
         foreach ($this->em->getRepository(Schedule::class)->createQueryBuilder('s')->join('s.courses', 'c')->addSelect('c')
             ->where('s.startDate >= :from AND s.startDate < :until')->setParameter('from', $from->format('Y-m-d'))
@@ -64,7 +64,7 @@ final class ClubCalendar
             $events[] = ['key' => 'course-' . $schedule->getId(), 'kind' => 'Tauchausbildung',
                 'title' => $schedule->getCourses()->getTitle() . ': ' . $schedule->getTitle(),
                 'start' => $start, 'end' => $schedule->getDuration() ? $start->modify('+' . $schedule->getDuration() . ' minutes') : null,
-                'location' => $schedule->getLocation(), 'url' => $this->urls->generate('admin_portal_training_course', ['id' => $schedule->getCourses()->getId()])];
+                'location' => $schedule->getLocation(), 'url' => $backend ? $this->urls->generate('admin_portal_training_course', ['id' => $schedule->getCourses()->getId()]) : null];
         }
         usort($events, static fn (array $a, array $b): int => ($a['start'] <=> $b['start']) ?: strcmp($a['key'], $b['key']));
         return $events;

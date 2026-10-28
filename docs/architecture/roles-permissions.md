@@ -30,8 +30,9 @@ oder Veranstaltungsankündigungen erstellen oder freigeben.
 Die EasyAdmin-Navigation bietet berechtigten Nutzern einen Einstieg unter
 „Website & Redaktion“. Auch ein Pressewart ohne `ROLE_ADMIN` kann ausschließlich
 die Redaktionsrouten innerhalb des EasyAdmin-Backends öffnen; die Redaktionsrolle
-verleiht keinen Zugriff auf andere Backend-Routen. Die öffentliche Navigation
-enthält keinen Redaktionslink.
+verleiht keinen Zugriff auf andere Backend-Routen. Anonyme Besucher erhalten
+keinen Redaktionslink. Angemeldete Berechtigte des Website-Vereins erreichen
+die Redaktion über die ausdrücklich getrennte Gruppe „Verwaltungsportale“.
 
 - Routenrollen ersetzen keine Objektberechtigung.
 - Member-/Kurs-Voter vergleichen persistierte Vereins-IDs.
@@ -67,6 +68,12 @@ keinen Zugriff.
 | Externe Mannschaften und Spieler erfassen | Veranstalter |
 | Gebühren verbuchen | Veranstalter; keine Veränderung alter Zahlungsbelege |
 | Private Turnierdokumente herunterladen | Für das zugehörige Turnier berechtigte Verwaltung/Betreuung |
+
+Die Sportverwaltungsansichten verwenden auch für berechtigte Nichtadmins das
+Backendlayout mit eigener, eingeschränkter Navigation. Der persönliche
+Kalendereinstieg ist `/calendar`; er bleibt auch für Admins eine Frontend-
+Leseansicht. `/admin/calendar` und bestehende EasyAdmin-Kurzaufrufe bleiben
+kompatibel. Die Kalenderprojektion und ihre Objektberechtigungen sind identisch.
 
 Abgelaufene Mannschaftszuordnungen, gewöhnliche Spieler, Betreuer ohne
 Leitungsfunktion und nicht mehr aktive Mitglieder erhalten dadurch keine

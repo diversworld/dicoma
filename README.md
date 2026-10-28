@@ -136,6 +136,22 @@ every application FormType, catalogue/parameter parity, actual form and
 validation translations, admin labels/help/actions, confirmation escaping,
 locale-rendered JavaScript and rich-text editor translations.
 
+#### Role-aware portals and navigation
+
+After login, `/portal` is the shared entry point for guests, members and staff.
+Personal training and the read-only `/calendar` stay in the frontend even for
+administrators; course and team management stay in their protected backend
+areas. Existing functional portals include a common portal/website switch.
+Stored login target paths and CSRF-protected POST logout are preserved.
+
+The public `/club` and `/contact` pages use the active club explicitly selected
+by `PUBLIC_SITE_CLUB_ID`. Its description and organizational contact fields
+become public; internal notes and personal/member data never do. Without an
+active configured club, these pages return 404 and have no navigation links.
+See [portal consolidation](docs/phase11-portals.md) for scope and tests, and
+the [current specification matrix](docs/analysis/feature-matrix.md) for the
+remaining functional gaps. This is not a full Master Specification acceptance.
+
 #### License
 - [GNU](https://www.gnu.org/licenses/gpl-3.0.html)
 

@@ -17,6 +17,18 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_MEMBER')]
 final class MemberPortalController extends AbstractController
 {
+    #[Route('/my/bookings', name: 'member_bookings', methods: ['GET'])]
+    public function bookings(EntityManagerInterface $em): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User || $user->getMember() === null) {
+            throw $this->createAccessDeniedException('Kein Mitgliedsprofil zugeordnet.');
+        }
+        return $this->render('member_portal/bookings.html.twig', [
+            'bookings' => $em->getRepository(MemberTankCheckBooking::class)->findBy(['member' => $user->getMember()], ['id' => 'DESC']),
+        ]);
+    }
+
     #[Route('/my', name: 'member_portal_dashboard', methods: ['GET'])]
     public function dashboard(EntityManagerInterface $em, \App\Service\CompetitionAccess $competitions): Response
     {

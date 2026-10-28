@@ -1,5 +1,24 @@
 # DICOMA – Datenbankanalyse
 
+## Aktualisierung 28.10.2026
+
+Die folgende ursprüngliche Inventur ist historisch. Im aktuellen Modell sind
+zusätzlich insbesondere `Person`, Mitgliedsanträge/-beiträge/-zahlungen,
+`CoursePayment`, Mannschaftstraining, Turniere mit Kader/Spielen/Zahlungen,
+Thekenschichten/-tausch/-stundenkonten/-kasse und `WebsitePublication` vorhanden.
+Die zentrale Trennung `User` / `Person` / `Member` ist bereits implementiert.
+Bestehende Vereinszuordnungen und fachliche Beziehungen werden beibehalten.
+
+Die Portal-/Navigationskonsolidierung ändert kein Schema und keine Daten.
+SQLite-In-Memory-Schemen dienen der isolierten HTTP-Prüfung; daraus folgt keine
+Freigabe der MariaDB-Migrationen oder eines produktiven Datenbestands.
+Ein vollständiges Veranstaltungsbuchungs- oder Clubreisemodell ist im geprüften
+Stand nicht vorhanden. Dessen Einführung erfordert additive Migrationen mit
+Personenbezug, Vereinsgrenzen, Kapazitäts-/Konkurrenzschutz und Finanznachweisen.
+Produktive Migrationen werden durch diesen Auftrag nicht automatisch ausgeführt.
+
+## Historische Inventur
+
 Statische Inventur; Datenbankverbindung und Migrationstest wurden nicht ausgeführt.
 
 ## Doctrine-Konfiguration

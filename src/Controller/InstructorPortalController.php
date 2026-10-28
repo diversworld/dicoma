@@ -13,6 +13,23 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_INSTRUCTOR')]
 final class InstructorPortalController extends AbstractController
 {
+    #[Route('/instructor-portal/courses', name: 'instructor_portal_courses', methods: ['GET'])]
+    public function courses(\Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $user = $this->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        if ($member === null || $member->getClub() === null) {
+            throw $this->createAccessDeniedException('Keine Vereinszuordnung.');
+        }
+        $courses = $em->getRepository(\App\Entity\Courses::class)->createQueryBuilder('c')
+            ->leftJoin('c.schedule', 's')
+            ->where('c.club = :club AND (c.leadInstructor = :member OR s.instructor = :member)')
+            ->setParameter('club', $member->getClub())->setParameter('member', $member)
+            ->distinct()->orderBy('c.id', 'DESC')->getQuery()->getResult();
+
+        return $this->render('instructor_portal/courses.html.twig', ['courses' => $courses]);
+    }
+
     #[Route('/instructor-portal', name: 'instructor_portal_dashboard', methods: ['GET'])]
     public function dashboard(Request $request, InstructorTaskService $tasks): Response
     {

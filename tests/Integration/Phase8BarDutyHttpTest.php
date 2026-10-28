@@ -23,6 +23,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
     private User $manager;
     private User $alice;
     private User $bob;
+    private bool $management = true;
     protected function setUp(): void
     {
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
@@ -41,7 +42,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
 
     public function testDefinitionsPlanningSignupNotificationsAndCalendarAreIntegrated(): void
     {
-        $this->client->request('GET', '/bar-duty/settings'); self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/bar-duty/settings'); self::assertResponseIsSuccessful();
         $this->post('define', 0, ['title' => 'Friday bar', 'location' => 'Clubhouse', 'time' => '18:30', 'minutes' => '180', 'capacity' => '2']);
         $definition = $this->em->getRepository(BarShiftDefinition::class)->findOneBy([]);
         self::assertSame(180, $definition->getDurationMinutes());
@@ -58,7 +59,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $notification = $this->em->getRepository(BarDutyNotification::class)->findOneBy([]);
         $this->post('read', $notification->getId());
         self::assertNotNull($this->em->find(BarDutyNotification::class, $notification->getId())->getReadAt());
-        $this->client->request('GET', '/admin/calendar?month='.$date->format('Y-m'));
+        $this->client->request('GET', '/calendar?month='.$date->format('Y-m'));
         self::assertResponseIsSuccessful(); self::assertSelectorExists('[data-event-key="bar-duty-'.$shift->getId().'"]');
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
     }
@@ -69,22 +70,23 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $user = $this->account('portal-user', [$role]);
         $shift = $this->shift('+3 days');
         $this->login($user);
-        $urls = ['/bar-duty', '/bar-duty/'.$shift->getId()];
-        if ($management) { $urls = [...$urls, '/bar-duty/plan', '/bar-duty/settings', '/bar-duty/report']; }
+        $prefix = $management ? '/admin' : '';
+        $urls = [$prefix.'/bar-duty', $prefix.'/bar-duty/'.$shift->getId()];
+        if ($management) { $urls = [...$urls, '/admin/bar-duty/plan', '/admin/bar-duty/settings', '/admin/bar-duty/report']; }
         foreach ($urls as $url) {
             $this->client->request('GET', $url);
             self::assertResponseIsSuccessful();
-            self::assertSelectorExists('body[data-bar-duty-portal]');
-            self::assertSelectorTextContains('header', 'Thekendienstportal');
-            self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty"]');
+            self::assertSelectorExists('[data-bar-duty-portal]');
             self::assertSelectorExists('form[method="post"][action="/logout"] input[name="_csrf_token"]');
             self::assertSelectorExists('link[href="/css/pages/bar-duty-portal.css"]');
-            self::assertSelectorNotExists('aside.sidebar');
-            self::assertSelectorNotExists('#frontendNavbar');
             if ($management) {
-                self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty/plan"]');
-                self::assertSelectorExists('nav[aria-label="Thekendienstportal"] a[href="/bar-duty/report"]');
+                self::assertSelectorExists('aside.sidebar');
+                self::assertSelectorNotExists('#frontendNavbar');
+                self::assertSelectorExists('nav[aria-label="Clubheimverwaltung"] a[href="/admin/bar-duty/plan"]');
+                self::assertSelectorExists('nav[aria-label="Clubheimverwaltung"] a[href="/admin/bar-duty/report"]');
             } else {
+                self::assertSelectorNotExists('aside.sidebar');
+                self::assertSelectorExists('#frontendNavbar');
                 self::assertSelectorNotExists('a[href="/bar-duty/plan"]');
                 self::assertSelectorNotExists('a[href="/bar-duty/settings"]');
                 self::assertSelectorNotExists('a[href="/bar-duty/report"]');
@@ -184,8 +186,8 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $this->post('attendance', $assignment->getId(), ['attendance' => 'present', 'minutes' => '90', 'reason' => 'Correction after verified early departure']);
         $row = $accounts->account($row['member'], $year); self::assertSame(90, $row['earned']); self::assertSame(30, $row['remaining']);
         $this->post('complete', $shift->getId(), ['reason' => 'All attendance reviewed and completed']);
-        $this->client->request('GET', '/bar-duty/report?year='.$year); self::assertResponseIsSuccessful(); self::assertSelectorTextContains('body', '90');
-        $this->client->request('GET', '/bar-duty/report.csv?year='.$year); self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/bar-duty/report?year='.$year); self::assertResponseIsSuccessful(); self::assertSelectorTextContains('body', '90');
+        $this->client->request('GET', '/admin/bar-duty/report.csv?year='.$year); self::assertResponseIsSuccessful();
         self::assertStringContainsString('Bestätigte Minuten', $this->client->getInternalResponse()->getContent());
         $this->post('attendance', $assignment->getId(), ['attendance' => 'present', 'minutes' => '100', 'reason' => 'Must reject changes after completion']);
         self::assertSame(90, (int) $this->em->getConnection()->fetchOne('SELECT credited_minutes FROM bar_duty_assignment WHERE id = ?', [$assignment->getId()]));
@@ -223,7 +225,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $fresh = $this->em->find(BarCashSession::class, $session->getId());
         self::assertSame(4766, $fresh->getExpectedCents()); self::assertSame(4760, $fresh->getCountedCents()); self::assertNotNull($fresh->getClosedAt());
         self::assertSame(64, strlen($fresh->getMovementHash()));
-        $this->client->request('GET', '/bar-duty/cash/'.$fresh->getId().'.csv'); self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/bar-duty/cash/'.$fresh->getId().'.csv'); self::assertResponseIsSuccessful();
         $csv = $this->client->getInternalResponse()->getContent(); self::assertStringContainsString("'=SUM(A1)", $csv); self::assertStringContainsString('4766', $csv);
         $this->post('cash-book', $fresh->getId(), ['direction' => 'in', 'amount' => '1', 'reason' => 'Attempt after immutable cash closing']);
         self::assertSame(3, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM bar_cash_entry'));
@@ -404,7 +406,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
     public function testBoardInheritsThekenleitungWithoutChangingMemberStatus(): void
     {
         $board = $this->account('board', [User::ROLE_BOARD]);
-        $this->login($board); $this->client->request('GET', '/bar-duty/settings'); self::assertResponseIsSuccessful();
+        $this->login($board); $this->client->request('GET', '/admin/bar-duty/settings'); self::assertResponseIsSuccessful();
     }
 
     public function testMissingRecipientPersistsFailureWithoutCallingMailer(): void
@@ -603,6 +605,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
 
     private function login(User $user): void
     {
+        $this->management = array_intersect($user->getStoredRoles(), [User::ROLE_BAR_MANAGER, User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN, User::ROLE_BOARD]) !== [];
         $this->client->loginUser($user);
         $this->client->request('GET', '/bar-duty'); self::assertResponseIsSuccessful();
     }
@@ -614,7 +617,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
             $token = static::getContainer()->get('security.csrf.token_manager')->getToken('bar_duty_'.$operation.'_'.$id)->getValue();
             $this->client->getRequest()->getSession()->save();
         } finally { $stack->pop(); }
-        $this->client->request('POST', '/bar-duty/actions/'.$operation.'/'.$id, ['_token' => $token] + $data);
+        $this->client->request('POST', ($this->management ? '/admin' : '').'/bar-duty/actions/'.$operation.'/'.$id, ['_token' => $token] + $data);
         self::assertResponseStatusCodeSame($status);
     }
     private function shift(string $day, int $capacity = 1, string $time = '18:00', int $minutes = 180): BarShift

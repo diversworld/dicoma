@@ -1,7 +1,7 @@
 {% extends 'bar_duty/layout.html.twig' %}
 {% block duty_body %}
 <h2>Dienststundenkonten {{ year }}</h2>
-<form method="get" class="mb-3"><label>Jahr <input name="year" type="number" min="2000" max="2100" value="{{ year }}" required></label><button class="btn btn-primary">Auswertung anzeigen</button> <a href="{{ path('bar_duty_report_csv', {year:year}) }}">CSV herunterladen</a></form>
+<form method="get" class="mb-3"><label>Jahr <input name="year" type="number" min="2000" max="2100" value="{{ year }}" required></label><button class="btn btn-primary">Auswertung anzeigen</button> <a href="{{ path(duty_route_prefix ~ 'bar_duty_report_csv', {year:year}) }}">CSV herunterladen</a></form>
 <p>Alle Angaben in Minuten. Planung ist keine Gutschrift. Individuelle Pflicht 0 bedeutet Befreiung; fehlende Jahresregel ist keine automatische Befreiung.</p>
 <div class="table-responsive"><table class="table table-striped">
     <thead><tr><th>Mitglied</th><th>Pflicht</th><th>Bestätigt</th><th>Geplant</th><th>Offen</th><th>Saldo</th><th>Abwesend</th><th>Ausnahme</th></tr></thead><tbody>
@@ -12,9 +12,9 @@
 <h2>Separate Thekenkassen {{ year }}</h2>
 <p>Unabhängig von Stundenkonten und Gerätewartkasse; jeder Kassensturz gehört zu genau einer Schicht.</p>
 <ul>{% for session in cashSessions %}
-    <li><a href="{{ path('bar_duty_shift', {id:session.shift.id}) }}">{{ session.shift.startsAt|date('d.m.Y H:i') }} · {{ session.shift.title }}</a> ·
+    <li><a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:session.shift.id}) }}">{{ session.shift.startsAt|date('d.m.Y H:i') }} · {{ session.shift.title }}</a> ·
         {{ session.closedAt ? 'Abgeschlossen' : 'Offen' }}
         {% if session.closedAt %} · Soll {{ (session.expectedCents / 100)|number_format(2, ',', '.') }} EUR · Ist {{ (session.countedCents / 100)|number_format(2, ',', '.') }} EUR{% endif %}
-        · <a href="{{ path('bar_duty_cash_csv', {id:session.id}) }}">Kassenjournal CSV</a></li>
+        · <a href="{{ path(duty_route_prefix ~ 'bar_duty_cash_csv', {id:session.id}) }}">Kassenjournal CSV</a></li>
 {% else %}<li>Keine Thekenkassen in diesem Jahr.</li>{% endfor %}</ul>
 {% endblock %}

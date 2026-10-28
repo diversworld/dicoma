@@ -35,6 +35,7 @@
             <file>tests/Integration/Phase6EquipmentHttpTest.php</file>
             <file>tests/Integration/Phase8BarDutyHttpTest.php</file>
             <file>tests/Integration/WebsitePublishingHttpTest.php</file>
+            <file>tests/Integration/PortalNavigationHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>
