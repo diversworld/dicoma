@@ -24,13 +24,17 @@ final class PortalNavigation
             $links[] = ['label' => 'Kontakt', 'route' => 'website_contact'];
         }
 
-        return [
+        $links = [
             ...$links,
             ['label' => 'Aktuelles', 'route' => 'website_articles'],
             ['label' => 'Veranstaltungen', 'route' => 'website_events'],
             ['label' => 'Kursangebot', 'route' => 'frontend_course_registration_index'],
-            ['label' => 'Mitglied werden', 'route' => 'membership_application_clubs'],
         ];
+        if (!$this->security->isGranted(User::ROLE_MEMBER)) {
+            $links[] = ['label' => 'Mitglied werden', 'route' => 'membership_application_clubs'];
+        }
+
+        return $links;
     }
 
     public function getLoginRoute(): string

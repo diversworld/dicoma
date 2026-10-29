@@ -33,7 +33,7 @@ seinen eigenen Rahmen.
 
 | Gruppe | Funktionen |
 |---|---|
-| Öffentlich | Startseite, Verein, Kontakt, Aktuelles, Veranstaltungen, Kursangebot, Mitgliedsantrag |
+| Öffentlich | Startseite, Verein, Kontakt, Aktuelles, Veranstaltungen, Kursangebot; Mitgliedsantrag nur für Gäste und andere Konten ohne aktive Mitgliedschaft |
 | Mitglied | Dashboard, Meine Daten, Meine Mitgliedschaft, Meine Ausrüstung, Meine Buchungen, Meine Kurse; weitere vorhandene Ausbildungs-/Reservierungsfunktionen |
 | Ausbilder | Meine zugeordneten Kurse, Ausbilder Dashboard, Meine Aufgaben |
 | Gerätewart | Übersicht, TÜV Prüfung, Equipmentverleih, Inventar/Wartung, Kasse, Kompressorlogbuch, Füllgebühren |

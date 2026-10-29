@@ -68,6 +68,43 @@ final class PortalNavigationHttpTest extends WebTestCase
         yield 'explicit frontend and backend role' => [[User::ROLE_ADMIN, User::ROLE_INSTRUCTOR], '/my'];
     }
 
+    #[DataProvider('membershipNavigationCases')]
+    public function testMembershipApplicationNavigationIsHiddenOnlyForActiveMembers(string $case, bool $visible): void
+    {
+        if ($case === 'guest') {
+            $person = (new Person())->setFirstname('Guest')->setLastname('Synthetic')->setEmail('guest@example.invalid');
+            $user = (new User())->setUser('guest')->setEmail('guest@example.invalid')->setPassword('unused')
+                ->setIsVerified(true)->setPerson($person);
+            $this->em->persist($user); $this->em->flush();
+            $this->client->loginUser($user);
+        } elseif ($case !== 'anonymous') {
+            $user = $this->account('member', $case === 'staff-member' ? [User::ROLE_INSTRUCTOR] : [User::ROLE_MEMBER]);
+            if ($case === 'former') {
+                $user->getMember()->setMembershipStatus(MembershipStatus::FORMER);
+                $this->em->flush();
+            }
+            $this->client->loginUser($user);
+        }
+        $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        foreach (['#frontendNavbar', 'footer'] as $container) {
+            if ($visible) {
+                self::assertSelectorExists($container.' a[href="/membership/apply"]');
+            } else {
+                self::assertSelectorNotExists($container.' a[href="/membership/apply"]');
+            }
+        }
+    }
+
+    public static function membershipNavigationCases(): iterable
+    {
+        yield 'anonymous visitor' => ['anonymous', true];
+        yield 'signed-in guest' => ['guest', true];
+        yield 'former member' => ['former', true];
+        yield 'active member' => ['member', false];
+        yield 'active member with function' => ['staff-member', false];
+    }
+
     #[DataProvider('credentialLogins')]
     public function testCredentialLoginUsesRoleDestinationAndPreservesSavedTarget(array $roles, ?string $savedTarget, string $expected): void
     {
