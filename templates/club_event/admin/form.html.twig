@@ -4,5 +4,6 @@
 {% block main %}
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
 <p>Bis zur ersten Anmeldung können Veranstaltungen bearbeitet werden. Danach bleiben die Angaben unveränderlich; bei Bedarf absagen und neu anlegen.</p>
+<p>Bilder zuerst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen und anschließend auswählen. Das Bild kann auch später separat geändert werden.</p>
 {{ form_start(form) }}{{ form_errors(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Veranstaltung speichern</button>{{ form_end(form) }}
 {% endblock %}

@@ -1,0 +1,8 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Dateiangaben bearbeiten{% endblock %}
+{% block main %}
+    {% if file.image %}<img src="{{ path('admin_media_file', {id:file.id}) }}" alt="{{ file.altText }}" width="200">{% endif %}
+    {{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Angaben speichern</button>{{ form_end(form) }}
+    <p><a href="{{ path('admin_media_index') }}">Zur Dateiverwaltung</a></p>
+{% endblock %}

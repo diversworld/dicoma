@@ -1,0 +1,38 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Dateiverwaltung{% endblock %}
+{% block main %}
+    {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+    {% if canManageEditorial %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Website-Redaktion</a></p>{% endif %}
+    <p>Vereinsdateien werden geschützt gespeichert. Bilder können in Artikeln und Veranstaltungen ausgewählt werden. Verwendete Dateien können nicht gelöscht werden.</p>
+    <p>Erlaubt: JPG, PNG, WebP, PDF, DOCX, XLSX und PPTX, jeweils bis 10 MB. Bilder werden bei sichtbaren Inhalten öffentlich angezeigt; bitte Rechte und Bildmetadaten prüfen.</p>
+    <form method="post" action="{{ path('admin_media_upload') }}" enctype="multipart/form-data">
+        <input type="hidden" name="_token" value="{{ csrf_token('media_upload') }}">
+        <label for="media-file">Datei</label>
+        <input id="media-file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx" required>
+        <label for="media-alt">Alternativtext für Bilder</label>
+        <input id="media-alt" name="alt_text" type="text" maxlength="255">
+        <button type="submit" class="btn btn-primary">Datei hochladen</button>
+    </form>
+    <h2>Gespeicherte Dateien</h2>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Vorschau</th><th>Datei</th><th>Typ / Größe</th><th>Verwendung</th><th>Aktion</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+            {% set file = row.file %}
+            <tr>
+                <td>{% if file.image %}<img src="{{ path('admin_media_file', {id:file.id}) }}" alt="{{ file.altText }}" width="100">{% endif %}</td>
+                <td><a href="{{ path('admin_media_file', {id:file.id}) }}">{{ file.originalName }}</a>{% if file.image %}<br>Alternativtext: {{ file.altText ?: 'keiner' }}{% endif %}</td>
+                <td>{{ file.mimeType }} · {{ (file.size / 1024)|number_format(0, ',', '.') }} KB</td>
+                <td>{{ row.used }}</td>
+                <td><a href="{{ path('admin_media_edit', {id:file.id}) }}">Angaben bearbeiten</a>
+                {% if not row.used %}
+                    <form method="post" action="{{ path('admin_media_delete', {id:file.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('media_delete_' ~ file.id) }}">
+                        <button type="submit">Löschen</button>
+                    </form>
+                {% else %}In Verwendung{% endif %}</td>
+            </tr>
+        {% else %}<tr><td colspan="5">Noch keine Dateien.</td></tr>{% endfor %}
+        </tbody>
+    </table></div>
+{% endblock %}

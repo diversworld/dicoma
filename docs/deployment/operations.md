@@ -34,12 +34,63 @@ Artikel und Veranstaltungen werden im Backend unter
 `/admin/{_locale}/editorial` verwaltet. Auch Pressewarte ohne Adminrolle
 erhalten ausschließlich Zugriff auf diese Redaktionsseiten, nicht auf das
 übrige EasyAdmin. Die öffentliche Navigation enthält keinen Redaktionslink.
+Unter **Konfiguration → Website-Anzeige**
+können Pressewart und Vorstand für den Website-Verein die Anzahl der Artikel
+und Veranstaltungen pro Seite getrennt auf 1 bis 100 setzen. Ohne gespeicherte
+Einstellung gelten jeweils sechs Karten. Die Werte gelten auf Startseite und
+Übersichtsseiten; auf der Startseite wird je Rubrik unabhängig geblättert.
+Die additive Migration `Version20261029120000` muss vor Bereitstellung dieser
+Funktion nach Backup und Freigabe angewendet werden.
 Beiträge zunächst als Entwurf speichern. Nur freigegebene Beiträge werden ab dem gewählten
-Zeitpunkt öffentlich. Veröffentlichung zurückziehen: Beitrag bearbeiten,
-Freigabe abwählen, speichern. Kein Cronjob für zeitgesteuerte Sichtbarkeit
+Zeitpunkt öffentlich. In der Redaktionsübersicht kann die Freigabe mit dem
+Schalter gesetzt oder zurückgenommen werden; ohne JavaScript über die
+Schaltfläche „Freigabe speichern“. Beim Freigeben gelten die gleichen
+Inhaltsprüfungen wie im Formular; Änderungen werden protokolliert.
+Alternativ lässt sich die Freigabe beim Bearbeiten ändern. Kein Cronjob für zeitgesteuerte Sichtbarkeit
 erforderlich. Veranstaltungstexte und Termine sind redaktionelle Angaben;
 Quelländerungen übernehmen keine internen Daten automatisch. Abgesagte
 oder auf Entwurf gesetzte Quellen werden nicht mehr öffentlich angezeigt.
+
+### Dateiverwaltung und Beitragsbilder
+
+Die additive Migration `Version20261029130000` ergänzt eine vereinsbezogene
+Dateiverwaltung und optionale Bildzuordnungen für Beiträge und buchbare
+Veranstaltungen. Vor Bereitstellung Backup und Schemafreigabe durchführen.
+Die Anwendung benötigt die PHP-Erweiterungen `fileinfo` und `zip`.
+Server und PHP müssen Uploads von mindestens 10 MB zulassen; `post_max_size`
+muss dabei größer als `upload_max_filesize` sein. Office-Dateien können
+schädliche Inhalte enthalten und sollten vor dem Öffnen nach den
+Sicherheitsvorgaben des Vereins geprüft werden.
+
+Vereinsadmins und die zur Website-Redaktion berechtigten Pressewarte laden
+unter **Dateiverwaltung** JPG, PNG, WebP, PDF oder Office-Dateien
+(`docx`, `xlsx`, `pptx`) bis 10 MB hoch. Dateiname und Alternativtext können
+bearbeitet werden; Bilddateien sind in den Formularen auswählbar. Das Bild
+einer buchbaren Veranstaltung lässt sich auch nach Anmeldungen separat ändern,
+ohne Preis oder Termin zu verändern. Genutzte Dateien können erst nach dem
+Entfernen aller Zuordnungen gelöscht werden. Beim Hochladen sind Urheberrechte
+und gegebenenfalls personenbezogene Bildmetadaten zu prüfen.
+
+Alle Dateien liegen außerhalb von `public/` unter `var/private/website_media`.
+Die Dateiverwaltung ist vereinsgebunden und zeigt Redaktions- und
+Verwaltungsberechtigten dieses Vereins auch hochgeladene Dokumente; andere
+Rollen erhalten keinen Zugriff. Dokumente werden als Download bereitgestellt.
+Nur Bilder verknüpfter, für den jeweiligen Besucher sichtbarer Inhalte werden
+über geschützte Inhaltsrouten ausgeliefert; Entwürfe und mitgliedervorbehaltene
+Veranstaltungen machen ihre Bilder nicht öffentlich. Die Dateien und die
+Datenbank müssen zusammen gesichert und wiederhergestellt werden. Das Verzeichnis
+muss für den PHP-Prozess beschreibbar sein und darf nicht vom Webserver direkt
+ausgeliefert werden. Teilnehmerbezogene Veranstaltungsdokumente liegen
+ebenfalls dort, erscheinen aber nicht in der allgemeinen Dateiverwaltung;
+ihre Zuordnungen und Zugriffsregeln sind in der Veranstaltungsverwaltung
+getrennt erfasst. Dafür ist Migration `Version20261029140000` erforderlich.
+
+Die zentrale Backend-Konfiguration enthält die Website-Seitengrößen,
+Mitgliedschaftsregeln und Beitragsklassen sowie die Jahresregeln des
+Thekendienstes. Die verfügbaren Bereiche richten sich nach Rolle und
+Vereinszuordnung; bei Superadmins gilt die Vereinsauswahl für
+Mitgliedschaft und Beiträge, Website und Thekendienst bleiben an den
+eigenen berechtigten Verein gebunden. Secrets bleiben in der Serverumgebung.
 
 Neue Themes unter `site.themes` registrieren und per `SITE_THEME`
 auswählen; Struktur und Blockvertrag stehen in der

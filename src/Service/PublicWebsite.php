@@ -63,4 +63,21 @@ final class PublicWebsite
         $qb->orderBy($kind === 'event' ? 'p.startsAt' : 'p.publishAt', $kind === 'event' ? 'ASC' : 'DESC')->addOrderBy('p.id', 'DESC');
         return array_values(array_filter($qb->getQuery()->getResult(), $this->visible(...)));
     }
+
+    /** @return list<array{publication: ?WebsitePublication, event: ?\App\Entity\ClubEvent, startsAt: \DateTimeImmutable}> */
+    public function upcomingEvents(ClubEventBooking $booking, ?User $user): array
+    {
+        $entries = [];
+        foreach ($this->publications('event', true) as $publication) {
+            $entries[] = ['publication' => $publication, 'event' => null, 'startsAt' => $publication->getStartsAt()];
+        }
+        $club = $this->club();
+        if ($club !== null) {
+            foreach ($booking->visibleUpcoming($club, $user) as $event) {
+                $entries[] = ['publication' => null, 'event' => $event, 'startsAt' => $event->getStartsAt()];
+            }
+        }
+        usort($entries, static fn (array $a, array $b): int => $a['startsAt'] <=> $b['startsAt']);
+        return $entries;
+    }
 }

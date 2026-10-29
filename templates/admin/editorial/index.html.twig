@@ -12,17 +12,49 @@
                 <li>Bei Veranstaltungen Beginn, Ende und öffentlichen Ort ergänzen. Veröffentlichungszeitpunkt festlegen; optional einen freigegebenen Kurs oder ein Turnier verknüpfen.</li>
                 <li>„Zur Veröffentlichung freigeben“ aktivieren und speichern. Ohne Freigabe bleibt der Beitrag ein Entwurf. Eine Freigabe zu einem späteren Zeitpunkt wird automatisch dann sichtbar.</li>
             </ol>
-            <p class="mb-0">Freigegebene Artikel erscheinen unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Änderungen oder das Zurücknehmen der Freigabe erfolgen über „Bearbeiten / Freigabe ändern“.</p>
+            <p class="mb-0">Freigegebene Artikel erscheinen unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Die Freigabe kann auch direkt in der Übersicht geändert werden.</p>
         </div>
     </section>
     {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
+    {% for message in app.flashes('danger') %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
     <p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Artikel / Veranstaltung erstellen</a></p>
     <div class="table-responsive"><table class="table">
-        <thead><tr><th>Titel</th><th>Typ</th><th>Freigabe</th><th>Öffentlich ab</th><th>Aktion</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Titel</th>
+                <th>Typ</th>
+                <th>Freigabe</th>
+                <th>Öffentlich ab</th>
+                <th>Bild</th>
+                <th>Veröffentlicht</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
         <tbody>{% for publication in publications %}<tr>
-            <td>{{ publication.title }}</td><td>{{ publication.kind == 'article' ? 'Artikel' : 'Veranstaltung' }}</td>
-            <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td><td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
+            <td>{{ publication.title }}</td>
+            <td>{{ publication.kind == 'article' ? 'Artikel' : 'Veranstaltung' }}</td>
+            <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td>
+            <td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
+            <td>{{ publication.image ? 'Ja' : 'Nein' }}</td>
+            <td>
+                <form method="post" action="{{ path('admin_website_editorial_publication', {'_locale': app.request.locale, entityId: publication.id}) }}" data-editorial-publication-toggle>
+                    <input type="hidden" name="_token" value="{{ csrf_token('website_publication_toggle_' ~ publication.id) }}">
+                    <input type="hidden" name="version" value="{{ publication.version }}">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="publication-{{ publication.id }}" name="published" value="1" {{ publication.published ? 'checked' : '' }} autocomplete="off" aria-label="Veröffentlichung für {{ publication.title }}">
+                        <label class="form-check-label" for="publication-{{ publication.id }}"></label>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" type="submit" data-editorial-toggle-submit>Freigabe speichern</button>
+                </form>
+            </td>
             <td><a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a></td>
-        </tr>{% else %}<tr><td colspan="5">Noch keine Beiträge.</td></tr>{% endfor %}</tbody>
+        </tr>{% else %}<tr>
+            <td colspan="7">Noch keine Beiträge.</td>
+        </tr>{% endfor %}</tbody>
     </table></div>
+{% endblock %}
+
+{% block body_javascript %}
+    {{ parent() }}
+    <script src="{{ asset('js/editorial-publication-toggle.js') }}" defer></script>
 {% endblock %}

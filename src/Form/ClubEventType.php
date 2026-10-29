@@ -15,6 +15,7 @@ final class ClubEventType extends AbstractType
     {
         $builder->add('title', TextType::class, ['label' => 'Titel'])
             ->add('description', TextareaType::class, ['label' => 'Beschreibung'])
+            ->add('image', MediaImageType::class, ['club' => $builder->getData()->getClub()])
             ->add('pricing', ChoiceType::class, ['label' => 'Veranstaltungsart', 'choices' => [
                 'Kostenfrei, nur aktive Mitglieder' => 'members_free',
                 'Kostenpflichtig, Mitglieder und Gäste' => 'paid',

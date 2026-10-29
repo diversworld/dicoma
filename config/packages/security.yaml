@@ -67,11 +67,11 @@ security:
 
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/(?:articles|events)$, roles: PUBLIC_ACCESS }
-        - { path: ^/events/\d+$, roles: PUBLIC_ACCESS }
+        - { path: ^/events/\d+(?:/image)?$, roles: PUBLIC_ACCESS }
         - { path: ^/events/\d+/register$, roles: ROLE_USER }
         - { path: ^/event-registrations(?:/|$), roles: ROLE_USER }
         - { path: ^/(?:club|contact)$, roles: PUBLIC_ACCESS }
-        - { path: ^/news/\d+$, roles: PUBLIC_ACCESS }
+        - { path: ^/news/\d+(?:/image)?$, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
@@ -105,7 +105,9 @@ security:
         - { path: ^/admin/training-overview(?:/|$), roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/(?:de|en|fr|es)/training-overview$, roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/bar-duty(?:/|$), roles: ROLE_BAR_MANAGER }
+        - { path: ^/admin/configuration$, roles: [ROLE_ADMIN, ROLE_PRESS_OFFICER, ROLE_BAR_MANAGER] }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
+        - { path: ^/admin/media(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }
 

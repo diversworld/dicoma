@@ -3,13 +3,16 @@
 declare(strict_types=1);
 namespace App\Controller\Admin;
 
-use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, User};
+use App\Entity\{Club, ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration, User};
 use App\Form\ClubEventType;
-use App\Service\{ClubEventBooking, FrontendCourseRegistrationService};
+use App\Form\MediaImageType;
+use App\Service\{ClubEventBooking, FrontendCourseRegistrationService, MediaFileStorage};
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -67,7 +70,79 @@ final class ClubEventAdminController extends AbstractController
             $rows[] = ['registration' => $registration, 'paid' => $booking->paid($registration),
                 'payments' => $em->getRepository(ClubEventPayment::class)->findBy(['registration' => $registration], ['id' => 'ASC'])];
         }
-        return $this->render('club_event/admin/detail.html.twig', ['event' => $event, 'rows' => $rows]);
+        return $this->render('club_event/admin/detail.html.twig', ['event' => $event, 'rows' => $rows,
+            'documents' => $em->getRepository(ClubEventDocument::class)->findBy(['event' => $event], ['id' => 'DESC'])]);
+    }
+
+    #[Route('/{id}/documents', name: 'admin_club_event_document_upload', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function uploadDocument(int $id, Request $request, EntityManagerInterface $em, MediaFileStorage $storage): Response
+    {
+        $event = $this->event($id, $em);
+        if (!$this->isCsrfTokenValid('event_document_upload_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
+        $audience = $request->request->getString('audience');
+        $registration = null;
+        if ($audience === 'individual') {
+            $registration = $em->getRepository(ClubEventRegistration::class)->findOneBy(['id' => $request->request->getString('registration'), 'event' => $event]);
+            if ($registration === null) { throw $this->createNotFoundException('Anmeldung nicht gefunden.'); }
+        } elseif ($audience !== 'all') {
+            throw $this->createAccessDeniedException('Empfängerkreis auswählen.');
+        }
+        $upload = $request->files->get('file');
+        if (!$upload instanceof UploadedFile) {
+            $this->addFlash('danger', 'Bitte eine Datei auswählen; maximal 10 MB.');
+        } else {
+            try {
+                $file = $storage->store($event->getClub(), $upload, '');
+                $saved = false;
+                try {
+                    $em->persist(new ClubEventDocument($event, $registration, $file));
+                    $em->flush(); $saved = true;
+                } finally {
+                    if (!$saved) { $storage->delete($file); }
+                }
+                $this->addFlash('success', 'Veranstaltungsdokument gespeichert.');
+            } catch (\InvalidArgumentException $e) { $this->addFlash('danger', $e->getMessage()); }
+        }
+        return $this->redirectToRoute('admin_club_event', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/{id}/documents/{documentId}', name: 'admin_club_event_document', requirements: ['id' => '\d+', 'documentId' => '\d+'], methods: ['GET'])]
+    public function document(int $id, int $documentId, EntityManagerInterface $em, MediaFileStorage $storage): Response
+    {
+        return $storage->response($this->documentForEvent($id, $documentId, $em)->file(), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+    }
+
+    #[Route('/{id}/documents/{documentId}/delete', name: 'admin_club_event_document_delete', requirements: ['id' => '\d+', 'documentId' => '\d+'], methods: ['POST'])]
+    public function deleteDocument(int $id, int $documentId, Request $request, EntityManagerInterface $em, MediaFileStorage $storage): Response
+    {
+        if (!$this->isCsrfTokenValid('event_document_delete_'.$documentId, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
+        $document = $this->documentForEvent($id, $documentId, $em);
+        $file = $document->file();
+        $em->remove($document); $em->flush();
+        $storage->delete($file);
+        $this->addFlash('success', 'Veranstaltungsdokument gelöscht.');
+        return $this->redirectToRoute('admin_club_event', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/{id}/image', name: 'admin_club_event_image', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function image(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $event = $this->event($id, $em);
+        $form = $this->createFormBuilder(null, ['csrf_token_id' => 'event_image_'.$id])
+            ->add('image', MediaImageType::class, ['club' => $event->getClub(), 'data' => $event->getImage()])
+            ->getForm();
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $image = $form->get('image')->getData();
+            $em->getConnection()->transactional(function () use ($em, $event, $image): void {
+                $em->refresh($event, LockMode::PESSIMISTIC_WRITE);
+                $event->setImage($image);
+                $em->flush();
+            });
+            $this->addFlash('success', 'Veranstaltungsbild gespeichert.');
+            return $this->redirectToRoute('admin_club_event', ['id' => $id], Response::HTTP_SEE_OTHER);
+        }
+        return $this->render('club_event/admin/image.html.twig', ['form' => $form, 'event' => $event], new Response(status: $form->isSubmitted() ? 422 : 200));
     }
 
     #[Route('/{id}/cancel', name: 'admin_club_event_cancel', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -112,5 +187,13 @@ final class ClubEventAdminController extends AbstractController
         $event = $em->find(ClubEvent::class, $id);
         if (!$event || $event->getClub()->getId() !== $this->club()->getId()) { throw $this->createNotFoundException(); }
         return $event;
+    }
+
+    private function documentForEvent(int $id, int $documentId, EntityManagerInterface $em): ClubEventDocument
+    {
+        $event = $this->event($id, $em);
+        $document = $em->getRepository(ClubEventDocument::class)->findOneBy(['id' => $documentId, 'event' => $event]);
+        if (!$document instanceof ClubEventDocument) { throw $this->createNotFoundException(); }
+        return $document;
     }
 }

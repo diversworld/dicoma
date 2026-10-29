@@ -25,6 +25,7 @@ class ClubEvent
     #[ORM\Column(nullable: true), Assert\Positive] private ?int $capacity = null;
     #[ORM\Column] private bool $published = false;
     #[ORM\Column] private bool $cancelled = false;
+    #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
 
     public function __construct(Club $club) { $this->club = $club; }
     public function getId(): ?int { return $this->id; }
@@ -52,6 +53,8 @@ class ClubEvent
     public function isPublished(): bool { return $this->published; }
     public function setPublished(bool $value): void { $this->published = $value; }
     public function isCancelled(): bool { return $this->cancelled; }
+    public function getImage(): ?MediaFile { return $this->image; }
+    public function setImage(?MediaFile $value): void { $this->image = $value; }
     public function cancel(): void { $this->cancelled = true; }
     public function copyDetailsFrom(self $other): void
     {
@@ -59,11 +62,15 @@ class ClubEvent
         $this->memberFeeCents = $other->memberFeeCents; $this->guestFeeCents = $other->guestFeeCents;
         $this->startsAt = $other->startsAt; $this->endsAt = $other->endsAt; $this->deadline = $other->deadline;
         $this->location = $other->location; $this->capacity = $other->capacity; $this->published = $other->published;
+        $this->image = $other->image;
     }
 
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
+        if ($this->image !== null && (!$this->image->isImage() || $this->image->getClub()->getId() !== $this->club->getId())) {
+            $context->buildViolation('Nur Bilder des eigenen Vereins können ausgewählt werden.')->atPath('image')->addViolation();
+        }
         if ($this->startsAt === null || $this->endsAt === null || $this->endsAt <= $this->startsAt) {
             $context->buildViolation('Beginn und ein späteres Ende sind erforderlich.')->atPath('startsAt')->addViolation();
         }

@@ -12,6 +12,12 @@
     {% elseif registration.status == 'cancelled' or registration.event.cancelled %}<p>Erstattung offen: {{ (paid / 100)|number_format(2, ',', '.') }} EUR. Bitte mit der Vereinsverwaltung abstimmen.</p>
     {% else %}<p>Offen: {{ ((registration.feeCents - paid) / 100)|number_format(2, ',', '.') }} EUR. Überweisung oder Barzahlung nach Absprache mit dem Verein.</p>{% endif %}
     <ul>{% for payment in payments %}<li>{{ payment.recordedAt|date('d.m.Y') }} · {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }}</li>{% endfor %}</ul>
+    {% if registration.status == 'registered' and not registration.event.cancelled %}
+        <h2>Veranstaltungsdokumente</h2>
+        <ul>{% for document in documents %}
+            <li><a href="{{ path('club_event_registration_document', {id: registration.id, documentId: document.id}) }}">{{ document.originalName }}</a></li>
+        {% else %}<li>Keine Dokumente vorhanden.</li>{% endfor %}</ul>
+    {% endif %}
     {% if registration.status != 'cancelled' and not registration.event.cancelled and registration.event.startsAt > date() %}
         <form method="post" action="{{ path('club_event_cancel', {id: registration.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('event_cancel_' ~ registration.id) }}">

@@ -13,15 +13,14 @@ use Symfony\Component\Routing\Annotation\Route;
 class HomeController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    public function index(\App\Service\PublicWebsite $website, \App\Service\ClubEventBooking $booking): Response
+    public function index(Request $request, \App\Service\PublicWebsite $website, \App\Service\ClubEventBooking $booking, \App\Service\WebsitePagination $pagination): Response
     {
 
         $user = $this->getUser();
-        $club = $website->club();
+        $limits = $pagination->limits();
         $response = $this->render('home/index.html.twig', [
-            'articles' => array_slice($website->publications('article'), 0, 6),
-            'events' => array_slice($website->publications('event', true), 0, 6),
-            'bookableEvents' => $club === null ? [] : $booking->visibleUpcoming($club, $user instanceof \App\Entity\User ? $user : null, 6),
+            'articlesPage' => $pagination->page($website->publications('article'), $limits['articles'], $request, 'artikel_seite'),
+            'eventsPage' => $pagination->page($website->upcomingEvents($booking, $user instanceof \App\Entity\User ? $user : null), $limits['events'], $request, 'veranstaltungen_seite'),
         ]);
         if ($user !== null) { $response->setPrivate()->headers->addCacheControlDirective('no-store'); }
         return $response;

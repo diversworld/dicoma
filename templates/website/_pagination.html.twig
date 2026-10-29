@@ -1,0 +1,14 @@
+{% if pagination.pages > 1 %}
+    <nav aria-label="{{ label }}: Seiten" class="mb-4">
+        {% set query = app.request.query.all %}
+        {% set route = app.request.attributes.get('_route') %}
+        {% set fragment = anchor ? '#' ~ anchor : '' %}
+        {% if pagination.page > 1 %}
+            <a rel="prev" href="{{ path(route, query|merge({(parameter): pagination.page - 1})) }}{{ fragment }}">Vorherige Seite</a>
+        {% endif %}
+        <span>Seite {{ pagination.page }} von {{ pagination.pages }}</span>
+        {% if pagination.page < pagination.pages %}
+            <a rel="next" href="{{ path(route, query|merge({(parameter): pagination.page + 1})) }}{{ fragment }}">Nächste Seite</a>
+        {% endif %}
+    </nav>
+{% endif %}

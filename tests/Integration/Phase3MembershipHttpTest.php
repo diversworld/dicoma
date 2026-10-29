@@ -139,10 +139,11 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/membership/club/' . $this->club->getId());
         $this->assertBackendPage();
+        $crawler = $this->client->request('GET', '/admin/configuration?club=' . $this->club->getId());
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[cancellationCutoff]' => '09-30', 'membership_policy[membershipYearEnd]' => '12-31',
         ]);
-        self::assertResponseRedirects('/admin/membership/club/' . $this->club->getId());
+        self::assertResponseRedirects('/admin/configuration?club=' . $this->club->getId());
         $crawler = $this->client->request('GET', '/admin/membership/member/' . $admin->getMember()->getId());
         $this->assertBackendPage();
         self::assertCount(1, $crawler->filter('form[name="billing_assignment"]'));
@@ -278,7 +279,7 @@ final class Phase3MembershipHttpTest extends WebTestCase
     {
         $admin = $this->memberUser('finance-admin', ['ROLE_ADMIN']);
         $memberId = $admin->getMember()->getId();
-        $clubPath = '/admin/membership/club/' . $this->club->getId();
+        $clubPath = '/admin/configuration?club=' . $this->club->getId();
         $memberPath = '/admin/membership/member/' . $memberId;
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', $clubPath);
@@ -437,12 +438,13 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $finance->assign($admin->getMember(), $class, null, 0, null, 'admin');
         $charge = $finance->annual($admin->getMember(), 2026, new \DateTimeImmutable('2026-12-01'), 'admin');
         $this->client->loginUser($admin);
-        $crawler = $this->client->request('GET', '/admin/membership/contribution/' . $class->getId());
+        $crawler = $this->client->request('GET', '/admin/configuration?club=' . $this->club->getId());
         self::assertResponseIsSuccessful();
-        $form = $crawler->filter('form[name="contribution_class"]')->form();
-        $form['contribution_class[active]']->untick();
-        $this->client->submit($form, ['contribution_class[name]' => 'Archived rate', 'contribution_class[annualCents]' => '150.00']);
-        self::assertResponseRedirects('/admin/membership/club/' . $this->club->getId());
+        $formName = 'contribution_class_' . $class->getId();
+        $form = $crawler->filter('form[name="'.$formName.'"]')->form();
+        $form[$formName.'[active]']->untick();
+        $this->client->submit($form, [$formName.'[name]' => 'Archived rate', $formName.'[annualCents]' => '150.00']);
+        self::assertResponseRedirects('/admin/configuration?club=' . $this->club->getId());
         $this->em->clear();
         self::assertFalse($this->em->find(ContributionClass::class, $class->getId())->isActive());
         self::assertSame(10000, $this->em->find(MembershipCharge::class, $charge->getId())->getAmountCents());
@@ -480,24 +482,24 @@ final class Phase3MembershipHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $crawler = $this->client->click($crawler->selectLink('Mitgliedschaften und Beiträge')->link());
         $this->assertBackendPage();
-        $crawler = $this->client->click($crawler->selectLink('Beiträge und Vereinsregeln konfigurieren')->link());
-        $this->assertBackendPage();
+        $crawler = $this->client->request('GET', '/admin/configuration?club=' . $clubId);
+        $this->assertConfigurationBackend();
         self::assertCount(1, $crawler->filter('form[name="membership_policy"]'));
         $this->client->submit($crawler->filter('form[name="contribution_class"]')->form(), [
             'contribution_class[name]' => 'Backend-Testbeitrag',
             'contribution_class[annualCents]' => '87.65',
         ]);
-        self::assertResponseRedirects('/admin/membership/club/' . $clubId);
+        self::assertResponseRedirects('/admin/configuration?club=' . $clubId);
         $crawler = $this->client->followRedirect();
-        $this->assertBackendPage();
-        $crawler = $this->client->click($crawler->selectLink('Backend-Testbeitrag')->link());
-        $this->assertBackendPage();
-        $this->client->submit($crawler->filter('form[name="contribution_class"]')->form(), [
-            'contribution_class[annualCents]' => '100.01',
+        $this->assertConfigurationBackend();
+        $class = $this->em->getRepository(ContributionClass::class)->findOneBy(['name' => 'Backend-Testbeitrag']);
+        $formName = 'contribution_class_' . $class->getId();
+        $this->client->submit($crawler->filter('form[name="'.$formName.'"]')->form(), [
+            $formName.'[annualCents]' => '100.01',
         ]);
-        self::assertResponseRedirects('/admin/membership/club/' . $clubId);
+        self::assertResponseRedirects('/admin/configuration?club=' . $clubId);
         $this->client->followRedirect();
-        $this->assertBackendPage();
+        $this->assertConfigurationBackend();
         $class = $this->em->getRepository(ContributionClass::class)->findOneBy(['name' => 'Backend-Testbeitrag']);
         self::assertInstanceOf(ContributionClass::class, $class);
         self::assertSame(10001, $class->getAnnualCents());
@@ -509,6 +511,13 @@ final class Phase3MembershipHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('[data-membership-area="frontend"]');
         self::assertSelectorNotExists('[data-membership-area="backend"]');
+    }
+
+    private function assertConfigurationBackend(): void
+    {
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorNotExists('nav[aria-label="Hauptnavigation"]');
     }
 
     private function assertBackendPage(): void

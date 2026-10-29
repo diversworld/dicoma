@@ -3,11 +3,12 @@
 declare(strict_types=1);
 namespace App\Controller\Frontend;
 
-use App\Entity\{ClubEvent, ClubEventPayment, ClubEventRegistration, Person, User};
-use App\Service\{ClubEventBooking, PublicWebsite};
+use App\Entity\{ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration, Person, User};
+use App\Service\{ClubEventBooking, MediaFileStorage, PublicWebsite};
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -25,6 +26,18 @@ final class ClubEventController extends AbstractController
         $response = $this->render('club_event/detail.html.twig', ['event' => $event, 'registration' => $registration]);
         if ($user instanceof User) { $response->setPrivate()->headers->addCacheControlDirective('no-store'); }
         return $response;
+    }
+
+    #[Route('/events/{id}/image', name: 'club_event_image', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function image(int $id, EntityManagerInterface $em, ClubEventBooking $booking, PublicWebsite $website, \App\Service\MediaFileStorage $storage): Response
+    {
+        $event = $em->find(ClubEvent::class, $id);
+        $user = $this->getUser();
+        $image = $event?->getImage();
+        if (!$event || $event->getClub()->getId() !== $website->club()?->getId()
+            || !$booking->canSee($event, $user instanceof User ? $user : null)
+            || $image === null || !$image->isImage() || $image->getClub()->getId() !== $event->getClub()->getId()) { throw $this->createNotFoundException(); }
+        return $storage->response($image, \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_INLINE);
     }
 
     #[Route('/events/{id}/register', name: 'club_event_register', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -60,10 +73,32 @@ final class ClubEventController extends AbstractController
     public function registration(int $id, EntityManagerInterface $em, ClubEventBooking $booking): Response
     {
         $registration = $this->ownRegistration($id, $em);
+        $documents = [];
+        if ($registration->getStatus() === 'registered' && !$registration->getEvent()->isCancelled()) {
+            $documents = $em->getRepository(ClubEventDocument::class)->createQueryBuilder('d')
+                ->where('d.event = :event AND (d.registration IS NULL OR d.registration = :registration)')
+                ->setParameter('event', $registration->getEvent())->setParameter('registration', $registration)
+                ->orderBy('d.id', 'DESC')->getQuery()->getResult();
+        }
         $response = $this->render('club_event/registration.html.twig', ['registration' => $registration,
-            'paid' => $booking->paid($registration), 'payments' => $em->getRepository(ClubEventPayment::class)->findBy(['registration' => $registration], ['id' => 'ASC'])]);
+            'paid' => $booking->paid($registration), 'payments' => $em->getRepository(ClubEventPayment::class)->findBy(['registration' => $registration], ['id' => 'ASC']),
+            'documents' => $documents]);
         $response->setPrivate()->headers->addCacheControlDirective('no-store');
         return $response;
+    }
+
+    #[Route('/event-registrations/{id}/documents/{documentId}', name: 'club_event_registration_document', requirements: ['id' => '\d+', 'documentId' => '\d+'], methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function document(int $id, int $documentId, EntityManagerInterface $em, MediaFileStorage $storage): Response
+    {
+        $registration = $this->ownRegistration($id, $em);
+        $document = $em->find(ClubEventDocument::class, $documentId);
+        if ($registration->getStatus() !== 'registered' || $registration->getEvent()->isCancelled()
+            || !$document instanceof ClubEventDocument || $document->getEvent()->getId() !== $registration->getEvent()->getId()
+            || ($document->getRegistration() !== null && $document->getRegistration()->getId() !== $registration->getId())) {
+            throw $this->createNotFoundException();
+        }
+        return $storage->response($document->file(), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
     }
 
     #[Route('/event-registrations/{id}/cancel', name: 'club_event_cancel', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -73,7 +108,7 @@ final class ClubEventController extends AbstractController
         if (!$this->isCsrfTokenValid('event_cancel_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
         try {
             $booking->cancel($this->ownRegistration($id, $em), $this->person());
-            $this->addFlash('success', 'Anmeldung storniert. Eventuell gezahlte Beträge werden durch die Vereinsverwaltung erstattet.');
+            $this->addFlash('success', 'Anmeldung storniert. Eine eventuelle Erstattung muss mit der Vereinsverwaltung abgestimmt und manuell durchgeführt werden.');
         } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
         return $this->redirectToRoute('club_event_registration', ['id' => $id], Response::HTTP_SEE_OTHER);
     }

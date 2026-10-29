@@ -1,10 +1,13 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
 
 {% block content_title %}{{ publication.id ? 'Beitrag bearbeiten' : 'Artikel / Veranstaltung erstellen' }}{% endblock %}
 
 {% block main %}
     <p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Übersicht und Veröffentlichungshilfe</a></p>
     <p>Texte werden als reiner Text veröffentlicht, HTML wird nicht ausgeführt. Bei Veranstaltungen öffentliche Termine und Ort ausdrücklich angeben. Optional einen eigenen freigegebenen Kurs oder ein Turnier zuordnen; interne Daten werden nicht kopiert. Wird die Quelle abgesagt oder zum Entwurf, verschwindet die Ankündigung automatisch.</p>
+    <p>Bilder zuerst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen und anschließend hier auswählen.</p>
+    {% if publication.image %}<img src="{{ path('admin_media_file', {id:publication.image.id}) }}" alt="{{ publication.image.altText }}" width="200">{% endif %}
     {{ form_start(form) }}
         {{ form_errors(form) }}
         {{ form_widget(form) }}

@@ -2,6 +2,6 @@
 {% block title %}Mitgliedschaftsverwaltung{% endblock %}
 {% block membership_body %}
 <h1>Mitgliedschaftsverwaltung</h1>
-<p>Wählen Sie einen Verein, um Beitragsklassen, Vereinsregeln und Mitgliedschaften im Backend zu verwalten.</p>
-<ul>{% for club in clubs %}<li class="mb-3"><strong>{{ club.name }}</strong> <a class="btn btn-primary" href="{{ path('membership_club', {id: club.id}) }}">Beiträge und Vereinsregeln konfigurieren</a></li>{% else %}<li>Keine verwaltbare Vereinszuordnung.</li>{% endfor %}</ul>
+<p>Wählen Sie einen Verein, um Mitgliedschaften im Backend zu verwalten.</p>
+<ul>{% for club in clubs %}<li class="mb-3"><strong>{{ club.name }}</strong> <a class="btn btn-primary" href="{{ path('membership_club', {id: club.id}) }}">Mitgliedschaften verwalten</a></li>{% else %}<li>Keine verwaltbare Vereinszuordnung.</li>{% endfor %}</ul>
 {% endblock %}

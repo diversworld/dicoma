@@ -24,6 +24,7 @@ use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
 use App\Entity\WebsitePublication;
+use App\Entity\WebsiteDisplaySettings;
 use App\Enum\CourseStatus;
 use App\Controller\Admin\MemberCrudController;
 use App\Security\Voter\MemberManagementVoter;
@@ -37,6 +38,7 @@ use App\Service\TankInspectionOverview;
 use App\Service\PublicWebsite;
 use App\Repository\MemberQualificationRepository;
 use App\Form\WebsitePublicationType;
+use App\Form\WebsiteDisplaySettingsType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -52,6 +54,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Doctrine\DBAL\LockMode;
 use App\Service\TuvMessageRenderer;
 use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -253,6 +258,72 @@ class DashboardController extends AbstractDashboardController
         ]);
     }
 
+    #[AdminRoute(path: '/editorial/{entityId}/publication', name: 'website_editorial_publication', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
+    public function changeWebsitePublication(int $entityId, Request $request, PublicWebsite $website, ValidatorInterface $validator): Response
+    {
+        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
+        $club = $website->editorialClub();
+        $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy(['id' => $entityId, 'club' => $club]);
+        if ($publication === null) { throw $this->createNotFoundException(); }
+        if (!$this->isCsrfTokenValid('website_publication_toggle_'.$entityId, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+        }
+        $version = $request->request->getString('version');
+        $value = $request->request->getString('published', '0');
+        if (!preg_match('/^[1-9][0-9]{0,9}$/D', $version) || !in_array($value, ['0', '1'], true)) {
+            throw new BadRequestHttpException('Ungültiger Veröffentlichungsstatus oder Versionswert.');
+        }
+        try {
+            $this->em->lock($publication, LockMode::OPTIMISTIC, (int) $version);
+            $published = $value === '1';
+            if ($publication->isPublished() !== $published) {
+                if ($published) {
+                    $candidate = clone $publication;
+                    $candidate->setPublished(true);
+                    $errors = $validator->validate($candidate);
+                    if (count($errors) > 0) {
+                        foreach ($errors as $error) { $this->addFlash('danger', (string) $error->getMessage()); }
+                        return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+                    }
+                }
+                $publication->setPublished($published);
+                $publication->record($this->getUser()->getUserIdentifier());
+                $this->em->flush();
+            }
+            $this->addFlash('success', $published
+                ? 'Beitrag freigegeben. Sichtbar ab dem Veröffentlichungszeitpunkt, sofern die verknüpfte Veranstaltung freigegeben ist.'
+                : 'Freigabe zurückgenommen; der Beitrag ist nicht öffentlich sichtbar.');
+        } catch (OptimisticLockException) {
+            $this->addFlash('danger', 'Der Beitrag wurde zwischenzeitlich geändert. Bitte den aktuellen Stand prüfen und erneut versuchen.');
+        }
+        return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+    }
+
+    #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET', 'POST']])]
+    public function websiteDisplaySettings(Request $request, PublicWebsite $website): Response
+    {
+        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
+        $club = $website->editorialClub();
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('admin_configuration');
+        }
+        $settings = $this->em->find(WebsiteDisplaySettings::class, $club->getId()) ?? new WebsiteDisplaySettings($club);
+        $form = $this->createForm(WebsiteDisplaySettingsType::class, $settings);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                $this->em->persist($settings);
+                $this->em->flush();
+                $this->addFlash('success', 'Anzeigeeinstellungen gespeichert.');
+                return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+                $form->addError(new FormError('Die Einstellungen wurden gleichzeitig angelegt. Bitte laden Sie die Seite neu.'));
+                return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: 409));
+            }
+        }
+        return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: $form->isSubmitted() ? 422 : 200));
+    }
+
     #[AdminRoute(path: '/editorial/new', name: 'website_editorial_new', options: ['methods' => ['GET', 'POST']])]
     public function newWebsitePublication(Request $request, PublicWebsite $website): Response
     {
@@ -434,14 +505,18 @@ class DashboardController extends AbstractDashboardController
     {
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
+                MenuItem::linkToRoute('Konfiguration', 'fa fa-gear', 'admin_configuration'),
                 MenuItem::section('Website & Redaktion'),
                 MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
+                    ->setPermission('ROLE_PRESS_OFFICER'),
+                MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')
                     ->setPermission('ROLE_PRESS_OFFICER'),
             ];
         }
 
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
+            MenuItem::linkToRoute('Konfiguration', 'fa fa-gear', 'admin_configuration'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
             ...($this->publicWebsite->canManageEditorial() ? [
                 MenuItem::section('Website & Redaktion'),
@@ -451,6 +526,7 @@ class DashboardController extends AbstractDashboardController
 
             MenuItem::section('Tägliche Verwaltung'),
             MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', 'admin_club_events'),
+            MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index'),
             MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'admin_portal_bar_duty')->setPermission('ROLE_BAR_MANAGER'),
 
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')->setSubItems([

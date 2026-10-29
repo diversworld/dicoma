@@ -1,0 +1,8 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Veranstaltungsbild: {{ event.title }}{% endblock %}
+{% block main %}
+    <p>Bilder zunächst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen. Das Bild kann unabhängig von Anmeldungen geändert werden.</p>
+    {{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Bild speichern</button>{{ form_end(form) }}
+    <p><a href="{{ path('admin_club_event', {id:event.id}) }}">Zur Veranstaltung</a></p>
+{% endblock %}

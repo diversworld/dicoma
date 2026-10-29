@@ -16,6 +16,9 @@
                 {% if is_granted('ROLE_BAR_MANAGER') %}
                     <p><a href="{{ path('admin_portal_bar_duty') }}">Clubheimverwaltung</a></p>
                 {% endif %}
+                {% if is_granted('ROLE_BAR_MANAGER') or is_granted('ROLE_PRESS_OFFICER') %}
+                    <p><a href="{{ path('admin_configuration') }}">Konfiguration</a></p>
+                {% endif %}
             </nav>
         </aside>
     {% endif %}

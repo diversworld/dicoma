@@ -83,10 +83,83 @@ final class MigrationChainTest extends TestCase
         $publications = $this->connection->fetchAllAssociative('SELECT * FROM website_publication');
         $this->migrate('latest');
         self::assertSame($members, $this->connection->fetchAllAssociative('SELECT * FROM member'));
-        self::assertSame($publications, $this->connection->fetchAllAssociative('SELECT * FROM website_publication'));
+        $after = $this->connection->fetchAllAssociative('SELECT * FROM website_publication');
+        self::assertNull($after[0]['image_id']);
+        unset($after[0]['image_id']);
+        self::assertSame($publications, $after);
         foreach (['club_event', 'club_event_registration', 'club_event_payment'] as $table) {
             self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM '.$table));
         }
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testWebsiteDisplaySettingsUpgradePreservesExistingData(): void
+    {
+        $this->migrate('20261028181000');
+        $club = $this->createClub();
+        $this->connection->insert('website_publication', ['club_id' => $club, 'version' => 1, 'kind' => 'article',
+            'title' => 'Existing article', 'summary' => 'Existing', 'body' => 'Keep unchanged', 'published' => 1,
+            'publish_at' => '2026-01-01 10:00:00', 'location' => '', 'history' => '[]']);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM website_publication');
+        $this->migrate('latest');
+        $after = $this->connection->fetchAllAssociative('SELECT * FROM website_publication');
+        self::assertNull($after[0]['image_id']);
+        unset($after[0]['image_id']);
+        self::assertSame($before, $after);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM website_display_settings'));
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testMediaUpgradePreservesExistingEventsAndPublications(): void
+    {
+        $this->migrate('20261029120000');
+        $club = $this->createClub();
+        $this->connection->insert('website_publication', ['club_id' => $club, 'version' => 1, 'kind' => 'article',
+            'title' => 'Existing article', 'summary' => 'Existing', 'body' => 'Keep', 'published' => 1,
+            'publish_at' => '2026-01-01 10:00:00', 'location' => '', 'history' => '[]']);
+        $this->connection->insert('club_event', ['club_id' => $club, 'title' => 'Existing event', 'description' => 'Keep',
+            'pricing' => 'paid', 'member_fee_cents' => 1000, 'guest_fee_cents' => 2000, 'starts_at' => '2027-01-01 10:00:00',
+            'ends_at' => '2027-01-01 11:00:00', 'location' => 'Club', 'published' => 1, 'cancelled' => 0]);
+        $publication = $this->connection->fetchAssociative('SELECT * FROM website_publication');
+        $event = $this->connection->fetchAssociative('SELECT * FROM club_event');
+        $this->migrate('latest');
+        $afterPublication = $this->connection->fetchAssociative('SELECT * FROM website_publication');
+        $afterEvent = $this->connection->fetchAssociative('SELECT * FROM club_event');
+        self::assertNull($afterPublication['image_id']);
+        self::assertNull($afterEvent['image_id']);
+        unset($afterPublication['image_id'], $afterEvent['image_id']);
+        self::assertSame($publication, $afterPublication);
+        self::assertSame($event, $afterEvent);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM media_file'));
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testEventDocumentUpgradePreservesExistingRecords(): void
+    {
+        $this->migrate('20261029130000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Guest', 'lastname' => 'Example']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_file', ['club_id' => $club, 'storage_name' => str_repeat('a', 40).'.pdf',
+            'original_name' => 'public.pdf', 'mime_type' => 'application/pdf', 'size' => 100, 'alt_text' => '', 'created_at' => '2026-01-01 10:00:00']);
+        $this->connection->insert('website_publication', ['club_id' => $club, 'version' => 1, 'kind' => 'article',
+            'title' => 'Article', 'summary' => 'Summary', 'body' => 'Body', 'published' => 1,
+            'publish_at' => '2026-01-01 10:00:00', 'location' => '', 'history' => '[]']);
+        $this->connection->insert('club_event', ['club_id' => $club, 'title' => 'Event', 'description' => 'Body',
+            'pricing' => 'paid', 'member_fee_cents' => 1000, 'guest_fee_cents' => 2000, 'starts_at' => '2027-01-01 10:00:00',
+            'ends_at' => '2027-01-01 11:00:00', 'location' => 'Club', 'published' => 1, 'cancelled' => 0]);
+        $event = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_event_registration', ['event_id' => $event, 'person_id' => $person,
+            'status' => 'registered', 'fee_cents' => 2000, 'tariff' => 'guest', 'registered_at' => '2026-01-01 10:00:00']);
+        $registration = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_event_payment', ['registration_id' => $registration, 'amount_cents' => 1000,
+            'method' => 'cash', 'reference' => 'receipt', 'recorded_by' => 'admin', 'recorded_at' => '2026-01-01 10:00:00']);
+        $tables = ['media_file', 'website_publication', 'club_event', 'club_event_registration', 'club_event_payment'];
+        $before = [];
+        foreach ($tables as $table) { $before[$table] = $this->connection->fetchAllAssociative('SELECT * FROM '.$table); }
+        $this->migrate('latest');
+        foreach ($tables as $table) { self::assertSame($before[$table], $this->connection->fetchAllAssociative('SELECT * FROM '.$table)); }
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_event_document'));
         $this->assertSchemaMatchesMapping();
     }
 

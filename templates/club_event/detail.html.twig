@@ -5,6 +5,7 @@
 <main class="container py-4">
     {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
     <h1>{{ event.title }}</h1>
+    {% if event.image %}{% include 'website/_image.html.twig' with {image: event.image, url: path('club_event_image', {id: event.id})} %}{% endif %}
     <p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
     <p>{{ event.description|nl2br }}</p>
     {% if event.pricing == 'members_free' %}

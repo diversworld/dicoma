@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, Courses, Member, Person, Tournament, User, WebsitePublication};
+use App\Entity\{Club, Courses, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\{CourseStatus, MembershipStatus, TournamentStatus};
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -90,6 +90,8 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->client->loginUser($this->press);
         $this->client->request('GET', '/admin/de/editorial/new'); self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('.form-switch input[type="checkbox"][name="website_publication[published]"].form-check-input');
+        self::assertSelectorNotExists('input[name="website_publication[published]"].form-control');
         $this->client->submitForm('Beitrag speichern', $this->formData());
         self::assertResponseStatusCodeSame(303);
         $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy([]);
@@ -104,6 +106,115 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(303);
         $this->client->request('GET', '/news/'.$publication->getId()); self::assertResponseStatusCodeSame(404);
         self::assertCount(3, $this->em->find(WebsitePublication::class, $publication->getId())->getHistory());
+    }
+
+    public function testEditorialOverviewSwitchPublishesAndWithdrawsWithAuditAndScheduledVisibility(): void
+    {
+        $article = $this->publication('Toggle article', false);
+        $articleId = $article->getId();
+        $future = $this->publication('Scheduled article', false);
+        $future->setPublishAt(new \DateTimeImmutable('+1 day'));
+        $event = $this->publication('Toggle event', false);
+        $event->setKind('event'); $event->setLocation('Club');
+        $event->setStartsAt(new \DateTimeImmutable('+2 days')); $event->setEndsAt(new \DateTimeImmutable('+2 days +1 hour'));
+        $this->em->flush();
+        $this->client->loginUser($this->press);
+        foreach ([$articleId, $future->getId(), $event->getId()] as $id) {
+            $crawler = $this->client->request('GET', '/admin/de/editorial');
+            $selector = 'form[action="/admin/de/editorial/'.$id.'/publication"]';
+            self::assertSelectorExists($selector.' .form-switch input.form-check-input:not(:checked)');
+            self::assertSelectorExists($selector.' button[data-editorial-toggle-submit]');
+            self::assertSelectorExists('script[src="/js/editorial-publication-toggle.js"]');
+            $form = $crawler->filter($selector)->form();
+            $form['published']->tick();
+            $this->client->submit($form);
+            self::assertResponseRedirects('/admin/de/editorial', 303);
+            $this->em->clear();
+            $saved = $this->em->find(WebsitePublication::class, $id);
+            self::assertTrue($saved->isPublished());
+            self::assertTrue($saved->getHistory()[0]['published']);
+        }
+        $this->client->request('GET', '/news/'.$articleId);
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/news/'.$future->getId());
+        self::assertResponseStatusCodeSame(404);
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        $selector = 'form[action="/admin/de/editorial/'.$articleId.'/publication"]';
+        self::assertSelectorExists($selector.' .form-switch input.form-check-input:checked');
+        $form = $crawler->filter($selector)->form(); $form['published']->untick();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/admin/de/editorial', 303);
+        $this->em->clear();
+        $saved = $this->em->find(WebsitePublication::class, $articleId);
+        self::assertFalse($saved->isPublished());
+        self::assertCount(2, $saved->getHistory());
+        self::assertFalse($saved->getHistory()[1]['published']);
+        $this->client->request('GET', '/news/'.$articleId);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testEditorialOverviewSwitchRejectsInvalidOrStaleChangesAndForeignAccess(): void
+    {
+        $article = $this->publication('Protected article', false);
+        $id = $article->getId();
+        $other = (new Club())->setName('Other club'); $this->em->persist($other);
+        $foreign = new WebsitePublication($other); $foreign->setTitle('Foreign'); $foreign->setSummary('Summary'); $foreign->setBody('Body');
+        $this->em->persist($foreign); $this->em->flush();
+        $foreignId = $foreign->getId();
+        $foreignPress = $this->account('foreign-switch-press', [User::ROLE_PRESS_OFFICER], $other);
+        $this->client->loginUser($this->press);
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        $form = $crawler->filter('form[action="/admin/de/editorial/'.$id.'/publication"]')->form();
+        $values = $form->getPhpValues(); $values['published'] = '1';
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', array_replace($values, ['_token' => 'invalid']));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/de/editorial/'.$foreignId.'/publication', $values);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', array_replace($values, ['published' => 'other']));
+        self::assertResponseStatusCodeSame(400);
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', array_replace($values, ['version' => 'invalid']));
+        self::assertResponseStatusCodeSame(400);
+        $this->em->getConnection()->executeStatement('UPDATE website_publication SET title = ?, version = version + 1 WHERE id = ?', ['Newer title', $id]);
+        $this->em->clear();
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', $values);
+        self::assertResponseRedirects('/admin/de/editorial', 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', 'zwischenzeitlich geändert');
+        $saved = $this->em->find(WebsitePublication::class, $id);
+        self::assertFalse($saved->isPublished());
+        self::assertSame('Newer title', $saved->getTitle());
+        self::assertCount(0, $saved->getHistory());
+        $this->client->loginUser($this->member);
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', $values);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($foreignPress);
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', $values);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testEditorialOverviewSwitchValidatesBeforePublishingButAllowsWithdrawal(): void
+    {
+        $course = $this->source('course', $this->club);
+        $event = $this->publication('Course event', true);
+        $event->setKind('event'); $event->setLocation('Club');
+        $event->setStartsAt(new \DateTimeImmutable('+2 days')); $event->setEndsAt(new \DateTimeImmutable('+2 days +1 hour'));
+        $event->setCourse($course); $this->em->flush();
+        $id = $event->getId();
+        $course->setStatus(CourseStatus::CANCELLED); $this->em->flush();
+        $this->client->loginUser($this->press);
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        $selector = 'form[action="/admin/de/editorial/'.$id.'/publication"]';
+        $form = $crawler->filter($selector)->form(); $form['published']->untick();
+        $this->client->submit($form); self::assertResponseRedirects('/admin/de/editorial', 303);
+        $crawler = $this->client->followRedirect();
+        $form = $crawler->filter($selector)->form(); $form['published']->tick();
+        $this->client->submit($form); self::assertResponseRedirects('/admin/de/editorial', 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', 'Verknüpfte Veranstaltung muss freigegeben sein');
+        $this->em->clear();
+        $saved = $this->em->find(WebsitePublication::class, $id);
+        self::assertFalse($saved->isPublished());
+        self::assertCount(1, $saved->getHistory());
     }
 
     public function testEditorialIsBackendOnlyAndDoesNotGrantGeneralBackendAccess(): void
@@ -197,6 +308,109 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->client->submitForm('Beitrag speichern', $data); self::assertResponseStatusCodeSame(303);
         $this->client->request('GET', '/events'); self::assertResponseIsSuccessful(); self::assertSelectorTextContains('main', 'Club garden');
         self::assertSelectorTextContains('main', '01.06.2027 18:00');
+    }
+
+    public function testDisplaySettingsAndIndependentPagination(): void
+    {
+        for ($i = 1; $i <= 5; ++$i) {
+            $article = $this->publication('Article '.$i, true);
+            $article->setPublishAt(new \DateTimeImmutable('-'.$i.' hours'));
+            $event = new WebsitePublication($this->club);
+            $event->setKind('event'); $event->setTitle('Event '.$i); $event->setSummary('Summary'); $event->setBody('Body');
+            $event->setLocation('Club'); $event->setPublished(true);
+            $event->setStartsAt(new \DateTimeImmutable('+'.$i.' days'));
+            $event->setEndsAt(new \DateTimeImmutable('+'.$i.' days +1 hour'));
+            $this->em->persist($event);
+        }
+        $this->em->flush();
+        $this->client->loginUser($this->press);
+        $this->client->request('POST', '/admin/configuration', [
+            'website_display_settings' => ['articlesPerPage' => '2', 'eventsPerPage' => '3', '_token' => 'invalid'],
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->em->getRepository(WebsiteDisplaySettings::class)->count([]));
+        $this->client->request('GET', '/admin/configuration');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="website_display_settings[articlesPerPage]"][value="6"]');
+        self::assertSelectorExists('input[name="website_display_settings[eventsPerPage]"][value="6"]');
+        $this->client->submitForm('Anzeige speichern', [
+            'website_display_settings[articlesPerPage]' => '2',
+            'website_display_settings[eventsPerPage]' => '3',
+        ]);
+        self::assertResponseRedirects('/admin/configuration', 303);
+        $this->em->clear();
+        $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
+        self::assertSame(2, $settings->getArticlesPerPage());
+        self::assertSame(3, $settings->getEventsPerPage());
+
+        $this->client->request('GET', '/?artikel_seite=2&veranstaltungen_seite=1');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Article 3');
+        self::assertSelectorTextNotContains('body', 'Article 1');
+        self::assertSelectorTextContains('body', 'Event 3');
+        self::assertSelectorTextNotContains('body', 'Event 4');
+        self::assertCount(5, $this->client->getCrawler()->filter('article.col-md-6'));
+        self::assertSelectorExists('nav[aria-label="Veranstaltungen: Seiten"] a[rel="next"][href*="artikel_seite=2"]');
+        $this->client->click($this->client->getCrawler()->filter('nav[aria-label="Veranstaltungen: Seiten"] a[rel="next"]')->link());
+        self::assertSelectorTextContains('body', 'Article 3');
+        self::assertSelectorTextContains('body', 'Event 4');
+        self::assertSelectorTextNotContains('body', 'Event 1');
+        self::assertSelectorExists('nav[aria-label="Veranstaltungen: Seiten"] a[rel="prev"]');
+        $this->client->request('GET', '/articles?seite=3');
+        self::assertSelectorTextContains('main', 'Article 5');
+        self::assertSelectorTextNotContains('main', 'Article 1');
+        $this->client->request('GET', '/events?seite=2');
+        self::assertSelectorTextContains('main', 'Event 5');
+        self::assertSelectorTextNotContains('main', 'Event 1');
+        $this->client->request('GET', '/events?seite=999');
+        self::assertSelectorTextContains('main', 'Event 5');
+        $this->client->request('GET', '/events?seite=0');
+        self::assertResponseStatusCodeSame(400);
+        $this->client->request('GET', '/events?seite[]=2');
+        self::assertResponseStatusCodeSame(400);
+
+        $this->client->request('GET', '/admin/configuration');
+        $this->client->submitForm('Anzeige speichern', [
+            'website_display_settings[articlesPerPage]' => '0',
+            'website_display_settings[eventsPerPage]' => '101',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        $this->em->clear();
+        $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
+        self::assertSame(2, $settings->getArticlesPerPage());
+        self::assertSame(3, $settings->getEventsPerPage());
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial/display-settings');
+        self::assertResponseStatusCodeSame(403);
+        $other = (new Club())->setName('Other club');
+        $this->em->persist($other); $this->em->flush();
+        $foreignPress = $this->account('foreign-press', [User::ROLE_PRESS_OFFICER], $other);
+        $this->client->loginUser($foreignPress);
+        $this->client->request('GET', '/admin/de/editorial/display-settings');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testDefaultPaginationMakesSeventhArticleAndEventReachable(): void
+    {
+        for ($i = 1; $i <= 7; ++$i) {
+            $article = $this->publication('News item '.$i, true);
+            $article->setPublishAt(new \DateTimeImmutable('-'.$i.' hours'));
+            $event = new WebsitePublication($this->club);
+            $event->setKind('event'); $event->setTitle('Calendar item '.$i); $event->setSummary('Summary'); $event->setBody('Body');
+            $event->setLocation('Club'); $event->setPublished(true);
+            $event->setStartsAt(new \DateTimeImmutable('+'.$i.' days'));
+            $event->setEndsAt(new \DateTimeImmutable('+'.$i.' days +1 hour'));
+            $this->em->persist($event);
+        }
+        $this->em->flush();
+        $this->client->request('GET', '/');
+        self::assertCount(12, $this->client->getCrawler()->filter('article.col-md-6'));
+        self::assertSelectorTextNotContains('body', 'News item 7');
+        self::assertSelectorTextNotContains('body', 'Calendar item 7');
+        $this->client->request('GET', '/?artikel_seite=2&veranstaltungen_seite=2');
+        self::assertSelectorTextContains('body', 'News item 7');
+        self::assertSelectorTextContains('body', 'Calendar item 7');
+        self::assertCount(2, $this->client->getCrawler()->filter('article.col-md-6'));
     }
 
     #[DataProvider('eventSources')]

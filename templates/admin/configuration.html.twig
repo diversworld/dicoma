@@ -1,0 +1,49 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Konfiguration{% endblock %}
+{% block main %}
+<h1>Konfiguration</h1>
+<p>Technische Zugangsdaten und Umgebungsvariablen werden weiterhin auf dem Server verwaltet.</p>
+{% if websiteForm %}
+    {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}
+    <h2>Website-Anzeige – {{ ownClub.name }}</h2>
+    <p>Seitengröße für Startseite und Übersichten, jeweils zwischen 1 und 100 Karten.</p>
+    {{ form_start(websiteForm) }}{{ form_errors(websiteForm) }}{{ form_widget(websiteForm) }}<button class="btn btn-primary">Anzeige speichern</button>{{ form_end(websiteForm) }}
+{% endif %}
+{% if superAdmin %}
+    <form method="get" class="my-3"><label>Verein für Mitgliedschaft und Beiträge
+        <select name="club" required><option value="">Bitte auswählen</option>{% for option in clubs %}<option value="{{ option.id }}" {{ club and club.id == option.id ? 'selected' : '' }}>{{ option.name }}</option>{% endfor %}</select>
+    </label><input type="hidden" name="year" value="{{ year }}"><button class="btn btn-secondary">Verein auswählen</button></form>
+{% endif %}
+{% if policyForm %}
+    <h2>Mitgliedschaft – {{ club.name }}</h2>
+    <p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.</p>
+    {{ form_start(policyForm) }}{{ form_errors(policyForm) }}{{ form_widget(policyForm) }}<button class="btn btn-primary">Vereinsregeln speichern</button>{{ form_end(policyForm) }}
+    <h2>Beitragsklassen</h2>
+    <p>Änderungen gelten nur für zukünftige Forderungen; bestehende Forderungen bleiben unverändert.</p>
+    {% for item in classForms %}
+        <details class="my-3" {% if item.form.vars.submitted %}open{% endif %}><summary>{{ item.class.name }}</summary>
+            {{ form_start(item.form) }}{{ form_errors(item.form) }}{{ form_widget(item.form) }}<button class="btn btn-primary">Beitragsklasse speichern</button>{{ form_end(item.form) }}
+        </details>
+    {% endfor %}
+    <h3>Beitragsklasse anlegen</h3>
+    {{ form_start(classForm) }}{{ form_errors(classForm) }}{{ form_widget(classForm) }}<button class="btn btn-primary">Beitragsklasse anlegen</button>{{ form_end(classForm) }}
+{% endif %}
+{% if canBar %}
+    <h2>Thekendienst-Jahresregel – {{ ownClub.name }}</h2>
+    <form method="get" class="my-3">
+        {% if club %}<input type="hidden" name="club" value="{{ club.id }}">{% endif %}
+        <label>Kalenderjahr <input type="number" name="year" min="2000" max="2100" value="{{ year }}" required></label>
+        <button class="btn btn-secondary">Jahr auswählen</button>
+    </form>
+    <form method="post" class="card card-body mb-3">
+        <input type="hidden" name="section" value="bar_policy"><input type="hidden" name="_token" value="{{ csrf_token('bar_duty_policy_0') }}">
+        <p>Regel für {{ year }}. {{ barPolicy ? 'Bereits konfiguriert.' : 'Noch nicht konfiguriert; es wird keine Pflicht automatisch angenommen.' }}</p>
+        <label>Pflichtminuten je Mitglied (0 = ausdrücklich keine Pflicht) <input class="form-control" type="number" name="minutes" min="0" max="60000" value="{{ barPolicy ? barPolicy.requiredMinutes : '' }}" required></label>
+        <label><input type="checkbox" name="cash" value="1" {{ barPolicy and barPolicy.cashEnabled ? 'checked' : '' }}> Separate Thekenkasse für dieses Jahr aktivieren</label>
+        <p>Die Kasse ist von der Gerätewartkasse getrennt. Bestehende Kassen bleiben bei Deaktivierung abschließbar.</p>
+        <label>Begründung (10–500 Zeichen) <input class="form-control" name="reason" minlength="10" maxlength="500" required></label>
+        <button class="btn btn-primary">Jahresregel speichern</button>
+    </form>
+    {% if barPolicy %}<details><summary>Änderungshistorie</summary><ul>{% for event in barPolicy.history %}<li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.minutes }} Minuten · Kasse {{ event.cash ? 'aktiviert' : 'deaktiviert' }} · {{ event.reason }}</li>{% endfor %}</ul></details>{% endif %}
+{% endif %}
+{% endblock %}

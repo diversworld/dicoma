@@ -4,6 +4,7 @@
 {% block body %}
 <main class="container section"><article>
     <h1>{{ publication.title }}</h1>
+    {% if publication.image %}{% include 'website/_image.html.twig' with {image: publication.image, url: path('website_publication_image', {id: publication.id})} %}{% endif %}
     <p class="lead">{{ publication.summary }}</p>
     {% if publication.kind == 'event' %}<p><time datetime="{{ publication.startsAt|date('c') }}">{{ publication.startsAt|date('d.m.Y H:i') }}</time> – {{ publication.endsAt|date('d.m.Y H:i') }} · {{ publication.location }}</p>{% endif %}
     <div>{{ publication.body|nl2br }}</div>

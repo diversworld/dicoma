@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, Member, Person, User};
+use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, Member, Person, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\MembershipStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -187,6 +187,9 @@ final class ClubEventBookingHttpTest extends WebTestCase
         self::assertSame(1, $this->em->getRepository(ClubEventPayment::class)->count([]));
         $this->postWithToken('/admin/club-events/'.$event->getId().'/cancel', 'event_admin_cancel_'.$event->getId());
         self::assertResponseStatusCodeSame(303);
+        $this->client->request('GET', '/admin/club-events/'.$event->getId());
+        self::assertSelectorTextContains('body', 'Erstattung offen: 20,00 EUR');
+        self::assertSelectorTextContains('body', 'zunächst tatsächlich manuell erstatten');
         $this->postWithToken($path, $token, ['amount' => '1', 'method' => 'cash', 'reference' => 'after-cancel']);
         self::assertSame(1, $this->em->getRepository(ClubEventPayment::class)->count([]));
         $this->postWithToken($path, $token, ['amount' => '-20,00', 'method' => 'cash', 'reference' => 'refund']);
@@ -215,6 +218,53 @@ final class ClubEventBookingHttpTest extends WebTestCase
         self::assertSame('Test event', $this->em->find(ClubEvent::class, $id)->getTitle());
         $this->client->request('GET', '/admin/calendar?month='.$month);
         self::assertSelectorExists('[data-event-key="club-event-'.$id.'"] a[href="/admin/club-events/'.$id.'"]');
+    }
+
+    public function testHomepageAndEventListShowAllVisibleEventsInChronologicalOrder(): void
+    {
+        $settings = new WebsiteDisplaySettings($this->club);
+        $settings->setEventsPerPage(100);
+        $this->em->persist($settings);
+        for ($i = 1; $i <= 8; ++$i) {
+            $publication = new WebsitePublication($this->club);
+            $publication->setKind('event'); $publication->setTitle('Announcement '.$i);
+            $publication->setSummary('Announcement summary'); $publication->setBody('Announcement body');
+            $publication->setLocation('Clubhouse'); $publication->setPublished(true);
+            $publication->setStartsAt(new \DateTimeImmutable('+'.($i * 2).' days'));
+            $publication->setEndsAt(new \DateTimeImmutable('+'.($i * 2).' days +1 hour'));
+            $this->em->persist($publication);
+        }
+        $this->em->flush();
+        $event = $this->event('paid');
+        $event->setTitle('Bookable between announcements');
+        $event->setStartsAt(new \DateTimeImmutable('+3 days'));
+        $event->setEndsAt(new \DateTimeImmutable('+3 days +1 hour'));
+        $this->em->flush();
+        for ($i = 1; $i <= 7; ++$i) {
+            $extra = $this->event('paid');
+            $extra->setTitle('Bookable extra '.$i);
+        }
+        $draft = $this->event('paid');
+        $draft->setTitle('Unpublished event'); $draft->setPublished(false);
+        $past = $this->event('paid');
+        $past->setTitle('Past event'); $past->setStartsAt(new \DateTimeImmutable('-2 days')); $past->setEndsAt(new \DateTimeImmutable('-1 day'));
+        $this->em->flush();
+        $this->event('members_free');
+        foreach (['/', '/events'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            $text = $this->client->getCrawler()->filter('body')->text();
+            self::assertStringContainsString('Announcement 8', $text);
+            self::assertStringContainsString('Bookable extra 7', $text);
+            self::assertStringNotContainsString('Test event', $text);
+            self::assertStringNotContainsString('Unpublished event', $text);
+            self::assertStringNotContainsString('Past event', $text);
+            self::assertLessThan(strpos($text, 'Announcement 2'), strpos($text, 'Bookable between announcements'));
+            self::assertLessThan(strpos($text, 'Bookable between announcements'), strpos($text, 'Announcement 1'));
+        }
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/');
+        self::assertSelectorTextContains('body', 'Test event');
     }
 
     public function testInactiveWaitingMemberIsNotPromotedForFreeEvent(): void

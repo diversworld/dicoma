@@ -14,14 +14,20 @@ use App\Entity\MembershipCharge;
 use App\Entity\MembershipEvent;
 use App\Entity\MembershipPayment;
 use App\Entity\MembershipPolicy;
+use App\Entity\BarDutyPolicy;
+use App\Entity\WebsiteDisplaySettings;
 use App\Entity\Person;
 use App\Entity\SepaMandate;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
 use App\Form\MemberContactType;
+use App\Form\WebsiteDisplaySettingsType;
 use App\Security\Voter\MemberManagementVoter;
 use App\Service\MembershipFinanceService;
 use App\Service\MembershipService;
+use App\Service\BarDutyAccess;
+use App\Service\BarDutyWorkflow;
+use App\Service\PublicWebsite;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -85,20 +91,91 @@ final class MembershipController extends AbstractController
         return $this->adminPage('membership/admin_clubs.html.twig', ['clubs' => $clubs]);
     }
 
+    #[Route('/admin/configuration', name: 'admin_configuration', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
+    public function configuration(Request $request, PublicWebsite $website, BarDutyAccess $barAccess, BarDutyWorkflow $barWorkflow): Response
+    {
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_BAR_MANAGER')) {
+            throw $this->createAccessDeniedException();
+        }
+        $user = $this->account();
+        $ownClub = $user->getMember()?->getClub();
+        $clubs = $this->isGranted('ROLE_SUPER_ADMIN') ? $this->em->getRepository(Club::class)->findAll() : array_filter([$ownClub]);
+        $club = null;
+        if ($this->isGranted('ROLE_ADMIN')) {
+            $clubId = $request->query->getInt('club', $ownClub?->getId() ?? 0);
+            if ($clubId > 0) {
+                $club = $this->em->find(Club::class, $clubId) ?? throw $this->createNotFoundException();
+                $this->assertClub($club);
+            }
+        }
+        $parameters = $club ? ['club' => $club->getId()] : [];
+        $websiteForm = $policyForm = $classForm = null;
+        $classForms = [];
+        $classEditSubmitted = false;
+        if ($website->canManageEditorial()) {
+            $websiteClub = $website->editorialClub();
+            $display = $this->em->find(WebsiteDisplaySettings::class, $websiteClub->getId()) ?? new WebsiteDisplaySettings($websiteClub);
+            $websiteForm = $this->createForm(WebsiteDisplaySettingsType::class, $display)->handleRequest($request);
+            if ($response = $this->process($websiteForm, function () use ($display): void {
+                $this->em->persist($display); $this->em->flush();
+            }, 'admin_configuration', $parameters)) { return $response; }
+        }
+        if ($club !== null) {
+            $policy = $this->memberships->policy($club) ?? new MembershipPolicy($club);
+            $policyForm = $this->policyForm($policy)->handleRequest($request);
+            if ($response = $this->process($policyForm, function () use ($policy): void {
+                $policy->validateRules(); $this->em->persist($policy); $this->em->flush();
+            }, 'admin_configuration', $parameters)) { return $response; }
+            $class = new ContributionClass($club);
+            $classForm = $this->contributionForm($class)->handleRequest($request);
+            if ($response = $this->process($classForm, fn () => $this->saveContribution($class), 'admin_configuration', $parameters)) { return $response; }
+            foreach ($this->em->getRepository(ContributionClass::class)->findBy(['club' => $club], ['name' => 'ASC']) as $existing) {
+                $form = $this->contributionForm($existing, 'contribution_class_'.$existing->getId())->handleRequest($request);
+                if ($response = $this->process($form, fn () => $this->saveContribution($existing), 'admin_configuration', $parameters)) { return $response; }
+                $classEditSubmitted = $classEditSubmitted || $form->isSubmitted();
+                $classForms[] = ['class' => $existing, 'form' => $form->createView()];
+            }
+        }
+        $yearRaw = $request->query->getString('year', date('Y'));
+        if (!preg_match('/^\d{4}$/D', $yearRaw) || (int) $yearRaw < 2000 || (int) $yearRaw > 2100) { throw $this->createNotFoundException('Ungültiges Jahr.'); }
+        $year = (int) $yearRaw;
+        $barPolicy = null;
+        $canBar = $barAccess->isManager() && $ownClub !== null;
+        if ($canBar) {
+            $barAccess->requireManager();
+            if ($request->isMethod('POST') && $request->request->getString('section') === 'bar_policy') {
+                if (!$this->isCsrfTokenValid('bar_duty_policy_0', $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
+                try {
+                    $minutes = $request->request->getString('minutes');
+                    if (!preg_match('/^\d{1,7}$/D', $minutes)) { throw new \DomainException('Ganzzahlige Angabe erforderlich.'); }
+                    $barWorkflow->configure($year, (int) $minutes, $request->request->getString('cash') === '1', $request->request->getString('reason'));
+                    $this->addFlash('success', 'Jahresregel gespeichert.');
+                } catch (\DomainException $e) { $this->addFlash('danger', $e->getMessage()); }
+                return $this->redirectToRoute('admin_configuration', $parameters + ['year' => $year], Response::HTTP_SEE_OTHER);
+            }
+            $barPolicy = $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $barAccess->club(), 'year' => $year]);
+        }
+        if ($request->isMethod('POST') && !($websiteForm?->isSubmitted() || $policyForm?->isSubmitted() || $classForm?->isSubmitted()
+            || $classEditSubmitted)) {
+            throw $this->createAccessDeniedException('Unbekannter oder nicht erlaubter Konfigurationsbereich.');
+        }
+        $response = $this->adminPage('admin/configuration.html.twig', [
+            'clubs' => $clubs, 'club' => $club, 'ownClub' => $ownClub, 'superAdmin' => $this->isGranted('ROLE_SUPER_ADMIN'),
+            'websiteForm' => $websiteForm?->createView(), 'policyForm' => $policyForm?->createView(),
+            'classForm' => $classForm?->createView(), 'classForms' => $classForms,
+            'canBar' => $canBar, 'barPolicy' => $barPolicy, 'year' => $year,
+        ]);
+        if ($request->isMethod('POST')) { $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY); }
+        return $response;
+    }
+
     #[IsGranted('ROLE_ADMIN')]
     #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function club(Club $club, Request $request): Response
     {
         $this->assertClub($club);
         $policy = $this->memberships->policy($club) ?? new MembershipPolicy($club);
-        $policyForm = $this->forms->createNamedBuilder('membership_policy', F\FormType::class, $policy)
-            ->add('applicationsEnabled', F\CheckboxType::class, ['label' => 'Öffentliche Anträge erlauben', 'required' => false])
-            ->add('contactEmail', F\EmailType::class, ['label' => 'Kontaktadresse der Verwaltung', 'required' => false])
-            ->add('cancellationCutoff', F\TextType::class, ['label' => 'Kündigungsstichtag (MM-TT, z. B. 09-30)', 'required' => false])
-            ->add('membershipYearEnd', F\TextType::class, ['label' => 'Mitgliedschaftsjahresende (MM-TT, z. B. 12-31)', 'required' => false])
-            ->add('requiredDocuments', F\ChoiceType::class, ['label' => 'Erforderliche Unterlagen', 'choices' => MemberDocument::kinds(), 'multiple' => true, 'required' => false])
-            ->add('creditorIdentifier', F\TextType::class, ['label' => 'SEPA-Gläubiger-ID', 'required' => false])
-            ->getForm()->handleRequest($request);
+        $policyForm = $this->policyForm($policy)->handleRequest($request);
         if ($response = $this->process($policyForm, function () use ($policy): void {
             $policy->validateRules();
             $this->em->persist($policy);
@@ -108,11 +185,7 @@ final class MembershipController extends AbstractController
         $class = new ContributionClass($club);
         $classForm = $this->contributionForm($class)->handleRequest($request);
         if ($response = $this->process($classForm, function () use ($class, $club): void {
-            if ($this->em->getRepository(ContributionClass::class)->findOneBy(['club' => $club, 'name' => $class->getName()]) !== null) {
-                throw new \DomainException('Diese Beitragsklasse existiert bereits.');
-            }
-            $this->em->persist($class);
-            $this->em->flush();
+            $this->saveContribution($class);
         }, 'membership_club', ['id' => $club->getId()])) { return $response; }
         return $this->adminPage('membership/club.html.twig', [
             'club' => $club, 'policyForm' => $policyForm->createView(), 'classForm' => $classForm->createView(),
@@ -127,23 +200,12 @@ final class MembershipController extends AbstractController
     public function editContribution(ContributionClass $class, Request $request): Response
     {
         $this->assertClub($class->getClub());
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('admin_configuration', ['club' => $class->getClub()->getId()]);
+        }
         $form = $this->contributionForm($class)->handleRequest($request);
         if ($response = $this->process($form, function () use ($class): void {
-            $duplicate = $this->em->getRepository(ContributionClass::class)->findOneBy(['club' => $class->getClub(), 'name' => $class->getName()]);
-            if ($duplicate !== null && $duplicate->getId() !== $class->getId()) {
-                throw new \DomainException('Diese Beitragsklasse existiert bereits.');
-            }
-            if (!$class->isFamily()) {
-                $dependants = $this->em->getRepository(Member::class)->createQueryBuilder('m')
-                    ->select('COUNT(m.id)')->join('m.familyPayer', 'p')
-                    ->where('p.contributionClass = :class')->setParameter('class', $class)->getQuery()->getSingleScalarResult();
-                if ((int) $dependants > 0) { throw new \DomainException('Familienbeitragsklasse mit abhängigen Mitgliedern nicht in einen Einzelbeitrag umwandeln.'); }
-            }
-            $excessDiscounts = $this->em->getRepository(Member::class)->createQueryBuilder('m')
-                ->select('COUNT(m.id)')->where('m.contributionClass = :class')->andWhere('m.contributionDiscountCents > :amount')
-                ->setParameter('class', $class)->setParameter('amount', $class->getAnnualCents())->getQuery()->getSingleScalarResult();
-            if ((int) $excessDiscounts > 0) { throw new \DomainException('Zuerst Ermäßigungen anpassen, die den neuen Jahresbeitrag übersteigen.'); }
-            $this->em->flush();
+            $this->saveContribution($class);
         }, 'membership_club', ['id' => $class->getClub()->getId()])) { return $response; }
         return $this->adminPage('membership/form.html.twig', ['title' => 'Beitragsklasse bearbeiten', 'form' => $form->createView(), 'explanation' => 'Änderungen gelten nur für zukünftige Forderungen. Bereits erhobene Beiträge und Zahlungen bleiben unverändert. Deaktivierte Klassen dürfen nicht für neue Jahresforderungen verwendet werden.']);
     }
@@ -347,9 +409,38 @@ final class MembershipController extends AbstractController
         return ['label' => $label, 'currency' => 'EUR', 'divisor' => 100, 'input' => 'integer', 'constraints' => [new Assert\Range(min: 0, max: 100000000)]];
     }
 
-    private function contributionForm(ContributionClass $class): FormInterface
+    private function policyForm(MembershipPolicy $policy): FormInterface
     {
-        return $this->forms->createNamedBuilder('contribution_class', F\FormType::class, $class)
+        return $this->forms->createNamedBuilder('membership_policy', F\FormType::class, $policy)
+            ->add('applicationsEnabled', F\CheckboxType::class, ['label' => 'Öffentliche Anträge erlauben', 'required' => false])
+            ->add('contactEmail', F\EmailType::class, ['label' => 'Kontaktadresse der Verwaltung', 'required' => false])
+            ->add('cancellationCutoff', F\TextType::class, ['label' => 'Kündigungsstichtag (MM-TT, z. B. 09-30)', 'required' => false])
+            ->add('membershipYearEnd', F\TextType::class, ['label' => 'Mitgliedschaftsjahresende (MM-TT, z. B. 12-31)', 'required' => false])
+            ->add('requiredDocuments', F\ChoiceType::class, ['label' => 'Erforderliche Unterlagen', 'choices' => MemberDocument::kinds(), 'multiple' => true, 'required' => false])
+            ->add('creditorIdentifier', F\TextType::class, ['label' => 'SEPA-Gläubiger-ID', 'required' => false])->getForm();
+    }
+
+    private function saveContribution(ContributionClass $class): void
+    {
+        $duplicate = $this->em->getRepository(ContributionClass::class)->findOneBy(['club' => $class->getClub(), 'name' => $class->getName()]);
+        if ($duplicate !== null && $duplicate->getId() !== $class->getId()) { throw new \DomainException('Diese Beitragsklasse existiert bereits.'); }
+        if ($class->getId() !== null) {
+            if (!$class->isFamily()) {
+                $dependants = $this->em->getRepository(Member::class)->createQueryBuilder('m')->select('COUNT(m.id)')->join('m.familyPayer', 'p')
+                    ->where('p.contributionClass = :class')->setParameter('class', $class)->getQuery()->getSingleScalarResult();
+                if ((int) $dependants > 0) { throw new \DomainException('Familienbeitragsklasse mit abhängigen Mitgliedern nicht in einen Einzelbeitrag umwandeln.'); }
+            }
+            $excessDiscounts = $this->em->getRepository(Member::class)->createQueryBuilder('m')->select('COUNT(m.id)')
+                ->where('m.contributionClass = :class')->andWhere('m.contributionDiscountCents > :amount')
+                ->setParameter('class', $class)->setParameter('amount', $class->getAnnualCents())->getQuery()->getSingleScalarResult();
+            if ((int) $excessDiscounts > 0) { throw new \DomainException('Zuerst Ermäßigungen anpassen, die den neuen Jahresbeitrag übersteigen.'); }
+        }
+        $this->em->persist($class); $this->em->flush();
+    }
+
+    private function contributionForm(ContributionClass $class, string $name = 'contribution_class'): FormInterface
+    {
+        return $this->forms->createNamedBuilder($name, F\FormType::class, $class)
             ->add('name', F\TextType::class, ['label' => 'Beitragsklasse'])
             ->add('annualCents', F\MoneyType::class, $this->money('Jahresbeitrag EUR'))
             ->add('family', F\CheckboxType::class, ['label' => 'Familienbeitrag', 'required' => false])

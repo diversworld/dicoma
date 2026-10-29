@@ -49,6 +49,23 @@ gebunden. Frontend und Backend behalten ihre getrennte Navigation; der
 Vereinskalender zeigt zulässige Veranstaltungen im jeweiligen Bereich.
 Redaktionelle Ankündigungen sowie Kurs-/Turnieranmeldungen bleiben unabhängige
 Datensätze; sie werden nicht automatisch in Veranstaltungsbuchungen umgewandelt.
+Startseite und Veranstaltungsübersicht zeigen die jeweils sichtbaren,
+kommenden redaktionellen und buchbaren Veranstaltungen gemeinsam nach Beginn
+sortiert und seitenweise. Die Seitengröße kann in der zentralen Konfiguration
+eingestellt werden; weitere Veranstaltungen sind über die Seitennavigation erreichbar.
+Eine Verknüpfung zwischen einer redaktionellen Ankündigung und einer
+Veranstaltungsbuchung gibt es bislang nicht; für dieselbe Veranstaltung separat
+angelegte Datensätze erscheinen daher weiterhin doppelt.
+
+## Veranstaltungsdokumente
+
+Vereinsadmins können in der Veranstaltungsverwaltung Dokumente entweder allen
+bestätigten Teilnehmenden oder einer einzelnen Anmeldung zuordnen. Bestätigte
+Mitglieder und Gäste finden ihre Dokumente bei ihrer Anmeldung. Bei Warteliste,
+persönlichem Storno oder Veranstaltungsabsage ist der Zugriff gesperrt. Jeder
+Download prüft die Berechtigung erneut. Die Dateien werden getrennt von der
+allgemeinen Dateiverwaltung verwaltet und als private Downloads bereitgestellt.
+Es gelten deren Dateitypen und die Größenbegrenzung von 10 MB.
 
 ## Betrieb und Grenzen
 
@@ -62,8 +79,12 @@ Im hier geprüften lokalen Bestand war die erste Migration bereits anderweitig
 ausgeführt; nach ausdrücklicher Freigabe wurde nur die zweite ausgeführt.
 Schema und Mapping stimmen dort überein, es sind keine Migrationen offen.
 
-Automatische Erinnerungen, E-Mail-Nachrichten beim Nachrücken oder Absagen,
-Veranstaltungsdokumente und erneute Anmeldung nach Storno sind noch nicht
+Für Veranstaltungsdokumente ist zusätzlich die irreversible Migration
+`Version20261029140000` erforderlich; Datenbank und private Dateien gemeinsam
+sichern und die Migration erst nach Freigabe ausführen.
+
+Automatische Erinnerungen, E-Mail-Nachrichten beim Nachrücken oder Absagen
+und erneute Anmeldung nach Storno sind noch nicht
 implementiert. Der Verein muss Teilnehmer über Änderungen außerhalb der
 Anwendung informieren. Diese Einschränkungen sind keine vollständige Abnahme
 der Veranstaltungsphase der Master Specification.

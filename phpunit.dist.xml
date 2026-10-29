@@ -37,6 +37,7 @@
             <file>tests/Integration/WebsitePublishingHttpTest.php</file>
             <file>tests/Integration/PortalNavigationHttpTest.php</file>
             <file>tests/Integration/ClubEventBookingHttpTest.php</file>
+            <file>tests/Integration/MediaFileHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

@@ -28,6 +28,7 @@ class WebsitePublication
     #[ORM\Column(length: 255), Assert\Length(max: 255)] private string $location = '';
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Courses $course = null;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Tournament $tournament = null;
+    #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
     #[ORM\Column(type: 'json')] private array $history = [];
 
     public function __construct(Club $club) { $this->club = $club; $this->publishAt = new \DateTimeImmutable(); }
@@ -56,6 +57,8 @@ class WebsitePublication
     public function setCourse(?Courses $value): void { $this->course = $value; }
     public function getTournament(): ?Tournament { return $this->tournament; }
     public function setTournament(?Tournament $value): void { $this->tournament = $value; }
+    public function getImage(): ?MediaFile { return $this->image; }
+    public function setImage(?MediaFile $value): void { $this->image = $value; }
     public function getHistory(): array { return $this->history; }
     public function record(string $actor): void
     {
@@ -65,6 +68,9 @@ class WebsitePublication
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
+        if ($this->image !== null && (!$this->image->isImage() || $this->image->getClub()->getId() !== $this->club->getId())) {
+            $context->buildViolation('Nur Bilder des eigenen Vereins können ausgewählt werden.')->atPath('image')->addViolation();
+        }
         if ($this->kind === 'event' && ($this->startsAt === null || $this->endsAt === null || $this->endsAt <= $this->startsAt || $this->location === '')) {
             $context->buildViolation('Veranstaltungen benötigen Ort, Beginn und ein späteres Ende.')->atPath('startsAt')->addViolation();
         }

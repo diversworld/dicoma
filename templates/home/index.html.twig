@@ -5,12 +5,13 @@
 {% block body %}
     <section class="about section">
         <div class="container">
-            <h2>Aktuelles aus dem Verein</h2>
-            {% include 'website/_cards.html.twig' with {publications:articles, kind:'article'} %}
+            <h2 id="aktuelles">Aktuelles aus dem Verein</h2>
+            {% include 'website/_cards.html.twig' with {publications:articlesPage.items, kind:'article'} %}
+            {% include 'website/_pagination.html.twig' with {pagination: articlesPage, parameter: 'artikel_seite', label: 'Artikel', anchor: 'aktuelles'} %}
             <p><a href="{{ path('website_articles') }}">Alle Artikel</a></p>
-            <h2>Kommende Veranstaltungen</h2>
-            {% include 'club_event/_cards.html.twig' with {events: bookableEvents} %}
-            {% include 'website/_cards.html.twig' with {publications:events, kind:'event'} %}
+            <h2 id="veranstaltungen">Kommende Veranstaltungen</h2>
+            {% include 'website/_event_cards.html.twig' with {entries: eventsPage.items} %}
+            {% include 'website/_pagination.html.twig' with {pagination: eventsPage, parameter: 'veranstaltungen_seite', label: 'Veranstaltungen', anchor: 'veranstaltungen'} %}
             <p><a href="{{ path('website_events') }}">Alle Veranstaltungen</a></p>
         </div>
     </section>
