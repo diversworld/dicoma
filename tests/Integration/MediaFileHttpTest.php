@@ -235,6 +235,15 @@ final class MediaFileHttpTest extends WebTestCase
         ]);
         self::assertResponseRedirects();
         self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
+        $crawler = $this->client->request('GET', '/admin/configuration');
+        $this->client->submit($crawler->filter('form[name="website_display_settings"]')->form(), [
+            'website_display_settings[articlesPerPage]' => '101',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('#website_display_settings_articlesPerPage.is-invalid');
+        $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
+        $this->em->refresh($settings);
+        self::assertSame(4, $settings->getArticlesPerPage());
         $this->client->request('POST', '/admin/configuration', ['bar_duty_policy' => ['_token' => $this->token('bar_duty_policy_0'), 'minutes' => '60']]);
         self::assertResponseStatusCodeSame(403);
 
@@ -309,6 +318,13 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
         self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Media club');
         self::assertSelectorExists('select[name="club"].form-select');
+        $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
+            'bar_duty_policy[minutes]' => '60', 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
+        ]);
+        self::assertResponseRedirects('/admin/configuration?club='.$other->getId().'&year=2029', 303);
+        self::assertSame(60, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2029])->getRequiredMinutes());
+        self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2029]));
+        $this->client->request('GET', '/admin/configuration?club='.$other->getId().'&year=2029');
         $this->client->submitForm('Jahr auswählen', ['year' => '2030'], 'GET');
         self::assertResponseIsSuccessful();
         self::assertSame('/admin/configuration?club='.$other->getId().'&year=2030', $this->client->getRequest()->getRequestUri());
