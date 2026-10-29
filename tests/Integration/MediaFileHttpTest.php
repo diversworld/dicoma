@@ -229,13 +229,13 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('form[name="website_display_settings"]');
         self::assertSelectorNotExists('form[name="membership_policy"]');
-        self::assertSelectorNotExists('input[name="section"][value="bar_policy"]');
+        self::assertSelectorNotExists('form[name="bar_duty_policy"]');
         $this->client->submit($crawler->filter('form[name="website_display_settings"]')->form(), [
             'website_display_settings[articlesPerPage]' => '4', 'website_display_settings[eventsPerPage]' => '7',
         ]);
         self::assertResponseRedirects();
         self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
-        $this->client->request('POST', '/admin/configuration', ['section' => 'bar_policy', '_token' => $this->token('bar_duty_policy_0'), 'minutes' => '60']);
+        $this->client->request('POST', '/admin/configuration', ['bar_duty_policy' => ['_token' => $this->token('bar_duty_policy_0'), 'minutes' => '60']]);
         self::assertResponseStatusCodeSame(403);
 
         $this->client->loginUser($manager);
@@ -243,11 +243,42 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('form[name="website_display_settings"]');
         self::assertSelectorNotExists('form[name="membership_policy"]');
-        $this->client->submitForm('Jahresregel speichern', ['minutes' => '120', 'cash' => '1', 'reason' => 'Beschluss des Vereins']);
+        self::assertSelectorExists('input[name="year"][value="2028"].form-control');
+        self::assertSelectorExists('input[name="bar_duty_policy[minutes]"].form-control');
+        self::assertSelectorExists('input[name="bar_duty_policy[cash]"].form-check-input');
+        $this->client->submitForm('Jahresregel speichern', [
+            'bar_duty_policy[minutes]' => '120', 'bar_duty_policy[cash]' => '1', 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
+        ]);
         self::assertResponseRedirects('/admin/configuration?year=2028', 303);
         self::assertSame(120, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
-        $this->client->request('POST', '/admin/configuration?year=2028', ['section' => 'bar_policy', '_token' => 'invalid', 'minutes' => '10']);
+        $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+        $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
+            'bar_duty_policy[minutes]' => '60001', 'bar_duty_policy[reason]' => 'Zu kurz',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('#bar_duty_policy_minutes.is-invalid');
+        self::assertSelectorExists('#bar_duty_policy_reason.is-invalid');
+        self::assertSame(120, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
+        foreach (['0', '60000'] as $minutes) {
+            $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+            $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
+                'bar_duty_policy[minutes]' => $minutes, 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
+            ]);
+            self::assertResponseRedirects('/admin/configuration?year=2028', 303);
+            self::assertSame((int) $minutes, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
+        }
+        $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+        $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
+            'bar_duty_policy[minutes]' => '1.5', 'bar_duty_policy[reason]' => '         x         ',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('#bar_duty_policy_minutes.is-invalid');
+        self::assertSelectorExists('#bar_duty_policy_reason.is-invalid');
+        self::assertSame(60000, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
+        $this->client->request('POST', '/admin/configuration?year=2028', ['bar_duty_policy' => ['_token' => 'invalid', 'minutes' => '10']]);
         self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/configuration?year=1999');
+        self::assertResponseStatusCodeSame(404);
 
         $this->client->loginUser($this->admin);
         $crawler = $this->client->request('GET', '/admin/configuration');
@@ -277,6 +308,15 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
         self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Media club');
+        self::assertSelectorExists('select[name="club"].form-select');
+        $this->client->submitForm('Jahr auswählen', ['year' => '2030'], 'GET');
+        self::assertResponseIsSuccessful();
+        self::assertSame('/admin/configuration?club='.$other->getId().'&year=2030', $this->client->getRequest()->getRequestUri());
+        self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
+        $this->client->submitForm('Verein auswählen', ['club' => (string) $this->club->getId()], 'GET');
+        self::assertResponseIsSuccessful();
+        self::assertSame('/admin/configuration?club='.$this->club->getId().'&year=2030', $this->client->getRequest()->getRequestUri());
+        $crawler = $this->client->request('GET', '/admin/configuration?club='.$other->getId().'&year=2029');
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[contactEmail]' => 'other@example.org',
         ]);

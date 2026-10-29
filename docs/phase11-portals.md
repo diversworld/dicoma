@@ -29,6 +29,16 @@ Rahmen; nur das Menü ändert sich. Die vorhandene Mitgliederseite bleibt
 gestalterisch erhalten. EasyAdmin verwendet unabhängig von der Kontorolle
 seinen eigenen Rahmen.
 
+## Konfigurationsformulare
+
+Die zentrale Seite `/admin/configuration` verwendet Symfony-FormTypes für
+Website-Anzeige, Mitgliedschaftsregeln, Beitragsklassen und die
+Thekendienst-Jahresregel. Vereins- und Jahresauswahl sind GET-Formulare;
+sie behalten die bestehenden Parameter `club` und `year`. Die FormTypes für
+Mitgliedschaftsregeln und Beitragsklassen werden auch auf den bisherigen
+Mitgliedschaftsseiten verwendet. Schreibende Formulare sind CSRF-geschützt;
+ungültige Eingaben werden direkt an den Formularfeldern angezeigt.
+
 ## Frontendnavigation
 
 | Gruppe | Funktionen |

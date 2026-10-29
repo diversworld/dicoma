@@ -62,7 +62,7 @@ use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use \Doctrine\ORM\EntityManagerInterface;
-
+use \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 #[AdminDashboard(
 	routePath: '/admin/{_locale}', 
@@ -276,6 +276,7 @@ class DashboardController extends AbstractDashboardController
         try {
             $this->em->lock($publication, LockMode::OPTIMISTIC, (int) $version);
             $published = $value === '1';
+
             if ($publication->isPublished() !== $published) {
                 if ($published) {
                     $candidate = clone $publication;
@@ -290,6 +291,7 @@ class DashboardController extends AbstractDashboardController
                 $publication->record($this->getUser()->getUserIdentifier());
                 $this->em->flush();
             }
+            
             $this->addFlash('success', $published
                 ? 'Beitrag freigegeben. Sichtbar ab dem Veröffentlichungszeitpunkt, sofern die verknüpfte Veranstaltung freigegeben ist.'
                 : 'Freigabe zurückgenommen; der Beitrag ist nicht öffentlich sichtbar.');
@@ -304,23 +306,27 @@ class DashboardController extends AbstractDashboardController
     {
         $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
         $club = $website->editorialClub();
+
         if ($request->isMethod('GET')) {
             return $this->redirectToRoute('admin_configuration');
         }
+        
         $settings = $this->em->find(WebsiteDisplaySettings::class, $club->getId()) ?? new WebsiteDisplaySettings($club);
         $form = $this->createForm(WebsiteDisplaySettingsType::class, $settings);
         $form->handleRequest($request);
+        
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $this->em->persist($settings);
                 $this->em->flush();
                 $this->addFlash('success', 'Anzeigeeinstellungen gespeichert.');
                 return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
-            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+            } catch (UniqueConstraintViolationException) {
                 $form->addError(new FormError('Die Einstellungen wurden gleichzeitig angelegt. Bitte laden Sie die Seite neu.'));
                 return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: 409));
             }
         }
+        
         return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: $form->isSubmitted() ? 422 : 200));
     }
 
