@@ -9,6 +9,7 @@
             {% include 'website/_cards.html.twig' with {publications:articles, kind:'article'} %}
             <p><a href="{{ path('website_articles') }}">Alle Artikel</a></p>
             <h2>Kommende Veranstaltungen</h2>
+            {% include 'club_event/_cards.html.twig' with {events: bookableEvents} %}
             {% include 'website/_cards.html.twig' with {publications:events, kind:'event'} %}
             <p><a href="{{ path('website_events') }}">Alle Veranstaltungen</a></p>
         </div>

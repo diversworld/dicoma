@@ -1,0 +1,10 @@
+<div class="row">
+    {% for event in events %}
+        <article class="col-md-6 mb-4"><div class="block">
+            <h3><a href="{{ path('club_event_detail', {id: event.id}) }}">{{ event.title }}</a></h3>
+            <p>{{ event.startsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
+            <p>{{ event.pricing == 'members_free' ? 'Kostenfrei für Mitglieder' : 'Mitglieder und Gäste' }}</p>
+            <a class="btn btn-small" href="{{ path('club_event_detail', {id: event.id}) }}">Details und Anmeldung</a>
+        </div></article>
+    {% endfor %}
+</div>

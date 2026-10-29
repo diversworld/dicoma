@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+{% block title %}Veranstaltungsanmeldung | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+    <h1>{{ registration.event.title }}</h1>
+    <p>{{ registration.event.startsAt|date('d.m.Y H:i') }} · {{ registration.event.location }}</p>
+    <p>Status: {{ registration.event.cancelled ? 'Veranstaltung abgesagt' : (registration.status == 'registered' ? 'Angemeldet' : (registration.status == 'waitlisted' ? 'Warteliste' : (registration.status == 'ineligible' ? 'Mitgliedschaft nicht mehr aktiv' : 'Storniert'))) }}</p>
+    <p>Vereinbarter Preis: {{ (registration.feeCents / 100)|number_format(2, ',', '.') }} EUR · Bezahlt: {{ (paid / 100)|number_format(2, ',', '.') }} EUR.</p>
+    {% if registration.status in ['waitlisted', 'ineligible'] %}<p>Es ist keine Zahlung fällig.</p>
+    {% elseif registration.status == 'cancelled' or registration.event.cancelled %}<p>Erstattung offen: {{ (paid / 100)|number_format(2, ',', '.') }} EUR. Bitte mit der Vereinsverwaltung abstimmen.</p>
+    {% else %}<p>Offen: {{ ((registration.feeCents - paid) / 100)|number_format(2, ',', '.') }} EUR. Überweisung oder Barzahlung nach Absprache mit dem Verein.</p>{% endif %}
+    <ul>{% for payment in payments %}<li>{{ payment.recordedAt|date('d.m.Y') }} · {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }}</li>{% endfor %}</ul>
+    {% if registration.status != 'cancelled' and not registration.event.cancelled and registration.event.startsAt > date() %}
+        <form method="post" action="{{ path('club_event_cancel', {id: registration.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('event_cancel_' ~ registration.id) }}">
+            <button type="submit">Anmeldung stornieren</button>
+        </form>
+    {% endif %}
+    <a href="{{ path('club_event_registrations') }}">Meine Veranstaltungsanmeldungen</a>
+</main>
+{% endblock %}

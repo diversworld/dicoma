@@ -33,10 +33,19 @@ final class PublicWebsiteController extends AbstractController
 
     #[Route('/articles', name: 'website_articles', methods: ['GET'])]
     #[Route('/events', name: 'website_events', methods: ['GET'])]
-    public function index(\Symfony\Component\HttpFoundation\Request $request, PublicWebsite $website): Response
+    public function index(\Symfony\Component\HttpFoundation\Request $request, PublicWebsite $website, \App\Service\ClubEventBooking $booking): Response
     {
         $kind = $request->attributes->get('_route') === 'website_events' ? 'event' : 'article';
-        return $this->render('website/index.html.twig', ['kind' => $kind, 'publications' => $website->publications($kind, $kind === 'event')]);
+        $events = [];
+        if ($kind === 'event' && $website->club() !== null) {
+            $user = $this->getUser();
+            $events = $booking->visibleUpcoming($website->club(), $user instanceof \App\Entity\User ? $user : null);
+        }
+        $response = $this->render('website/index.html.twig', ['kind' => $kind, 'publications' => $website->publications($kind, $kind === 'event'), 'bookableEvents' => $events]);
+        if ($kind === 'event' && $this->getUser() !== null) {
+            $response->setPrivate()->headers->addCacheControlDirective('no-store');
+        }
+        return $response;
     }
 
     #[Route('/news/{id}', name: 'website_publication', requirements: ['id' => '\d+'], methods: ['GET'])]

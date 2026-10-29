@@ -4,6 +4,10 @@
 {% block body %}
 <main class="container section">
     <h1>{{ kind == 'event' ? 'Kommende Veranstaltungen' : 'Aktuelles aus dem Verein' }}</h1>
+    {% if kind == 'event' and bookableEvents %}
+        <h2>Veranstaltungen mit Anmeldung</h2>
+        {% include 'club_event/_cards.html.twig' with {events: bookableEvents} %}
+    {% endif %}
     {% include 'website/_cards.html.twig' %}
 </main>
 {% endblock %}

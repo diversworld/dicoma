@@ -1,5 +1,35 @@
 # Phase-2-Prüfbericht
 
+## Veranstaltungsbuchungen vom 28.10.2026
+
+Der [Fachvertrag](../phase9-events.md) beschreibt kostenlose Mitglieds-
+veranstaltungen, kostenpflichtige Veranstaltungen mit getrennten Mitglieder-/
+Gästetarifen, bestätigte Konten und manuelle Zahlungen.
+
+- Die kombinierte Unit-/isolierte Regression lief während der Entwicklung
+  erfolgreich mit **303 Tests und 5.564 Assertions**. Anschließend ergänzte
+  Fälle wurden separat und gezielt erneut geprüft: zuletzt **9 Veranstaltungs-
+  HTTP-Tests mit 58 Assertions**. Navigation und Vereinskalender bestanden
+  zusätzlich mit **54 Tests und 1.873 Assertions**.
+- MariaDB-Migrationstests prüften Neuinstallation, Bestandsupgrade und die
+  Indexkorrektur mit vorhandenen Anmeldungen: **3 Tests, 21 Assertions**.
+  Zwei zusätzliche Tests für den letzten Platz unter Repeatable Read und
+  MariaDB-Snapshotisolation bestanden mit **14 Assertions**.
+- Twig, Test-/Produktionscontainer, YAML, Übersetzungskataloge und
+  `git diff --check` wurden geprüft. Die öffentliche Veranstaltungsübersicht
+  und eine vorhandene Veranstaltungsdetailseite wurden im Browser lesend
+  kontrolliert; es wurden keine Buchungen oder Zahlungen im Geschäftsbestand
+  angelegt.
+- Die erste Veranstaltungsmigration war auf der lokalen Anwendungsdatenbank
+  bereits durch eine andere Aktivität angewendet worden. Nach ausdrücklicher
+  Freigabe und isolierter Prüfung wurde ausschließlich die nachfolgende
+  Indexkorrekturmigration lokal ausgeführt. Schema und Mapping stimmen danach
+  überein, keine Migrationen stehen aus.
+
+Automatische Teilnehmerbenachrichtigungen und Veranstaltungsdokumente fehlen.
+Benachrichtigung bei Absage/Nachrücken und tatsächliche Erstattungen müssen
+außerhalb der Anwendung erfolgen; siehe Fachvertrag.
+
 ## Navigations- und Schichtkassenprüfung vom 28.10.2026
 
 Maßgeblich ist der präzisierte [Navigationsvertrag](../phase11-portals.md):

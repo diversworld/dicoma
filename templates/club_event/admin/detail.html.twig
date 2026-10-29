@@ -1,0 +1,27 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}{{ event.title }}{% endblock %}
+{% block main %}
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+<p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
+<p>{{ event.description|nl2br }}</p>
+<p>Status: {{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }} · Mitglieder {{ (event.memberFeeCents / 100)|number_format(2, ',', '.') }} EUR · Gäste {{ (event.guestFeeCents / 100)|number_format(2, ',', '.') }} EUR</p>
+{% if not event.cancelled %}<p>Bei einer Absage müssen Teilnehmende außerhalb der Anwendung informiert und Zahlungen manuell erstattet werden.</p><form method="post" action="{{ path('admin_club_event_cancel', {id: event.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('event_admin_cancel_' ~ event.id) }}"><button type="submit">Veranstaltung absagen</button></form>{% endif %}
+{% if not event.cancelled and rows is empty %}<a href="{{ path('admin_club_event_edit', {id: event.id}) }}">Veranstaltung bearbeiten</a>{% endif %}
+<h2>Teilnehmer und Zahlungsstatus</h2>
+{% for row in rows %}
+    {% set registration = row.registration %}
+    <section class="card card-body mb-3">
+        <h3>{{ registration.person.firstname }} {{ registration.person.lastname }}</h3>
+        <p>{{ registration.status }} · {{ registration.tariff }} · Preis {{ (registration.feeCents / 100)|number_format(2, ',', '.') }} EUR · bezahlt {{ (row.paid / 100)|number_format(2, ',', '.') }} EUR</p>
+        <ul>{% for payment in row.payments %}<li>{{ payment.recordedAt|date('d.m.Y H:i') }} · {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.method }} · {{ payment.reference }} · {{ payment.recordedBy }}</li>{% endfor %}</ul>
+        <form method="post" action="{{ path('admin_club_event_payment', {id: registration.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('event_payment_' ~ registration.id) }}">
+            <label>Betrag EUR (Erstattung negativ) <input name="amount" required inputmode="decimal"></label>
+            <label>Zahlungsart <select name="method"><option value="transfer">Überweisung</option><option value="cash">Bar</option></select></label>
+            <label>Belegreferenz <input name="reference" required maxlength="120"></label>
+            <button type="submit">Zahlung / Erstattung buchen</button>
+        </form>
+    </section>
+{% else %}<p>Keine Anmeldungen.</p>{% endfor %}
+<a href="{{ path('admin_club_events') }}">Zur Veranstaltungsverwaltung</a>
+{% endblock %}

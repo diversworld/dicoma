@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+{% block title %}Meine Veranstaltungsanmeldungen | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <h1>{{ 'Meine Veranstaltungsanmeldungen'|trans }}</h1>
+    <ul>{% for registration in registrations %}
+        <li><a href="{{ path('club_event_registration', {id: registration.id}) }}">{{ registration.event.title }}</a>
+            · {{ registration.event.startsAt|date('d.m.Y H:i') }}
+            · {{ registration.event.cancelled ? 'Veranstaltung abgesagt' : (registration.status == 'registered' ? 'Angemeldet' : (registration.status == 'waitlisted' ? 'Warteliste' : (registration.status == 'ineligible' ? 'Mitgliedschaft nicht mehr aktiv' : 'Storniert'))) }}</li>
+    {% else %}<li>Noch keine Veranstaltungsanmeldungen.</li>{% endfor %}</ul>
+    <a href="{{ path('website_events') }}">Veranstaltungen ansehen</a>
+</main>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ event.title }} | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+    <h1>{{ event.title }}</h1>
+    <p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
+    <p>{{ event.description|nl2br }}</p>
+    {% if event.pricing == 'members_free' %}
+        <p>Kostenfrei für aktive Mitglieder dieses Vereins.</p>
+    {% else %}
+        <p>Mitglieder: {{ (event.memberFeeCents / 100)|number_format(2, ',', '.') }} EUR · Gäste: {{ (event.guestFeeCents / 100)|number_format(2, ',', '.') }} EUR</p>
+        <p>Bezahlung per Überweisung oder bar nach Absprache mit dem Verein.</p>
+    {% endif %}
+    <p>{{ event.capacity ? event.capacity ~ ' Plätze; bei Auslastung Warteliste.' : 'Keine Teilnehmerbegrenzung.' }}
+        {% if event.deadline %} Anmeldeschluss: {{ event.deadline|date('d.m.Y H:i') }}.{% endif %}</p>
+    {% if registration %}
+        <a href="{{ path('club_event_registration', {id: registration.id}) }}">Meine Anmeldung anzeigen</a>
+    {% elseif app.user %}
+        <form method="post" action="{{ path('club_event_register', {id: event.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('event_register_' ~ event.id) }}">
+            <button type="submit" class="btn btn-primary">Verbindlich anmelden</button>
+        </form>
+    {% else %}<p>Für die Anmeldung ist ein bestätigtes Konto erforderlich.</p>
+        <a href="{{ path('app_login') }}">Anmelden</a> · <a href="{{ path('app_register') }}">Gastkonto erstellen</a>
+    {% endif %}
+</main>
+{% endblock %}

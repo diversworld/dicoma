@@ -70,6 +70,95 @@ final class MigrationChainTest extends TestCase
         $this->migrate('20261016194500');
     }
 
+    public function testEventBookingUpgradePreservesExistingPublicationsAndMembers(): void
+    {
+        $this->migrate('20261025190000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Member']);
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => (int) $this->connection->lastInsertId(), 'membership_status' => 'active']);
+        $members = $this->connection->fetchAllAssociative('SELECT * FROM member');
+        $this->connection->insert('website_publication', ['club_id' => $club, 'version' => 1, 'kind' => 'event', 'title' => 'Existing announcement',
+            'summary' => 'Existing', 'body' => 'Keep unchanged', 'published' => 1, 'publish_at' => '2026-01-01 10:00:00',
+            'starts_at' => '2027-01-01 10:00:00', 'ends_at' => '2027-01-01 11:00:00', 'location' => 'Clubhouse', 'history' => '[]']);
+        $publications = $this->connection->fetchAllAssociative('SELECT * FROM website_publication');
+        $this->migrate('latest');
+        self::assertSame($members, $this->connection->fetchAllAssociative('SELECT * FROM member'));
+        self::assertSame($publications, $this->connection->fetchAllAssociative('SELECT * FROM website_publication'));
+        foreach (['club_event', 'club_event_registration', 'club_event_payment'] as $table) {
+            self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM '.$table));
+        }
+        $this->assertSchemaMatchesMapping();
+    }
+
+    #[DataProvider('barDutySnapshotModes')]
+    public function testEventCapacityUsesCurrentReadAfterEarlierSnapshot(bool $snapshotIsolation): void
+    {
+        $mariaDb = str_contains($this->connection->fetchOne('SELECT VERSION()'), 'MariaDB');
+        if ($snapshotIsolation && !$mariaDb) { self::markTestSkipped('MariaDB-specific snapshot isolation.'); }
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $ids = [];
+        foreach (['Reader', 'Writer'] as $name) {
+            $this->connection->insert('person', ['firstname' => $name, 'lastname' => 'Synthetic']);
+            $ids[] = (int) $this->connection->lastInsertId();
+        }
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $reader = DriverManager::getConnection($this->connection->getParams());
+        $writer = DriverManager::getConnection($this->connection->getParams());
+        $em = EntityManager::create($reader, $config);
+        $event = new \App\Entity\ClubEvent($em->find(\App\Entity\Club::class, $clubId));
+        $event->setTitle('Last place'); $event->setDescription('Synthetic'); $event->setLocation('Club');
+        $event->setPricing('paid'); $event->setMemberFeeCents(1000); $event->setGuestFeeCents(2000);
+        $event->setStartsAt(new \DateTimeImmutable('+3 days')); $event->setEndsAt(new \DateTimeImmutable('+4 days'));
+        $event->setCapacity(1); $event->setPublished(true);
+        $em->persist($event); $em->flush();
+        $user = (new \App\Entity\User())->setUser('event-reader')->setIsVerified(true)->setPerson($em->find(\App\Entity\Person::class, $ids[0]));
+        $workflow = new \App\Service\ClubEventBooking($em);
+        if ($mariaDb) { $reader->executeStatement('SET SESSION innodb_snapshot_isolation = '.($snapshotIsolation ? '1' : '0')); }
+        $reader->setTransactionIsolation(\Doctrine\DBAL\TransactionIsolationLevel::REPEATABLE_READ);
+        $reader->beginTransaction();
+        try {
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM club_event_registration'));
+            $writer->insert('club_event_registration', ['event_id' => $event->getId(), 'person_id' => $ids[1],
+                'status' => 'registered', 'fee_cents' => 2000, 'tariff' => 'guest', 'registered_at' => '2026-01-01 10:00:00']);
+            self::assertSame(0, (int) $reader->fetchOne('SELECT COUNT(*) FROM club_event_registration'));
+            try {
+                $registration = $workflow->register($event->getId(), $user);
+                self::assertFalse($snapshotIsolation, 'Snapshot conflict must be rejected, not overbooked.');
+                self::assertSame('waitlisted', $registration->getStatus());
+            } catch (\DomainException $e) {
+                self::assertTrue($snapshotIsolation);
+                self::assertStringContainsString('Gleichzeitige Änderung', $e->getMessage());
+            }
+            self::assertSame(1, (int) $writer->fetchOne("SELECT COUNT(*) FROM club_event_registration WHERE status = 'registered'"));
+        } finally {
+            if ($reader->isTransactionActive()) { $reader->rollBack(); }
+            $reader->close(); $writer->close();
+        }
+    }
+
+    public function testEventIndexCorrectionPreservesExistingRegistrations(): void
+    {
+        $this->migrate('20261028180000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Event', 'lastname' => 'Participant']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_event', ['club_id' => $club, 'title' => 'Keep event', 'description' => 'Keep details',
+            'pricing' => 'paid', 'member_fee_cents' => 1000, 'guest_fee_cents' => 2000, 'starts_at' => '2027-01-01 10:00:00',
+            'ends_at' => '2027-01-01 12:00:00', 'location' => 'Club', 'published' => 1, 'cancelled' => 0]);
+        $event = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_event_registration', ['event_id' => $event, 'person_id' => $person, 'status' => 'registered',
+            'fee_cents' => 2000, 'tariff' => 'guest', 'registered_at' => '2026-01-01 10:00:00']);
+        $before = $this->connection->fetchAllAssociative('SELECT * FROM club_event_registration');
+        $this->connection->executeStatement('ALTER TABLE club_event RENAME INDEX IDX_9BC0201561190A32 TO idx_event_club');
+        $this->connection->executeStatement('ALTER TABLE club_event_registration RENAME INDEX IDX_11085451217BBB47 TO idx_event_reg_person');
+        $this->migrate('latest');
+        self::assertSame($before, $this->connection->fetchAllAssociative('SELECT * FROM club_event_registration'));
+        self::assertSame('Keep event', $this->connection->fetchOne('SELECT title FROM club_event WHERE id = ?', [$event]));
+        $this->assertSchemaMatchesMapping();
+    }
+
     public function testCompetitionUpgradePreservesExistingTeamsAndMemberships(): void
     {
         $this->migrate('20261024130000');

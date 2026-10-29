@@ -1,0 +1,9 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Veranstaltungsbuchungen{% endblock %}
+{% block main %}
+<a href="{{ path('admin_club_event_new') }}" class="btn btn-primary">Veranstaltung anlegen</a>
+<table class="table"><thead><tr><th>Veranstaltung</th><th>Beginn</th><th>Status</th></tr></thead><tbody>
+{% for event in events %}<tr><td><a href="{{ path('admin_club_event', {id: event.id}) }}">{{ event.title }}</a></td><td>{{ event.startsAt|date('d.m.Y H:i') }}</td><td>{{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }}</td></tr>
+{% else %}<tr><td colspan="3">Keine Veranstaltungen.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

@@ -92,6 +92,7 @@ final class PortalNavigation
             $personal[] = ['label' => 'Mein Fortschritt', 'route' => 'app_my_training_progress'];
             $personal[] = ['label' => 'Meine Anwesenheit', 'route' => 'app_my_training_attendance'];
             $personal[] = ['label' => 'Meine Kursanmeldungen', 'route' => 'frontend_course_registrations'];
+            $personal[] = ['label' => 'Meine Veranstaltungsanmeldungen', 'route' => 'club_event_registrations'];
         }
         if ($hasClub && $isMember) {
             $roles['Thekendienst'] = [

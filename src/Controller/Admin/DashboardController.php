@@ -450,6 +450,7 @@ class DashboardController extends AbstractDashboardController
             ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),
+            MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', 'admin_club_events'),
             MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'admin_portal_bar_duty')->setPermission('ROLE_BAR_MANAGER'),
 
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')->setSubItems([

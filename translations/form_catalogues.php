@@ -31,6 +31,7 @@ return static function (string $domain, string $locale): array {
         'Meine Daten' => ['My details', 'Mes coordonnées', 'Mis datos'],
         'Meine Mitgliedschaft' => ['My membership', 'Mon adhésion', 'Mi afiliación'],
         'Meine Buchungen' => ['My bookings', 'Mes réservations', 'Mis reservas'],
+        'Meine Veranstaltungsanmeldungen' => ['My event registrations', 'Mes inscriptions aux événements', 'Mis inscripciones a eventos'],
         'Meine Kurse' => ['My courses', 'Mes cours', 'Mis cursos'],
         'Ausbilder' => ['Instructors', 'Moniteurs', 'Instructores'],
         'Ausbilder Dashboard' => ['Instructor dashboard', 'Tableau de bord du moniteur', 'Panel del instructor'],

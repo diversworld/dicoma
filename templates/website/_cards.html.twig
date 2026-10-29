@@ -6,5 +6,5 @@
         <p>{{ publication.summary }}</p>
         <a class="btn btn-small" href="{{ path('website_publication', {id:publication.id}) }}">Weiterlesen</a>
     </div></article>
-{% else %}<div class="col-12"><p>Derzeit keine veröffentlichten {{ kind == 'event' ? 'Veranstaltungen' : 'Artikel' }}.</p></div>{% endfor %}
+{% else %}{% if kind != 'event' or not bookableEvents|default([]) %}<div class="col-12"><p>Derzeit keine veröffentlichten {{ kind == 'event' ? 'Veranstaltungen' : 'Artikel' }}.</p></div>{% endif %}{% endfor %}
 </div>

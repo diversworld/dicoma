@@ -41,8 +41,9 @@ seinen eigenen Rahmen.
 
 `PortalNavigation` bündelt öffentliche und rollenabhängige Frontendlinks.
 Die Buchungsübersicht zeigt eigene TÜV-Buchungen und Einstiege zu vorhandenen
-Reservierungen/Kursanmeldungen. Veranstaltungsbuchungen sind dort ausdrücklich
-als noch nicht verfügbar gekennzeichnet; Ankündigungen sind keine Buchungsfunktion.
+Reservierungen/Kursanmeldungen sowie zu den eigenen Veranstaltungsanmeldungen.
+Redaktionelle Ankündigungen sind davon unabhängige Inhalte und erzeugen keine
+Buchungen; siehe [Veranstaltungsbuchungen](phase9-events.md).
 
 ## Clubheimverwaltung und eigene Thekenkasse
 
@@ -88,6 +89,6 @@ php tests/translation_health.php lint:translations
 
 Keine Abhängigkeitsänderung, Datenmigration oder Veränderung produktiver
 Geschäftsdaten erforderlich. Ergebnisse und Grenzen stehen im
-[Prüfbericht](testing/test-report.md). Veranstaltungsanmeldungen, Clubreisen
-und weitere noch fehlende Geschäftsprozesse bleiben im
+[Prüfbericht](testing/test-report.md). Clubreisen, automatische Veranstaltungs-
+Erinnerungen und weitere noch fehlende Geschäftsprozesse bleiben im
 [Umsetzungsplan](analysis/implementation-roadmap.md) ausdrücklich offen.

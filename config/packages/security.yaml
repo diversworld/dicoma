@@ -67,6 +67,9 @@ security:
 
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/(?:articles|events)$, roles: PUBLIC_ACCESS }
+        - { path: ^/events/\d+$, roles: PUBLIC_ACCESS }
+        - { path: ^/events/\d+/register$, roles: ROLE_USER }
+        - { path: ^/event-registrations(?:/|$), roles: ROLE_USER }
         - { path: ^/(?:club|contact)$, roles: PUBLIC_ACCESS }
         - { path: ^/news/\d+$, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }

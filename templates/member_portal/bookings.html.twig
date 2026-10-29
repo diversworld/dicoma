@@ -15,7 +15,7 @@
     <h2>{{ 'Meine Kurse'|trans }}</h2>
     <a href="{{ path('frontend_course_registrations') }}">{{ 'Meine Kursanmeldungen'|trans }}</a>
     <h2>Veranstaltungen</h2>
-    <p>Veranstaltungsanmeldungen sind noch nicht verfügbar.</p>
+    <a href="{{ path('club_event_registrations') }}">{{ 'Meine Veranstaltungsanmeldungen'|trans }}</a><br>
     <a href="{{ path('website_events') }}">Veröffentlichte Veranstaltungen</a>
 </main>
 {% endblock %}

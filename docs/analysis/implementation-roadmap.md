@@ -25,10 +25,11 @@ Vereinsmodell ergänzt. Die nachfolgenden Fachmodule sind damit ausdrücklich
 
 ## 2. Veranstaltungen
 
-Aufbauend auf vorhandenen Ankündigungen, aber mit eigenständigem Fachprozess:
-Vereins-/öffentliche Sichtbarkeit, Anmeldung an `Person`, Kapazität und
-Warteliste mit Transaktion/Sperre, Anmeldefrist, Gebühren, Zahlungen, Storno,
-Teilnehmerrechte, Dokumente, Erinnerungen und Kalenderprojektion.
+Eigenständiger Fachprozess für Vereins-/öffentliche Sichtbarkeit, Anmeldung an
+`Person`, Kapazität, Warteliste, Anmeldefrist, getrennte Mitglieder-/Gästetarife,
+manuelle Zahlungen/Erstattungen, Storno, Teilnehmerrechte und Kalenderprojektion:
+siehe [Veranstaltungsbuchungen](../phase9-events.md). Automatische Erinnerungen
+und Veranstaltungsdokumente bleiben offen.
 Verknüpfte Kurse/Turniere behalten ihre eigenen Anmeldeprozesse; keine
 doppelten Teilnehmer-/Kalenderdaten.
 

@@ -8,6 +8,7 @@ use App\Entity\Schedule;
 use App\Entity\BarShift;
 use App\Entity\TeamTraining;
 use App\Entity\Tournament;
+use App\Entity\ClubEvent;
 use App\Enum\TournamentStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -21,6 +22,8 @@ final class ClubCalendar
         private readonly CompetitionAccess $access,
         private readonly Security $security,
         private readonly UrlGeneratorInterface $urls,
+        private readonly ClubEventBooking $bookings,
+        private readonly PublicWebsite $website,
     ) {}
 
     public function events(\DateTimeImmutable $from, \DateTimeImmutable $until, bool $backend = true): array
@@ -28,6 +31,21 @@ final class ClubCalendar
         $events = [];
         $user = $this->security->getUser();
         $club = $user instanceof \App\Entity\User ? $user->getMember()?->getClub() : null;
+        if ($club !== null) {
+            foreach ($this->em->getRepository(ClubEvent::class)->createQueryBuilder('e')
+                ->where('e.club = :club AND e.published = true AND e.cancelled = false AND e.startsAt < :until AND e.endsAt > :from')
+                ->setParameter('club', $club)->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $event) {
+                if (!$this->bookings->canSee($event, $user)) { continue; }
+                $url = null;
+                if ($backend && $this->security->isGranted('ROLE_ADMIN')) {
+                    $url = $this->urls->generate('admin_club_event', ['id' => $event->getId()]);
+                } elseif (!$backend && $event->getClub()->getId() === $this->website->club()?->getId()) {
+                    $url = $this->urls->generate('club_event_detail', ['id' => $event->getId()]);
+                }
+                $events[] = ['key' => 'club-event-'.$event->getId(), 'kind' => 'Veranstaltung', 'title' => $event->getTitle(),
+                    'start' => $event->getStartsAt(), 'end' => $event->getEndsAt(), 'location' => $event->getLocation(), 'url' => $url];
+            }
+        }
         if ($club !== null && ($this->security->isGranted('ROLE_BAR_MANAGER') || $user->getMember()->isActiveMember())) {
             foreach ($this->em->getRepository(BarShift::class)->createQueryBuilder('s')
                 ->where('s.club = :club AND s.status != :cancelled AND s.startsAt < :until AND s.endsAt > :from')

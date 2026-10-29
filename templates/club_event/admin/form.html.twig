@@ -1,0 +1,8 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Veranstaltung anlegen{% endblock %}
+{% block main %}
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+<p>Bis zur ersten Anmeldung können Veranstaltungen bearbeitet werden. Danach bleiben die Angaben unveränderlich; bei Bedarf absagen und neu anlegen.</p>
+{{ form_start(form) }}{{ form_errors(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Veranstaltung speichern</button>{{ form_end(form) }}
+{% endblock %}
