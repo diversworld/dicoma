@@ -15,6 +15,8 @@ class MediaFile
     private ?int $id = null;
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private Club $club;
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?MediaFolder $folder = null;
     #[ORM\Column(length: 80, unique: true)]
     private string $storageName;
     #[ORM\Column(length: 255), Assert\NotBlank, Assert\Length(max: 255), Assert\Regex(pattern: '/^[^\/\\\\\x00-\x1f\x7f]+$/u', message: 'Der Dateiname darf keine Pfade oder Steuerzeichen enthalten.')]
@@ -41,6 +43,15 @@ class MediaFile
 
     public function getId(): ?int { return $this->id; }
     public function getClub(): Club { return $this->club; }
+    public function getFolder(): ?MediaFolder { return $this->folder; }
+    public function setFolder(?MediaFolder $folder): void
+    {
+        if ($folder !== null && $folder->getClub() !== $this->club
+            && ($this->club->getId() === null || $folder->getClub()->getId() !== $this->club->getId())) {
+            throw new \InvalidArgumentException('Der Ordner gehört zu einem anderen Verein.');
+        }
+        $this->folder = $folder;
+    }
     public function getStorageName(): string { return $this->storageName; }
     public function getOriginalName(): string { return $this->originalName; }
     public function setOriginalName(?string $value): void { $this->originalName = trim($value ?? ''); }

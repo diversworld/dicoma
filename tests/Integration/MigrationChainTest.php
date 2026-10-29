@@ -158,8 +158,16 @@ final class MigrationChainTest extends TestCase
         $before = [];
         foreach ($tables as $table) { $before[$table] = $this->connection->fetchAllAssociative('SELECT * FROM '.$table); }
         $this->migrate('latest');
-        foreach ($tables as $table) { self::assertSame($before[$table], $this->connection->fetchAllAssociative('SELECT * FROM '.$table)); }
+        foreach ($tables as $table) {
+            $after = $this->connection->fetchAllAssociative('SELECT * FROM '.$table);
+            if ($table === 'media_file') {
+                self::assertNull($after[0]['folder_id']);
+                unset($after[0]['folder_id']);
+            }
+            self::assertSame($before[$table], $after);
+        }
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_event_document'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM media_folder'));
         $this->assertSchemaMatchesMapping();
     }
 

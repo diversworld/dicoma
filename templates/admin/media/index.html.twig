@@ -5,13 +5,40 @@
     {% if canManageEditorial %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Website-Redaktion</a></p>{% endif %}
     <p>Vereinsdateien werden geschützt gespeichert. Bilder können in Artikeln und Veranstaltungen ausgewählt werden. Verwendete Dateien können nicht gelöscht werden.</p>
     <p>Erlaubt: JPG, PNG, WebP, PDF, DOCX, XLSX und PPTX, jeweils bis 10 MB. Bilder werden bei sichtbaren Inhalten öffentlich angezeigt; bitte Rechte und Bildmetadaten prüfen.</p>
-    <form method="post" action="{{ path('admin_media_upload') }}" enctype="multipart/form-data">
+    <nav aria-label="Ordnerpfad" class="my-3">
+        <a href="{{ path('admin_media_index') }}">Hauptordner</a>
+        {% for ancestor in breadcrumbs %}
+            / <a href="{{ path('admin_media_index', {folder: ancestor.id}) }}">{{ ancestor.name }}</a>
+        {% endfor %}
+    </nav>
+    <h2>Ordner</h2>
+    <ul>
+        {% for child in children %}
+            <li><a href="{{ path('admin_media_index', {folder: child.id}) }}">{{ child.name }}</a></li>
+        {% else %}
+            <li>Keine Unterordner vorhanden.</li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
+        <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create') }}">
+        <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
+        <label for="media-folder-name" class="form-label">Neuer Ordner in {{ folder ? folder.path : 'Hauptordner' }}</label>
+        <input id="media-folder-name" class="form-control" name="name" type="text" maxlength="120" required>
+        <button type="submit" class="btn btn-secondary mt-2">Ordner anlegen</button>
+    </form>
+    <h2>Dateien hochladen</h2>
+    <p>Die Dateien werden in {{ folder ? folder.path : 'den Hauptordner' }} hochgeladen. Ungültige Dateien werden einzeln gemeldet; gültige Dateien werden gespeichert.</p>
+    {% if maxFileUploads > 0 %}<p>Der Server erlaubt höchstens {{ maxFileUploads }} Dateien pro Upload; zusätzlich gilt ein Limit für die Gesamtgröße.</p>{% endif %}
+    <form method="post" action="{{ path('admin_media_upload') }}" enctype="multipart/form-data" class="mb-4">
         <input type="hidden" name="_token" value="{{ csrf_token('media_upload') }}">
-        <label for="media-file">Datei</label>
-        <input id="media-file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx" required>
-        <label for="media-alt">Alternativtext für Bilder</label>
-        <input id="media-alt" name="alt_text" type="text" maxlength="255">
-        <button type="submit" class="btn btn-primary">Datei hochladen</button>
+        <input type="hidden" name="folder" value="{{ folder ? folder.id : '' }}">
+        <input id="media-selected-count" type="hidden" name="selected_count" value="">
+        <label for="media-file" class="form-label">Dateien</label>
+        <input id="media-file" class="form-control" name="files[]" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx" multiple required>
+        <label for="media-alt" class="form-label mt-2">Alternativtext für alle hochgeladenen Bilder</label>
+        <input id="media-alt" class="form-control" name="alt_text" type="text" maxlength="255">
+        <div class="form-text">Bei Bedarf den Alternativtext anschließend für jedes Bild einzeln bearbeiten.</div>
+        <button type="submit" class="btn btn-primary mt-2">Dateien hochladen</button>
     </form>
     <h2>Gespeicherte Dateien</h2>
     <div class="table-responsive"><table class="table">
@@ -25,6 +52,17 @@
                 <td>{{ file.mimeType }} · {{ (file.size / 1024)|number_format(0, ',', '.') }} KB</td>
                 <td>{{ row.used }}</td>
                 <td><a href="{{ path('admin_media_edit', {id:file.id}) }}">Angaben bearbeiten</a>
+                <form method="post" action="{{ path('admin_media_move', {id:file.id}) }}" class="my-2">
+                    <input type="hidden" name="_token" value="{{ csrf_token('media_move_' ~ file.id) }}">
+                    <label class="form-label" for="media-move-{{ file.id }}">Zielordner für {{ file.originalName }}</label>
+                    <select class="form-select" id="media-move-{{ file.id }}" name="folder">
+                        <option value="" {{ not folder ? 'selected' : '' }}>Hauptordner</option>
+                        {% for target in folders %}
+                            <option value="{{ target.id }}" {{ folder and target.id == folder.id ? 'selected' : '' }}>{{ target.path }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-secondary btn-sm mt-2" type="submit">Verschieben</button>
+                </form>
                 {% if not row.used %}
                     <form method="post" action="{{ path('admin_media_delete', {id:file.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('media_delete_' ~ file.id) }}">
@@ -35,4 +73,9 @@
         {% else %}<tr><td colspan="5">Noch keine Dateien.</td></tr>{% endfor %}
         </tbody>
     </table></div>
+{% endblock %}
+
+{% block body_javascript %}
+    {{ parent() }}
+    <script src="{{ asset('js/media-upload-count.js') }}" defer></script>
 {% endblock %}

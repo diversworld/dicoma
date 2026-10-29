@@ -21,7 +21,7 @@ final class ConfigurationYearSelectionType extends AbstractType
 
         $builder->add('year', IntegerType::class, [
             'label' => 'Kalenderjahr',
-            'attr' => ['min' => 2000, 'max' => 2100],
+            'attr' => ['min' => 2000, 'max' => 2100, 'class' => 'form-control'],
             'constraints' => [new Assert\NotNull(), new Assert\Range(min: 2000, max: 2100)],
         ]);
     }

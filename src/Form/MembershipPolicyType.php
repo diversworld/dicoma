@@ -45,7 +45,8 @@ final class MembershipPolicyType extends AbstractType
                 'choices' => MemberDocument::kinds(),
                 'multiple' => true,
                 'required' => false,
-            ])
+                ]
+            )
             ->add('creditorIdentifier', TextType::class, [
                 'label' => 'SEPA-Gläubiger-ID',
                 'attr' => ['class' => 'form-control'],

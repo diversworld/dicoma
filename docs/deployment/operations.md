@@ -58,7 +58,9 @@ Dateiverwaltung und optionale Bildzuordnungen für Beiträge und buchbare
 Veranstaltungen. Vor Bereitstellung Backup und Schemafreigabe durchführen.
 Die Anwendung benötigt die PHP-Erweiterungen `fileinfo` und `zip`.
 Server und PHP müssen Uploads von mindestens 10 MB zulassen; `post_max_size`
-muss dabei größer als `upload_max_filesize` sein. Office-Dateien können
+muss für mehrere Dateien größer als deren gesamte Uploadgröße sein.
+`max_file_uploads` begrenzt die Anzahl der Dateien pro Anfrage; auch
+vorgeschaltete Webserver können die Gesamtgröße begrenzen. Office-Dateien können
 schädliche Inhalte enthalten und sollten vor dem Öffnen nach den
 Sicherheitsvorgaben des Vereins geprüft werden.
 
@@ -70,6 +72,18 @@ einer buchbaren Veranstaltung lässt sich auch nach Anmeldungen separat ändern,
 ohne Preis oder Termin zu verändern. Genutzte Dateien können erst nach dem
 Entfernen aller Zuordnungen gelöscht werden. Beim Hochladen sind Urheberrechte
 und gegebenenfalls personenbezogene Bildmetadaten zu prüfen.
+
+Mit der additiven Migration `Version20261029150000` können Berechtigte
+vereinsbezogene Ordner und Unterordner anlegen. Neue Dateien werden im
+aktuell geöffneten Ordner hochgeladen; eine Auswahl mehrerer Dateien ist
+möglich. Ungültige Dateien werden einzeln gemeldet, gültige unabhängig davon
+gespeichert. Der beim Upload angegebene Alternativtext gilt zunächst für alle
+ausgewählten Bilder und kann anschließend pro Bild geändert werden. Dateien
+lassen sich in andere Ordner oder zurück in den Hauptordner verschieben;
+vorhandene Bildzuordnungen bleiben dabei erhalten. Bereits vorhandene Dateien
+erscheinen zunächst im Hauptordner. Ordner sind eine Datenbankzuordnung:
+Die privaten Dateien werden beim Verschieben nicht physisch umgelagert.
+Vor der Migration Backup und Schemafreigabe durchführen.
 
 Alle Dateien liegen außerhalb von `public/` unter `var/private/website_media`.
 Die Dateiverwaltung ist vereinsgebunden und zeigt Redaktions- und

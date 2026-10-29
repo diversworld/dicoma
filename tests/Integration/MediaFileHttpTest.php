@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ContributionClass, MediaFile, Member, MembershipPolicy, Person, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ContributionClass, MediaFile, MediaFolder, Member, MembershipPolicy, Person, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\MembershipStatus;
 use App\Service\MediaFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
@@ -97,6 +97,93 @@ final class MediaFileHttpTest extends WebTestCase
         $foreign = $this->account('foreign', [User::ROLE_ADMIN], $other);
         $this->client->loginUser($foreign);
         $this->client->request('GET', '/admin/media/'.$png->getId());
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testNestedFoldersMultipleUploadsAndMovesStayClubScoped(): void
+    {
+        $this->client->loginUser($this->press);
+        $token = $this->token('media_folder_create');
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => 'Ausflüge', 'parent' => '']);
+        self::assertResponseRedirects('/admin/media', 303);
+        $parent = $this->em->getRepository(MediaFolder::class)->findOneBy(['club' => $this->club, 'name' => 'Ausflüge']);
+        self::assertNotNull($parent);
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => '2026', 'parent' => (string) $parent->getId()]);
+        self::assertResponseRedirects('/admin/media?folder='.$parent->getId(), 303);
+        $child = $this->em->getRepository(MediaFolder::class)->findOneBy(['club' => $this->club, 'name' => '2026']);
+        self::assertSame('Ausflüge / 2026', $child->getPath());
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => '../unsicher', 'parent' => '']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'Ordnername');
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => '2026', 'parent' => (string) $parent->getId()]);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'existiert hier bereits');
+        $this->client->request('POST', '/admin/media/folders', ['_token' => 'invalid', 'name' => 'Abgelehnt']);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/media/upload', [], [], ['CONTENT_LENGTH' => '999999999999']);
+        self::assertResponseStatusCodeSame(413);
+
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true);
+        $uploads = [];
+        foreach (['eins.png' => $png, 'kaputt.svg' => '<svg></svg>', 'zwei.png' => $png] as $name => $contents) {
+            $path = tempnam($this->root, 'upload-'); $this->paths[] = $path;
+            file_put_contents($path, $contents);
+            $uploads[] = new UploadedFile($path, $name, null, null, true);
+        }
+        $uploadToken = $this->token('media_upload');
+        $this->client->request('POST', '/admin/media/upload', [
+            '_token' => $uploadToken, 'folder' => (string) $child->getId(), 'alt_text' => 'Gemeinsamer Text', 'selected_count' => '4',
+        ], ['files' => $uploads]);
+        self::assertResponseRedirects('/admin/media?folder='.$child->getId(), 303);
+        $files = $this->em->getRepository(MediaFile::class)->findBy(['club' => $this->club, 'folder' => $child], ['id' => 'ASC']);
+        self::assertCount(2, $files);
+        foreach ($files as $file) {
+            $this->paths[] = $this->root.'/var/private/website_media/'.$file->getStorageName();
+            self::assertSame('Gemeinsamer Text', $file->getAltText());
+        }
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'kaputt.svg');
+        self::assertSelectorTextContains('body', 'Nicht alle ausgewählten Dateien wurden vom Server angenommen');
+        self::assertSelectorTextContains('body', '2 Datei(en) gespeichert');
+        self::assertSelectorTextContains('nav[aria-label="Ordnerpfad"]', 'Ausflüge');
+        self::assertSelectorExists('img[src="/admin/media/'.$files[0]->getId().'"]');
+        $this->client->request('GET', '/admin/media');
+        self::assertSelectorNotExists('img[src="/admin/media/'.$files[0]->getId().'"]');
+        $this->client->request('GET', '/admin/de/editorial/new');
+        self::assertSelectorTextContains('option[value="'.$files[0]->getId().'"]', 'Ausflüge / 2026 / eins.png');
+
+        $publication = new WebsitePublication($this->em->find(Club::class, $this->club->getId()));
+        $publication->setTitle('Test'); $publication->setSummary('Test'); $publication->setBody('Test');
+        $publication->setImage($this->em->find(MediaFile::class, $files[0]->getId())); $this->em->persist($publication); $this->em->flush();
+        $moveToken = $this->token('media_move_'.$files[0]->getId());
+        $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $moveToken, 'folder' => (string) $parent->getId()]);
+        self::assertResponseRedirects('/admin/media?folder='.$child->getId(), 303);
+        self::assertSame($parent->getId(), $this->em->find(MediaFile::class, $files[0]->getId())->getFolder()->getId());
+        self::assertSame($files[0]->getId(), $this->em->find(WebsitePublication::class, $publication->getId())->getImage()->getId());
+        $this->client->request('GET', '/admin/media/'.$files[0]->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => 'invalid', 'folder' => '']);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $moveToken, 'folder' => '']);
+        self::assertResponseRedirects('/admin/media?folder='.$parent->getId(), 303);
+        self::assertNull($this->em->find(MediaFile::class, $files[0]->getId())->getFolder());
+
+        $other = (new Club())->setName('Other club'); $this->em->persist($other); $this->em->flush();
+        $foreign = new MediaFolder($other, 'Fremd'); $this->em->persist($foreign); $this->em->flush();
+        $this->client->request('GET', '/admin/media?folder='.$foreign->getId());
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => 'Fremd', 'parent' => (string) $foreign->getId()]);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', '/admin/media/upload', ['_token' => $uploadToken, 'folder' => (string) $foreign->getId()]);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $moveToken, 'folder' => (string) $foreign->getId()]);
+        self::assertResponseStatusCodeSame(404);
+        self::assertNull($this->em->find(MediaFile::class, $files[0]->getId())->getFolder());
+        $foreignAdmin = $this->account('other-media-admin', [User::ROLE_ADMIN], $this->em->find(Club::class, $other->getId()));
+        $this->client->loginUser($foreignAdmin);
+        $this->client->request('GET', '/admin/media?folder='.$child->getId());
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/admin/media/'.$files[0]->getId());
         self::assertResponseStatusCodeSame(404);
     }
 

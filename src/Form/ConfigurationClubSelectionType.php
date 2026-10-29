@@ -22,6 +22,7 @@ final class ConfigurationClubSelectionType extends AbstractType
                 'choice_label' => 'name',
                 'choice_value' => static fn (?Club $club): string => $club ? (string) $club->getId() : '',
                 'placeholder' => 'Bitte auswählen',
+                'attr' => ['class' => 'form-control'],
             ])
             ->add('year', HiddenType::class);
     }
