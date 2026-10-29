@@ -154,6 +154,7 @@ final class MediaFileHttpTest extends WebTestCase
 
         $publication = new WebsitePublication($this->em->find(Club::class, $this->club->getId()));
         $publication->setTitle('Test'); $publication->setSummary('Test'); $publication->setBody('Test');
+        $publication->setPublished(true); $publication->setPublishAt(new \DateTimeImmutable('-1 hour'));
         $publication->setImage($this->em->find(MediaFile::class, $files[0]->getId())); $this->em->persist($publication); $this->em->flush();
         $moveToken = $this->token('media_move_'.$files[0]->getId());
         $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $moveToken, 'folder' => (string) $parent->getId()]);
@@ -162,6 +163,10 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSame($files[0]->getId(), $this->em->find(WebsitePublication::class, $publication->getId())->getImage()->getId());
         $this->client->request('GET', '/admin/media/'.$files[0]->getId());
         self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/news/'.$publication->getId().'/image');
+        self::assertResponseIsSuccessful();
+        $this->post('/admin/media/'.$files[0]->getId().'/delete', 'media_delete_'.$files[0]->getId());
+        self::assertNotNull($this->em->find(MediaFile::class, $files[0]->getId()));
         $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => 'invalid', 'folder' => '']);
         self::assertResponseStatusCodeSame(403);
         $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $moveToken, 'folder' => '']);
@@ -184,6 +189,9 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/media?folder='.$child->getId());
         self::assertResponseStatusCodeSame(404);
         $this->client->request('GET', '/admin/media/'.$files[0]->getId());
+        self::assertResponseStatusCodeSame(404);
+        $foreignMoveToken = $this->token('media_move_'.$files[0]->getId());
+        $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $foreignMoveToken, 'folder' => (string) $foreign->getId()]);
         self::assertResponseStatusCodeSame(404);
     }
 
