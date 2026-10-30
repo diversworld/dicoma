@@ -230,12 +230,18 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
         $stack->push($this->client->getRequest());
         try {
+            $toggleToken = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-toggle')->getValue();
             $batchToken = static::getContainer()->get('security.csrf.token_manager')
                 ->getToken('ea-batch-action-batchDelete-'.Sport::class)->getValue();
             $this->client->getRequest()->getSession()->save();
         } finally {
             $stack->pop();
         }
+        $this->client->request('PATCH', '/admin/de/sport/'.$otherSport->getId().'/edit?'.http_build_query([
+            'fieldName' => 'active', 'newValue' => 'false', 'csrfToken' => $toggleToken,
+        ]), [], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->em->find(Sport::class, $otherSport->getId())->isActive());
         $this->client->request('POST', '/admin/de/sport/batch-delete', [
             'batchActionName' => 'batchDelete',
             'entityFqcn' => Sport::class,
