@@ -47,7 +47,8 @@ Vereinsadmins können unter `/admin/settings/sports` für ihren eigenen Verein
 Sportarten (Sparten) anlegen und deren
 Bezeichnung, Kurzbezeichnung, Beschreibung und Sortierung bearbeiten.
 Superadmins wählen den Verein im Benutzermenü; die Auswahl gilt derzeit
-für die Sportarten-Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung sowie die Kennzahlen
+für die Sportarten-Einstellungen, die Kurs- und Teilnehmeransichten im
+Ausbildungsportal, die Kurs-Spartenprüfung sowie die Kennzahlen
 und Listen der Verwaltungsübersicht. Die Kopfzeile zeigt den Verein und weist darauf hin,
 dass die Filterung noch nicht backendweit gilt. Direkte Sportarten- und
 Funktions-URLs müssen zum ausgewählten Verein passen. Die übrigen

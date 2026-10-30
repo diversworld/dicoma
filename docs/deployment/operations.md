@@ -116,7 +116,8 @@ Spartenfunktion erzeugt keine globale Benutzerrolle. Vor der Migration
 Backup und Schemafreigabe durchführen.
 
 Die Sportarten-Einstellungen unter `/admin/settings/sports`, die
-Kurs-Spartenprüfung, das Ausbildungsportal und die Verwaltungsübersicht verwenden für Superadmins die sitzungsgebundene
+Kurs-Spartenprüfung, die Kurs- und Teilnehmeransichten im Ausbildungsportal
+und die Verwaltungsübersicht verwenden für Superadmins die sitzungsgebundene
 Vereinsauswahl im Benutzermenü. Sie ist CSRF-geschützt; direkte
 Sportartenbearbeitungen werden gegen den gewählten Verein geprüft. Andere
 Backendbereiche sind noch nicht durchgehend auf diesen Kontext umgestellt.

@@ -296,6 +296,9 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $ownCourse = $this->em->getRepository(Courses::class)->findOneBy(['title' => 'Own course one']);
         $otherCourse = $this->em->getRepository(Courses::class)->findOneBy(['title' => 'Other course']);
+        $ownParticipation = (new CourseParticipant())->setCourse($ownCourse)->setPerson($super->getPerson());
+        $this->em->persist($ownParticipation);
+        $this->em->flush();
         $this->client->request('GET', '/admin/training');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Other course');
@@ -304,6 +307,19 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/training/course/'.$otherCourse->getId());
         self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/training/participant/'.$ownParticipation->getId());
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/training/course/new');
+        $this->client->submit($crawler->selectButton('Speichern')->form(), [
+            'training_course[title]' => 'New selected club course',
+            'training_course[category]' => 'beginner',
+            'training_course[courseFee]' => '25,00',
+            'training_course[status]' => 'open',
+        ]);
+        self::assertResponseRedirects();
+        $created = $this->em->getRepository(Courses::class)->findOneBy(['title' => 'New selected club course']);
+        self::assertNotNull($created);
+        self::assertSame($other->getId(), $created->getClub()->getId());
         $this->client->request('GET', '/admin/training/course/'.$ownCourse->getId().'/divisions');
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/training/course/'.$otherCourse->getId().'/divisions');

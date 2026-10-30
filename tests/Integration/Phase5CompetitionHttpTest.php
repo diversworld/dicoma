@@ -132,6 +132,13 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         $easySport = $this->em->getRepository(Sport::class)->findOneBy(['name' => 'EasyAdmin Sport']);
         self::assertNotNull($easySport);
         self::assertSame($ownClubId, $easySport->getClub()->getId());
+        $crawler = $this->client->request('GET', '/admin/de/sport/new');
+        $this->client->submit($crawler->filter('form[name="Sport"]')->form(), [
+            'Sport[name]' => 'EasyAdmin Sport',
+            'Sport[sortOrder]' => '3',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Diese Sparte existiert in diesem Verein bereits.');
         $crawler = $this->client->request('GET', '/admin/de/sport/'.$easySport->getId().'/edit');
         $this->client->submit($crawler->filter('form[name="Sport"]')->form(), [
             'Sport[name]' => 'EasyAdmin Sport aktualisiert',
