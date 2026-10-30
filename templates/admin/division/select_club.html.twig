@@ -1,0 +1,12 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Verein auswählen{% endblock %}
+{% block main %}
+    <h1>Verein auswählen</h1>
+    <p>Die Auswahl konnte nicht gespeichert werden. Bitte prüfen Sie Ihre Eingabe.</p>
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        {{ form_row(form.club) }}
+        <button class="btn btn-primary" type="submit">Verein wechseln</button>
+    {{ form_end(form) }}
+{% endblock %}

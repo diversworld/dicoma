@@ -1,0 +1,14 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Kurs-Spartenzuordnungen prüfen{% endblock %}
+{% block main %}
+    <h1>Kurs-Spartenzuordnungen prüfen – {{ club ? club.name : 'ohne Verein' }}</h1>
+    <p>Bestehende und neue Kurse bleiben ungeprüft, bis sie ausdrücklich als vereinsweit oder einer bzw. mehreren Sparten zugeordnet werden.</p>
+    <ul>
+        {% for course in courses %}
+            <li>{% if club %}<a href="{{ path('admin_course_division_edit', {id: course.id}) }}">{{ course.title }}</a>{% else %}{{ course.title }} (#{{ course.id }}) – zuerst einen Verein zuordnen{% endif %}</li>
+        {% else %}
+            <li>Keine ungeprüften Kurse.</li>
+        {% endfor %}
+    </ul>
+    {% if club %}<p><a href="{{ path('admin_configuration', {club: club.id}) }}">Zur Konfiguration</a></p>{% endif %}
+{% endblock %}

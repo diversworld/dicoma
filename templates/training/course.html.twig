@@ -8,6 +8,14 @@
 <p>Benötigte Ausrüstung: {{ course.requiredEquipment }}</p>
 <p>Verantwortlicher Ausbilder: {{ course.leadInstructor|default('Noch nicht zugeordnet') }}</p>
 {% set manage = is_granted('COURSE_MANAGE', course) %}
+{% if manage and training_route_prefix %}
+    <p>Spartenzuordnung:
+        {% if not course.divisionReviewed %}Noch zu prüfen
+        {% elseif course.divisions is empty %}Vereinsweit
+        {% else %}{{ course.divisions|map(division => division.name)|join(', ') }}{% endif %}
+        · <a href="{{ path('admin_course_division_edit', {id: course.id}) }}">Zuordnung bearbeiten</a>
+    </p>
+{% endif %}
 {% if manage and course.status.value not in ['completed', 'cancelled'] %}
 <p>
     <a href="{{ path('admin_portal_training_course_edit', {id: course.id}) }}">Kurs bearbeiten</a> ·

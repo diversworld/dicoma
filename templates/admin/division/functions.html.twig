@@ -1,0 +1,27 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Funktionen – {{ sport.name }}{% endblock %}
+{% block page_actions %}
+    <a class="btn btn-primary" href="{{ path('admin_division_function_new', {id: sport.id}) }}">Funktion zuordnen</a>
+    <a class="btn btn-secondary" href="{{ path('admin_settings_sports_configuration') }}">Sportarten</a>
+{% endblock %}
+{% block main %}
+    <p>Nur die Spartenleitung erhält derzeit zusätzliche Rechte für den Sportbetrieb. Funktionen gelten nur im angegebenen Zeitraum.</p>
+    <div class="content-panel">
+        <table class="table datagrid">
+            <thead><tr><th>Mitglied</th><th>Funktion</th><th>Beginn</th><th>Ende</th><th>Aktionen</th></tr></thead>
+            <tbody>
+                {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.member.fullName }}</td>
+                        <td>{{ assignment.role.label }}</td>
+                        <td>{{ assignment.startsAt|date('d.m.Y') }}</td>
+                        <td>{{ assignment.endsAt ? assignment.endsAt|date('d.m.Y') : 'Offen' }}</td>
+                        <td><a href="{{ path('admin_division_function_edit', {id: assignment.id}) }}">Bearbeiten</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">Keine Funktionen zugeordnet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

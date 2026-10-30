@@ -106,6 +106,7 @@ security:
         - { path: ^/admin/(?:de|en|fr|es)/training-overview$, roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/bar-duty(?:/|$), roles: ROLE_BAR_MANAGER }
         - { path: ^/admin/configuration$, roles: [ROLE_ADMIN, ROLE_PRESS_OFFICER, ROLE_BAR_MANAGER] }
+        - { path: ^/admin/settings/bar-services$, roles: ROLE_BAR_MANAGER }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin/media(?:/|$), roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin, roles: ROLE_ADMIN }

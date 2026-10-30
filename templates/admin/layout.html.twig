@@ -4,6 +4,17 @@
 {# The vendor layout renders this block inside the user dropdown's ActionList. #}
 {% block user_menu %}
     {{ parent() }}
+    {% if is_granted('ROLE_SUPER_ADMIN') %}
+        <twig:ea:ActionMenu:ActionList:Divider />
+        {% set clubSelection = admin_club_context.selectionForm.createView %}
+        {% form_theme clubSelection 'bootstrap_5_layout.html.twig' %}
+        <div class="p-3">
+            {{ form_start(clubSelection) }}
+                {{ form_row(clubSelection.club) }}
+                <button class="btn btn-secondary btn-sm" type="submit">Verein wechseln</button>
+            {{ form_end(clubSelection) }}
+        </div>
+    {% endif %}
     {% if app.user %}
         <twig:ea:ActionMenu:ActionList:Divider />
         <form method="post" action="{{ path('app_logout') }}" class="dicoma-admin-logout-form">
@@ -15,3 +26,21 @@
         </form>
     {% endif %}
 {% endblock user_menu %}
+
+{% block header_custom_menu %}
+    {% if is_granted('ROLE_ADMIN') %}
+        <span class="me-3" data-sport-club-context>
+            Verein: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt' }} <small>(Filterung noch nicht backendweit)</small>
+        </span>
+    {% endif %}
+    {{ parent() }}
+{% endblock header_custom_menu %}
+
+{% block responsive_header_logo %}
+    {{ parent() }}
+    {% if is_granted('ROLE_ADMIN') %}
+        <span class="ms-2" data-sport-club-context>
+            Verein: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt' }} <small>(Filterung noch nicht backendweit)</small>
+        </span>
+    {% endif %}
+{% endblock responsive_header_logo %}

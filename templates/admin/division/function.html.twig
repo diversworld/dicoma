@@ -1,0 +1,24 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Spartenfunktion{% endblock %}
+{% block page_actions %}
+    <a class="btn btn-secondary" href="{{ path('admin_division_functions', {id: sport.id}) }}">Zu den Funktionen</a>
+{% endblock %}
+{% block main %}
+    <h2>Funktion für {{ sport.name }}</h2>
+    <p>Die Spartenleitung kann Mannschaften, Kader, Training und zugehörige Turnieranmeldungen dieser Sparte verwalten. Trainerrechte werden weiterhin über die jeweilige Mannschaft vergeben. Die übrigen Funktionen vergeben derzeit keine zusätzlichen Rechte.</p>
+    <div class="content-panel">
+    <div class="content-panel-body">
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        <div class="row">
+            <div class="col-12 col-md-6">{{ form_row(form.member) }}</div>
+            <div class="col-12 col-md-6">{{ form_row(form.role) }}</div>
+            <div class="col-12 col-md-6">{{ form_row(form.startsAt) }}</div>
+            <div class="col-12 col-md-6">{{ form_row(form.endsAt) }}</div>
+        </div>
+        <button class="btn btn-primary" type="submit">Funktion speichern</button>
+    {{ form_end(form) }}
+    </div>
+    </div>
+{% endblock %}

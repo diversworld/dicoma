@@ -297,6 +297,10 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $application->setFirstname('Foreign application');
         $application->setBirthday(new \DateTimeImmutable('2000-01-01'));
         $this->em->persist($application);
+        $foreignQualification = (new Qualification())->setName('Foreign expired qualification');
+        $this->em->persist($foreignQualification);
+        $this->em->persist((new MemberQualification())->setMember($foreign->getMember())->setQualification($foreignQualification)
+            ->setValidUntil(new \DateTime('yesterday')));
         $decided = new MembershipApplication($admin->getMember()->getClub());
         $decided->setFirstname('Decided application');
         $decided->setBirthday(new \DateTimeImmutable('2000-01-01'));
@@ -321,11 +325,31 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertSelectorExists('aside.sidebar');
         }
         $this->client->loginUser($super);
-        $this->client->request('GET', '/admin/de');
+        $crawler = $this->client->request('GET', '/admin/de');
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '3');
-        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '7');
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '0');
+        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '0');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $admin->getMember()->getClub()->getId(),
+        ]);
+        $crawler = $this->client->request('GET', '/admin/de');
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '2');
+        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '6');
+        self::assertSelectorTextContains('[data-dashboard-metric="expired"] .fs-1', '6');
+        self::assertSelectorTextNotContains('body', 'Foreign application');
+        self::assertSelectorTextNotContains('body', 'Foreign expired qualification');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $foreign->getMember()->getClub()->getId(),
+        ]);
+        $this->client->request('GET', '/admin/de');
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"] .fs-1', '1');
+        self::assertSelectorTextContains('[data-dashboard-metric="applications"] .fs-1', '1');
+        self::assertSelectorTextContains('[data-dashboard-metric="expired"] .fs-1', '1');
         self::assertSelectorTextContains('[data-dashboard-schedules]', 'Foreign session');
+        self::assertSelectorTextContains('body', 'Foreign application');
+        self::assertSelectorTextContains('body', 'Foreign expired qualification');
+        self::assertSelectorTextNotContains('body', 'Own session');
+        self::assertSelectorTextNotContains('body', 'Own application');
     }
 
     public function testDashboardQualificationLinksDoNotLeakFiltersAndEnglishLabelsAreTranslated(): void

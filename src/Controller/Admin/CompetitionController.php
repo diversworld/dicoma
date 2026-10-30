@@ -57,7 +57,7 @@ final class CompetitionController extends AbstractController
     {
         $this->access->require($this->access->isStaff());
         return $this->render('competition/teams.html.twig', [
-            'teams' => $this->teamsForUser(), 'canCreate' => $this->isGranted('ROLE_ADMIN'),
+            'teams' => $this->teamsForUser(), 'canCreate' => $this->isGranted('ROLE_ADMIN') || $this->access->manageableDivisions() !== [],
         ]);
     }
 
@@ -73,9 +73,8 @@ final class CompetitionController extends AbstractController
     public function teamEdit(Request $request, ?int $id = null): Response
     {
         $team = $id === null ? new Team() : $this->team($id);
-        $this->access->require($id === null ? $this->isGranted('ROLE_ADMIN') : $this->access->managesTeam($team));
-        $sports = array_values(array_filter($this->em->getRepository(Sport::class)->findAll(),
-            fn (Sport $sport): bool => $sport->getClub() !== null && $this->access->managesClub($sport->getClub())));
+        $sports = $this->access->manageableDivisions();
+        $this->access->require($id === null ? ($this->isGranted('ROLE_ADMIN') || $sports !== []) : $this->access->managesTeam($team));
         if ($id !== null && !$this->isGranted('ROLE_ADMIN')) { $sports = [$team->getSport()]; }
         $form = $this->createFormBuilder($team, ['action' => $this->generateUrl($id === null ? 'competition_team_new' : 'competition_team_edit', $id === null ? [] : ['id' => $id])])
             ->add('name', F\TextType::class, ['label' => 'Mannschaftsname'])

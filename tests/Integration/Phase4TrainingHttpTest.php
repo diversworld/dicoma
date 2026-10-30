@@ -15,6 +15,7 @@ use App\Entity\MemberQualification;
 use App\Entity\Person;
 use App\Entity\Qualification;
 use App\Entity\Schedule;
+use App\Entity\Sport;
 use App\Entity\TrainingUnitResult;
 use App\Entity\TrainingUnitType;
 use App\Entity\User;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
@@ -86,6 +88,234 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         self::assertSame(1, $this->em->getRepository(CourseParticipant::class)->count([]));
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
+    }
+
+    public function testCourseDivisionAssignmentsAreReviewedScopedAndPreserveCourseData(): void
+    {
+        $manager = $this->staff('division-course-admin', User::ROLE_COURSE_ADMIN);
+        $ordinary = $this->staff('division-member', User::ROLE_MEMBER);
+        $course = $this->course();
+        $club = $this->em->find(Club::class, $this->club->getId());
+        $diving = (new Sport())->setClub($club)->setName('Tauchen');
+        $triathlon = (new Sport())->setClub($club)->setName('Triathlon');
+        $inactive = (new Sport())->setClub($club)->setName('Alte Sparte')->setActive(false);
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreignSport = (new Sport())->setClub($foreignClub)->setName('Foreign sport');
+        foreach ([$diving, $triathlon, $inactive, $foreignClub, $foreignSport] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $courseId = $course->getId();
+        $url = '/admin/training/course/'.$courseId.'/divisions';
+        $this->client->loginUser($manager);
+        $this->client->request('GET', '/admin/training');
+        self::assertSelectorExists('a[href="/admin/training/divisions/review"]');
+        $this->client->request('GET', '/admin/training/divisions/review');
+        self::assertSelectorTextContains('body', 'Phase 4 Dive Course');
+        $this->client->request('GET', '/admin/training/divisions/review?club='.$foreignClub->getId());
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('option[value="'.$diving->getId().'"]');
+        self::assertSelectorNotExists('option[value="'.$foreignSport->getId().'"]');
+        $token = $crawler->filter('input[name="course_division_selection[_token]"]')->attr('value');
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [(string) $foreignSport->getId()], '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertFalse($this->em->find(Courses::class, $courseId)->isDivisionReviewed());
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [(string) $inactive->getId()], '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Inaktive Sparten können nicht neu zugeordnet werden.');
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [], '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Bitte mindestens eine Sparte auswählen.');
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'club', 'divisions' => [(string) $diving->getId()], '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [(string) $diving->getId()], '_token' => 'invalid',
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [(string) $diving->getId(), (string) $triathlon->getId()], '_token' => $token,
+        ]]);
+        self::assertResponseRedirects('/admin/training/course/'.$courseId, 303);
+        $this->em->clear();
+        $course = $this->em->find(Courses::class, $courseId);
+        self::assertTrue($course->isDivisionReviewed());
+        self::assertCount(2, $course->getDivisions());
+        self::assertSame(12550, FrontendCourseRegistrationService::moneyToCents($course->getCourseFee()));
+        $this->client->request('GET', '/admin/training/course/'.$courseId);
+        self::assertSelectorTextContains('body', 'Tauchen');
+        self::assertSelectorTextContains('body', 'Triathlon');
+        $crawler = $this->client->request('GET', '/admin/training/course/'.$courseId.'/edit');
+        $this->client->submit($crawler->selectButton('Speichern')->form(), [
+            'training_course[title]' => 'Updated dive course',
+        ]);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $course = $this->em->find(Courses::class, $courseId);
+        self::assertSame('Updated dive course', $course->getTitle());
+        self::assertTrue($course->isDivisionReviewed());
+        self::assertCount(2, $course->getDivisions());
+        $this->client->request('GET', '/admin/training/divisions/review');
+        self::assertSelectorNotExists('a[href="'.$url.'"]');
+        $this->em->find(Sport::class, $diving->getId())->setActive(false);
+        $this->em->flush();
+        $crawler = $this->client->request('GET', $url);
+        self::assertSelectorTextContains('body', 'Tauchen (inaktiv)');
+        $this->client->submit($crawler->selectButton('Zuordnung speichern')->form());
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $course = $this->em->find(Courses::class, $courseId);
+        self::assertCount(2, $course->getDivisions());
+        $crawler = $this->client->request('GET', $url);
+        $this->client->submit($crawler->selectButton('Zuordnung speichern')->form(), [
+            'course_division_selection[scope]' => 'club',
+            'course_division_selection[divisions]' => [],
+        ]);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $course = $this->em->find(Courses::class, $courseId);
+        self::assertTrue($course->isDivisionReviewed());
+        self::assertCount(0, $course->getDivisions());
+        $crawler = $this->client->request('GET', $url);
+        $this->client->submit($crawler->selectButton('Zuordnung speichern')->form(), ['course_division_selection[scope]' => 'unreviewed']);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        self::assertFalse($this->em->find(Courses::class, $courseId)->isDivisionReviewed());
+        $this->client->loginUser($ordinary);
+        $this->client->request('GET', $url);
+        self::assertResponseStatusCodeSame(403);
+        $foreignManager = $this->staff('foreign-course-manager', User::ROLE_COURSE_ADMIN, $this->em->find(Club::class, $foreignClub->getId()));
+        $this->em->flush();
+        $this->client->loginUser($foreignManager);
+        $this->client->request('GET', $url);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testCourseAndDivisionClubChangesRejectForeignAssignments(): void
+    {
+        $course = $this->course();
+        $division = (new Sport())->setClub($this->club)->setName('Tauchen');
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreignDivision = (new Sport())->setClub($foreignClub)->setName('Foreign division');
+        foreach ([$division, $foreignClub, $foreignDivision] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $course->updateDivisionAssignment(true, [$division]);
+        $this->em->flush();
+        $courseId = $course->getId();
+        $divisionId = $division->getId();
+        $foreignClubId = $foreignClub->getId();
+        $this->em->clear();
+        $course = $this->em->find(Courses::class, $courseId);
+        $division = $this->em->find(Sport::class, $divisionId);
+        $foreignClub = $this->em->find(Club::class, $foreignClubId);
+        $validator = static::getContainer()->get(ValidatorInterface::class);
+
+        $course->setClub($foreignClub);
+        self::assertStringContainsString('Kurs und Sparten müssen zum selben Verein gehören.', (string) $validator->validate($course));
+        $course->setClub($division->getClub());
+        $division->setClub($foreignClub);
+        self::assertStringContainsString('Die Sparte ist Kursen eines anderen Vereins zugeordnet.', (string) $validator->validate($division));
+        $division->setClub($course->getClub());
+
+        try {
+            $course->updateDivisionAssignment(true, [$foreignDivision]);
+            self::fail('A foreign division must be rejected.');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertStringContainsString('selben Verein', $exception->getMessage());
+        }
+        self::assertCount(1, $course->getDivisions());
+        $course->updateDivisionAssignment(true, []);
+        $division->setClub($foreignClub);
+        self::assertCount(0, $validator->validate($division));
+    }
+
+    public function testSuperAdminCanReviewCoursesWithoutClub(): void
+    {
+        $superAdmin = $this->staff('division-super-admin', User::ROLE_SUPER_ADMIN);
+        $course = $this->course()->setClub(null);
+        $this->em->flush();
+        $this->client->loginUser($superAdmin);
+        $this->client->request('GET', '/admin/training/divisions/review?club=unassigned');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Phase 4 Dive Course');
+        self::assertSelectorTextContains('body', 'zuerst einen Verein zuordnen');
+        $this->client->request('GET', '/admin/training/course/'.$course->getId().'/divisions');
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testDashboardUsesSelectedClubAndRequiresASelection(): void
+    {
+        $super = $this->staff('dashboard-context-super', User::ROLE_SUPER_ADMIN);
+        $other = (new Club())->setName('Dashboard Other Club');
+        $this->em->persist($other);
+        foreach ([
+            ['Own course one', $this->club],
+            ['Own course two', $this->club],
+            ['Other course', $other],
+        ] as [$title, $club]) {
+            $this->em->persist((new Courses())->setTitle($title)->setCategory('beginner')->setClub($club)->setStatus(CourseStatus::OPEN));
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"]', '2');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $crawler = $this->client->request('GET', '/admin/training/course/new');
+        self::assertResponseIsSuccessful();
+        $staleForm = $crawler->selectButton('Speichern')->form();
+        $this->client->submit($selection, [
+            'admin_club[club]' => (string) $other->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm, [
+            'training_course[title]' => 'Stale course',
+            'training_course[category]' => 'beginner',
+            'training_course[courseFee]' => '25,00',
+            'training_course[status]' => 'open',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#training_course', 'CSRF-Token');
+        self::assertNull($this->em->getRepository(Courses::class)->findOneBy(['title' => 'Stale course']));
+        $this->client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Dashboard Other Club');
+        self::assertSelectorTextContains('[data-dashboard-metric="courses"]', '1');
+        $this->client->request('GET', '/admin/training/divisions/review');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Other course');
+        self::assertSelectorTextNotContains('body', 'Own course one');
+        $this->client->request('GET', '/admin/training/divisions/review?club='.$this->club->getId());
+        self::assertResponseStatusCodeSame(403);
+        $ownCourse = $this->em->getRepository(Courses::class)->findOneBy(['title' => 'Own course one']);
+        $otherCourse = $this->em->getRepository(Courses::class)->findOneBy(['title' => 'Other course']);
+        $this->client->request('GET', '/admin/training');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Other course');
+        self::assertSelectorTextNotContains('body', 'Own course one');
+        $this->client->request('GET', '/admin/training/course/'.$ownCourse->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/training/course/'.$otherCourse->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/training/course/'.$ownCourse->getId().'/divisions');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/training/course/'.$otherCourse->getId().'/divisions');
+        self::assertResponseIsSuccessful();
+
+        $withoutClub = $this->user('dashboard-no-club')->setRoles([User::ROLE_SUPER_ADMIN]);
+        $this->em->flush();
+        $this->client->loginUser($withoutClub);
+        $this->client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Bitte wählen Sie im Benutzermenü einen Verein aus');
+        self::assertSelectorNotExists('[data-dashboard-metric="courses"]');
     }
 
     public function testWaitlistCancellationPromotesOldestAndDoesNotConsumeCapacity(): void

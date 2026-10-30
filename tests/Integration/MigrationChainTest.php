@@ -171,6 +171,44 @@ final class MigrationChainTest extends TestCase
         $this->assertSchemaMatchesMapping();
     }
 
+    public function testDivisionRoleUpgradePreservesExistingSportAssignments(): void
+    {
+        $this->migrate('20261029150000');
+        $club = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Member']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => $person, 'membership_status' => 'active']);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('sport', ['club_id' => $club, 'name' => 'Diving', 'active' => 1, 'sort_order' => 0]);
+        $sport = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member_sport', ['member_id' => $member, 'sport_id' => $sport, 'status' => 'active']);
+        $this->connection->insert('team', ['sport_id' => $sport, 'name' => 'Team', 'type' => 'team', 'active' => 1, 'sort_order' => 0]);
+        $tables = ['sport', 'member', 'member_sport', 'team'];
+        $before = [];
+        foreach ($tables as $table) { $before[$table] = $this->connection->fetchAllAssociative('SELECT * FROM '.$table); }
+        $this->migrate('latest');
+        foreach ($tables as $table) { self::assertSame($before[$table], $this->connection->fetchAllAssociative('SELECT * FROM '.$table)); }
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM division_role_assignment'));
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testCourseDivisionUpgradeKeepsExistingCoursesUnreviewed(): void
+    {
+        $this->migrate('20261030100000');
+        $club = $this->createClub();
+        $this->connection->insert('courses', ['club_id' => $club, 'title' => 'Existing course', 'category' => 'beginner']);
+        $course = (int) $this->connection->lastInsertId();
+        $this->connection->insert('sport', ['club_id' => $club, 'name' => 'Diving', 'active' => 1, 'sort_order' => 0]);
+        $before = $this->connection->fetchAssociative('SELECT * FROM courses WHERE id = ?', [$course]);
+        $this->migrate('latest');
+        $after = $this->connection->fetchAssociative('SELECT * FROM courses WHERE id = ?', [$course]);
+        self::assertSame(0, (int) $after['division_reviewed']);
+        unset($after['division_reviewed']);
+        self::assertSame($before, $after);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM course_division'));
+        $this->assertSchemaMatchesMapping();
+    }
+
     #[DataProvider('barDutySnapshotModes')]
     public function testEventCapacityUsesCurrentReadAfterEarlierSnapshot(bool $snapshotIsolation): void
     {

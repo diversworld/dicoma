@@ -13,6 +13,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use App\Enum\CourseParticipantStatus;
 
 #[Assert\Callback('validateQualification')]
+#[Assert\Callback('validateDivisions')]
 #[ORM\Entity(repositoryClass: CoursesRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 class Courses
@@ -56,6 +57,16 @@ class Courses
 	#[ORM\ManyToOne]
 	#[ORM\JoinColumn(nullable: true)]
 	private ?Club $club = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $divisionReviewed = false;
+
+    /** @var Collection<int, Sport> */
+    #[ORM\ManyToMany(targetEntity: Sport::class, inversedBy: 'courses')]
+    #[ORM\JoinTable(name: 'course_division')]
+    #[ORM\JoinColumn(name: 'course_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'sport_id', referencedColumnName: 'id', onDelete: 'RESTRICT')]
+    private Collection $divisions;
 	
 	#[ORM\ManyToOne]
 	#[ORM\JoinColumn(nullable: true)]
@@ -102,6 +113,7 @@ class Courses
 		$this->schedule = new ArrayCollection();
 		$this->participants = new ArrayCollection();
 		$this->trainingUnits = new ArrayCollection();
+        $this->divisions = new ArrayCollection();
 	}
 	
     public function __toString(): string
@@ -348,6 +360,49 @@ class Courses
 
 		return $this;
 	}
+
+    public function isDivisionReviewed(): bool { return $this->divisionReviewed; }
+
+    /** @return Collection<int, Sport> */
+    public function getDivisions(): Collection { return $this->divisions; }
+
+    /** @param list<Sport> $divisions */
+    public function updateDivisionAssignment(bool $reviewed, array $divisions): void
+    {
+        if (!$reviewed && $divisions !== []) {
+            throw new \InvalidArgumentException('Ungeprüfte Kurse dürfen keine Spartenzuordnung haben.');
+        }
+        foreach ($divisions as $division) {
+            if ($this->club === null || $division->getClub() === null
+                || ($division->getClub() !== $this->club
+                    && ($this->club->getId() === null || $division->getClub()->getId() !== $this->club->getId()))) {
+                throw new \InvalidArgumentException('Kurs und Sparten müssen zum selben Verein gehören.');
+            }
+        }
+        foreach ($this->divisions as $previous) {
+            $previous->unlinkCourse($this);
+        }
+        $this->divisions->clear();
+        foreach ($divisions as $division) {
+            if (!$this->divisions->contains($division)) {
+                $this->divisions->add($division);
+                $division->linkCourse($this);
+            }
+        }
+        $this->divisionReviewed = $reviewed;
+    }
+
+    public function validateDivisions(ExecutionContextInterface $context): void
+    {
+        foreach ($this->divisions as $division) {
+            if ($this->club === null || $division->getClub() === null
+                || ($division->getClub() !== $this->club
+                    && ($this->club->getId() === null || $division->getClub()->getId() !== $this->club->getId()))) {
+                $context->buildViolation('Kurs und Sparten müssen zum selben Verein gehören.')->atPath('club')->addViolation();
+                return;
+            }
+        }
+    }
     public function getCourseFee(): string { return $this->courseFee; }
     public function setCourseFee(string $value): static { $this->courseFee = $value; return $this; }	
 	public function validateQualification(

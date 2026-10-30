@@ -3,7 +3,11 @@
 {% block content_title %}{{ 'Verwaltungsübersicht'|trans }}{% endblock %}
 
 {% block main %}
-    <p class="text-muted">{{ 'Ansicht für'|trans }}: <strong>{{ dashboardScope ?? 'Alle Vereine'|trans }}</strong></p>
+    {% if dashboardScope %}
+        <p class="text-muted">{{ 'Ansicht für'|trans }}: <strong>{{ dashboardScope }}</strong></p>
+    {% else %}
+        <p class="alert alert-warning">Bitte wählen Sie im Benutzermenü einen Verein aus, um die Übersicht anzuzeigen.</p>
+    {% endif %}
 
     <section aria-labelledby="dashboard-shortcuts" class="mb-4">
         <h2 id="dashboard-shortcuts" class="h5">{{ 'Schnellzugriffe'|trans }}</h2>
@@ -20,6 +24,7 @@
         </div>
     </section>
 
+    {% if dashboardScope %}
     <section aria-labelledby="dashboard-attention" class="mb-4">
         <h2 id="dashboard-attention" class="h5">{{ 'Aktuell im Blick'|trans }}</h2>
         <div class="row g-3">
@@ -126,4 +131,5 @@
             {% endfor %}
         </div>
     </section>
+    {% endif %}
 {% endblock %}

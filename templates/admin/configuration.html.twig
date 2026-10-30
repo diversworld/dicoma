@@ -1,8 +1,8 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}Konfiguration{% endblock %}
+{% block content_title %}{{ barOnly ? 'Thekendiensteinstellungen' : 'Konfiguration' }}{% endblock %}
 {% block main %}
-    <h1>Konfiguration</h1>
-    <p>Technische Zugangsdaten und Umgebungsvariablen werden weiterhin auf dem Server verwaltet.</p>
+    <h1>{{ barOnly ? 'Thekendiensteinstellungen' : 'Konfiguration' }}</h1>
+    {% if not barOnly %}<p>Technische Zugangsdaten und Umgebungsvariablen werden weiterhin auf dem Server verwaltet.</p>{% endif %}
     {% if websiteForm %}
         {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}
         <h2>Website-Anzeige – {{ ownClub.name }}</h2>
@@ -24,6 +24,11 @@
     {% if policyForm %}
         {% form_theme policyForm 'bootstrap_5_layout.html.twig' %}
         {% form_theme classForm 'bootstrap_5_layout.html.twig' %}
+        <h2>Sportarten und Sparten</h2>
+        <p>Sparten entsprechen den vorhandenen Sportarten.</p>
+        <p><a href="{{ path('admin_settings_sports_configuration') }}">Sportarten im ausgewählten Sportarten-Kontext verwalten</a></p>
+        <p><a href="{{ path('admin_course_division_review', {club: club.id}) }}">Ungeprüfte Kurs-Spartenzuordnungen</a></p>
+        {% if is_granted('ROLE_SUPER_ADMIN') %}<p><a href="{{ path('admin_course_division_review', {club: 'unassigned'}) }}">Ungeprüfte Kurse ohne Verein</a></p>{% endif %}
         <h2>Mitgliedschaft – {{ club.name }}</h2>
         <p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.</p>
         {{ form_start(policyForm) }}
@@ -62,7 +67,11 @@
         {{ form_start(barForm, {attr: {class: 'card card-body mb-3'}}) }}
             <p>Regel für {{ year }}. {{ barPolicy ? 'Bereits konfiguriert.' : 'Noch nicht konfiguriert; es wird keine Pflicht automatisch angenommen.' }}</p>
             {{ form_errors(barForm) }}
-            {{ form_widget(barForm) }}
+            <div class="row">
+                <div class="col-12 col-md-4">{{ form_row(barForm.minutes) }}</div>
+                <div class="col-12 col-md-8">{{ form_row(barForm.cash) }}</div>
+                <div class="col-12">{{ form_row(barForm.reason) }}</div>
+            </div>
             <button class="btn btn-primary">Jahresregel speichern</button>
         {{ form_end(barForm) }}
         {% if barPolicy %}

@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use App\Entity\Booking;
 use App\Entity\Club;
 use App\Entity\Courses;
+use App\Entity\DivisionRoleAssignment;
 use App\Entity\Member;
 use App\Entity\MemberSport;
 use App\Entity\Person;
@@ -23,6 +24,7 @@ use App\Entity\TournamentPayment;
 use App\Entity\TournamentPlayer;
 use App\Entity\User;
 use App\Enum\CourseStatus;
+use App\Enum\DivisionRole;
 use App\Enum\MembershipStatus;
 use App\Enum\TeamMemberRole;
 use App\Enum\TournamentStatus;
@@ -105,6 +107,271 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorTextContains('body', 'Phase 5 Cup');
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
+    }
+
+    public function testDivisionAdministrationIsClubScopedAndPreservesExistingTeams(): void
+    {
+        $ownClubId = $this->club->getId();
+        $sportId = $this->sport->getId();
+        $this->client->request('GET', '/admin/settings/sports');
+        self::assertResponseRedirects('/admin/de/sport');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('table.datagrid');
+        self::assertSelectorExists('.navbar-custom-menu [data-sport-club-context] + .user-menu-wrapper');
+        $this->client->clickLink('Funktionen');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Funktionen');
+        $crawler = $this->client->request('GET', '/admin/de/sport/new');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[name="Sport"]')->form(), [
+            'Sport[name]' => 'EasyAdmin Sport',
+            'Sport[sortOrder]' => '3',
+        ]);
+        self::assertResponseRedirects();
+        $easySport = $this->em->getRepository(Sport::class)->findOneBy(['name' => 'EasyAdmin Sport']);
+        self::assertNotNull($easySport);
+        self::assertSame($ownClubId, $easySport->getClub()->getId());
+        $crawler = $this->client->request('GET', '/admin/de/sport/'.$easySport->getId().'/edit');
+        $this->client->submit($crawler->filter('form[name="Sport"]')->form(), [
+            'Sport[name]' => 'EasyAdmin Sport aktualisiert',
+        ]);
+        self::assertResponseRedirects();
+        self::assertNotNull($this->em->getRepository(Sport::class)->findOneBy(['name' => 'EasyAdmin Sport aktualisiert']));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $toggleToken = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-toggle')->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('PATCH', '/admin/de/sport/'.$sportId.'/edit?'.http_build_query([
+            'fieldName' => 'active', 'newValue' => 'false', 'csrfToken' => $toggleToken,
+        ]), [], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertTrue($this->em->find(Sport::class, $sportId)->isActive());
+        $crawler = $this->client->request('GET', '/admin/divisions/club/'.$ownClubId.'/new');
+        $this->client->submit($crawler->selectButton('Sparte speichern')->form(), [
+            'division[name]' => 'Triathlon', 'division[shortName]' => 'TRI', 'division[sortOrder]' => '5',
+        ]);
+        self::assertResponseRedirects('/admin/settings/sports', 303);
+        $created = $this->em->getRepository(Sport::class)->findOneBy(['name' => 'Triathlon']);
+        self::assertNotNull($created);
+        self::assertSame($ownClubId, $created->getClub()->getId());
+        $crawler = $this->client->request('GET', '/admin/divisions/club/'.$ownClubId.'/new');
+        $this->client->submit($crawler->selectButton('Sparte speichern')->form(), ['division[name]' => 'Triathlon']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Diese Sparte existiert in diesem Verein bereits.');
+        $crawler = $this->client->request('GET', '/admin/divisions/'.$sportId.'/edit');
+        $this->client->submit($crawler->selectButton('Sparte speichern')->form(), ['division[name]' => 'Unterwasserrugby neu']);
+        self::assertResponseRedirects();
+        self::assertSame($sportId, $this->em->find(Team::class, $this->team->getId())->getSport()->getId());
+
+        $other = (new Club())->setName('Other club');
+        $this->em->persist($other); $this->em->flush();
+        $otherSport = (new Sport())->setClub($other)->setName('Other sport');
+        $this->em->persist($otherSport); $this->em->flush();
+        $this->client->request('GET', '/admin/de/sport/'.$sportId.'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('input[name="Sport[active]"]');
+        $this->client->request('POST', '/admin/de/sport/'.$sportId.'/delete');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/settings/sports?club='.$other->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/divisions/club/'.$other->getId().'/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/divisions/'.$otherSport->getId().'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/divisions/club/'.$ownClubId.'/new', [
+            'division' => ['name' => 'Without CSRF', 'sortOrder' => '0', '_token' => 'invalid'],
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(Sport::class)->findOneBy(['name' => 'Without CSRF']));
+        $member = $this->account('division-member', User::ROLE_MEMBER);
+        $this->client->loginUser($member);
+        $this->client->request('GET', '/admin/divisions/club/'.$ownClubId.'/new');
+        self::assertResponseStatusCodeSame(403);
+        $super = $this->account('division-super', User::ROLE_SUPER_ADMIN);
+        $this->client->loginUser($super);
+        $this->client->request('GET', '/admin/settings/sports?club='.$other->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/settings/sports');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('[data-sport-club-context]', 'Own Competition Club');
+        $selectionForm = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->request('POST', '/admin/settings/club', ['admin_club' => ['club' => (string) $other->getId(), '_token' => 'invalid']]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->submit($selectionForm, ['admin_club[club]' => (string) $other->getId()]);
+        self::assertResponseRedirects('/admin/settings/sports', 303);
+        $this->client->followRedirect();
+        self::assertResponseRedirects('/admin/de/sport');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-sport-club-context]', 'Other club');
+        self::assertSelectorTextContains('body', 'Other sport');
+        self::assertSelectorNotExists('a[href="/admin/divisions/'.$sportId.'/edit"]');
+        $this->client->request('GET', '/admin/de/sport');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Other sport');
+        self::assertSelectorTextNotContains('body', 'Unterwasserrugby neu');
+        $this->client->request('GET', '/admin/de/sport/'.$sportId.'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/de/sport/'.$otherSport->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('select[name="Sport[club]"]');
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $batchToken = static::getContainer()->get('security.csrf.token_manager')
+                ->getToken('ea-batch-action-batchDelete-'.Sport::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', '/admin/de/sport/batch-delete', [
+            'batchActionName' => 'batchDelete',
+            'entityFqcn' => Sport::class,
+            'batchActionCsrfToken' => $batchToken,
+            'batchActionEntityIds' => [(string) $otherSport->getId(), (string) $sportId],
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNotNull($this->em->find(Sport::class, $otherSport->getId()));
+        self::assertNotNull($this->em->find(Sport::class, $sportId));
+        $crawler = $this->client->request('GET', '/admin/de/sport/new');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[name="Sport"]')->form(), [
+            'Sport[name]' => 'Sport im ausgewählten Verein',
+            'Sport[sortOrder]' => '2',
+        ]);
+        self::assertResponseRedirects();
+        $legacyCreated = $this->em->getRepository(Sport::class)->findOneBy(['name' => 'Sport im ausgewählten Verein']);
+        self::assertNotNull($legacyCreated);
+        self::assertSame($other->getId(), $legacyCreated->getClub()->getId());
+        $this->client->request('GET', '/admin/divisions/'.$sportId.'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/divisions/club/'.$ownClubId.'/new', [
+            'division' => ['name' => 'Wrong context', '_token' => 'invalid'],
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/divisions/'.$otherSport->getId().'/edit');
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testDivisionLeaderAssignmentIsScopedAndTimeLimited(): void
+    {
+        $leader = $this->account('division-leader', User::ROLE_MEMBER);
+        $trainer = $this->account('division-trainer', User::ROLE_MEMBER);
+        $otherSport = (new Sport())->setClub($this->em->find(Club::class, $this->club->getId()))->setName('Triathlon');
+        $this->em->persist($otherSport); $this->em->flush();
+        $otherTeam = (new Team())->setSport($otherSport)->setName('Other team');
+        $this->em->persist($otherTeam); $this->em->flush();
+        $otherClub = (new Club())->setName('Foreign club'); $this->em->persist($otherClub); $this->em->flush();
+        $foreign = $this->account('foreign-division', User::ROLE_MEMBER, $otherClub);
+        $sportId = $this->sport->getId();
+        $formUrl = '/admin/divisions/'.$sportId.'/functions/new';
+        $crawler = $this->client->request('GET', $formUrl);
+        self::assertSelectorNotExists('option[value="'.$foreign->getMember()->getId().'"]');
+        $token = $crawler->filter('input[name="division_role_assignment[_token]"]')->attr('value');
+        $this->client->request('POST', $formUrl, ['division_role_assignment' => [
+            'member' => (string) $foreign->getMember()->getId(), 'role' => 'leader',
+            'startsAt' => '2020-01-01', 'endsAt' => '', '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->em->getRepository(DivisionRoleAssignment::class)->count([]));
+        $this->client->request('POST', $formUrl, ['division_role_assignment' => [
+            'member' => (string) $leader->getMember()->getId(), 'role' => 'leader',
+            'startsAt' => '2020-01-01', 'endsAt' => '', '_token' => 'invalid',
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->em->getRepository(DivisionRoleAssignment::class)->count([]));
+        $crawler = $this->client->request('GET', $formUrl);
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[member]' => (string) $leader->getMember()->getId(),
+            'division_role_assignment[role]' => 'leader',
+            'division_role_assignment[startsAt]' => '2020-01-01',
+            'division_role_assignment[endsAt]' => '',
+        ]);
+        self::assertResponseRedirects('/admin/divisions/'.$sportId.'/functions', 303);
+        $assignment = $this->em->getRepository(DivisionRoleAssignment::class)->findOneBy(['role' => DivisionRole::LEADER]);
+        self::assertNotNull($assignment);
+        $assignmentId = $assignment->getId();
+        $this->client->loginUser($leader);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/teams/'.$otherTeam->getId());
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/teams/new');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('option[value="'.$sportId.'"]');
+        self::assertSelectorNotExists('option[value="'.$otherSport->getId().'"]');
+        $teamToken = $crawler->filter('input[name="form[_token]"]')->attr('value');
+        $this->client->request('POST', '/admin/teams/new', ['form' => [
+            'name' => 'Forbidden team', 'sport' => (string) $otherSport->getId(),
+            'type' => 'team', 'active' => '1', '_token' => $teamToken,
+        ]]);
+        self::assertNull($this->em->getRepository(Team::class)->findOneBy(['name' => 'Forbidden team']));
+        $crawler = $this->client->request('GET', '/admin/teams/new');
+        $this->client->submit($crawler->selectButton('Speichern')->form(), [
+            'form[name]' => 'Leader team', 'form[sport]' => (string) $sportId,
+            'form[type]' => 'team', 'form[active]' => '1',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', $formUrl);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/divisions/functions/'.$assignmentId.'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($this->admin);
+        $crawler = $this->client->request('GET', '/admin/divisions/functions/'.$assignmentId.'/edit');
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[endsAt]' => '2019-12-31',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Das Ende darf nicht vor dem Beginn liegen.');
+        $crawler = $this->client->request('GET', '/admin/divisions/functions/'.$assignmentId.'/edit');
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[endsAt]' => '2020-01-02',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->loginUser($leader);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->loginUser($this->admin);
+        $crawler = $this->client->request('GET', '/admin/divisions/functions/'.$assignmentId.'/edit');
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[startsAt]' => '2099-01-01',
+            'division_role_assignment[endsAt]' => '',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->loginUser($leader);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($this->admin);
+        $crawler = $this->client->request('GET', '/admin/divisions/functions/'.$assignmentId.'/edit');
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[startsAt]' => '2020-01-01',
+            'division_role_assignment[endsAt]' => '',
+        ]);
+        self::assertResponseRedirects();
+        $leaderMember = $this->em->find(Member::class, $leader->getMember()->getId());
+        $leaderMember->setMembershipStatus(MembershipStatus::FORMER);
+        $this->em->flush();
+        $this->client->loginUser($leader);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseRedirects('/login');
+        $this->client->loginUser($this->admin);
+        $crawler = $this->client->request('GET', $formUrl);
+        $this->client->submit($crawler->selectButton('Funktion speichern')->form(), [
+            'division_role_assignment[member]' => (string) $trainer->getMember()->getId(),
+            'division_role_assignment[role]' => 'trainer',
+            'division_role_assignment[startsAt]' => '2020-01-01',
+            'division_role_assignment[endsAt]' => '',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->loginUser($trainer);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testRoundRobinResultsStandingsCorrectionFeesAndImmutableArchive(): void

@@ -106,14 +106,22 @@ final class MembershipController extends AbstractController
     }
 
     #[Route('/admin/configuration', name: 'admin_configuration', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
+    #[Route('/admin/settings/bar-services', name: 'admin_settings_bar_services', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'bar'], methods: ['GET', 'POST'])]
     public function configuration(Request $request, PublicWebsite $website, BarDutyAccess $barAccess, BarDutyWorkflow $barWorkflow): Response
     {
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_BAR_MANAGER')) {
             throw $this->createAccessDeniedException();
         }
 
+        $barOnly = $request->attributes->get('configuration_section') === 'bar';
+        if ($barOnly && !$barAccess->isManager()) {
+            throw $this->createAccessDeniedException('Nur die Thekenleitung darf diese Einstellungen verwalten.');
+        }
         $user = $this->account();
         $ownClub = $user->getMember()?->getClub();
+        if ($barOnly && $request->query->has('club')) {
+            throw $this->createNotFoundException('Für die Thekendiensteinstellungen gilt der eigene Verein.');
+        }
         $clubs = $this->isGranted('ROLE_SUPER_ADMIN') ? $this->em->getRepository(Club::class)->findAll() : array_filter([$ownClub]);
         $club = null;
 
@@ -130,7 +138,7 @@ final class MembershipController extends AbstractController
         $classForms = [];
         $classEditSubmitted = false;
 
-        if ($website->canManageEditorial()) {
+        if (!$barOnly && $website->canManageEditorial()) {
             $websiteClub = $website->editorialClub();
             $display = $this->em->find(WebsiteDisplaySettings::class, $websiteClub->getId()) ?? new WebsiteDisplaySettings($websiteClub);
             $websiteForm = $this->createForm(WebsiteDisplaySettingsType::class, $display)->handleRequest($request);
@@ -144,7 +152,7 @@ final class MembershipController extends AbstractController
             }
         }
 
-        if ($club !== null) {
+        if (!$barOnly && $club !== null) {
             $policy = $this->memberships->policy($club) ?? new MembershipPolicy($club);
             $policyForm = $this->policyForm($policy)->handleRequest($request);
 
@@ -185,18 +193,21 @@ final class MembershipController extends AbstractController
         
         $year = (int) $yearRaw;
         $barPolicy = $barForm = $yearForm = null;
-        $clubForm = $this->isGranted('ROLE_SUPER_ADMIN')
+        $clubForm = !$barOnly && $this->isGranted('ROLE_SUPER_ADMIN')
             ? $this->forms->createNamed('', ConfigurationClubSelectionType::class, ['club' => $club, 'year' => (string) $year], ['clubs' => $clubs])
             : null;
         $canBar = $barAccess->isManager() && $ownClub !== null;
         
+        if ($barOnly && !$canBar) {
+            throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
+        }
         if ($canBar) {
             $barAccess->requireManager();
             $barPolicy = $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $barAccess->club(), 'year' => $year]);
             $yearForm = $this->forms->createNamed('', ConfigurationYearSelectionType::class, [
-                'club' => $club ? (string) $club->getId() : null,
+                'club' => !$barOnly && $club ? (string) $club->getId() : null,
                 'year' => $year,
-            ], ['include_club' => $club !== null]);
+            ], ['include_club' => !$barOnly && $club !== null]);
             $barForm = $this->createForm(BarDutyPolicyType::class, [
                 'minutes' => $barPolicy?->getRequiredMinutes(),
                 'cash' => $barPolicy?->isCashEnabled() ?? false,
@@ -213,7 +224,7 @@ final class MembershipController extends AbstractController
             if ($response = $this->process($barForm, function () use ($barForm, $barWorkflow, $year): void {
                 $data = $barForm->getData();
                 $barWorkflow->configure($year, $data['minutes'], $data['cash'], $data['reason']);
-            }, 'admin_configuration', $parameters + ['year' => $year], 'Jahresregel gespeichert.')) {
+            }, $barOnly ? 'admin_settings_bar_services' : 'admin_configuration', ($barOnly ? [] : $parameters) + ['year' => $year], 'Jahresregel gespeichert.')) {
                 return $response;
             }
         }
@@ -236,6 +247,7 @@ final class MembershipController extends AbstractController
             'barForm' => $barForm?->createView(),
             'yearForm' => $yearForm?->createView(),
             'year' => $year,
+            'barOnly' => $barOnly,
         ]);
 
         if ($request->isMethod('POST')) { $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY); }

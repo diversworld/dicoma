@@ -38,6 +38,55 @@ sie behalten die bestehenden Parameter `club` und `year`. Die FormTypes für
 Mitgliedschaftsregeln und Beitragsklassen werden auch auf den bisherigen
 Mitgliedschaftsseiten verwendet. Schreibende Formulare sind CSRF-geschützt;
 ungültige Eingaben werden direkt an den Formularfeldern angezeigt.
+Die Thekendienst-Jahresregel ist zusätzlich als eigenständige Seite
+`/admin/settings/bar-services` erreichbar. Sie verwendet momentan weiterhin
+den Verein der Thekenleitung, nicht die Sportarten-Vereinsauswahl. Die zentrale
+Seite und die übrige Aufteilung der Einstellungen sind noch nicht entfernt.
+
+Vereinsadmins können unter `/admin/settings/sports` für ihren eigenen Verein
+Sportarten (Sparten) anlegen und deren
+Bezeichnung, Kurzbezeichnung, Beschreibung und Sortierung bearbeiten.
+Superadmins wählen den Verein im Benutzermenü; die Auswahl gilt derzeit
+für die Sportarten-Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung sowie die Kennzahlen
+und Listen der Verwaltungsübersicht. Die Kopfzeile zeigt den Verein und weist darauf hin,
+dass die Filterung noch nicht backendweit gilt. Direkte Sportarten- und
+Funktions-URLs müssen zum ausgewählten Verein passen. Die übrigen
+Verwaltungsbereiche und die bisherige Konfigurationsseite verwenden noch
+nicht durchgehend diesen Sitzungskontext. Die Sportartenverwaltung nutzt
+die EasyAdmin-Liste und -Formulare.
+Die Verwaltung verwendet
+die bestehende Sportart und erhält damit vorhandene Mitglieder- und
+Mannschaftszuordnungen. Den bestehenden Aktiv-Status können ausschließlich
+Superadmins ändern; er wird noch nicht fachbereichsübergreifend durchgesetzt.
+Vereinsadmins und Superadmins
+können für Mitglieder ihres Vereins zeitlich begrenzte Spartenfunktionen
+zuordnen. Eine aktuell gültige Spartenleitung kann Mannschaften ihrer Sparte
+einschließlich Kader, Training und zugehöriger Turnieranmeldungen verwalten.
+Die Person muss aktives Mitglied desselben Vereins sein. Trainerrechte werden
+weiterhin pro Mannschaft vergeben; die Funktionen Trainer, Gerätewart und
+Jugendwart begründen für sich noch keine zusätzlichen Rechte. Die Zuordnung
+ändert keine globalen Symfony-Rollen. Bei mehreren Zuordnungen gilt die
+Berechtigung, solange mindestens eine Zuordnung aktuell ist.
+
+Kursverwaltung, Ausbildungsleitung und Vereinsadmins können in der
+Ausbildungsverwaltung Kurse als ungeprüft, vereinsweit oder einer bzw.
+mehreren Sparten zugeordnet kennzeichnen. Die Prüfliste und die Bearbeitung
+verwenden den ausgewählten Verein;
+Superadmins können auch Kurse ohne Verein zur Nachbearbeitung anzeigen.
+Neue und bestehende Kurse sind zunächst ungeprüft. Inaktive Sparten können
+nicht neu zugeordnet werden, vorhandene Zuordnungen bleiben erhalten.
+Ein Vereinswechsel von Kurs oder zugeordneter Sparte wird bei widersprechenden
+Zuordnungen abgelehnt. Die Zuordnung verändert weder Kursberechtigungen noch
+die öffentliche Sichtbarkeit.
+
+Die additiven Migrationen `Version20261030100000` und `Version20261030110000`
+sind nach Backup und Schemafreigabe erforderlich. Funktionsfreigaben,
+öffentliche Sichtbarkeit, spartenübergreifende Jugendgruppen und Zuordnungen
+zu weiteren Fachbereichen sind noch nicht implementiert.
+
+Das Benutzermenü zeigt den vorhandenen Personennamen bzw. Kontonamen und ein
+Standardbild. Separate Backendseiten für Profil und Passwort existieren noch
+nicht; das Menü weist darauf hin, statt auf nicht vorhandene Routen zu führen.
 
 ## Frontendnavigation
 
@@ -97,8 +146,9 @@ ddev exec php8.5 bin/console lint:container --env=test
 php tests/translation_health.php lint:translations
 ```
 
-Keine Abhängigkeitsänderung, Datenmigration oder Veränderung produktiver
-Geschäftsdaten erforderlich. Ergebnisse und Grenzen stehen im
+Für die oben beschriebenen Spartenfunktionen und Kurszuordnungen sind die
+genannten Migrationen erforderlich; sie wurden nicht auf produktive Daten
+angewendet. Ergebnisse und Grenzen stehen im
 [Prüfbericht](testing/test-report.md). Clubreisen, automatische Veranstaltungs-
 Erinnerungen und weitere noch fehlende Geschäftsprozesse bleiben im
 [Umsetzungsplan](analysis/implementation-roadmap.md) ausdrücklich offen.

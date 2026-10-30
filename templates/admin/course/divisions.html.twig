@@ -1,0 +1,16 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}Kurs-Spartenzuordnung{% endblock %}
+{% block main %}
+    <h1>Spartenzuordnung – {{ course.title }}</h1>
+    <p>Sparten entsprechen den vorhandenen Sportarten. Die Zuordnung dient zur fachlichen Einordnung und verändert weder Kursberechtigungen noch die öffentliche Sichtbarkeit.</p>
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        <div class="row">
+            <div class="col-12 col-md-6">{{ form_row(form.scope) }}</div>
+            <div class="col-12 col-md-6">{{ form_row(form.divisions) }}</div>
+        </div>
+        <button class="btn btn-primary" type="submit">Zuordnung speichern</button>
+    {{ form_end(form) }}
+    <p class="mt-3"><a href="{{ path('admin_portal_training_course', {id: course.id}) }}">Zum Kurs</a></p>
+{% endblock %}

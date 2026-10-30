@@ -14,6 +14,12 @@
     <h2>{% if is_granted('ROLE_TRAINING_MANAGER') %}Ausbildungsleitung{% elseif is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}Kursverwaltung{% else %}Ausbilder: Meine Kurse{% endif %}</h2>
     {% if is_granted('ROLE_TRAINING_MANAGER') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
         <p><a class="btn btn-primary" href="{{ path('admin_portal_training_course_new') }}">Kurs anlegen</a></p>
+        {% if admin_club_context.club %}
+            <p><a href="{{ path('admin_course_division_review') }}">Ungeprüfte Kurs-Spartenzuordnungen</a></p>
+        {% endif %}
+        {% if is_granted('ROLE_SUPER_ADMIN') %}
+            <p><a href="{{ path('admin_course_division_review', {club: 'unassigned'}) }}">Ungeprüfte Kurse ohne Verein</a></p>
+        {% endif %}
     {% endif %}
     <ul>{% for course in courses %}
         <li><a href="{{ path('admin_portal_training_course', {id: course.id}) }}">{{ course.title }}</a> – {{ course.status.label() }}</li>

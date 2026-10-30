@@ -27,15 +27,13 @@ use App\Entity\WebsitePublication;
 use App\Entity\WebsiteDisplaySettings;
 use App\Enum\CourseStatus;
 use App\Controller\Admin\MemberCrudController;
-use App\Security\Voter\MemberManagementVoter;
 use \App\Entity\TuvInvoiceSettings;
-use App\Controller\Admin\EquipmentReservationCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
-use App\Controller\Admin\MemberTankCheckBooking;
 use App\Controller\Admin\EquipmentBookingCrudController;
 use App\Controller\Admin\MemberTankCheckBookingCrudController;
 use App\Service\TankInspectionOverview;
 use App\Service\PublicWebsite;
+use App\Service\AdminClubContext;
 use App\Repository\MemberQualificationRepository;
 use App\Form\WebsitePublicationType;
 use App\Form\WebsiteDisplaySettingsType;
@@ -50,7 +48,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
-use EasyCorp\Bundle\EasyAdminBundle\Config\Option\IconSet;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormError;
@@ -60,7 +57,6 @@ use Doctrine\DBAL\LockMode;
 use App\Service\TuvMessageRenderer;
 use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use \Doctrine\ORM\EntityManagerInterface;
 use \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
@@ -104,19 +100,16 @@ class DashboardController extends AbstractDashboardController
 		private readonly MemberQualificationRepository $memberQualificationRepository, 
 		private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly EntityManagerInterface $em,
-        private readonly PublicWebsite $publicWebsite
+        private readonly PublicWebsite $publicWebsite,
+        private readonly AdminClubContext $clubContext
 	) {
 	}
 	
 	public function index(): Response
 	{
-        $club = null;
-        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
-            $user = $this->getUser();
-            $club = $user instanceof User ? $user->getMember()?->getClub() : null;
-            if ($club === null || $club->getId() === null) {
-                throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
-            }
+        $club = $this->clubContext->getClub();
+        if ($club === null && !$this->isGranted('ROLE_SUPER_ADMIN')) {
+            throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
         }
         $qualificationUrl = (clone $this->adminUrlGenerator)->unsetAll()
 			->setController(MemberQualificationCrudController::class)
@@ -141,6 +134,9 @@ class DashboardController extends AbstractDashboardController
             $courses->andWhere('c.club = :club')->setParameter('club', $club);
             $schedules->andWhere('c.club = :club')->setParameter('club', $club);
             $applicationCriteria['club'] = $club;
+        } else {
+            $courses->andWhere('1 = 0');
+            $schedules->andWhere('1 = 0');
         }
         $applications = $this->em->getRepository(MembershipApplication::class);
 
@@ -151,27 +147,27 @@ class DashboardController extends AbstractDashboardController
             'dashboardScope' => $club?->getName(),
             'activeCourseCount' => (int) $courses->getQuery()->getSingleScalarResult(),
             'upcomingSchedules' => $schedules->getQuery()->getResult(),
-            'pendingApplicationCount' => $applications->count($applicationCriteria),
-            'pendingApplications' => $applications->findBy($applicationCriteria, ['submittedAt' => 'ASC', 'id' => 'ASC'], 5),
+            'pendingApplicationCount' => $club === null ? 0 : $applications->count($applicationCriteria),
+            'pendingApplications' => $club === null ? [] : $applications->findBy($applicationCriteria, ['submittedAt' => 'ASC', 'id' => 'ASC'], 5),
             'quickLinks' => [
                 ['label' => 'Mitglieder verwalten', 'icon' => 'fa-users', 'url' => $membersUrl],
                 ['label' => 'Mitgliedschaften und Beiträge', 'icon' => 'fa-address-card', 'url' => $this->generateUrl('membership_admin')],
                 ['label' => 'Ausbildungsportal', 'icon' => 'fa-graduation-cap', 'url' => $this->generateUrl('admin_portal_training_portal')],
                 ['label' => 'Kurskalender', 'icon' => 'fa-calendar', 'url' => $this->generateUrl('admin_course_calendar')],
             ],
-			'expiredQualifications' =>
+			'expiredQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpired($club, 5),
 
-			'expiringQualifications' =>
+			'expiringQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpiringWithinDays(30, $club, 5),
 
-			'expiredQualificationCount' =>
+			'expiredQualificationCount' => $club === null ? 0 :
 				$this->memberQualificationRepository
 					->countExpired($club),
 
-			'expiringQualificationCount' =>
+			'expiringQualificationCount' => $club === null ? 0 :
 				$this->memberQualificationRepository
 					->countExpiringWithinDays(30, $club),
 			
@@ -225,9 +221,7 @@ class DashboardController extends AbstractDashboardController
         return Dashboard::new()
             ->setTitle('<h4>DiveClubManager</h4>')
             ->setFaviconPath('images/favicon.ico')
-            // to customize the labels of locales, pass a key => value array
-            // (e.g. to display flags; although it's not a recommended practice,
-            // because many languages/locales are not associated to a single country)
+            ->setTranslationDomain('messages')
             ->setLocales([
                 Locale::new('de', 'DE Deutsch', 'locale-flag locale-flag-de'), // locale without custom options
                 Locale::new('en', 'GB English', 'locale-flag locale-flag-gb'), // custom label and icon
@@ -242,6 +236,7 @@ class DashboardController extends AbstractDashboardController
         return Assets::new()
            ->addCssFile('css/theme-variables.css')
 		   ->addCssFile('css/admin.css')
+           ->addCssFile('css/admin-theme.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
             ->addCssFile('css/utilities.css');
@@ -621,14 +616,19 @@ class DashboardController extends AbstractDashboardController
                     ->setPermission('ROLE_SUPER_ADMIN'),
             ]),
 			
-			MenuItem::subMenu('System & Einstellungen','fa fa-gear')->setPermission('ROLE_SUPER_ADMIN')->setSubItems([
-                MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building'),
-                MenuItem::linkTo(SportCrudController::class, 'Sportarten', 'fa fa-person-swimming'),
-                MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
-                MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear'),
-                MenuItem::linkToRoute('Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview'),
-                MenuItem::linkToRoute('TÜV-Benachrichtigungstexte', 'fa fa-envelope', 'admin_settings_tuv_notifications'),
-			]),
+			MenuItem::subMenu('System & Einstellungen','fa fa-gear')
+                ->setPermission('ROLE_SUPER_ADMIN')
+                ->setSubItems([
+                    MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building'),
+                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
+                    MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear'),
+                    MenuItem::linkToRoute('Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview'),
+                    MenuItem::linkToRoute('TÜV-Benachrichtigungstexte', 'fa fa-envelope', 'admin_settings_tuv_notifications'),
+                    MenuItem::linkToRoute('Sportarten und Sparten', 'fa fa-person-swimming', 'admin_settings_sports_configuration'),
+                    MenuItem::linkToRoute('Thekendiensteinstellungen', 'fa fa-cocktail', 'admin_settings_bar_services'),
+                    MenuItem::linkToRoute('Mitgliedschaft', 'fa fa-users', 'membership_admin'),
+			    ]
+            ),
         ];
     }
 
@@ -637,10 +637,15 @@ class DashboardController extends AbstractDashboardController
     // diese erlauben unter anderem die Verwaltung von Rollen.
     public function configureUserMenu(UserInterface $user): UserMenu
     {
-        return UserMenu::new()
-            ->setName($user->getUserIdentifier())
-            ->displayUserName(false)
-            ->displayUserAvatar(false);
+        $name = $user->getUserIdentifier();
+        if ($user instanceof User && $user->getPerson()?->getFullName()) {
+            $name = $user->getPerson()->getFullName();
+        }
+
+        return parent::configureUserMenu($user)
+            ->setName($name)
+            ->setAvatarUrl('/images/images/Diversworld_Viking.png')
+            ->addMenuItems([MenuItem::section('Profil- und Passwortseiten im Backend noch nicht verfügbar')]);
     }
 
 	public function configureCrud(): Crud

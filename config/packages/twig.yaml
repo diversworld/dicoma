@@ -2,6 +2,7 @@ twig:
     globals:
         site_theme: '@App\Service\SiteTheme'
         portal_navigation: '@App\Service\PortalNavigation'
+        admin_club_context: '@App\Service\AdminClubContext'
     default_path: '%kernel.project_dir%/templates'
     date:
         format: 'd.m.Y H:i'

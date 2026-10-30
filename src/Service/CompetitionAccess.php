@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Club;
+use App\Entity\DivisionRoleAssignment;
+use App\Entity\Sport;
 use App\Entity\Team;
 use App\Entity\TeamMember;
 use App\Entity\Tournament;
 use App\Entity\TournamentEntry;
 use App\Entity\User;
 use App\Enum\TeamMemberRole;
+use App\Enum\DivisionRole;
 use App\Enum\TournamentStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -30,7 +33,7 @@ final class CompetitionAccess
     public function managesTeam(Team $team): bool
     {
         if ($team->getSport()?->getClub() === null) { return false; }
-        if ($this->managesClub($team->getSport()->getClub())) { return true; }
+        if ($this->managesDivision($team->getSport())) { return true; }
         $member = $this->security->getUser() instanceof User ? $this->security->getUser()->getMember() : null;
         if ($member === null || !$member->isActiveMember() || !$team->isActive()
             || $member->getClub()?->getId() !== $team->getSport()->getClub()->getId()) { return false; }
@@ -43,6 +46,39 @@ final class CompetitionAccess
         return false;
     }
 
+    public function managesDivision(Sport $sport): bool
+    {
+        $club = $sport->getClub();
+        if ($club === null) { return false; }
+        if ($this->managesClub($club)) { return true; }
+        $user = $this->security->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        if ($member === null || !$member->isActiveMember() || $club->getId() === null
+            || $member->getClub()?->getId() !== $club->getId()) {
+            return false;
+        }
+        foreach ($this->em->getRepository(DivisionRoleAssignment::class)->findBy([
+            'sport' => $sport, 'member' => $member, 'role' => DivisionRole::LEADER,
+        ]) as $assignment) {
+            if ($assignment->isAssignedOn(new \DateTimeImmutable('today'))) { return true; }
+        }
+        return false;
+    }
+
+    /** @return list<Sport> */
+    public function manageableDivisions(): array
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof User) { return []; }
+        $club = $user->getMember()?->getClub();
+        if (!$this->security->isGranted('ROLE_SUPER_ADMIN') && $club === null) { return []; }
+        $sports = $this->em->getRepository(Sport::class)->findBy(
+            $this->security->isGranted('ROLE_SUPER_ADMIN') ? [] : ['club' => $club],
+            ['name' => 'ASC'],
+        );
+        return array_values(array_filter($sports, $this->managesDivision(...)));
+    }
+
     public function isStaff(): bool
     {
         if ($this->security->isGranted('ROLE_SUPER_ADMIN')) { return true; }
@@ -50,6 +86,7 @@ final class CompetitionAccess
             $user = $this->security->getUser();
             return $user instanceof User && $user->getMember()?->getClub() !== null;
         }
+        if ($this->manageableDivisions() !== []) { return true; }
         foreach ($this->em->getRepository(Team::class)->findAll() as $team) {
             if ($this->managesTeam($team)) { return true; }
         }

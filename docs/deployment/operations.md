@@ -106,6 +106,32 @@ Vereinszuordnung; bei Superadmins gilt die Vereinsauswahl für
 Mitgliedschaft und Beiträge, Website und Thekendienst bleiben an den
 eigenen berechtigten Verein gebunden. Secrets bleiben in der Serverumgebung.
 
+Mit der additiven Migration `Version20261030100000` können Vereinsadmins für
+ihren Verein und Superadmins vereinsübergreifend befristete Spartenfunktionen
+vergeben. Eine aktive Spartenleitung darf Mannschaften der zugeordneten Sparte,
+deren Kader und Training sowie zugehörige Turnieranmeldungen verwalten.
+Trainer-, Gerätewart- und Jugendwart-Zuordnungen vergeben derzeit keine neuen
+Rechte; Trainer benötigen weiterhin ihre Mannschaftszuordnung. Eine
+Spartenfunktion erzeugt keine globale Benutzerrolle. Vor der Migration
+Backup und Schemafreigabe durchführen.
+
+Die Sportarten-Einstellungen unter `/admin/settings/sports`, die
+Kurs-Spartenprüfung, das Ausbildungsportal und die Verwaltungsübersicht verwenden für Superadmins die sitzungsgebundene
+Vereinsauswahl im Benutzermenü. Sie ist CSRF-geschützt; direkte
+Sportartenbearbeitungen werden gegen den gewählten Verein geprüft. Andere
+Backendbereiche sind noch nicht durchgehend auf diesen Kontext umgestellt.
+Die Kopfzeile weist deshalb ausdrücklich darauf hin, dass noch keine
+backendweite Vereinsfilterung besteht.
+
+Die additive Migration `Version20261030110000` ergänzt den Prüfstatus und
+Mehrfachzuordnungen von Kursen zu Sparten. Bestehende Kurse bleiben ungeprüft;
+es erfolgt keine automatische Zuordnung. Nach Backup und Schemafreigabe
+migrieren und die ungeprüften Kurse vereinsweise in der Ausbildungsverwaltung
+prüfen. Vereinslose Kurse sind für Superadmins separat sichtbar und müssen
+vor der Spartenzuordnung einem Verein zugewiesen werden. Die Zuordnung selbst
+ändert weder Berechtigungen noch öffentliche Kursfreigaben. Es wurde keine
+Migration auf der Anwendungsdatenbank ausgeführt.
+
 Neue Themes unter `site.themes` registrieren und per `SITE_THEME`
 auswählen; Struktur und Blockvertrag stehen in der
 [Systemübersicht](../architecture/system-overview.md#austauschbares-airspace-theme-und-öffentliche-redaktion).

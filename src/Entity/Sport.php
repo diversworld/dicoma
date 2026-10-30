@@ -7,8 +7,11 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: SportRepository::class)]
+#[Assert\Callback('validateCourseClubs')]
 #[ORM\Table(
     name: 'sport',
     uniqueConstraints: [
@@ -55,9 +58,14 @@ class Sport
     )]
     private Collection $memberships;
 
+    /** @var Collection<int, Courses> */
+    #[ORM\ManyToMany(targetEntity: Courses::class, mappedBy: 'divisions')]
+    private Collection $courses;
+
     public function __construct()
     {
         $this->memberships = new ArrayCollection();
+        $this->courses = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -80,6 +88,31 @@ class Sport
         $this->club = $club;
 
         return $this;
+    }
+
+    public function linkCourse(Courses $course): void
+    {
+        if (!$this->courses->contains($course)) {
+            $this->courses->add($course);
+        }
+    }
+
+    public function unlinkCourse(Courses $course): void
+    {
+        $this->courses->removeElement($course);
+    }
+
+    public function validateCourseClubs(ExecutionContextInterface $context): void
+    {
+        foreach ($this->courses as $course) {
+            $courseClub = $course->getClub();
+            if ($this->club === null || $courseClub === null
+                || ($courseClub !== $this->club
+                    && ($this->club->getId() === null || $courseClub->getId() !== $this->club->getId()))) {
+                $context->buildViolation('Die Sparte ist Kursen eines anderen Vereins zugeordnet.')->atPath('club')->addViolation();
+                return;
+            }
+        }
     }
 
     public function getName(): ?string

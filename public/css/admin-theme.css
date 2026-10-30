@@ -46,6 +46,8 @@ body.ea-dark-scheme {
     --text-muted: var(--dw-admin-muted);
     --color-primary: var(--dw-admin-primary);
     --ea-primary: var(--dw-admin-primary);
+    --border-radius: var(--dw-admin-radius);
+    --border-radius-lg: var(--dw-admin-radius);
     --link-color: var(--dw-admin-link);
     --content-bg: var(--dw-admin-content-bg);
     --content-panel-bg: var(--dw-admin-content-bg);

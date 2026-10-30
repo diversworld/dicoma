@@ -23,6 +23,7 @@ use App\Service\CourseArchiveService;
 use App\Service\FrontendCourseRegistrationService;
 use App\Service\ScheduleParticipantSyncService;
 use App\Service\TrainingProgressService;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -33,6 +34,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -45,6 +47,8 @@ final class TrainingPortalController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly FrontendCourseRegistrationService $registration,
         private readonly TrainingProgressService $progress,
+        private readonly AdminClubContext $clubContext,
+        private readonly RequestStack $requests,
     ) {}
 
     #[Route('/training', name: 'training_portal', methods: ['GET'])]
@@ -53,12 +57,10 @@ final class TrainingPortalController extends AbstractController
         $user = $this->account();
         $mine = $user->getPerson() === null ? [] : $this->em->getRepository(CourseParticipant::class)->findBy(['person' => $user->getPerson()], ['id' => 'DESC']);
         $staffCourses = [];
-        $club = $user->getMember()?->getClub();
+        $club = $this->clubContext->getClub();
         $candidates = [];
         if ($request->attributes->get('routeCreatedByEasyAdmin')) {
-            $candidates = $this->isGranted('ROLE_SUPER_ADMIN')
-                ? $this->em->getRepository(Courses::class)->findBy([], ['id' => 'DESC'])
-                : ($club === null ? [] : $this->em->getRepository(Courses::class)->findBy(['club' => $club], ['id' => 'DESC']));
+            $candidates = $club === null ? [] : $this->em->getRepository(Courses::class)->findBy(['club' => $club], ['id' => 'DESC']);
         }
         foreach ($candidates as $course) {
             if ($this->canViewCourse($course)) { $staffCourses[] = $course; }
@@ -71,7 +73,9 @@ final class TrainingPortalController extends AbstractController
     public function edit(Request $request, ?int $id = null): Response
     {
         if ($id === null) {
-            $club = $this->account()->getMember()?->getClub();
+            $club = $request->attributes->get('routeCreatedByEasyAdmin')
+                ? $this->clubContext->getClub()
+                : $this->account()->getMember()?->getClub();
             if ($club === null) { throw $this->createAccessDeniedException('Für neue Kurse ist eine Vereinszuordnung erforderlich.'); }
             $course = (new Courses())->setClub($club);
         } else {
@@ -83,6 +87,7 @@ final class TrainingPortalController extends AbstractController
         $form = $this->createForm(TrainingCourseType::class, $course, [
             'club' => $course->getClub(),
             'instructors' => $this->em->getRepository(Member::class)->findInstructors($course->getClub()),
+            'csrf_token_id' => 'training_course_'.$course->getClub()->getId(),
         ]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
@@ -325,6 +330,7 @@ final class TrainingPortalController extends AbstractController
     {
         $course = $this->em->find(Courses::class, $id);
         if (!$course instanceof Courses) { throw $this->createNotFoundException('Kurs nicht gefunden.'); }
+        $this->assertBackendCourseContext($course);
         return $course;
     }
 
@@ -332,10 +338,22 @@ final class TrainingPortalController extends AbstractController
     {
         $participant = $this->em->find(CourseParticipant::class, $id);
         if (!$participant instanceof CourseParticipant) { throw $this->createNotFoundException(); }
+        $this->assertBackendCourseContext($participant->getCourse());
         if ($participant->getPerson() !== $this->account()->getPerson() && !$this->canViewCourse($participant->getCourse())) {
             throw $this->createAccessDeniedException();
         }
         return $participant;
+    }
+
+    private function assertBackendCourseContext(?Courses $course): void
+    {
+        if (!$this->requests->getCurrentRequest()?->attributes->get('routeCreatedByEasyAdmin')) {
+            return;
+        }
+        $selectedId = $this->clubContext->getClub()?->getId();
+        if ($selectedId === null || $course?->getClub()?->getId() !== $selectedId) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
+        }
     }
 
     private function canViewCourse(?Courses $course): bool
