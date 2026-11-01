@@ -1,0 +1,21 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Einstellungen{% endblock %}
+{% block main %}
+    <h1>Einstellungen</h1>
+    <p>Die Einstellungen beziehen sich auf den ausgewählten Verein. Technische Zugangsdaten bleiben in der Serverumgebung.</p>
+    <ul>
+        {% if is_granted('ROLE_ADMIN') %}
+            <li><a href="{{ path('admin_settings_membership') }}">Mitgliedschaftsregeln</a></li>
+            <li><a href="{{ path('admin_settings_contributions') }}">Beitragsklassen</a></li>
+            <li><a href="{{ path('admin_settings_sports_configuration') }}">Sportarten und Sparten</a></li>
+            <li><a href="{{ path('admin_course_division_review') }}">Kurs-Spartenzuordnungen prüfen</a></li>
+        {% endif %}
+        {% if canWebsite %}<li><a href="{{ path('admin_settings_website') }}">Website-Anzeige</a></li>{% endif %}
+        {% if canBar %}<li><a href="{{ path('admin_settings_bar_services') }}">Thekendienst-Jahresregel</a></li>{% endif %}
+        {% if is_granted('ROLE_SUPER_ADMIN') %}
+            <li><a href="{{ path('admin_invoice_settings_overview') }}">TÜV-Rechnungseinstellungen</a></li>
+            <li><a href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\MemberCrudController').setAction('index').set('unassigned', '1') }}">Mitglieder ohne Vereinszuordnung prüfen</a></li>
+            <li><a href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\CoursesCrudController').setAction('index').set('unassigned', '1') }}">Kurse ohne Vereinszuordnung prüfen</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}

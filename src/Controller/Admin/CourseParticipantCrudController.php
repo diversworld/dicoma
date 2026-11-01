@@ -6,13 +6,14 @@ use App\Entity\CourseParticipant;
 use App\Entity\Courses;
 use App\Entity\Member;
 use Doctrine\ORM\EntityRepository;
-use App\Entity\User;
+use App\Service\AdminClubContext;
 use App\Security\Voter\CourseManagementVoter;
 use App\Security\Voter\MemberManagementVoter;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\BatchActionDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use Symfony\Component\Translation\TranslatableMessage;
 use App\Enum\CourseParticipantStatus;
@@ -35,6 +36,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_ADMIN')]
@@ -44,7 +47,8 @@ class CourseParticipantCrudController extends AbstractCrudController
         private readonly CourseCompletionService $courseCompletionService,
         private readonly UrlGeneratorInterface $router,
         private readonly ScheduleRepository $scheduleRepository,
-        private readonly ScheduleParticipantSyncService $participantSyncService
+        private readonly ScheduleParticipantSyncService $participantSyncService,
+        private readonly AdminClubContext $clubContext
     ) {
     }
 
@@ -52,18 +56,15 @@ class CourseParticipantCrudController extends AbstractCrudController
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
-        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
-            $user = $this->getUser();
-            $clubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-            if ($clubId === null) {
-                $qb->andWhere('1 = 0');
-            } else {
-                $qb->join('entity.course', 'managedParticipantCourse')
-                    ->leftJoin('entity.member', 'managedParticipantMember')
-                    ->andWhere('managedParticipantCourse.club = :participantManagedClub')
-                    ->andWhere('(entity.member IS NULL OR managedParticipantMember.club = :participantManagedClub)')
-                    ->setParameter('participantManagedClub', $clubId);
-            }
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null) {
+            $qb->andWhere('1 = 0');
+        } else {
+            $qb->join('entity.course', 'managedParticipantCourse')
+                ->leftJoin('entity.member', 'managedParticipantMember')
+                ->andWhere('managedParticipantCourse.club = :participantManagedClub')
+                ->andWhere('(entity.member IS NULL OR managedParticipantMember.club = :participantManagedClub)')
+                ->setParameter('participantManagedClub', $clubId);
         }
         return $qb;
     }
@@ -76,6 +77,10 @@ class CourseParticipantCrudController extends AbstractCrudController
             throw $this->createAccessDeniedException('Kurszuordnung fehlt.');
         }
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null || $course->getClub()?->getId() !== $clubId) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
+        }
         $member = $participant->getMember();
         if ($member === null) {
             if ($participant->getPerson() === null) {
@@ -84,6 +89,9 @@ class CourseParticipantCrudController extends AbstractCrudController
             return;
         }
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
+        if ($member->getClub()?->getId() !== $clubId) {
+            throw $this->createAccessDeniedException('Mitglied gehört nicht zum ausgewählten Verein.');
+        }
     }
 
     public static function getEntityFqcn(): string
@@ -91,9 +99,32 @@ class CourseParticipantCrudController extends AbstractCrudController
         return CourseParticipant::class;
     }
 
+    public function batchDelete(AdminContext $context, BatchActionDto $batchActionDto): Response
+    {
+        if ($batchActionDto->getEntityFqcn() !== CourseParticipant::class) {
+            throw new BadRequestHttpException('Ungültiger Teilnehmer-Stapel.');
+        }
+        $em = $this->container->get('doctrine')->getManagerForClass(CourseParticipant::class);
+        foreach ($batchActionDto->getEntityIds() as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string) $id) || (int) $id < 1) {
+                throw new BadRequestHttpException('Ungültige Teilnehmer-ID.');
+            }
+            $participant = $em->find(CourseParticipant::class, (int) $id);
+            if ($participant !== null) {
+                $this->assertParticipantAccess($participant);
+                if ($participant->hasPassed() || $participant->getArchivedAt() !== null
+                    || $participant->getCourse()?->getStatus() === CourseStatus::COMPLETED) {
+                    throw $this->createAccessDeniedException('Archivierte Teilnahmen oder Teilnahmen abgeschlossener Kurse dürfen nicht gelöscht werden.');
+                }
+            }
+        }
+        return parent::batchDelete($context, $batchActionDto);
+    }
+
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'participant_crud_'.($this->clubContext->getClub()?->getId() ?? 'none')])
             ->setEntityLabelInSingular('Kursteilnehmer')
             ->setEntityLabelInPlural('Kursteilnehmer')
             ->setPageTitle(
@@ -135,13 +166,11 @@ class CourseParticipantCrudController extends AbstractCrudController
         // Auswahlfilter sind UI-Schutz; die Voter in persist/update/delete
         // bleiben die verbindliche serverseitige Zugriffskontrolle.
         $isForm = $pageName === Crud::PAGE_NEW || $pageName === Crud::PAGE_EDIT;
-        $isSuperAdmin = $this->isGranted('ROLE_SUPER_ADMIN');
-        $currentUser = $this->getUser();
-        $clubId = $currentUser instanceof User ? $currentUser->getMember()?->getClub()?->getId() : null;
+        $clubId = $this->clubContext->getClub()?->getId();
 
         $courseField = AssociationField::new('course', 'Kurs');
         $memberField = AssociationField::new('member', 'Teilnehmer');
-        if ($isForm && !$isSuperAdmin) {
+        if ($isForm) {
             $courseField->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
                 $qb = $repository->createQueryBuilder('courseChoice');
                 return $clubId === null
@@ -379,19 +408,23 @@ class CourseParticipantCrudController extends AbstractCrudController
             return;
         }
 
-        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
-            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
-            $originalCourse = $original['course'] ?? null;
-            $originalMember = $original['member'] ?? null;
-            if (!$originalCourse instanceof \App\Entity\Courses || !$originalMember instanceof \App\Entity\Member) {
-                throw $this->createAccessDeniedException('Urspruengliche Teilnehmerzuordnung fehlt.');
-            }
-            $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $originalCourse);
-            $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $originalMember);
-            // Die Verknuepfungen sind bei einer normalen Bearbeitung unveraenderlich.
-            $entityInstance->setCourse($originalCourse);
-            $entityInstance->setMember($originalMember);
+        $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+        $originalCourse = $original['course'] ?? null;
+        $originalMember = $original['member'] ?? null;
+        if (!$originalCourse instanceof Courses || ($originalMember !== null && !$originalMember instanceof Member)) {
+            throw $this->createAccessDeniedException('Urspruengliche Teilnehmerzuordnung fehlt.');
         }
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $originalCourse);
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null || $originalCourse->getClub()?->getId() !== $clubId
+            || ($originalMember !== null && $originalMember->getClub()?->getId() !== $clubId)) {
+            throw $this->createAccessDeniedException('Teilnehmerzuordnung gehört nicht zum ausgewählten Verein.');
+        }
+        if ($originalMember !== null) {
+            $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $originalMember);
+        }
+        $entityInstance->setCourse($originalCourse);
+        $entityInstance->setMember($originalMember);
         $this->assertParticipantAccess($entityInstance);
         $course = $entityInstance->getCourse();
 

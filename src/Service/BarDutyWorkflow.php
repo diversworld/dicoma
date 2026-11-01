@@ -15,7 +15,11 @@ final class BarDutyWorkflow
 
     public function transaction(callable $work): mixed
     {
-        $club = $this->access->club();
+        return $this->transactionForClub($this->access->club(), $work);
+    }
+
+    private function transactionForClub(Club $club, callable $work): mixed
+    {
         try {
             return $this->em->wrapInTransaction(function () use ($club, $work): mixed {
                 $this->em->refresh($club, LockMode::PESSIMISTIC_WRITE);
@@ -121,6 +125,17 @@ final class BarDutyWorkflow
         $this->transaction(function (Club $club) use ($year, $minutes, $cash, $reason): void {
             $policy = $this->one(BarDutyPolicy::class, ['club' => $club, 'year' => $year]) ?? new BarDutyPolicy($club, $year);
             $policy->configure($minutes, $cash, $this->access->actor(), $reason);
+            $this->em->persist($policy);
+        });
+    }
+
+    public function configureForClub(Club $club, int $year, int $minutes, bool $cash, string $reason): void
+    {
+        $actor = $this->access->configurationActor($club);
+        self::year($year);
+        $this->transactionForClub($club, function (Club $club) use ($year, $minutes, $cash, $reason, $actor): void {
+            $policy = $this->one(BarDutyPolicy::class, ['club' => $club, 'year' => $year]) ?? new BarDutyPolicy($club, $year);
+            $policy->configure($minutes, $cash, $actor, $reason);
             $this->em->persist($policy);
         });
     }

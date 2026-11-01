@@ -67,27 +67,22 @@ final class Phase2InvoiceSettingsAuthorizationHttpTest extends WebTestCase
     {
         [$client, $users, $clubIds] = $this->context();
 
-        foreach ([
-            '/admin/de/invoice-settings',
-            '/admin/de/invoice-agency-confirmations',
-            '/admin/tuv/invoice/settings',
-        ] as $path) {
-            $client->loginUser($users['super']);
-            $client->request('GET', $path);
-
-            self::assertResponseIsSuccessful();
-        }
+        $client->loginUser($users['super']);
+        $client->request('GET', '/admin/de/invoice-agency-confirmations');
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/admin/tuv/invoice/settings');
+        self::assertResponseRedirects('/admin/de/invoice-settings', 303);
 
         foreach ($clubIds as $clubId) {
-            foreach ([
-                '/admin/de/invoice-settings/'.$clubId,
-                '/admin/tuv/invoice/settings/'.$clubId,
-            ] as $path) {
-                $client->loginUser($users['super']);
-                $client->request('GET', $path);
-
-                self::assertResponseIsSuccessful();
-            }
+            $crawler = $client->request('GET', '/admin/de/invoice-settings');
+            self::assertResponseIsSuccessful();
+            $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+            $client->submit($selection, ['admin_club[club]' => (string) $clubId]);
+            self::assertResponseRedirects();
+            $client->request('GET', '/admin/de/invoice-settings/'.$clubId);
+            self::assertResponseIsSuccessful();
+            $client->request('GET', '/admin/tuv/invoice/settings/'.$clubId);
+            self::assertResponseRedirects('/admin/de/invoice-settings/'.$clubId, 303);
         }
     }
 

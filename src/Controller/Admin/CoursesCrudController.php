@@ -15,9 +15,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\BatchActionDto;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use App\Security\Voter\CourseManagementVoter;
+use App\Service\AdminClubContext;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -48,6 +50,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\TranslatableMessage;
 
@@ -62,6 +65,7 @@ class CoursesCrudController extends AbstractCrudController
         private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly \App\Repository\MemberRepository $members,
         private readonly \Symfony\Component\Security\Core\Role\RoleHierarchyInterface $roleHierarchy,
+        private readonly AdminClubContext $clubContext,
 	) {
 	}
 	
@@ -78,11 +82,10 @@ class CoursesCrudController extends AbstractCrudController
         FilterCollection $filters
     ): QueryBuilder {
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
-        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
-            return $qb;
+        if ($this->getContext()?->getRequest()->query->get('unassigned') === '1' && $this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $qb->andWhere('entity.club IS NULL');
         }
-        $clubId = $this->getUser() instanceof \App\Entity\User
-            ? $this->getUser()->getMember()?->getClub()?->getId() : null;
+        $clubId = $this->clubContext->getClub()?->getId();
         if ($clubId === null) {
             $qb->andWhere('1 = 0');
         } else {
@@ -95,32 +98,65 @@ class CoursesCrudController extends AbstractCrudController
     private function assertCourseManage(Courses $course): void
     {
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+        $selectedId = $this->clubContext->getClub()?->getId();
+        $courseClubId = $course->getClub()?->getId();
+        if ($selectedId === null || ($courseClubId !== $selectedId && !($courseClubId === null && $this->isGranted('ROLE_SUPER_ADMIN')))) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
+        }
     }
 
     /** Paket 13: Vereinszuordnung beim Anlegen und Bearbeiten unveraenderlich halten. */
     private function enforceCourseClub(Courses $course, ?EntityManagerInterface $em = null): void
     {
-        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
-            return;
-        }
-        $club = $this->getUser() instanceof \App\Entity\User
-            ? $this->getUser()->getMember()?->getClub() : null;
+        $club = $this->clubContext->getClub();
         if ($club === null || $club->getId() === null) {
             throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
         }
         if ($em !== null && $course->getId() !== null) {
             $original = $em->getUnitOfWork()->getOriginalEntityData($course);
             $originalClub = $original['club'] ?? null;
-            if (!$originalClub instanceof \App\Entity\Club || $originalClub->getId() !== $club->getId()) {
+            if ($originalClub === null ? !$this->isGranted('ROLE_SUPER_ADMIN') : (!$originalClub instanceof \App\Entity\Club || $originalClub->getId() !== $club->getId())) {
                 throw $this->createAccessDeniedException('Kurs gehoert nicht zum eigenen Verein.');
             }
         }
         $course->setClub($club);
     }
 
+    public function createEntity(string $entityFqcn): Courses
+    {
+        return (new Courses())->setClub($this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.'));
+    }
+
+    public function edit(AdminContext $context)
+    {
+        $this->assertCourseManage($context->getEntity()->getInstance());
+        return parent::edit($context);
+    }
+
+    public function batchDelete(AdminContext $context, BatchActionDto $batchActionDto): Response
+    {
+        if ($batchActionDto->getEntityFqcn() !== Courses::class) {
+            throw new BadRequestHttpException('Ungültiger Kurs-Stapel.');
+        }
+        foreach ($batchActionDto->getEntityIds() as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string) $id) || (int) $id < 1) {
+                throw new BadRequestHttpException('Ungültige Kurs-ID.');
+            }
+            $course = $this->container->get('doctrine')->getManagerForClass(Courses::class)->find(Courses::class, (int) $id);
+            if ($course !== null) {
+                $this->assertCourseManage($course);
+                if ($course->getStatus() === CourseStatus::COMPLETED) {
+                    throw $this->createAccessDeniedException('Abgeschlossene Kurse dürfen nicht gelöscht werden.');
+                }
+            }
+        }
+        return parent::batchDelete($context, $batchActionDto);
+    }
+
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'course_crud_'.($this->clubContext->getClub()?->getId() ?? 'none')])
             ->overrideTemplate('crud/detail', 'admin/course/detail.html.twig')
             ->setEntityLabelInSingular('Kurs')
             ->setEntityLabelInPlural('Kurse')
@@ -290,7 +326,8 @@ class CoursesCrudController extends AbstractCrudController
             ->hideOnForm()
             ->setColumns(2);
         yield AssociationField::new('club','Verein')
-            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN'))
+            ->setFormTypeOption('choices', array_filter([$this->clubContext->getClub()]))
+            ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN') || ($pageName !== Crud::PAGE_NEW && $this->getContext()?->getEntity()?->getInstance()?->getClub() !== null))
             ->setRequired(true)
             ->setColumns(4);
         yield \EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField::new('courseFee', 'Kurspreis')
@@ -349,7 +386,7 @@ class CoursesCrudController extends AbstractCrudController
             ->setColumns(4)
             ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
             ->setFormTypeOption('choices', $this->members->findInstructors(
-                $this->isGranted('ROLE_SUPER_ADMIN') ? null : $this->getUser()?->getMember()?->getClub()
+                $this->clubContext->getClub()
             ));
         yield AssociationField::new('qualification','Zielqualifikation')
             ->setRequired(false)

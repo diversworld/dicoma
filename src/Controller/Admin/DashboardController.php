@@ -24,7 +24,6 @@ use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
 use App\Entity\WebsitePublication;
-use App\Entity\WebsiteDisplaySettings;
 use App\Enum\CourseStatus;
 use App\Controller\Admin\MemberCrudController;
 use \App\Entity\TuvInvoiceSettings;
@@ -36,7 +35,7 @@ use App\Service\PublicWebsite;
 use App\Service\AdminClubContext;
 use App\Repository\MemberQualificationRepository;
 use App\Form\WebsitePublicationType;
-use App\Form\WebsiteDisplaySettingsType;
+use App\Form\TuvInvoiceSettingsType;
 use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -58,7 +57,6 @@ use App\Service\TuvMessageRenderer;
 use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use \Doctrine\ORM\EntityManagerInterface;
-use \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 #[AdminDashboard(
 	routePath: '/admin/{_locale}', 
@@ -296,33 +294,14 @@ class DashboardController extends AbstractDashboardController
         return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
     }
 
-    #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET', 'POST']])]
-    public function websiteDisplaySettings(Request $request, PublicWebsite $website): Response
+    #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET']])]
+    public function websiteDisplaySettings(PublicWebsite $website): Response
     {
         $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
-        $club = $website->editorialClub();
-
-        if ($request->isMethod('GET')) {
-            return $this->redirectToRoute('admin_configuration');
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            $website->editorialClub();
         }
-        
-        $settings = $this->em->find(WebsiteDisplaySettings::class, $club->getId()) ?? new WebsiteDisplaySettings($club);
-        $form = $this->createForm(WebsiteDisplaySettingsType::class, $settings);
-        $form->handleRequest($request);
-        
-        if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                $this->em->persist($settings);
-                $this->em->flush();
-                $this->addFlash('success', 'Anzeigeeinstellungen gespeichert.');
-                return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
-            } catch (UniqueConstraintViolationException) {
-                $form->addError(new FormError('Die Einstellungen wurden gleichzeitig angelegt. Bitte laden Sie die Seite neu.'));
-                return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: 409));
-            }
-        }
-        
-        return $this->render('admin/editorial/display_settings.html.twig', ['form' => $form], new Response(status: $form->isSubmitted() ? 422 : 200));
+        return $this->redirectToRoute('admin_settings_website');
     }
 
     #[AdminRoute(path: '/editorial/new', name: 'website_editorial_new', options: ['methods' => ['GET', 'POST']])]
@@ -383,47 +362,55 @@ class DashboardController extends AbstractDashboardController
     }
 
     // DICOMA invoice settings EasyAdmin integration v1
-    #[AdminRoute(path: '/invoice-settings', name: 'invoice_settings_overview')]
-    public function invoiceSettingsOverview(EntityManagerInterface $em): Response
+    #[AdminRoute(path: '/invoice-settings', name: 'invoice_settings_overview', options: ['methods' => ['GET']])]
+    public function invoiceSettingsOverview(): Response
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
 
         return $this->render('admin/tuv_invoice_settings_overview_ea.html.twig', [
-            'clubs' => $em->getRepository(Club::class)->findBy([], ['name' => 'ASC']),
+            'clubs' => array_filter([$this->clubContext->getClub()]),
         ]);
     }
 
-    #[AdminRoute(path: '/invoice-settings/{id}', name: 'invoice_settings_edit')]
+    #[AdminRoute(path: '/invoice-settings/{id}', name: 'invoice_settings_edit', options: ['methods' => ['GET', 'POST']])]
     public function invoiceSettingsEdit(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $club = $em->getRepository(Club::class)->find($id);
         if (!$club) { throw $this->createNotFoundException(); }
+        if ($this->clubContext->getClub()?->getId() !== $id) {
+            throw $this->createAccessDeniedException('Verein entspricht nicht der aktuellen Auswahl.');
+        }
         $settings = $em->getRepository(TuvInvoiceSettings::class)->find($id);
         if (!$settings) { $settings = new TuvInvoiceSettings($club); }
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('invoice_settings_'.$id, (string) $request->request->get('_token', ''))) {
-                throw $this->createAccessDeniedException('Ungueltiges CSRF-Token.');
-            }
+        $form = $this->createForm(TuvInvoiceSettingsType::class, [
+            'taxMode' => $settings->getTaxMode() === 'unconfigured' ? null : $settings->getTaxMode(),
+            'taxNumber' => $settings->getTaxNumber(),
+            'vatId' => $settings->getVatId(),
+            'invoiceNote' => $settings->getInvoiceNote(),
+            'memberAgencyEnabled' => $settings->isMemberAgencyEnabled(),
+        ], ['csrf_token_id' => 'invoice_settings_'.$id])->handleRequest($request);
+        if ($request->isMethod('POST') && !$form->isSubmitted()) {
+            throw new BadRequestHttpException('Ungültiges Rechnungsformular.');
+        }
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
             try {
                 $settings->configure(
-                    (string) $request->request->get('tax_mode', ''),
-                    (string) $request->request->get('tax_number', ''),
-                    (string) $request->request->get('vat_id', ''),
-                    (string) $request->request->get('invoice_note', '')
+                    $data['taxMode'], $data['taxNumber'], $data['vatId'], $data['invoiceNote']
                 );
-                $settings->setMemberAgencyEnabled($request->request->get('member_agency_enabled') === '1');
+                $settings->setMemberAgencyEnabled($data['memberAgencyEnabled']);
                 $em->persist($settings);
                 $em->flush();
                 $this->addFlash('success', 'Rechnungseinstellungen gespeichert.');
                 return $this->redirectToRoute('admin_invoice_settings_edit', ['id' => $id]);
             } catch (\InvalidArgumentException $e) {
-                $this->addFlash('danger', $e->getMessage());
+                $form->addError(new FormError($e->getMessage()));
             }
         }
         return $this->render('admin/tuv_invoice_settings_ea.html.twig', [
-            'club' => $club, 'settings' => $settings,
-        ]);
+            'club' => $club, 'form' => $form->createView(),
+        ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[AdminRoute(path: '/invoice-agency-confirmations', name: 'invoice_agency_confirmations')]
@@ -506,7 +493,7 @@ class DashboardController extends AbstractDashboardController
     {
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
-                MenuItem::linkToRoute('Konfiguration', 'fa fa-gear', 'admin_configuration'),
+                MenuItem::linkToRoute('Einstellungen', 'fa fa-gear', 'admin_settings'),
                 MenuItem::section('Website & Redaktion'),
                 MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
                     ->setPermission('ROLE_PRESS_OFFICER'),
@@ -517,7 +504,7 @@ class DashboardController extends AbstractDashboardController
 
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
-            MenuItem::linkToRoute('Konfiguration', 'fa fa-gear', 'admin_configuration'),
+            MenuItem::linkToRoute('Einstellungen', 'fa fa-gear', 'admin_settings'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
             ...($this->publicWebsite->canManageEditorial() ? [
                 MenuItem::section('Website & Redaktion'),
@@ -623,10 +610,9 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),
                     MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear'),
                     MenuItem::linkToRoute('Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview'),
-                    MenuItem::linkToRoute('TÜV-Benachrichtigungstexte', 'fa fa-envelope', 'admin_settings_tuv_notifications'),
+                    MenuItem::linkToRoute('TÜV-Benachrichtigungstexte (systemweit)', 'fa fa-envelope', 'admin_settings_tuv_notifications'),
                     MenuItem::linkToRoute('Sportarten und Sparten', 'fa fa-person-swimming', 'admin_settings_sports_configuration'),
                     MenuItem::linkToRoute('Thekendiensteinstellungen', 'fa fa-cocktail', 'admin_settings_bar_services'),
-                    MenuItem::linkToRoute('Mitgliedschaft', 'fa fa-users', 'membership_admin'),
 			    ]
             ),
         ];

@@ -20,7 +20,7 @@
         {% endfor %}
     </ul>
     <form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
-        <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create_' ~ club.id) }}">
         <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
         <label for="media-folder-name" class="form-label">Neuer Ordner in {{ folder ? folder.path : 'Hauptordner' }}</label>
         <input id="media-folder-name" class="form-control" name="name" type="text" maxlength="120" required>
@@ -30,7 +30,7 @@
     <p>Die Dateien werden in {{ folder ? folder.path : 'den Hauptordner' }} hochgeladen. Ungültige Dateien werden einzeln gemeldet; gültige Dateien werden gespeichert.</p>
     {% if maxFileUploads > 0 %}<p>Der Server erlaubt höchstens {{ maxFileUploads }} Dateien pro Upload; zusätzlich gilt ein Limit für die Gesamtgröße.</p>{% endif %}
     <form method="post" action="{{ path('admin_media_upload') }}" enctype="multipart/form-data" class="mb-4">
-        <input type="hidden" name="_token" value="{{ csrf_token('media_upload') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('media_upload_' ~ club.id) }}">
         <input type="hidden" name="folder" value="{{ folder ? folder.id : '' }}">
         <input id="media-selected-count" type="hidden" name="selected_count" value="">
         <label for="media-file" class="form-label">Dateien</label>

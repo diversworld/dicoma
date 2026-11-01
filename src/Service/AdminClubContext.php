@@ -41,6 +41,12 @@ final class AdminClubContext
         return $user->getMember()?->getClub();
     }
 
+    public function isBackendRequest(): bool
+    {
+        $path = $this->requests->getCurrentRequest()?->getPathInfo();
+        return $path !== null && ($path === '/admin' || str_starts_with($path, '/admin/'));
+    }
+
     public function selectionForm(): FormInterface
     {
         return $this->forms->createNamed('admin_club', ConfigurationClubSelectionType::class, ['club' => $this->getClub()], [

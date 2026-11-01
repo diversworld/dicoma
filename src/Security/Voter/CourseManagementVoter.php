@@ -6,19 +6,23 @@ namespace App\Security\Voter;
 
 use App\Entity\Courses;
 use App\Entity\User;
+use App\Service\AdminClubContext;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
 /**
- * Vereinsspezifische Kursbearbeitung. Globale Administration ist nur
- * mit ROLE_SUPER_ADMIN erlaubt; ROLE_ADMIN benötigt eine Vereinszuordnung.
+ * Vereinsspezifische Kursbearbeitung. Im Backend gilt für Superadmins der
+ * ausgewählte Verein; vereinslose Kurse bleiben zur Nachbearbeitung zugänglich.
  */
 final class CourseManagementVoter extends Voter
 {
     public const MANAGE = 'COURSE_MANAGE';
 
-    public function __construct(private readonly AuthorizationCheckerInterface $authorizationChecker) {}
+    public function __construct(
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
+        private readonly AdminClubContext $clubContext,
+    ) {}
 
     protected function supports(string $attribute, mixed $subject): bool
     {
@@ -37,6 +41,10 @@ final class CourseManagementVoter extends Voter
         }
 
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
+            if ($this->clubContext->isBackendRequest()) {
+                $selectedId = $this->clubContext->getClub()?->getId();
+                return $selectedId !== null && ($subject->getClub() === null || $subject->getClub()->getId() === $selectedId);
+            }
             return true;
         }
 

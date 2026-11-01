@@ -4,6 +4,8 @@ namespace App\Controller\Admin;
 
 use App\Entity\MemberQualification;
 use App\Entity\Member;
+use App\Service\AdminClubContext;
+use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -17,12 +19,16 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\BatchActionDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
@@ -30,7 +36,8 @@ class MemberQualificationCrudController extends AbstractCrudController
 {
 	public function __construct(
 		private readonly AdminUrlGenerator $adminUrlGenerator,
-        private readonly EntityManagerInterface $memberEntityManager
+        private readonly EntityManagerInterface $memberEntityManager,
+        private readonly AdminClubContext $clubContext,
 	) {
 	}
     public function createEntity(string $entityFqcn): MemberQualification
@@ -40,10 +47,69 @@ class MemberQualificationCrudController extends AbstractCrudController
         if (is_scalar($raw) && ctype_digit((string) $raw) && (int) $raw > 0) {
             $member = $this->memberEntityManager->getRepository(Member::class)->find((int) $raw);
             if ($member instanceof Member) {
+                $this->assertMemberClub($member);
                 $item->setMember($member);
             }
         }
         return $item;
+    }
+
+    private function assertMemberClub(?Member $member): void
+    {
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null || $member?->getClub()?->getId() !== $clubId) {
+            throw $this->createAccessDeniedException('Mitglied gehört nicht zum ausgewählten Verein.');
+        }
+    }
+
+    public function edit(AdminContext $context)
+    {
+        $this->assertMemberClub($context->getEntity()->getInstance()->getMember());
+        return parent::edit($context);
+    }
+
+    public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof MemberQualification) {
+            $this->assertMemberClub($entityInstance->getMember());
+        }
+        parent::persistEntity($entityManager, $entityInstance);
+    }
+
+    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof MemberQualification) {
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            $originalMember = $original['member'] ?? null;
+            $this->assertMemberClub($originalMember instanceof Member ? $originalMember : null);
+            $this->assertMemberClub($entityInstance->getMember());
+        }
+        parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof MemberQualification) {
+            $this->assertMemberClub($entityInstance->getMember());
+        }
+        parent::deleteEntity($entityManager, $entityInstance);
+    }
+
+    public function batchDelete(AdminContext $context, BatchActionDto $batchActionDto): Response
+    {
+        if ($batchActionDto->getEntityFqcn() !== MemberQualification::class) {
+            throw new BadRequestHttpException('Ungültiger Qualifikations-Stapel.');
+        }
+        foreach ($batchActionDto->getEntityIds() as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string) $id) || (int) $id < 1) {
+                throw new BadRequestHttpException('Ungültige Qualifikations-ID.');
+            }
+            $record = $this->memberEntityManager->find(MemberQualification::class, (int) $id);
+            if ($record !== null) {
+                $this->assertMemberClub($record->getMember());
+            }
+        }
+        return parent::batchDelete($context, $batchActionDto);
     }
 
     /**
@@ -123,6 +189,7 @@ class MemberQualificationCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'member_qualification_crud_'.($this->clubContext->getClub()?->getId() ?? 'none')])
             ->setEntityLabelInSingular(
                 'Mitgliedsqualifikation'
             )
@@ -167,10 +234,22 @@ class MemberQualificationCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
+        if ($pageName === Crud::PAGE_EDIT || $pageName === Crud::PAGE_DETAIL) {
+            $record = $this->getContext()?->getEntity()?->getInstance();
+            if ($record instanceof MemberQualification) {
+                $this->assertMemberClub($record->getMember());
+            }
+        }
+        $clubId = $this->clubContext->getClub()?->getId();
         yield AssociationField::new(
             'member',
             'Mitglied'
-        );
+        )->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+            $qb = $repository->createQueryBuilder('memberChoice');
+            return $clubId === null
+                ? $qb->andWhere('1 = 0')
+                : $qb->andWhere('memberChoice.club = :choiceClub')->setParameter('choiceClub', $clubId);
+        });
 
         yield AssociationField::new(
             'qualification',
@@ -214,8 +293,14 @@ class MemberQualificationCrudController extends AbstractCrudController
 	
 	public function configureFilters(Filters $filters): Filters
 	{
+        $clubId = $this->clubContext->getClub()?->getId();
 		return $filters
-			->add('member')
+			->add(EntityFilter::new('member')->setFormTypeOption('value_type_options.query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $qb = $repository->createQueryBuilder('filterMember');
+                return $clubId === null
+                    ? $qb->andWhere('1 = 0')
+                    : $qb->andWhere('filterMember.club = :filterClub')->setParameter('filterClub', $clubId);
+            }))
 			->add('qualification')
 			->add('verified');
 	}
@@ -260,6 +345,14 @@ class MemberQualificationCrudController extends AbstractCrudController
 			$fields,
 			$filters
 		);
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null) {
+            $queryBuilder->andWhere('1 = 0');
+        } else {
+            $queryBuilder->join('entity.member', 'managedQualificationMember')
+                ->andWhere('managedQualificationMember.club = :qualificationClub')
+                ->setParameter('qualificationClub', $clubId);
+        }
 
 		$request = $this->getContext()?->getRequest();
 

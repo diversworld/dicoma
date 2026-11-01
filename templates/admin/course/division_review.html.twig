@@ -10,5 +10,5 @@
             <li>Keine ungeprüften Kurse.</li>
         {% endfor %}
     </ul>
-    {% if club %}<p><a href="{{ path('admin_configuration', {club: club.id}) }}">Zur Konfiguration</a></p>{% endif %}
+    {% if club %}<p><a href="{{ path('admin_settings') }}">Zu den Einstellungen</a></p>{% endif %}
 {% endblock %}

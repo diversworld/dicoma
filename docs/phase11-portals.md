@@ -31,30 +31,43 @@ seinen eigenen Rahmen.
 
 ## Konfigurationsformulare
 
-Die zentrale Seite `/admin/configuration` verwendet Symfony-FormTypes für
-Website-Anzeige, Mitgliedschaftsregeln, Beitragsklassen und die
-Thekendienst-Jahresregel. Vereins- und Jahresauswahl sind GET-Formulare;
-sie behalten die bestehenden Parameter `club` und `year`. Die FormTypes für
-Mitgliedschaftsregeln und Beitragsklassen werden auch auf den bisherigen
-Mitgliedschaftsseiten verwendet. Schreibende Formulare sind CSRF-geschützt;
-ungültige Eingaben werden direkt an den Formularfeldern angezeigt.
-Die Thekendienst-Jahresregel ist zusätzlich als eigenständige Seite
-`/admin/settings/bar-services` erreichbar. Sie verwendet momentan weiterhin
-den Verein der Thekenleitung, nicht die Sportarten-Vereinsauswahl. Die zentrale
-Seite und die übrige Aufteilung der Einstellungen sind noch nicht entfernt.
+Unter `/admin/settings` führen getrennte Seiten zu Website-Anzeige
+(`/admin/settings/website`), Mitgliedschaftsregeln
+(`/admin/settings/membership`), Beitragsklassen
+(`/admin/settings/contributions`) und Thekendienst-Jahresregel
+(`/admin/settings/bar-services`). Die frühere zentrale Seite
+`/admin/configuration` leitet bei GET zur Übersicht weiter; alte POSTs werden
+nicht übernommen. Die FormTypes für Mitgliedschaftsregeln und Beitragsklassen
+werden auch auf den bisherigen Mitgliedschaftsseiten verwendet. Schreibende
+Formulare sind CSRF-geschützt; ungültige Eingaben werden direkt an den
+Formularfeldern angezeigt. Für Superadmins gilt der ausgewählte Verein auch
+für die Website-Anzeige und die Jahresregel; die Veröffentlichung der
+öffentlichen Website bleibt an `PUBLIC_SITE_CLUB_ID` gebunden.
+Die TÜV-Rechnungseinstellungen sind ebenfalls über `/admin/settings`
+erreichbar und bearbeiten ausschließlich den ausgewählten Verein. Die
+früheren eigenständigen TÜV-Rechnungsseiten leiten GET-Anfragen nach
+EasyAdmin weiter; alte POST-Anfragen werden nicht übernommen.
 
 Vereinsadmins können unter `/admin/settings/sports` für ihren eigenen Verein
 Sportarten (Sparten) anlegen und deren
 Bezeichnung, Kurzbezeichnung, Beschreibung und Sortierung bearbeiten.
 Superadmins wählen den Verein im Benutzermenü; die Auswahl gilt derzeit
-für die Sportarten-Einstellungen, die Kurs- und Teilnehmeransichten im
-Ausbildungsportal, die Kurs-Spartenprüfung sowie die Kennzahlen
-und Listen der Verwaltungsübersicht. Die Kopfzeile zeigt den Verein und weist darauf hin,
-dass die Filterung noch nicht backendweit gilt. Direkte Sportarten- und
-Funktions-URLs müssen zum ausgewählten Verein passen. Die übrigen
-Verwaltungsbereiche und die bisherige Konfigurationsseite verwenden noch
-nicht durchgehend diesen Sitzungskontext. Die Sportartenverwaltung nutzt
-die EasyAdmin-Liste und -Formulare.
+für die Sportarten-Einstellungen, Mitglieder-, Mitgliedsqualifikations-,
+Kurs- und Teilnehmer-CRUDs,
+die Mitgliedschaftsverwaltung, die Veranstaltungs- und Dateiverwaltung,
+die oben genannten Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung
+sowie die Kennzahlen und Listen der Verwaltungsübersicht. Vereinslose
+Mitglieder und Kurse können Superadmins über separate Listen in den
+Einstellungen prüfen und dem ausgewählten Verein zuordnen. Qualifikationen
+vereinsloser Mitglieder erscheinen erst nach der Vereinszuordnung des
+Mitglieds in der Qualifikationsverwaltung; vorhandene Daten bleiben erhalten.
+Der Qualifikationskatalog selbst ist weiterhin übergreifend. Die Kopfzeile
+weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
+insbesondere Equipment, Sportwettkämpfe und Kalender sind noch nicht
+durchgehend auf diesen Kontext umgestellt. TÜV-Benachrichtigungsvorlagen
+und die Übersicht der Vertretungsnachweise gelten weiterhin systemweit
+und sind entsprechend gekennzeichnet.
+Die Sportartenverwaltung nutzt die EasyAdmin-Liste und -Formulare.
 Die Verwaltung verwendet
 die bestehende Sportart und erhält damit vorhandene Mitglieder- und
 Mannschaftszuordnungen. Den bestehenden Aktiv-Status können ausschließlich

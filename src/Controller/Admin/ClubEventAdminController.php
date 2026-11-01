@@ -3,10 +3,10 @@
 declare(strict_types=1);
 namespace App\Controller\Admin;
 
-use App\Entity\{Club, ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration, User};
+use App\Entity\{Club, ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration};
 use App\Form\ClubEventType;
 use App\Form\MediaImageType;
-use App\Service\{ClubEventBooking, FrontendCourseRegistrationService, MediaFileStorage};
+use App\Service\{AdminClubContext, ClubEventBooking, FrontendCourseRegistrationService, MediaFileStorage};
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +20,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_ADMIN')]
 final class ClubEventAdminController extends AbstractController
 {
+    public function __construct(private readonly AdminClubContext $clubContext) {}
+
     #[Route('', name: 'admin_club_events', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
     {
@@ -30,7 +32,7 @@ final class ClubEventAdminController extends AbstractController
     public function create(Request $request, EntityManagerInterface $em): Response
     {
         $event = new ClubEvent($this->club());
-        $form = $this->createForm(ClubEventType::class, $event);
+        $form = $this->createForm(ClubEventType::class, $event, ['csrf_token_id' => 'club_event_'.$event->getClub()->getId()]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($event); $em->flush();
@@ -44,7 +46,7 @@ final class ClubEventAdminController extends AbstractController
     {
         $event = $this->event($id, $em);
         $draft = clone $event;
-        $form = $this->createForm(ClubEventType::class, $draft);
+        $form = $this->createForm(ClubEventType::class, $draft, ['csrf_token_id' => 'club_event_'.$event->getClub()->getId()]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             try {
@@ -177,9 +179,7 @@ final class ClubEventAdminController extends AbstractController
 
     private function club(): Club
     {
-        $user = $this->getUser();
-        if (!$user instanceof User || $user->getMember()?->getClub()?->getId() === null) { throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'); }
-        return $user->getMember()->getClub();
+        return $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
     }
 
     private function event(int $id, EntityManagerInterface $em): ClubEvent

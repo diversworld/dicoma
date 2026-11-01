@@ -11,7 +11,7 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class BarDutyAccess
 {
-    public function __construct(private readonly Security $security) {}
+    public function __construct(private readonly Security $security, private readonly AdminClubContext $clubContext) {}
     public function user(): User
     {
         $user = $this->security->getUser();
@@ -23,6 +23,14 @@ final class BarDutyAccess
     public function member(): Member { return $this->user()->getMember(); }
     public function actor(): string { return $this->user()->getUserIdentifier(); }
     public function isManager(): bool { return $this->security->isGranted('ROLE_BAR_MANAGER'); }
+    public function configurationActor(Club $club): string
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof User || !$this->isManager() || $this->clubContext->getClub()?->getId() !== $club->getId()) {
+            throw new AccessDeniedException('Thekendiensteinstellungen gehören nicht zum ausgewählten Verein.');
+        }
+        return $user->getUserIdentifier();
+    }
     public function requireManager(): void
     {
         $this->user();

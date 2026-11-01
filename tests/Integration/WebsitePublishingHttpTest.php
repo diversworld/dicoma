@@ -324,12 +324,12 @@ final class WebsitePublishingHttpTest extends WebTestCase
         }
         $this->em->flush();
         $this->client->loginUser($this->press);
-        $this->client->request('POST', '/admin/configuration', [
+        $this->client->request('POST', '/admin/settings/website', [
             'website_display_settings' => ['articlesPerPage' => '2', 'eventsPerPage' => '3', '_token' => 'invalid'],
         ]);
         self::assertResponseStatusCodeSame(422);
         self::assertSame(0, $this->em->getRepository(WebsiteDisplaySettings::class)->count([]));
-        $this->client->request('GET', '/admin/configuration');
+        $this->client->request('GET', '/admin/settings/website');
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('input[name="website_display_settings[articlesPerPage]"][value="6"]');
         self::assertSelectorExists('input[name="website_display_settings[eventsPerPage]"][value="6"]');
@@ -337,7 +337,7 @@ final class WebsitePublishingHttpTest extends WebTestCase
             'website_display_settings[articlesPerPage]' => '2',
             'website_display_settings[eventsPerPage]' => '3',
         ]);
-        self::assertResponseRedirects('/admin/configuration', 303);
+        self::assertResponseRedirects('/admin/settings/website', 303);
         $this->em->clear();
         $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
         self::assertSame(2, $settings->getArticlesPerPage());
@@ -369,7 +369,7 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->client->request('GET', '/events?seite[]=2');
         self::assertResponseStatusCodeSame(400);
 
-        $this->client->request('GET', '/admin/configuration');
+        $this->client->request('GET', '/admin/settings/website');
         $this->client->submitForm('Anzeige speichern', [
             'website_display_settings[articlesPerPage]' => '0',
             'website_display_settings[eventsPerPage]' => '101',

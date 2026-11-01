@@ -34,8 +34,8 @@ Artikel und Veranstaltungen werden im Backend unter
 `/admin/{_locale}/editorial` verwaltet. Auch Pressewarte ohne Adminrolle
 erhalten ausschließlich Zugriff auf diese Redaktionsseiten, nicht auf das
 übrige EasyAdmin. Die öffentliche Navigation enthält keinen Redaktionslink.
-Unter **Konfiguration → Website-Anzeige**
-können Pressewart und Vorstand für den Website-Verein die Anzahl der Artikel
+Unter **Einstellungen → Website-Anzeige**
+können berechtigte Nutzer die Anzahl der Artikel
 und Veranstaltungen pro Seite getrennt auf 1 bis 100 setzen. Ohne gespeicherte
 Einstellung gelten jeweils sechs Karten. Die Werte gelten auf Startseite und
 Übersichtsseiten; auf der Startseite wird je Rubrik unabhängig geblättert.
@@ -99,12 +99,17 @@ ebenfalls dort, erscheinen aber nicht in der allgemeinen Dateiverwaltung;
 ihre Zuordnungen und Zugriffsregeln sind in der Veranstaltungsverwaltung
 getrennt erfasst. Dafür ist Migration `Version20261029140000` erforderlich.
 
-Die zentrale Backend-Konfiguration enthält die Website-Seitengrößen,
-Mitgliedschaftsregeln und Beitragsklassen sowie die Jahresregeln des
-Thekendienstes. Die verfügbaren Bereiche richten sich nach Rolle und
-Vereinszuordnung; bei Superadmins gilt die Vereinsauswahl für
-Mitgliedschaft und Beiträge, Website und Thekendienst bleiben an den
-eigenen berechtigten Verein gebunden. Secrets bleiben in der Serverumgebung.
+Die Einstellungen unter `/admin/settings` verlinken eigenständige Formulare
+für Website-Seitengrößen, Mitgliedschaftsregeln, Beitragsklassen und
+Thekendienst-Jahresregeln. `/admin/configuration` leitet GET-Anfragen auf
+die Übersicht um; frühere POST-Anfragen werden nicht mehr angenommen. Die
+verfügbaren Bereiche richten sich nach Rolle und Vereinszuordnung; für
+Superadmins gilt jeweils der ausgewählte Verein. Die öffentliche Website
+verwendet weiterhin ausschließlich den über `PUBLIC_SITE_CLUB_ID`
+konfigurierten Verein. Secrets bleiben in der Serverumgebung.
+Die TÜV-Rechnungseinstellungen unter `/admin/de/invoice-settings` gelten
+ebenfalls für den ausgewählten Verein. Die alten TÜV-Rechnungsseiten leiten
+GET-Anfragen nach EasyAdmin weiter; alte POST-Anfragen werden nicht verarbeitet.
 
 Mit der additiven Migration `Version20261030100000` können Vereinsadmins für
 ihren Verein und Superadmins vereinsübergreifend befristete Spartenfunktionen
@@ -116,11 +121,18 @@ Spartenfunktion erzeugt keine globale Benutzerrolle. Vor der Migration
 Backup und Schemafreigabe durchführen.
 
 Die Sportarten-Einstellungen unter `/admin/settings/sports`, die
-Kurs-Spartenprüfung, die Kurs- und Teilnehmeransichten im Ausbildungsportal
-und die Verwaltungsübersicht verwenden für Superadmins die sitzungsgebundene
-Vereinsauswahl im Benutzermenü. Sie ist CSRF-geschützt; direkte
-Sportartenbearbeitungen werden gegen den gewählten Verein geprüft. Andere
-Backendbereiche sind noch nicht durchgehend auf diesen Kontext umgestellt.
+Kurs-Spartenprüfung, das Ausbildungsportal, die Mitglieder-,
+Mitgliedsqualifikations-, Kurs- und Teilnehmer-CRUDs, die Mitgliedschafts-, Veranstaltungs- und Dateiverwaltung
+sowie die oben genannten Einstellungen und die Verwaltungsübersicht verwenden
+für Superadmins die sitzungsgebundene Vereinsauswahl im Benutzermenü.
+Sie ist CSRF-geschützt. Vereinslose Mitglieder und Kurse können Superadmins
+über separate Listen in den Einstellungen prüfen und dem ausgewählten Verein
+zuordnen. Qualifikationen vereinsloser Mitglieder werden nach deren
+Vereinszuordnung in der Qualifikationsverwaltung sichtbar; der gemeinsame
+Qualifikationskatalog bleibt unverändert. Andere Backendbereiche,
+insbesondere Equipment, Sportwettkämpfe und Kalender, sind noch nicht
+durchgehend auf diesen Kontext umgestellt. TÜV-Benachrichtigungsvorlagen
+und die Übersicht der Vertretungsnachweise sind weiterhin systemweit.
 Die Kopfzeile weist deshalb ausdrücklich darauf hin, dass noch keine
 backendweite Vereinsfilterung besteht.
 

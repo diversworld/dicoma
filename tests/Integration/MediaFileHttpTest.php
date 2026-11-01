@@ -83,7 +83,7 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/media/'.$pdf->getId());
         self::assertStringStartsWith('attachment', $this->client->getResponse()->headers->get('Content-Disposition'));
 
-        $this->postUpload('fake.png', '<svg xmlns="http://www.w3.org/2000/svg"></svg>', 'media_upload');
+        $this->postUpload('fake.png', '<svg xmlns="http://www.w3.org/2000/svg"></svg>', 'media_upload_'.$this->club->getId());
         $this->client->followRedirect();
         self::assertSelectorTextContains('body', 'Erlaubt sind');
         self::assertSame(2, $this->em->getRepository(MediaFile::class)->count([]));
@@ -103,7 +103,7 @@ final class MediaFileHttpTest extends WebTestCase
     public function testNestedFoldersMultipleUploadsAndMovesStayClubScoped(): void
     {
         $this->client->loginUser($this->press);
-        $token = $this->token('media_folder_create');
+        $token = $this->token('media_folder_create_'.$this->club->getId());
         $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => 'Ausflüge', 'parent' => '']);
         self::assertResponseRedirects('/admin/media', 303);
         $parent = $this->em->getRepository(MediaFolder::class)->findOneBy(['club' => $this->club, 'name' => 'Ausflüge']);
@@ -130,7 +130,7 @@ final class MediaFileHttpTest extends WebTestCase
             file_put_contents($path, $contents);
             $uploads[] = new UploadedFile($path, $name, null, null, true);
         }
-        $uploadToken = $this->token('media_upload');
+        $uploadToken = $this->token('media_upload_'.$this->club->getId());
         $this->client->request('POST', '/admin/media/upload', [
             '_token' => $uploadToken, 'folder' => (string) $child->getId(), 'alt_text' => 'Gemeinsamer Text', 'selected_count' => '4',
         ], ['files' => $uploads]);
@@ -195,6 +195,33 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testSuperAdminMediaUsesSelectedClubAndRejectsStaleFolderForms(): void
+    {
+        $super = $this->account('media-super', [User::ROLE_SUPER_ADMIN]);
+        $other = (new Club())->setName('Other media club');
+        $this->em->persist($other);
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/media');
+        $oldFolder = $crawler->filter('form[action="/admin/media/folders"]')->form();
+        $this->client->submit($oldFolder, ['name' => 'Own media folder']);
+        self::assertResponseRedirects();
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $other->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->submit($oldFolder, ['name' => 'Stale media folder']);
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/media');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Own media folder');
+        $this->client->submit($crawler->filter('form[action="/admin/media/folders"]')->form(), ['name' => 'Other media folder']);
+        self::assertResponseRedirects();
+        self::assertNotNull($this->em->getRepository(MediaFolder::class)->findOneBy(['club' => $other, 'name' => 'Other media folder']));
+        self::assertNull($this->em->getRepository(MediaFolder::class)->findOneBy(['name' => 'Stale media folder']));
+    }
+
     public function testOfficeFilesAreValidatedAndRemainPrivateDownloads(): void
     {
         $this->client->loginUser($this->press);
@@ -211,10 +238,10 @@ final class MediaFileHttpTest extends WebTestCase
             self::assertResponseIsSuccessful();
             self::assertStringStartsWith('attachment', $this->client->getResponse()->headers->get('Content-Disposition'));
         }
-        $this->postUpload('fake.docx', 'Not an office document', 'media_upload');
+        $this->postUpload('fake.docx', 'Not an office document', 'media_upload_'.$this->club->getId());
         $this->client->followRedirect();
         self::assertSelectorTextContains('body', 'Erlaubt sind');
-        $this->postUpload('large.pdf', "%PDF-1.4\n".str_repeat('x', 10 * 1024 * 1024), 'media_upload');
+        $this->postUpload('large.pdf', "%PDF-1.4\n".str_repeat('x', 10 * 1024 * 1024), 'media_upload_'.$this->club->getId());
         $this->client->followRedirect();
         self::assertSelectorTextContains('body', 'größer als 10 MB');
         self::assertSame(3, $this->em->getRepository(MediaFile::class)->count([]));
@@ -320,7 +347,7 @@ final class MediaFileHttpTest extends WebTestCase
         $super = $this->account('super', [User::ROLE_SUPER_ADMIN]);
         $other = (new Club())->setName('Other club'); $this->em->persist($other); $this->em->flush();
         $this->client->loginUser($this->press);
-        $crawler = $this->client->request('GET', '/admin/configuration');
+        $crawler = $this->client->request('GET', '/admin/settings/website');
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('form[name="website_display_settings"]');
         self::assertSelectorNotExists('form[name="membership_policy"]');
@@ -330,7 +357,7 @@ final class MediaFileHttpTest extends WebTestCase
         ]);
         self::assertResponseRedirects();
         self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
-        $crawler = $this->client->request('GET', '/admin/configuration');
+        $crawler = $this->client->request('GET', '/admin/settings/website');
         $this->client->submit($crawler->filter('form[name="website_display_settings"]')->form(), [
             'website_display_settings[articlesPerPage]' => '101',
         ]);
@@ -339,7 +366,7 @@ final class MediaFileHttpTest extends WebTestCase
         $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
         $this->em->refresh($settings);
         self::assertSame(4, $settings->getArticlesPerPage());
-        $this->client->request('POST', '/admin/configuration', ['bar_duty_policy' => ['_token' => $this->token('bar_duty_policy_0'), 'minutes' => '60']]);
+        $this->client->request('POST', '/admin/settings/bar-services', ['bar_duty_policy' => ['_token' => $this->token('bar_duty_policy_0'), 'minutes' => '60']]);
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/settings/bar-services');
         self::assertResponseStatusCodeSame(403);
@@ -358,7 +385,7 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSame(73, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2027])->getRequiredMinutes());
         $this->client->request('GET', '/admin/settings/bar-services?club='.$other->getId());
         self::assertResponseStatusCodeSame(404);
-        $this->client->request('GET', '/admin/configuration?year=2028');
+        $this->client->request('GET', '/admin/settings/bar-services?year=2028');
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('form[name="website_display_settings"]');
         self::assertSelectorNotExists('form[name="membership_policy"]');
@@ -368,9 +395,9 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->submitForm('Jahresregel speichern', [
             'bar_duty_policy[minutes]' => '120', 'bar_duty_policy[cash]' => '1', 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
         ]);
-        self::assertResponseRedirects('/admin/configuration?year=2028', 303);
+        self::assertResponseRedirects('/admin/settings/bar-services?year=2028', 303);
         self::assertSame(120, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
-        $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+        $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2028');
         $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
             'bar_duty_policy[minutes]' => '60001', 'bar_duty_policy[reason]' => 'Zu kurz',
         ]);
@@ -379,14 +406,14 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSelectorExists('#bar_duty_policy_reason.is-invalid');
         self::assertSame(120, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
         foreach (['0', '60000'] as $minutes) {
-            $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+            $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2028');
             $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
                 'bar_duty_policy[minutes]' => $minutes, 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
             ]);
-            self::assertResponseRedirects('/admin/configuration?year=2028', 303);
+            self::assertResponseRedirects('/admin/settings/bar-services?year=2028', 303);
             self::assertSame((int) $minutes, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
         }
-        $crawler = $this->client->request('GET', '/admin/configuration?year=2028');
+        $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2028');
         $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
             'bar_duty_policy[minutes]' => '1.5', 'bar_duty_policy[reason]' => '         x         ',
         ]);
@@ -394,13 +421,13 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSelectorExists('#bar_duty_policy_minutes.is-invalid');
         self::assertSelectorExists('#bar_duty_policy_reason.is-invalid');
         self::assertSame(60000, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2028])->getRequiredMinutes());
-        $this->client->request('POST', '/admin/configuration?year=2028', ['bar_duty_policy' => ['_token' => 'invalid', 'minutes' => '10']]);
+        $this->client->request('POST', '/admin/settings/bar-services?year=2028', ['bar_duty_policy' => ['_token' => 'invalid', 'minutes' => '10']]);
         self::assertResponseStatusCodeSame(403);
-        $this->client->request('GET', '/admin/configuration?year=1999');
+        $this->client->request('GET', '/admin/settings/bar-services?year=1999');
         self::assertResponseStatusCodeSame(404);
 
         $this->client->loginUser($this->admin);
-        $crawler = $this->client->request('GET', '/admin/configuration');
+        $crawler = $this->client->request('GET', '/admin/settings/membership');
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[contactEmail]' => 'test@example.org',
@@ -408,48 +435,72 @@ final class MediaFileHttpTest extends WebTestCase
         ]);
         self::assertResponseRedirects();
         self::assertSame('09-30', $this->em->getRepository(MembershipPolicy::class)->findOneBy(['club' => $this->club])->getCancellationCutoff());
-        $crawler = $this->client->request('GET', '/admin/configuration');
+        $crawler = $this->client->request('GET', '/admin/settings/contributions');
         $this->client->submit($crawler->filter('form[name="contribution_class"]')->form(), [
             'contribution_class[name]' => 'Standard', 'contribution_class[annualCents]' => '123.45',
         ]);
         self::assertResponseRedirects();
         $class = $this->em->getRepository(ContributionClass::class)->findOneBy(['club' => $this->club, 'name' => 'Standard']);
         self::assertSame(12345, $class->getAnnualCents());
-        $crawler = $this->client->request('GET', '/admin/configuration');
+        $crawler = $this->client->request('GET', '/admin/settings/contributions');
         $name = 'contribution_class_'.$class->getId();
         $this->client->submit($crawler->filter('form[name="'.$name.'"]')->form(), [$name.'[annualCents]' => '150.00']);
         self::assertResponseRedirects();
         self::assertSame(15000, $this->em->find(ContributionClass::class, $class->getId())->getAnnualCents());
-        $this->client->request('GET', '/admin/configuration?club='.$other->getId());
+        $this->client->request('GET', '/admin/settings/membership?club='.$other->getId());
         self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($super);
-        $crawler = $this->client->request('GET', '/admin/configuration?club='.$other->getId().'&year=2029');
+        $crawler = $this->client->request('GET', '/admin/settings/membership');
+        $stalePolicy = $crawler->filter('form[name="membership_policy"]')->form();
+        $crawler = $this->client->request('GET', '/admin/settings/website');
+        $staleWebsite = $crawler->filter('form[name="website_display_settings"]')->form();
+        $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2031');
+        $staleBar = $crawler->filter('form[name="bar_duty_policy"]')->form();
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $other->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->submit($stalePolicy, ['membership_policy[contactEmail]' => 'stale@example.org']);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->submit($staleWebsite, ['website_display_settings[articlesPerPage]' => '3']);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->submit($staleBar, ['bar_duty_policy[minutes]' => '60', 'bar_duty_policy[reason]' => 'Beschluss des Vereins']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2031]));
+        $crawler = $this->client->request('GET', '/admin/settings/website');
+        $this->client->submit($crawler->filter('form[name="website_display_settings"]')->form(), [
+            'website_display_settings[articlesPerPage]' => '8',
+            'website_display_settings[eventsPerPage]' => '9',
+        ]);
+        self::assertResponseRedirects('/admin/settings/website', 303);
+        self::assertSame(8, $this->em->find(WebsiteDisplaySettings::class, $other->getId())->getArticlesPerPage());
+        self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
+        $crawler = $this->client->request('GET', '/admin/settings/membership');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
-        self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Media club');
-        self::assertSelectorExists('select[name="club"].form-select');
+        self::assertSelectorNotExists('form[name="bar_duty_policy"]');
+        $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2029');
+        self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Other club');
         $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
             'bar_duty_policy[minutes]' => '60', 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
         ]);
-        self::assertResponseRedirects('/admin/configuration?club='.$other->getId().'&year=2029', 303);
-        self::assertSame(60, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2029])->getRequiredMinutes());
-        self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2029]));
-        $this->client->request('GET', '/admin/configuration?club='.$other->getId().'&year=2029');
+        self::assertResponseRedirects('/admin/settings/bar-services?year=2029', 303);
+        self::assertSame(60, $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2029])->getRequiredMinutes());
+        self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $this->club, 'year' => 2029]));
+        $this->client->request('GET', '/admin/settings/bar-services?year=2029');
         $this->client->submitForm('Jahr auswählen', ['year' => '2030'], 'GET');
         self::assertResponseIsSuccessful();
-        self::assertSame('/admin/configuration?club='.$other->getId().'&year=2030', $this->client->getRequest()->getRequestUri());
-        self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
-        $this->client->submitForm('Verein auswählen', ['club' => (string) $this->club->getId()], 'GET');
-        self::assertResponseIsSuccessful();
-        self::assertSame('/admin/configuration?club='.$this->club->getId().'&year=2030', $this->client->getRequest()->getRequestUri());
-        $crawler = $this->client->request('GET', '/admin/configuration?club='.$other->getId().'&year=2029');
+        self::assertSame('/admin/settings/bar-services?year=2030', $this->client->getRequest()->getRequestUri());
+        self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Other club');
+        $crawler = $this->client->request('GET', '/admin/settings/membership');
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[contactEmail]' => 'other@example.org',
         ]);
         self::assertResponseRedirects();
         self::assertSame('other@example.org', $this->em->getRepository(MembershipPolicy::class)->findOneBy(['club' => $other])->getContactEmail());
         $this->client->loginUser($this->member);
-        $this->client->request('GET', '/admin/configuration');
+        $this->client->request('GET', '/admin/settings');
         self::assertResponseStatusCodeSame(403);
     }
 
@@ -590,7 +641,7 @@ final class MediaFileHttpTest extends WebTestCase
 
     private function upload(string $name, string $content, string $alt = ''): MediaFile
     {
-        $this->postUpload($name, $content, 'media_upload', $alt);
+        $this->postUpload($name, $content, 'media_upload_'.$this->club->getId(), $alt);
         self::assertResponseRedirects('/admin/media', 303);
         $file = $this->em->getRepository(MediaFile::class)->findOneBy([], ['id' => 'DESC']);
         self::assertNotNull($file);

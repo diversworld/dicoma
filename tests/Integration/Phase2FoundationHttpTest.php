@@ -6,9 +6,13 @@ namespace App\Tests\Integration;
 
 use App\Controller\Admin\DashboardController;
 use App\Controller\Admin\MemberCrudController;
+use App\Controller\Admin\MemberQualificationCrudController;
+use App\Controller\Admin\CoursesCrudController;
+use App\Controller\Admin\CourseParticipantCrudController;
 use App\Controller\Admin\PersonCrudController;
 use App\Entity\Club;
 use App\Entity\Courses;
+use App\Entity\CourseParticipant;
 use App\Entity\MembershipApplication;
 use App\Entity\Schedule;
 use App\Entity\Member;
@@ -142,8 +146,8 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $this->client->loginUser($super);
         $this->client->request('GET', $this->adminUrl(PersonCrudController::class));
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'GuestIdentity');
-        self::assertSelectorTextNotContains('body', 'SuperIdentity');
+        self::assertSelectorTextContains('table.datagrid', 'GuestIdentity');
+        self::assertSelectorTextNotContains('table.datagrid', 'SuperIdentity');
         $this->client->request('GET', $this->adminUrl(PersonCrudController::class, Crud::PAGE_EDIT, $guest->getId()));
         self::assertResponseIsSuccessful();
         $this->client->request('GET', $this->adminUrl(PersonCrudController::class, Crud::PAGE_EDIT, $super->getMember()->getPerson()->getId()));
@@ -190,6 +194,408 @@ final class Phase2FoundationHttpTest extends WebTestCase
         ]);
         self::assertSelectorTextContains('body', 'Diese Person hat bereits eine Mitgliedschaft in diesem Verein.');
         self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member'));
+    }
+
+    public function testMemberAndCourseCrudUseSelectedClub(): void
+    {
+        $super = $this->admin('scope-super', 'OwnScopedMember', User::ROLE_SUPER_ADMIN);
+        $foreign = $this->admin('scope-other', 'OtherScopedMember', User::ROLE_ADMIN);
+        $ownClubId = $super->getMember()->getClub()->getId();
+        $otherClubId = $foreign->getMember()->getClub()->getId();
+        $ownMemberId = $super->getMember()->getId();
+        $otherMemberId = $foreign->getMember()->getId();
+        $own = (new Courses())->setClub($super->getMember()->getClub())->setTitle('Own scoped course')->setCategory('beginner');
+        $other = (new Courses())->setClub($foreign->getMember()->getClub())->setTitle('Other scoped course')->setCategory('beginner');
+        $unassigned = (new Courses())->setTitle('Unassigned scoped course')->setCategory('beginner');
+        foreach ([$own, $other, $unassigned] as $course) { $this->em->persist($course); }
+        $ownParticipant = (new CourseParticipant())->setCourse($own)->setMember($super->getMember());
+        $otherParticipant = (new CourseParticipant())->setCourse($other)->setMember($foreign->getMember());
+        $guest = (new Person())->setFirstname('Stale')->setLastname('Guest')->setBirthday(new \DateTime('2000-01-01'));
+        $this->em->persist($ownParticipant);
+        $this->em->persist($otherParticipant);
+        $this->em->persist($guest);
+        $this->em->flush();
+        $ownId = $own->getId();
+        $otherId = $other->getId();
+        $unassignedId = $unassigned->getId();
+        $ownParticipantId = $ownParticipant->getId();
+        $otherParticipantId = $otherParticipant->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'OwnScopedMember');
+        self::assertSelectorTextNotContains('table.datagrid', 'OtherScopedMember');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Own scoped course');
+        self::assertSelectorTextNotContains('table.datagrid', 'Other scoped course');
+        $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $otherMemberId));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class, Crud::PAGE_EDIT, $otherId));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class, Crud::PAGE_EDIT, $unassignedId));
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', $this->adminUrl(CourseParticipantCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Own scoped course');
+        self::assertSelectorTextNotContains('table.datagrid', 'Other scoped course');
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_NEW, personId: $guest->getId()));
+        $staleMember = $crawler->filter('form[name="Member"]')->form();
+        $crawler = $this->client->request('GET', $this->adminUrl(CoursesCrudController::class, Crud::PAGE_NEW));
+        $staleCourse = $crawler->filter('form[name="Courses"]')->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClubId]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleMember);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->submit($staleCourse);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', $this->adminUrl(MemberCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'OtherScopedMember');
+        self::assertSelectorTextNotContains('table.datagrid', 'OwnScopedMember');
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Other scoped course');
+        self::assertSelectorTextNotContains('table.datagrid', 'Own scoped course');
+        $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $ownMemberId));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class, Crud::PAGE_EDIT, $ownId));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $otherMemberId));
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', $this->adminUrl(CourseParticipantCrudController::class, Crud::PAGE_EDIT, $ownParticipantId));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(CourseParticipantCrudController::class, Crud::PAGE_EDIT, $otherParticipantId));
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/membership/club/'.$ownClubId);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/membership/club/'.$otherClubId);
+        self::assertResponseIsSuccessful();
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->click($crawler->selectLink('Kurse ohne Vereinszuordnung prüfen')->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'Unassigned scoped course');
+        self::assertSelectorTextNotContains('table.datagrid', 'Other scoped course');
+        self::assertSame($ownClubId, $this->em->find(Member::class, $ownMemberId)->getClub()->getId());
+    }
+
+    public function testLegacyManagementRoutesAndUnassignedRecordsRespectSelectedClub(): void
+    {
+        $super = $this->admin('legacy-super', 'LegacyOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('legacy-other', 'LegacyOther', User::ROLE_ADMIN);
+        $clubId = $super->getMember()->getClub()->getId();
+        $unassignedMember = (new Member())->setFirstname('Unassigned')->setLastname('Member')->setBirthday(new \DateTime('2000-01-01'));
+        $unassignedCourse = (new Courses())->setTitle('Unassigned course')->setCategory('beginner');
+        $foreignCourse = (new Courses())->setClub($other->getMember()->getClub())->setTitle('Foreign course')->setCategory('beginner');
+        foreach ([$unassignedMember, $unassignedCourse, $foreignCourse] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $memberId = $unassignedMember->getId();
+        $courseId = $unassignedCourse->getId();
+        $foreignCourseId = $foreignCourse->getId();
+        $foreignMemberId = $other->getMember()->getId();
+        $this->client->loginUser($super);
+
+        $this->client->request('GET', '/member/');
+        self::assertResponseRedirects();
+        foreach (['/member/'.$foreignMemberId, '/member/'.$foreignMemberId.'/edit', '/courses/'.$foreignCourseId.'/edit'] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('POST', '/member/'.$foreignMemberId.'/edit');
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('POST', '/courses/'.$foreignCourseId.'/edit');
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('POST', '/courses/'.$foreignCourseId);
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('POST', '/member/new');
+        self::assertResponseStatusCodeSame(410);
+
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $memberId));
+        $this->client->submit($crawler->filter('form[name="Member"]')->form(), ['Member[club]' => (string) $clubId]);
+        self::assertResponseRedirects();
+        self::assertSame($clubId, (int) $this->em->getConnection()->fetchOne('SELECT club_id FROM member WHERE id = ?', [$memberId]));
+
+        $crawler = $this->client->request('GET', $this->adminUrl(CoursesCrudController::class, Crud::PAGE_EDIT, $courseId));
+        $this->client->submit($crawler->filter('form[name="Courses"]')->form(), [
+            'Courses[club]' => (string) $clubId,
+            'Courses[courseFee]' => '0.00',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame($clubId, (int) $this->em->getConnection()->fetchOne('SELECT club_id FROM courses WHERE id = ?', [$courseId]));
+
+    }
+
+    public function testCourseAndParticipantBatchDeletionIsClubScopedAndAtomic(): void
+    {
+        $super = $this->admin('batch-super', 'BatchOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('batch-other', 'BatchOther', User::ROLE_ADMIN);
+        $ownCourse = (new Courses())->setClub($super->getMember()->getClub())->setTitle('Batch own')->setCategory('beginner');
+        $otherCourse = (new Courses())->setClub($other->getMember()->getClub())->setTitle('Batch foreign')->setCategory('beginner');
+        $ownParticipant = (new CourseParticipant())->setCourse($ownCourse)->setMember($super->getMember());
+        $otherParticipant = (new CourseParticipant())->setCourse($otherCourse)->setMember($other->getMember());
+        foreach ([$ownCourse, $otherCourse, $ownParticipant, $otherParticipant] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownCourseId = $ownCourse->getId();
+        $otherCourseId = $otherCourse->getId();
+        $ownParticipantId = $ownParticipant->getId();
+        $otherParticipantId = $otherParticipant->getId();
+        $this->client->loginUser($super);
+        $this->client->request('GET', $this->adminUrl(CoursesCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $tokens = static::getContainer()->get('security.csrf.token_manager');
+            $courseToken = $tokens->getToken('ea-batch-action-batchDelete-'.Courses::class)->getValue();
+            $participantToken = $tokens->getToken('ea-batch-action-batchDelete-'.CourseParticipant::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        foreach ([
+            [CoursesCrudController::class, Courses::class, $courseToken, $ownCourseId, $otherCourseId, 'courses'],
+            [CourseParticipantCrudController::class, CourseParticipant::class, $participantToken, $ownParticipantId, $otherParticipantId, 'course_participant'],
+        ] as [$controller, $entity, $token, $ownId, $foreignId, $table]) {
+            $url = $this->adminUrl($controller, 'batchDelete');
+            $payload = ['batchActionName' => 'batchDelete', 'entityFqcn' => $entity, 'batchActionCsrfToken' => $token, 'batchActionEntityIds' => [(string) $ownId, (string) $foreignId]];
+            $this->client->request('POST', $url, $payload);
+            self::assertResponseStatusCodeSame(403);
+            self::assertSame(2, (int) $this->em->getConnection()->fetchOne("SELECT COUNT(*) FROM $table WHERE id IN (?, ?)", [$ownId, $foreignId]));
+        }
+        $this->client->request('POST', $this->adminUrl(CourseParticipantCrudController::class, 'batchDelete'), [
+            'batchActionName' => 'batchDelete', 'entityFqcn' => CourseParticipant::class, 'batchActionCsrfToken' => $participantToken, 'batchActionEntityIds' => [(string) $ownParticipantId],
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM course_participant WHERE id = ?', [$ownParticipantId]));
+        $this->client->request('POST', $this->adminUrl(CoursesCrudController::class, 'batchDelete'), [
+            'batchActionName' => 'batchDelete', 'entityFqcn' => Courses::class, 'batchActionCsrfToken' => $courseToken, 'batchActionEntityIds' => [(string) $ownCourseId],
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM courses WHERE id = ?', [$ownCourseId]));
+    }
+
+    public function testMemberQualificationsRespectSelectedClubAndFormSwitches(): void
+    {
+        $super = $this->admin('qualification-super', 'QualificationOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('qualification-other', 'QualificationForeign', User::ROLE_ADMIN);
+        $ownId = $super->getMember()->getId();
+        $otherId = $other->getMember()->getId();
+        $otherClubId = $other->getMember()->getClub()->getId();
+        $qualification = (new Qualification())->setName('Scoped qualification');
+        $newQualification = (new Qualification())->setName('New scoped qualification');
+        $unassignedMember = (new Member())->setFirstname('QualificationUnassigned')->setLastname('Diver')->setBirthday(new \DateTime('2000-01-01'));
+        $unassignedRecord = (new MemberQualification())->setMember($unassignedMember)->setQualification($qualification)
+            ->setCertificateNumber('UNASSIGNED-CERT');
+        $ownRecord = (new MemberQualification())->setMember($super->getMember())->setQualification($qualification)
+            ->setCertificateNumber('OWN-CERT')->setValidUntil(new \DateTime('yesterday'));
+        $foreignRecord = (new MemberQualification())->setMember($other->getMember())->setQualification($qualification)
+            ->setCertificateNumber('FOREIGN-CERT')->setValidUntil(new \DateTime('yesterday'));
+        foreach ([$qualification, $newQualification, $unassignedMember, $unassignedRecord, $ownRecord, $foreignRecord] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownRecordId = $ownRecord->getId();
+        $foreignRecordId = $foreignRecord->getId();
+        $newQualificationId = $newQualification->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'OWN-CERT');
+        self::assertSelectorTextNotContains('table.datagrid', 'FOREIGN-CERT');
+        self::assertSelectorTextNotContains('table.datagrid', 'UNASSIGNED-CERT');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $filterUrl = $crawler->filter('.action-filters-button')->attr('data-href');
+        $this->client->request('GET', $filterUrl);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'QualificationOwn');
+        self::assertSelectorTextNotContains('body', 'QualificationForeign');
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class).'?validity=expired');
+        self::assertSelectorTextContains('table.datagrid', 'OWN-CERT');
+        self::assertSelectorTextNotContains('table.datagrid', 'FOREIGN-CERT');
+        foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+            $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, $action, $foreignRecordId));
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_EDIT, $unassignedRecord->getId()));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_NEW).'?memberId='.$otherId);
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $tokens = static::getContainer()->get('security.csrf.token_manager');
+            $deleteToken = $tokens->getToken('ea-delete')->getValue();
+            $toggleToken = $tokens->getToken('ea-toggle')->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', $this->adminUrl(MemberQualificationCrudController::class, 'delete', $foreignRecordId), ['token' => $deleteToken]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('PATCH', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_EDIT, $foreignRecordId).'?'.http_build_query([
+            'fieldName' => 'verified', 'newValue' => 'true', 'csrfToken' => $toggleToken,
+        ]), [], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT verified FROM member_qualification WHERE id = ?', [$foreignRecordId]));
+
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_NEW));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="MemberQualification[member]"] option[value="'.$ownId.'"]');
+        self::assertSelectorNotExists('select[name="MemberQualification[member]"] option[value="'.$otherId.'"]');
+        $staleForm = $crawler->filter('form[name="MemberQualification"]')->form();
+        $form = $crawler->filter('form[name="MemberQualification"]')->form();
+        $forged = $form->getPhpValues();
+        $forged['MemberQualification']['member'] = (string) $otherId;
+        $forged['MemberQualification']['qualification'] = (string) $newQualificationId;
+        $forged['MemberQualification']['certificateNumber'] = 'FORGED-CERT';
+        $this->client->request('POST', $form->getUri(), $forged);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne("SELECT COUNT(*) FROM member_qualification WHERE certificate_number = 'FORGED-CERT'"));
+        $this->client->submit($form, [
+            'MemberQualification[member]' => (string) $ownId,
+            'MemberQualification[qualification]' => (string) $newQualificationId,
+            'MemberQualification[certificateNumber]' => 'CREATED-CERT',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame($ownId, (int) $this->em->getConnection()->fetchOne("SELECT member_id FROM member_qualification WHERE certificate_number = 'CREATED-CERT'"));
+
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_EDIT, $ownRecordId));
+        $this->client->submit($crawler->filter('form[name="MemberQualification"]')->form(), ['MemberQualification[certificateNumber]' => 'UPDATED-CERT']);
+        self::assertResponseRedirects();
+        self::assertSame('UPDATED-CERT', $this->em->getConnection()->fetchOne('SELECT certificate_number FROM member_qualification WHERE id = ?', [$ownRecordId]));
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $unassignedMember->getId()));
+        $this->client->submit($crawler->filter('form[name="Member"]')->form(), [
+            'Member[club]' => (string) $super->getMember()->getClub()->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'UNASSIGNED-CERT');
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClubId]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'FOREIGN-CERT');
+        self::assertSelectorTextNotContains('table.datagrid', 'UPDATED-CERT');
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class, Crud::PAGE_EDIT, $ownRecordId));
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testMemberQualificationBatchDeleteIsAtomic(): void
+    {
+        $super = $this->admin('qual-batch-super', 'QualBatchOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('qual-batch-other', 'QualBatchForeign', User::ROLE_ADMIN);
+        $qualification = (new Qualification())->setName('Batch qualification');
+        $own = (new MemberQualification())->setMember($super->getMember())->setQualification($qualification);
+        $foreign = (new MemberQualification())->setMember($other->getMember())->setQualification($qualification);
+        foreach ([$qualification, $own, $foreign] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownId = $own->getId();
+        $foreignId = $foreign->getId();
+        $this->client->loginUser($super);
+        $this->client->request('GET', $this->adminUrl(MemberQualificationCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = static::getContainer()->get('security.csrf.token_manager')
+                ->getToken('ea-batch-action-batchDelete-'.MemberQualification::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $url = $this->adminUrl(MemberQualificationCrudController::class, 'batchDelete');
+        $payload = ['batchActionName' => 'batchDelete', 'entityFqcn' => MemberQualification::class, 'batchActionCsrfToken' => $token, 'batchActionEntityIds' => [(string) $ownId, (string) $foreignId]];
+        $this->client->request('POST', $url, $payload);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_qualification WHERE id IN (?, ?)', [$ownId, $foreignId]));
+        $payload['batchActionEntityIds'] = [(string) $ownId];
+        $this->client->request('POST', $url, $payload);
+        self::assertResponseRedirects();
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_qualification WHERE id = ?', [$ownId]));
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_qualification WHERE id = ?', [$foreignId]));
+    }
+
+    public function testInvoiceSettingsFollowSelectedClubAndRejectStaleForms(): void
+    {
+        $super = $this->admin('invoice-super', 'InvoiceOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('invoice-other', 'InvoiceForeign', User::ROLE_ADMIN);
+        $clubId = $super->getMember()->getClub()->getId();
+        $otherId = $other->getMember()->getClub()->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/de/invoice-settings');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.list-group', 'invoice-super');
+        self::assertSelectorTextNotContains('.list-group', 'invoice-other');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        foreach (['/admin/de/invoice-settings/'.$otherId, '/admin/tuv/invoice/settings/'.$otherId] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseStatusCodeSame(403);
+            $this->client->request('POST', $path);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('GET', '/admin/tuv/invoice/settings');
+        self::assertResponseRedirects('/admin/de/invoice-settings', 303);
+        $this->client->request('GET', '/admin/tuv/invoice/settings/'.$clubId);
+        self::assertResponseRedirects('/admin/de/invoice-settings/'.$clubId, 303);
+        $this->client->request('POST', '/admin/tuv/invoice/settings/'.$clubId);
+        self::assertResponseStatusCodeSame(410);
+
+        $crawler = $this->client->request('GET', '/admin/de/invoice-settings/'.$clubId);
+        self::assertResponseIsSuccessful();
+        $staleForm = $crawler->filter('form[name="tuv_invoice_settings"]')->form();
+        $this->client->request('POST', '/admin/de/invoice-settings/'.$clubId, [
+            'tuv_invoice_settings' => ['taxMode' => 'standard', 'taxNumber' => '12345', '_token' => 'invalid'],
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', '/admin/de/invoice-settings/'.$clubId, ['tax_mode' => 'standard']);
+        self::assertResponseStatusCodeSame(400);
+        $this->client->submit($staleForm, [
+            'tuv_invoice_settings[taxMode]' => 'standard',
+            'tuv_invoice_settings[taxNumber]' => '',
+            'tuv_invoice_settings[vatId]' => '',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Bitte Steuernummer oder Umsatzsteuer-ID angeben.');
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM tuv_invoice_settings'));
+
+        $crawler = $this->client->request('GET', '/admin/de/invoice-settings/'.$clubId);
+        $form = $crawler->filter('form[name="tuv_invoice_settings"]')->form();
+        $this->client->submit($form, [
+            'tuv_invoice_settings[taxMode]' => 'standard',
+            'tuv_invoice_settings[taxNumber]' => '12345',
+            'tuv_invoice_settings[invoiceNote]' => 'Own note',
+            'tuv_invoice_settings[memberAgencyEnabled]' => '1',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame('12345', $this->em->getConnection()->fetchOne('SELECT tax_number FROM tuv_invoice_settings WHERE club_id = ?', [$clubId]));
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT member_agency_enabled FROM tuv_invoice_settings WHERE club_id = ?', [$clubId]));
+
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherId]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm, [
+            'tuv_invoice_settings[taxMode]' => 'standard', 'tuv_invoice_settings[taxNumber]' => 'SHOULD-NOT-SAVE',
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('12345', $this->em->getConnection()->fetchOne('SELECT tax_number FROM tuv_invoice_settings WHERE club_id = ?', [$clubId]));
+        $crawler = $this->client->request('GET', '/admin/de/invoice-settings/'.$otherId);
+        $this->client->submit($crawler->filter('form[name="tuv_invoice_settings"]')->form(), [
+            'tuv_invoice_settings[taxMode]' => 'small_business', 'tuv_invoice_settings[vatId]' => 'DE123',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame('DE123', $this->em->getConnection()->fetchOne('SELECT vat_id FROM tuv_invoice_settings WHERE club_id = ?', [$otherId]));
+        $this->client->loginUser($other);
+        foreach (['/admin/de/invoice-settings', '/admin/de/invoice-settings/'.$otherId, '/admin/tuv/invoice/settings', '/admin/tuv/invoice/settings/'.$otherId] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseStatusCodeSame(403);
+        }
     }
 
     public function testDashboardQualificationDataAndGlobalEquipmentActionsRespectClubScope(): void
@@ -242,11 +648,14 @@ final class Phase2FoundationHttpTest extends WebTestCase
             }
             $menuUrls = $crawler->filter('aside.sidebar .menu a[href]:not(.submenu-toggle)')->extract(['href']);
             self::assertGreaterThan(5, count($menuUrls));
-            self::assertSame(count($menuUrls), count(array_unique($menuUrls)), 'No duplicate sidebar destinations.');
+            self::assertSame(count($menuUrls), count(array_unique($menuUrls)), 'No duplicate sidebar destinations: '.implode(', ', array_keys(array_filter(array_count_values($menuUrls), static fn (int $count): bool => $count > 1))));
             $shortcuts = $crawler->filter('[data-dashboard-shortcuts] a')->extract(['href']);
             self::assertCount(4, $shortcuts);
             foreach (array_unique([...$menuUrls, ...$shortcuts]) as $url) {
                 $this->client->request('GET', $url);
+                if ($this->client->getResponse()->isRedirect()) {
+                    $this->client->followRedirect();
+                }
                 self::assertResponseIsSuccessful('Visible navigation target: ' . $url);
                 self::assertSelectorExists('aside.sidebar', 'Administration layout expected for '.$url);
             }

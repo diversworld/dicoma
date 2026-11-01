@@ -1,7 +1,7 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 {% block content_title %}Einstellungen – TÜV-Benachrichtigungen{% endblock %}
 {% block main %}
-<p>Diese Vorlagen gelten für <strong>neu vorgemerkte</strong> E-Mails. Bereits vorgemerkte Nachrichten bleiben unverändert.</p>
+<p>Diese Vorlagen gelten <strong>systemweit für alle Vereine</strong>, unabhängig von der Vereinsauswahl, und nur für <strong>neu vorgemerkte</strong> E-Mails. Bereits vorgemerkte Nachrichten bleiben unverändert.</p>
 <nav class="mb-3">{% for code, label in kinds %}<a class="btn btn-sm {{ code == kind ? 'btn-primary' : 'btn-outline-secondary' }}" href="{{ path('admin_settings_tuv_notifications',{kind:code}) }}">{{ label }}</a> {% endfor %}</nav>
 <form method="post" action="{{ path('admin_settings_tuv_notifications_save') }}">
 <input type="hidden" name="_token" value="{{ csrf_token('tuv_message_template') }}"><input type="hidden" name="kind" value="{{ kind }}">

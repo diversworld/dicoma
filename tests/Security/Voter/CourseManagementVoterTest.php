@@ -9,10 +9,16 @@ use App\Entity\Courses;
 use App\Entity\Member;
 use App\Entity\User;
 use App\Security\Voter\CourseManagementVoter;
+use App\Service\AdminClubContext;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class CourseManagementVoterTest extends TestCase
 {
@@ -57,6 +63,13 @@ final class CourseManagementVoterTest extends TestCase
         );
         $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
-        return (new CourseManagementVoter($checker))->vote($token, $course, [CourseManagementVoter::MANAGE]);
+        $context = new AdminClubContext(
+            $this->createStub(Security::class),
+            new RequestStack(),
+            $this->createStub(EntityManagerInterface::class),
+            $this->createStub(FormFactoryInterface::class),
+            $this->createStub(UrlGeneratorInterface::class),
+        );
+        return (new CourseManagementVoter($checker, $context))->vote($token, $course, [CourseManagementVoter::MANAGE]);
     }
 }

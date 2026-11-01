@@ -6,6 +6,7 @@ namespace App\Security\Voter;
 
 use App\Entity\Member;
 use App\Entity\User;
+use App\Service\AdminClubContext;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
@@ -15,7 +16,10 @@ final class MemberManagementVoter extends Voter
 {
     public const MANAGE = 'MEMBER_MANAGE';
 
-    public function __construct(private readonly AuthorizationCheckerInterface $authorizationChecker) {}
+    public function __construct(
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
+        private readonly AdminClubContext $clubContext,
+    ) {}
 
     protected function supports(string $attribute, mixed $subject): bool
     {
@@ -29,6 +33,10 @@ final class MemberManagementVoter extends Voter
             return false;
         }
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
+            if ($this->clubContext->isBackendRequest()) {
+                $selectedId = $this->clubContext->getClub()?->getId();
+                return $selectedId !== null && ($subject->getClub() === null || $subject->getClub()->getId() === $selectedId);
+            }
             return true;
         }
         if (!$this->authorizationChecker->isGranted('ROLE_ADMIN')) {

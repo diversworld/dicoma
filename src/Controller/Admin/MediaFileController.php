@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Entity\{Club, ClubEvent, MediaFile, MediaFolder, User, WebsitePublication};
-use App\Service\{MediaFileStorage, PublicWebsite};
+use App\Entity\{Club, ClubEvent, MediaFile, MediaFolder, WebsitePublication};
+use App\Service\{AdminClubContext, MediaFileStorage, PublicWebsite};
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +22,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_PRESS_OFFICER')]
 final class MediaFileController extends AbstractController
 {
+    public function __construct(private readonly AdminClubContext $clubContext) {}
+
     #[Route('', name: 'admin_media_index', methods: ['GET'])]
     public function index(Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
     {
@@ -40,7 +42,7 @@ final class MediaFileController extends AbstractController
             array_unshift($breadcrumbs, $ancestor);
         }
         return $this->render('admin/media/index.html.twig', [
-            'rows' => $rows, 'folder' => $folder, 'folders' => $folders, 'children' => $children,
+            'rows' => $rows, 'folder' => $folder, 'folders' => $folders, 'children' => $children, 'club' => $club,
             'breadcrumbs' => $breadcrumbs, 'canManageEditorial' => $website->canManageEditorial(),
             'maxFileUploads' => (int) ini_get('max_file_uploads'),
         ]);
@@ -50,7 +52,7 @@ final class MediaFileController extends AbstractController
     public function createFolder(Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
     {
         $club = $this->club($website);
-        if (!$this->isCsrfTokenValid('media_folder_create', $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
+        if (!$this->isCsrfTokenValid('media_folder_create_'.$club->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
         $parent = $this->folder($request->request->getString('parent'), $club, $em);
         try {
             $folder = new MediaFolder($club, $request->request->getString('name'), $parent);
@@ -73,7 +75,7 @@ final class MediaFileController extends AbstractController
         if ((new ServerParams($requestStack))->hasPostMaxSizeBeenExceeded()) {
             throw new HttpException(Response::HTTP_REQUEST_ENTITY_TOO_LARGE, 'Die Gesamtgröße der Dateien überschreitet das Serverlimit. Bitte weniger Dateien gleichzeitig hochladen.');
         }
-        if (!$this->isCsrfTokenValid('media_upload', $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
+        if (!$this->isCsrfTokenValid('media_upload_'.$club->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
         $folder = $this->folder($request->request->getString('folder'), $club, $em);
         $uploads = $request->files->get('files') ?? $request->files->get('file');
         $uploads = is_array($uploads) ? $uploads : [$uploads];
@@ -188,10 +190,8 @@ final class MediaFileController extends AbstractController
 
     private function club(PublicWebsite $website): Club
     {
-        $user = $this->getUser();
-        if (!$user instanceof User || !$user->getMember()?->getClub()) { throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'); }
         if (!$this->isGranted('ROLE_ADMIN')) { return $website->editorialClub(); }
-        return $user->getMember()->getClub();
+        return $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
     }
 
 }

@@ -21,7 +21,6 @@ use App\Entity\SepaMandate;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
 use App\Form\BarDutyPolicyType;
-use App\Form\ConfigurationClubSelectionType;
 use App\Form\ConfigurationYearSelectionType;
 use App\Form\ContributionClassType;
 use App\Form\MemberContactType;
@@ -33,6 +32,7 @@ use App\Service\MembershipService;
 use App\Service\BarDutyAccess;
 use App\Service\BarDutyWorkflow;
 use App\Service\PublicWebsite;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -58,6 +58,7 @@ final class MembershipController extends AbstractController
         private readonly MembershipService $memberships,
         private readonly MembershipFinanceService $finance,
         private readonly FormFactoryInterface $forms,
+        private readonly AdminClubContext $clubContext,
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
@@ -97,15 +98,33 @@ final class MembershipController extends AbstractController
     #[Route('/admin/membership', name: 'membership_admin', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function administration(): Response
     {
-        $user = $this->account();
-        $clubs = $this->isGranted('ROLE_SUPER_ADMIN')
-            ? $this->em->getRepository(Club::class)->findAll()
-            : array_filter([$user->getMember()?->getClub()]);
+        $this->account();
+        $clubs = array_filter([$this->clubContext->getClub()]);
 
         return $this->adminPage('membership/admin_clubs.html.twig', ['clubs' => $clubs]);
     }
 
-    #[Route('/admin/configuration', name: 'admin_configuration', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
+    #[Route('/admin/configuration', name: 'admin_configuration', methods: ['GET'])]
+    public function legacyConfiguration(): Response
+    {
+        return $this->redirectToRoute('admin_settings', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/admin/settings', name: 'admin_settings', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
+    public function settings(PublicWebsite $website, BarDutyAccess $barAccess): Response
+    {
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$barAccess->isManager()) {
+            throw $this->createAccessDeniedException();
+        }
+        return $this->adminPage('admin/settings.html.twig', [
+            'canWebsite' => $this->isGranted('ROLE_SUPER_ADMIN') || $website->canManageEditorial(),
+            'canBar' => $barAccess->isManager(),
+        ]);
+    }
+
+    #[Route('/admin/settings/website', name: 'admin_settings_website', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'website'], methods: ['GET', 'POST'])]
+    #[Route('/admin/settings/membership', name: 'admin_settings_membership', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'membership'], methods: ['GET', 'POST'])]
+    #[Route('/admin/settings/contributions', name: 'admin_settings_contributions', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'contributions'], methods: ['GET', 'POST'])]
     #[Route('/admin/settings/bar-services', name: 'admin_settings_bar_services', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'bar'], methods: ['GET', 'POST'])]
     public function configuration(Request $request, PublicWebsite $website, BarDutyAccess $barAccess, BarDutyWorkflow $barWorkflow): Response
     {
@@ -113,46 +132,69 @@ final class MembershipController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        $barOnly = $request->attributes->get('configuration_section') === 'bar';
+        $section = $request->attributes->getString('configuration_section');
+        if ($section === '') {
+            $section = match ($request->query->getString('routeName')) {
+                'admin_settings_website' => 'website',
+                'admin_settings_membership' => 'membership',
+                'admin_settings_contributions' => 'contributions',
+                'admin_settings_bar_services' => 'bar',
+                default => throw $this->createNotFoundException('Unbekannter Konfigurationsbereich.'),
+            };
+        }
+        $barOnly = $section === 'bar';
+        if (in_array($section, ['membership', 'contributions'], true)) {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        }
         if ($barOnly && !$barAccess->isManager()) {
             throw $this->createAccessDeniedException('Nur die Thekenleitung darf diese Einstellungen verwalten.');
         }
         $user = $this->account();
         $ownClub = $user->getMember()?->getClub();
+        if ($barOnly) {
+            $ownClub = $this->clubContext->getClub();
+        }
         if ($barOnly && $request->query->has('club')) {
             throw $this->createNotFoundException('Für die Thekendiensteinstellungen gilt der eigene Verein.');
         }
-        $clubs = $this->isGranted('ROLE_SUPER_ADMIN') ? $this->em->getRepository(Club::class)->findAll() : array_filter([$ownClub]);
         $club = null;
 
         if ($this->isGranted('ROLE_ADMIN')) {
-            $clubId = $request->query->getInt('club', $ownClub?->getId() ?? 0);
+            $clubId = $request->query->getInt('club', $this->clubContext->getClub()?->getId() ?? 0);
             if ($clubId > 0) {
                 $club = $this->em->find(Club::class, $clubId) ?? throw $this->createNotFoundException();
                 $this->assertClub($club);
             }
         }
 
-        $parameters = $club ? ['club' => $club->getId()] : [];
+        if (in_array($section, ['membership', 'contributions'], true) && $club === null) {
+            throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
+        }
         $websiteForm = $policyForm = $classForm = null;
         $classForms = [];
         $classEditSubmitted = false;
 
-        if (!$barOnly && $website->canManageEditorial()) {
-            $websiteClub = $website->editorialClub();
+        if ($section === 'website') {
+            if (!$this->isGranted('ROLE_SUPER_ADMIN') && !$website->canManageEditorial()) {
+                throw $this->createAccessDeniedException('Keine Berechtigung für Website-Einstellungen.');
+            }
+            $websiteClub = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
+            $ownClub = $websiteClub;
             $display = $this->em->find(WebsiteDisplaySettings::class, $websiteClub->getId()) ?? new WebsiteDisplaySettings($websiteClub);
-            $websiteForm = $this->createForm(WebsiteDisplaySettingsType::class, $display)->handleRequest($request);
+            $websiteForm = $this->createForm(WebsiteDisplaySettingsType::class, $display, [
+                'csrf_token_id' => 'website_display_'.$websiteClub->getId(),
+            ])->handleRequest($request);
 
             if ($response = $this->process($websiteForm, function () use ($display): void {
                 $this->em->persist($display); 
                 $this->em->flush();
             }, 
-            'admin_configuration', $parameters)) { 
+            'admin_settings_website')) {
                 return $response; 
             }
         }
 
-        if (!$barOnly && $club !== null) {
+        if ($section === 'membership' && $club !== null) {
             $policy = $this->memberships->policy($club) ?? new MembershipPolicy($club);
             $policyForm = $this->policyForm($policy)->handleRequest($request);
 
@@ -161,14 +203,16 @@ final class MembershipController extends AbstractController
                 $this->em->persist($policy); 
                 $this->em->flush();
             }, 
-            'admin_configuration', $parameters)) { 
+            'admin_settings_membership')) {
                 return $response; 
             }
-        
+        }
+
+        if ($section === 'contributions' && $club !== null) {
             $class = new ContributionClass($club);
             $classForm = $this->contributionForm($class)->handleRequest($request);
         
-            if ($response = $this->process($classForm, fn () => $this->saveContribution($class), 'admin_configuration', $parameters)) { 
+            if ($response = $this->process($classForm, fn () => $this->saveContribution($class), 'admin_settings_contributions')) {
                 return $response; 
             }
         
@@ -176,7 +220,7 @@ final class MembershipController extends AbstractController
 
                 $form = $this->contributionForm($existing, 'contribution_class_'.$existing->getId())->handleRequest($request);
 
-                if ($response = $this->process($form, fn () => $this->saveContribution($existing), 'admin_configuration', $parameters)) { 
+                if ($response = $this->process($form, fn () => $this->saveContribution($existing), 'admin_settings_contributions')) {
                     return $response; 
                 }
                 
@@ -193,17 +237,14 @@ final class MembershipController extends AbstractController
         
         $year = (int) $yearRaw;
         $barPolicy = $barForm = $yearForm = null;
-        $clubForm = !$barOnly && $this->isGranted('ROLE_SUPER_ADMIN')
-            ? $this->forms->createNamed('', ConfigurationClubSelectionType::class, ['club' => $club, 'year' => (string) $year], ['clubs' => $clubs])
-            : null;
-        $canBar = $barAccess->isManager() && $ownClub !== null;
+        $canBar = $barOnly && $barAccess->isManager() && $ownClub !== null;
         
         if ($barOnly && !$canBar) {
             throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
         }
         if ($canBar) {
-            $barAccess->requireManager();
-            $barPolicy = $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $barAccess->club(), 'year' => $year]);
+            $barAccess->configurationActor($ownClub);
+            $barPolicy = $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $ownClub, 'year' => $year]);
             $yearForm = $this->forms->createNamed('', ConfigurationYearSelectionType::class, [
                 'club' => !$barOnly && $club ? (string) $club->getId() : null,
                 'year' => $year,
@@ -212,19 +253,19 @@ final class MembershipController extends AbstractController
                 'minutes' => $barPolicy?->getRequiredMinutes(),
                 'cash' => $barPolicy?->isCashEnabled() ?? false,
                 'reason' => '',
-            ])->handleRequest($request);
+            ], ['csrf_token_id' => 'bar_duty_policy_'.$ownClub->getId().'_'.$year])->handleRequest($request);
 
             if ($barForm->isSubmitted()) {
                 $submittedBarData = $request->request->all()['bar_duty_policy'] ?? null;
                 $token = is_array($submittedBarData) && is_string($submittedBarData['_token'] ?? null) ? $submittedBarData['_token'] : '';
-                if (!$this->isCsrfTokenValid('bar_duty_policy_0', $token)) {
+                if (!$this->isCsrfTokenValid('bar_duty_policy_'.$ownClub->getId().'_'.$year, $token)) {
                     throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
                 }
             }
-            if ($response = $this->process($barForm, function () use ($barForm, $barWorkflow, $year): void {
+            if ($response = $this->process($barForm, function () use ($barForm, $barWorkflow, $year, $ownClub): void {
                 $data = $barForm->getData();
-                $barWorkflow->configure($year, $data['minutes'], $data['cash'], $data['reason']);
-            }, $barOnly ? 'admin_settings_bar_services' : 'admin_configuration', ($barOnly ? [] : $parameters) + ['year' => $year], 'Jahresregel gespeichert.')) {
+                $barWorkflow->configureForClub($ownClub, $year, $data['minutes'], $data['cash'], $data['reason']);
+            }, 'admin_settings_bar_services', ['year' => $year], 'Jahresregel gespeichert.')) {
                 return $response;
             }
         }
@@ -237,7 +278,6 @@ final class MembershipController extends AbstractController
         $response = $this->adminPage('admin/configuration.html.twig', [
             'club' => $club, 
             'ownClub' => $ownClub, 
-            'clubForm' => $clubForm?->createView(),
             'websiteForm' => $websiteForm?->createView(), 
             'policyForm' => $policyForm?->createView(),
             'classForm' => $classForm?->createView(), 
@@ -248,6 +288,7 @@ final class MembershipController extends AbstractController
             'yearForm' => $yearForm?->createView(),
             'year' => $year,
             'barOnly' => $barOnly,
+            'section' => $section,
         ]);
 
         if ($request->isMethod('POST')) { $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY); }
@@ -298,7 +339,7 @@ final class MembershipController extends AbstractController
         $this->assertClub($class->getClub());
 
         if ($request->isMethod('GET')) {
-            return $this->redirectToRoute('admin_configuration', ['club' => $class->getClub()->getId()]);
+            return $this->redirectToRoute('admin_settings_contributions');
         }
 
         $form = $this->contributionForm($class)->handleRequest($request);
@@ -406,6 +447,7 @@ final class MembershipController extends AbstractController
     public function member(Member $member, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
+        $this->assertClub($member->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
         return $this->memberPage($member, $request, true);
     }
 
@@ -541,6 +583,7 @@ final class MembershipController extends AbstractController
     public function payment(MembershipCharge $charge, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $charge->getMember());
+        $this->assertClub($charge->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
         $form = $this->forms->createNamedBuilder('membership_payment')
             ->add('amount', F\MoneyType::class, $this->money('Zahlung EUR'))
             ->add('reference', F\TextType::class, ['label' => 'Zahlungsreferenz / Beleg', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 180)]])
@@ -561,6 +604,7 @@ final class MembershipController extends AbstractController
     public function revoke(SepaMandate $mandate, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $mandate->getMember());
+        $this->assertClub($mandate->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
         if (!$this->isCsrfTokenValid('mandate_revoke_' . $mandate->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
         }
@@ -606,7 +650,7 @@ final class MembershipController extends AbstractController
 
     private function assertClub(Club $club): void
     {
-        if (!$this->isGranted('ROLE_SUPER_ADMIN') && $this->account()->getMember()?->getClub()?->getId() !== $club->getId()) {
+        if ($this->clubContext->getClub()?->getId() !== $club->getId()) {
             throw $this->createAccessDeniedException('Verein nicht im Verwaltungsbereich.');
         }
     }
@@ -618,7 +662,9 @@ final class MembershipController extends AbstractController
 
     private function policyForm(MembershipPolicy $policy): FormInterface
     {
-        return $this->forms->createNamed('membership_policy', MembershipPolicyType::class, $policy);
+        return $this->forms->createNamed('membership_policy', MembershipPolicyType::class, $policy, [
+            'csrf_token_id' => 'membership_policy_'.$policy->getClub()->getId(),
+        ]);
     }
 
     private function saveContribution(ContributionClass $class): void
@@ -641,7 +687,9 @@ final class MembershipController extends AbstractController
 
     private function contributionForm(ContributionClass $class, string $name = 'contribution_class'): FormInterface
     {
-        return $this->forms->createNamed($name, ContributionClassType::class, $class);
+        return $this->forms->createNamed($name, ContributionClassType::class, $class, [
+            'csrf_token_id' => $name.'_'.$class->getClub()->getId(),
+        ]);
     }
 
     private function adminPage(string $template, array $parameters): Response

@@ -74,6 +74,54 @@ final class ClubEventBookingHttpTest extends WebTestCase
         self::assertSame(1, $this->em->getRepository(ClubEventPayment::class)->count([]));
     }
 
+    public function testSuperAdminEventManagementUsesSelectedClub(): void
+    {
+        $own = $this->event('paid');
+        $own->setTitle('Own event');
+        $otherClub = (new Club())->setName('Other events club');
+        $other = new ClubEvent($otherClub);
+        $other->setTitle('Other event');
+        $other->setDescription('Other event description');
+        $other->setPricing('paid');
+        $other->setMemberFeeCents(1000);
+        $other->setGuestFeeCents(2000);
+        $other->setStartsAt(new \DateTimeImmutable('+10 days'));
+        $other->setEndsAt(new \DateTimeImmutable('+11 days'));
+        $other->setLocation('Other clubhouse');
+        $other->setPublished(true);
+        $this->em->persist($otherClub);
+        $this->em->persist($other);
+        $super = $this->account('events-super', true, [User::ROLE_SUPER_ADMIN]);
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $crawler = $this->client->request('GET', '/admin/club-events/new');
+        $staleForm = $crawler->selectButton('Veranstaltung speichern')->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm, [
+            'club_event[title]' => 'Stale event', 'club_event[description]' => 'A club meeting',
+            'club_event[pricing]' => 'paid', 'club_event[memberFeeCents]' => '12,50', 'club_event[guestFeeCents]' => '20,00',
+            'club_event[startsAt]' => (new \DateTimeImmutable('+10 days 18:00'))->format('Y-m-d\TH:i'),
+            'club_event[endsAt]' => (new \DateTimeImmutable('+10 days 20:00'))->format('Y-m-d\TH:i'),
+            'club_event[location]' => 'Clubhouse',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        self::assertNull($this->em->getRepository(ClubEvent::class)->findOneBy(['title' => 'Stale event']));
+        $this->client->request('GET', '/admin/club-events');
+        self::assertSelectorTextContains('body', 'Other event');
+        self::assertSelectorTextNotContains('body', 'Own event');
+        $this->client->request('GET', '/admin/club-events/'.$own->getId());
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/admin/club-events/'.$other->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/events');
+        self::assertSelectorTextContains('body', 'Own event');
+        self::assertSelectorTextNotContains('body', 'Other event');
+    }
+
     public function testInvalidPricesNeverCreateAnEvent(): void
     {
         $this->client->loginUser($this->admin);
