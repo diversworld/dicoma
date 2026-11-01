@@ -1295,7 +1295,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $crawler = $this->client->request('GET', '/equipment-manager/fill-billing');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $billing);
-            self::assertSelectorTextContains('table', $fillLabel);
+            self::assertSelectorTextContains('body', $fillLabel);
             $form = $crawler->filter('form[action$="/collect"]')->form();
             $params = $form->getPhpValues();
             $params['method'] = 'invalid';
