@@ -1314,8 +1314,10 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $fill = new \App\Entity\CompressorFillLog($club, $super, 'TEST', 'TEST', 40, 200);
         $charge = new \App\Entity\EquipmentFillCharge($club, $fill, 350);
         $charge->collect('cash', 'tester');
+        $payout = new \App\Entity\EquipmentCashPayout($club, 'certification', 'Synthetic recipient', 100, 'tester', 'Synthetic payout', null);
         $this->em->persist($fill);
         $this->em->persist($charge);
+        $this->em->persist($payout);
         $this->em->flush();
         $this->em->getConnection()->insert('equipment_cash_correction', [
             'club_id' => $club->getId(), 'source_type' => 'fill', 'source_id' => $charge->getId(),
@@ -1346,11 +1348,16 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $csv = $this->client->getInternalResponse()->getContent();
             self::assertStringContainsString($csvAmount, $csv);
             self::assertStringContainsString($fillLabel, $csv);
+            self::assertStringContainsString('payout-'.$payout->getId(), $csv);
+            self::assertStringContainsString('correction-1', $csv);
 
             $crawler = $this->client->request('GET', '/equipment-manager/cashbook/corrections');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $corrections);
             self::assertSelectorTextContains('table', $fillLabel);
+            $confirmation = $crawler->filter('main form[method="post"]')->attr('onsubmit');
+            self::assertStringStartsWith('return confirm(', $confirmation);
+            self::assertIsString(json_decode(substr($confirmation, strlen('return confirm('), -1), true, 512, JSON_THROW_ON_ERROR));
             $form = $crawler->filter('main form[method="post"]')->form();
             self::assertSame('http://localhost/equipment-manager/cashbook/corrections', $form->getUri());
             $params = $form->getPhpValues();
@@ -1383,6 +1390,22 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertResponseRedirects();
             $this->client->followRedirect();
             self::assertSelectorTextContains('.alert-danger', $closingError);
+        }
+        $club = $this->em->getReference(Club::class, $club->getId());
+        $this->em->persist(new \App\Entity\EquipmentCashClosing($club, new \DateTimeImmutable('today'), 0, 350, 450, -100, str_repeat('0', 64), 'tester', null, null));
+        $this->em->flush();
+        foreach ([
+            'de' => ['Abgeschlossen am', 'Keine Übergabe dokumentiert'],
+            'en' => ['Closed on', 'No handover recorded'],
+            'fr' => ['Clôturé le', 'Aucune remise enregistrée'],
+            'es' => ['Cerrado el', 'No se registró ninguna entrega'],
+        ] as $locale => [$closed, $handover]) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
+            $this->client->request('GET', $url);
+            $this->client->request('GET', '/equipment-manager/cashbook/closing');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $closed);
+            self::assertSelectorTextContains('body', $handover);
         }
     }
 
@@ -1463,7 +1486,9 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $crawler = $this->client->followRedirect();
             self::assertSelectorTextContains('.alert-danger', $cancelError);
             $form = $crawler->filter('form[action$="/issue-all"]')->form();
-            self::assertStringContainsString('confirm(', $crawler->filter('form[action$="/issue-all"]')->attr('onsubmit'));
+            $confirmation = $crawler->filter('form[action$="/issue-all"]')->attr('onsubmit');
+            self::assertStringStartsWith('return confirm(', $confirmation);
+            self::assertStringContainsString('1', json_decode(substr($confirmation, strlen('return confirm('), -1), true, 512, JSON_THROW_ON_ERROR));
             $this->client->request('POST', $form->getUri(), $form->getPhpValues());
             self::assertResponseRedirects();
             $this->client->followRedirect();
