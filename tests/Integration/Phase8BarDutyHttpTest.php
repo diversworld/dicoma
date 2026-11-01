@@ -93,7 +93,7 @@ final class Phase8BarDutyHttpTest extends WebTestCase
             }
         }
         $this->client->request('GET', '/bar-duty');
-        self::assertSelectorExists('link[href="/css/pages/admin-calendar-index.css"]');
+        self::assertSelectorExists('link[href="/css/pages/bar-duty-calendar.css"]');
     }
 
     public static function portalRoles(): iterable
@@ -507,7 +507,13 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $date = new \DateTimeImmutable('+3 days');
         $crawler = $this->client->request('GET', '/admin/bar-duty?month='.$date->format('Y-m'));
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('head link[href="/css/pages/bar-duty-calendar.css"]');
+        self::assertSelectorExists('[data-bar-duty-calendar] .bar-calendar-frame > table.bar-calendar-table');
+        self::assertSelectorNotExists('[data-bar-duty-calendar] .card, [data-bar-duty-calendar] .btn, [data-bar-duty-calendar] .d-flex');
         self::assertCount(7, $crawler->filter('[data-bar-duty-calendar] thead th'));
+        foreach ($crawler->filter('[data-bar-duty-calendar] tbody tr') as $row) {
+            self::assertCount(7, (new \Symfony\Component\DomCrawler\Crawler($row))->filter('td'));
+        }
         $cell = $crawler->filter('[data-calendar-date="'.$date->format('Y-m-d').'"]');
         $this->client->click($cell->selectLink('Veranstaltung eintragen')->link()); self::assertResponseIsSuccessful();
         self::assertInputValueSame('date', $date->format('Y-m-d'));
@@ -519,6 +525,8 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         self::assertSame('Clubhouse summer party', $shift->getTitle());
         $this->login($this->alice);
         $crawler = $this->client->request('GET', '/bar-duty?month='.$date->format('Y-m'));
+        self::assertSelectorExists('head link[href="/css/pages/bar-duty-calendar.css"]');
+        self::assertSelectorExists('[data-bar-duty-calendar] .bar-calendar-frame > table.bar-calendar-table');
         self::assertSelectorTextContains('[data-bar-event="'.$shift->getId().'"]', 'Noch niemand eingeteilt');
         self::assertSelectorTextContains('[data-bar-event="'.$shift->getId().'"]', '2 frei');
         self::assertSelectorNotExists('a[href^="/bar-duty/plan"]');

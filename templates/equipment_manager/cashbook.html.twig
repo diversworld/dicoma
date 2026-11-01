@@ -1,56 +1,57 @@
 {% extends 'equipment_manager/layout.html.twig' %}
+{% import 'equipment_manager/_cash_labels.html.twig' as cash %}
 
-{% block title %}Gerätewart-Kasse | DICOMA{% endblock %}{% block hero %}{% endblock %}
+{% block title %}{{ 'Gerätewart-Kasse'|trans }} | DICOMA{% endblock %}{% block hero %}{% endblock %}
 
 {% block body %}
 	<main class="container py-4 dw-max-width-1100px" >
-		<a href="{{ path('equipment_manager_dashboard') }}">← Gerätewart-Übersicht</a>
-		<h1 class="h2 mt-3">Gerätewart-Kasse</h1>
+		<a href="{{ path('equipment_manager_dashboard') }}">← {{ 'Gerätewart-Übersicht'|trans }}</a>
+		<h1 class="h2 mt-3">{{ 'Gerätewart-Kasse'|trans }}</h1>
 		<div class="row g-2 mb-3">
-			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-secondary w-100" href="{{ path('equipment_manager_cash_payouts') }}">Barauszahlungen /<br>Kassenbestand</a></div>
-			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-primary w-100" href="{{ path('equipment_manager_cashbook_day') }}">Tagesauswertung /<br>CSV-Export</a></div>
-			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-primary w-100" href="{{ path('equipment_manager_cash_closing') }}">Kassensturz /<br>Tagesabschluss</a></div>
-			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-danger w-100" href="{{ path('equipment_manager_cash_corrections') }}"><br>Kassenkorrekturen</a></div>
+			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-secondary w-100" href="{{ path('equipment_manager_cash_payouts') }}">{{ 'Barauszahlungen / Kassenbestand'|trans }}</a></div>
+			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-primary w-100" href="{{ path('equipment_manager_cashbook_day') }}">{{ 'Tagesauswertung / CSV-Export'|trans }}</a></div>
+			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-primary w-100" href="{{ path('equipment_manager_cash_closing') }}">{{ 'Kassensturz / Tagesabschluss'|trans }}</a></div>
+			<div class="col-12 col-md-4 col-lg-3"><a class="btn btn-danger w-100" href="{{ path('equipment_manager_cash_corrections') }}">{{ 'Kassenkorrekturen'|trans }}</a></div>
 		</div>
-		<p>Geldannahmen für TÜV-Prüfungen, Ausrüstungsverleih und Füllungen deines Vereins. Überweisungen werden separat ausgewiesen und zählen nicht zum Bargeldbestand.</p>
+		<p>{{ 'Geldannahmen für TÜV-Prüfungen, Ausrüstungsverleih und Füllungen deines Vereins. Überweisungen werden separat ausgewiesen und zählen nicht zum Bargeldbestand.'|trans }}</p>
 		{% for message in app.flashes('success') %}
 			<div class="alert alert-success">
-				{{ message }}
+				{{ message|trans }}
 			</div>
 		{% endfor %}
 		{% for message in app.flashes('danger') %}
 			<div class="alert alert-danger">
-				{{ message }}
+				{{ message|trans }}
 			</div>
 		{% endfor %}
 		<div class="row g-3 mb-4">
 			<div class="col-md-4">
 				<div class="card card-body">
-					<strong>Bar kassiert</strong>
+					<strong>{{ 'Bar kassiert'|trans }}</strong>
 					<span class="h4">{{ (totals.cash / 100)|number_format(2, ',', '.') }} €</span>
 				</div>
 			</div>
 			<div class="col-md-4">
 				<div class="card card-body">
-					<strong>Überweisung (nachrichtlich)</strong>
+					<strong>{{ 'Überweisung (nachrichtlich)'|trans }}</strong>
 					<span class="h4">{{ (totals.bank / 100)|number_format(2, ',', '.') }} €</span>
 				</div>
 			</div>
 			<div class="col-md-4">
 				<div class="card card-body">
-					<strong>Gesamt erfasst</strong>
+					<strong>{{ 'Gesamt erfasst'|trans }}</strong>
 					<span class="h4">{{ ((totals.cash + totals.bank) / 100)|number_format(2, ',', '.') }} €</span>
 				</div>
 			</div>
 		</div>
-		<h2 class="h4">Offene TÜV-Geldannahmen</h2>
-		<p class="text-muted small">Betrag aus der Buchung bzw. der mit dem Mitglied vereinbarten Zahlung übernehmen. Keine automatische Rechnungserstellung.</p>
+		<h2 class="h4">{{ 'Offene TÜV-Geldannahmen'|trans }}</h2>
+		<p class="text-muted small">{{ 'Betrag aus der Buchung bzw. der mit dem Mitglied vereinbarten Zahlung übernehmen. Keine automatische Rechnungserstellung.'|trans }}</p>
 		<div class="table-responsive">
 			<table class="table table-striped align-middle">
 				<thead>
 					<tr>
-						<th>Anmeldung</th><th>Mitglied</th>
-						<th>Betrag / Zahlungsart</th>
+						<th>{{ 'Anmeldung'|trans }}</th><th>{{ 'Mitglied'|trans }}</th>
+						<th>{{ 'Betrag / Zahlungsart'|trans }}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -58,36 +59,36 @@
 						<tr>
 							<td>TÜV #{{ b.id }}</td><td>{{ b.member }}</td>
 							<td>
-								<form method="post" action="{{ path('equipment_manager_tuv_collect_payment', {id:b.id}) }}" class="d-flex flex-wrap gap-2" onsubmit="return confirm('Geldannahme verbindlich im Kassenbuch erfassen?')">
+								<form method="post" action="{{ path('equipment_manager_tuv_collect_payment', {id:b.id}) }}" class="d-flex flex-wrap gap-2" onsubmit="return confirm({{ 'Geldannahme verbindlich im Kassenbuch erfassen?'|trans|json_encode|e('html_attr') }})">
 									<input type="hidden" name="_token" value="{{ csrf_token('tuv_collect_' ~ b.id) }}">
 									<input class="form-control form-control-sm dw-max-width-110px"  type="text" inputmode="decimal" name="amount" placeholder="EUR" required>
 										<select class="form-select form-select-sm dw-max-width-150px"  name="method">
-											<option value="cash">Bar erhalten</option><option value="bank">Überweisung</option>
+											<option value="cash">{{ 'Bar erhalten'|trans }}</option><option value="bank">{{ 'Überweisung'|trans }}</option>
 										</select>
-										<input class="form-control form-control-sm dw-max-width-190px"  type="text" name="note" maxlength="500" placeholder="Bemerkung">
-										<button class="btn btn-sm btn-primary">Kassieren</button>
+										<input class="form-control form-control-sm dw-max-width-190px"  type="text" name="note" maxlength="500" placeholder="{{ 'Bemerkung'|trans }}">
+										<button class="btn btn-sm btn-primary">{{ 'Kassieren'|trans }}</button>
 								</form>
 							</td>
 						</tr>
 					{% else %}
 						<tr>
-							<td colspan="3">Keine offenen TÜV-Zahlungen.</td>
+							<td colspan="3">{{ 'Keine offenen TÜV-Zahlungen.'|trans }}</td>
 						</tr>
 					{% endfor %}
 				</tbody>
 			</table>
 		</div>
-		<h2 class="h4 mt-4">Kassenjournal (Einnahmen, Barauszahlungen und Korrekturen; letzte 500 je Bereich)</h2>
+		<h2 class="h4 mt-4">{{ 'Kassenjournal (Einnahmen, Barauszahlungen und Korrekturen; letzte 500 je Bereich)'|trans }}</h2>
 		<div class="table-responsive">
 			<table class="table table-striped">
 				<thead>
 					<tr>
-						<th>Zeitpunkt</th>
-						<th>Art</th>
-						<th>Buchung</th>
-						<th>Zahlungsart</th>
-						<th>Betrag</th>
-						<th>Erfasst durch</th>
+						<th>{{ 'Zeitpunkt'|trans }}</th>
+						<th>{{ 'Art'|trans }}</th>
+						<th>{{ 'Buchung'|trans }}</th>
+						<th>{{ 'Zahlungsart'|trans }}</th>
+						<th>{{ 'Betrag'|trans }}</th>
+						<th>{{ 'Erfasst durch'|trans }}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -96,9 +97,9 @@
                         {% set c = row.correction %}
                         <tr class="table-warning">
                             <td>{{ c.created_at|date('d.m.Y H:i') }}</td>
-                            <td><strong>Korrektur</strong> ({{ c.source_type == 'tuv' ? 'TÜV' : (c.source_type == 'rental' ? 'Leihgebühr' : 'Barauszahlung') }})</td>
-                            <td>Originalbeleg #{{ c.source_id }}<div class="small text-muted">{{ c.reason }}</div></td>
-                            <td>Bar</td>
+                            <td><strong>{{ 'Korrektur'|trans }}</strong> ({{ cash.source(c.source_type) }})</td>
+                            <td>{{ 'Originalbeleg'|trans }} #{{ c.source_id }}<div class="small text-muted">{{ c.reason }}</div></td>
+                            <td>{{ 'Bar'|trans }}</td>
                             <td class="{{ c.direction == 'out' ? 'text-danger' : 'text-success' }}">{{ c.direction == 'out' ? '−' : '+' }}{{ (c.amount_cents / 100)|number_format(2, ',', '.') }} €</td>
                             <td>{{ c.created_by }}</td>
                         </tr>
@@ -106,30 +107,30 @@
                         {% set p = row.payout %}
                         <tr class="table-light">
                             <td>{{ p.paidAt|date('d.m.Y H:i') }}</td>
-                            <td>Barauszahlung ({{ p.category == 'certification' ? 'Brevetierung' : (p.category == 'training_material' ? 'Ausbildungsmaterial' : 'Material / Ersatzteile') }})</td>
+                            <td>{{ 'Barauszahlung'|trans }} ({{ (p.category == 'certification' ? 'Brevetierung' : (p.category == 'training_material' ? 'Ausbildungsmaterial' : 'Material / Ersatzteile'))|trans }})</td>
                             <td>AUS-{{ p.id }}<div class="small text-muted">{{ p.recipient }} · {{ p.purpose }}</div></td>
-                            <td>Bar</td>
+                            <td>{{ 'Bar'|trans }}</td>
                             <td class="text-danger">−{{ (p.amountCents / 100)|number_format(2, ',', '.') }} €</td>
                             <td>{{ p.paidBy }}</td>
                         </tr>
                         {% else %}
                         <tr>
                             <td>{{ row.receipt.collectedAt|date('d.m.Y H:i') }}</td>
-                            <td>{{ row.type == 'fill' ? 'Füllgebühr' : (row.type == 'tuv' ? 'TÜV' : 'Leihgebühr') }}</td>
-                            <td>{{ row.type == 'fill' ? row.receipt.label : row.receipt.booking.id }}</td>
-                            <td>{{ row.receipt.method == 'cash' ? 'Bar' : 'Überweisung' }}</td>
+                            <td>{{ cash.source(row.type) }}</td>
+                            <td>{{ row.type == 'fill' ? cash.fill(row.receipt) : row.receipt.booking.id }}</td>
+                            <td>{{ (row.receipt.method == 'cash' ? 'Bar' : 'Überweisung')|trans }}</td>
                             <td>{{ (row.receipt.amountCents / 100)|number_format(2, ',', '.') }} €</td>
                             <td>{{ row.receipt.collectedBy }}</td>
                         </tr>
                         {% endif %}
 					{% else %}
 						<tr>
-							<td colspan="6">Noch keine Zahlungen erfasst.</td>
+							<td colspan="6">{{ 'Noch keine Zahlungen erfasst.'|trans }}</td>
 						</tr>
 					{% endfor %}
 				</tbody>
 			</table>
 		</div>
-		<p class="small text-muted">Das Journal zeigt TÜV- und Leihgebühren, Barauszahlungen und Korrekturen chronologisch (maximal 500 Einträge je Art). Die Summenkarten oben zeigen nur ursprüngliche Einnahmen, nicht den aktuellen Kassenbestand. Den verbindlichen Kassenbestand und Tagesabschluss findest du über die Schaltflächen oben. Originalbelege bleiben erhalten; Einträge nicht manuell verändern.</p>
+		<p class="small text-muted">{{ 'Das Journal zeigt TÜV- und Leihgebühren, Barauszahlungen und Korrekturen chronologisch (maximal 500 Einträge je Art). Die Summenkarten oben zeigen nur ursprüngliche Einnahmen, nicht den aktuellen Kassenbestand. Den verbindlichen Kassenbestand und Tagesabschluss findest du über die Schaltflächen oben. Originalbelege bleiben erhalten; Einträge nicht manuell verändern.'|trans }}</p>
 	</main>
 {% endblock %}

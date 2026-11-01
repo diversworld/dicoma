@@ -1,0 +1,7 @@
+{% macro source(type) %}
+    {{ ({'tuv': 'TÜV', 'rental': 'Leihgebühr', 'fill': 'Füllgebühr', 'payout': 'Barauszahlung'}[type] ?? type)|trans }}
+{% endmacro %}
+
+{% macro fill(charge) %}
+    {{ (charge.log ? 'Einzelfüllung #%id%' : 'Viererfüllung #%id%')|trans({'%id%': charge.log ? charge.log.id : charge.batch.id}) }}
+{% endmacro %}

@@ -45,6 +45,8 @@ class EquipmentFillCharge
     }
     public function getId(): ?int { return $this->id; }
     public function getClub(): Club { return $this->club; }
+    public function getLog(): ?CompressorFillLog { return $this->log; }
+    public function getBatch(): ?CompressorFillBatch { return $this->batch; }
     public function getLabel(): string { return $this->log ? 'Einzelfüllung #'.$this->log->getId() : 'Viererfüllung #'.$this->batch->getId(); }
     public function getAmountCents(): int { return $this->amountCents; }
     public function getMethod(): ?string { return $this->method; }

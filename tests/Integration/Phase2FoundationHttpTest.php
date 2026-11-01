@@ -808,18 +808,21 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $ownCourse = (new Courses())->setClub($ownClub)->setTitle('Own assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
         $otherCourse = (new Courses())->setClub($otherClub)->setTitle('Foreign assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
         $unassignedCourse = (new Courses())->setTitle('Unassigned assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
+        $type = (new \App\Entity\TrainingUnitType())->setClub($ownClub)->setCode('ASSESS')->setName('Assessment unit');
+        $requirement = (new \App\Entity\CourseTrainingUnit())->setTrainingUnitType($type);
+        $ownCourse->addTrainingUnit($requirement);
         $ownParticipant = (new CourseParticipant())->setCourse($ownCourse)->setMember($super->getMember());
         $otherParticipant = (new CourseParticipant())->setCourse($otherCourse)->setMember($other->getMember());
         $unassignedParticipant = (new CourseParticipant())->setCourse($unassignedCourse)->setMember($super->getMember());
-        $ownSchedule = (new Schedule())->setCourses($ownCourse)->setTitle('Own assessment session')->setStartDate(new \DateTime('2026-11-10'));
+        $ownSchedule = (new Schedule())->setCourses($ownCourse)->setTrainingUnitType($type)->setTitle('Own assessment session')->setStartDate(new \DateTime('2026-11-10'));
         $otherSchedule = (new Schedule())->setCourses($otherCourse)->setTitle('Foreign assessment session')->setStartDate(new \DateTime('2026-11-10'));
-        $inconsistentSchedule = (new Schedule())->setCourses($ownCourse)->setInstructor($other->getMember())->setTitle('Inconsistent assessment session')->setStartDate(new \DateTime('2026-11-11'));
-        $foreignAssessorSchedule = (new Schedule())->setCourses($ownCourse)->setTitle('Foreign assessor session')->setStartDate(new \DateTime('2026-11-12'));
+        $inconsistentSchedule = (new Schedule())->setCourses($ownCourse)->setTrainingUnitType($type)->setInstructor($other->getMember())->setTitle('Inconsistent assessment session')->setStartDate(new \DateTime('2026-11-11'));
+        $foreignAssessorSchedule = (new Schedule())->setCourses($ownCourse)->setTrainingUnitType($type)->setTitle('Foreign assessor session')->setStartDate(new \DateTime('2026-11-12'));
         $ownResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($ownSchedule);
         $otherResult = (new TrainingUnitResult())->setCourseParticipant($otherParticipant)->setSchedule($otherSchedule);
-        $inconsistentResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($inconsistentSchedule);
-        $foreignAssessorResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($foreignAssessorSchedule)->setAssessor($other->getMember());
-        foreach ([$ownCourse, $otherCourse, $unassignedCourse, $ownParticipant, $otherParticipant, $unassignedParticipant, $ownSchedule, $otherSchedule, $inconsistentSchedule, $foreignAssessorSchedule, $ownResult, $otherResult, $inconsistentResult, $foreignAssessorResult] as $entity) {
+        $inconsistentResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($inconsistentSchedule)->setStatus(\App\Enum\TrainingUnitResultStatus::PASSED);
+        $foreignAssessorResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($foreignAssessorSchedule)->setAssessor($other->getMember())->setStatus(\App\Enum\TrainingUnitResultStatus::PASSED);
+        foreach ([$type, $requirement, $ownCourse, $otherCourse, $unassignedCourse, $ownParticipant, $otherParticipant, $unassignedParticipant, $ownSchedule, $otherSchedule, $inconsistentSchedule, $foreignAssessorSchedule, $ownResult, $otherResult, $inconsistentResult, $foreignAssessorResult] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
@@ -859,6 +862,26 @@ final class Phase2FoundationHttpTest extends WebTestCase
         foreach (['/admin/course-training-matrix/'.$ownCourse->getId(), '/admin/training-progress/'.$ownParticipant->getId()] as $url) {
             $this->client->request('GET', $url);
             self::assertResponseIsSuccessful();
+            self::assertSelectorTextNotContains('body', 'Inconsistent assessment session');
+        }
+        self::assertSelectorTextContains('body', 'Own assessment session');
+        self::assertSelectorTextNotContains('body', 'Foreign assessor session');
+        self::assertSelectorTextContains('body', 'Pflichtfortschritt: 0 / 1');
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $progress = static::getContainer()->get(\App\Service\TrainingProgressService::class);
+        $stack->push(\Symfony\Component\HttpFoundation\Request::create('/admin/course/'.$ownCourse->getId().'/completion-wizard'));
+        try {
+            self::assertFalse($progress->calculate($ownParticipant)['complete']);
+        } finally {
+            $stack->pop();
+        }
+        $stack->push(\Symfony\Component\HttpFoundation\Request::create('/student/'));
+        try {
+            $frontendProgress = $progress->calculate($ownParticipant);
+            self::assertSame(2, $frontendProgress['requirements'][0]['passed']);
+            self::assertTrue($frontendProgress['complete']);
+        } finally {
+            $stack->pop();
         }
         $crawler = $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class, Crud::PAGE_NEW));
         self::assertResponseIsSuccessful();
@@ -1217,15 +1240,19 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $super = $this->admin('equipment-language-super', 'LanguageClub', User::ROLE_SUPER_ADMIN);
         $tank = (new Tank())->setClub($super->getMember()->getClub())->setInventory('LANG-TANK')
             ->setSerialnumber('LANG-SERIAL')->setSize(12)->setLastCheckDate(new \DateTime('2025-01-01'));
+        $fill = new \App\Entity\CompressorFillLog($super->getMember()->getClub(), $super, 'LANG-TANK', 'COMPRESSOR', 40, 200);
+        $charge = new \App\Entity\EquipmentFillCharge($super->getMember()->getClub(), $fill, 350);
         $this->em->persist($tank);
+        $this->em->persist($fill);
+        $this->em->persist($charge);
         $this->em->flush();
         $this->client->loginUser($super);
         foreach ([
-            'de' => ['Gerätewart – Übersicht', 'Direktausleihe am Schalter', 'Jetzt Direktausleihe anlegen?', 'Bitte 1 bis 30 verschiedene Gegenstände auswählen.', 'TÜV-Termin planen', 'Gerätewart – Tauchflaschen', 'Inventar und Gerätewart', 'Einsatzbereit'],
-            'en' => ['Equipment manager – overview', 'Walk-in loan at the counter', 'Create this loan now?', 'Select between 1 and 30 different items.', 'Plan an inspection', 'Equipment manager – diving cylinders', 'Inventory and equipment management', 'Ready for use'],
-            'fr' => ['Responsable du matériel – aperçu', 'Prêt au guichet', 'Créer ce prêt maintenant ?', 'Choisissez entre 1 et 30 articles différents.', 'Planifier une inspection', 'Responsable du matériel – bouteilles de plongée', 'Inventaire et gestion du matériel', 'Prêt à l’emploi'],
-            'es' => ['Responsable de equipo – resumen', 'Préstamo en el mostrador', '¿Crear el préstamo ahora?', 'Seleccione entre 1 y 30 artículos diferentes.', 'Planificar una inspección', 'Responsable de equipo – botellas de buceo', 'Inventario y gestión de equipo', 'Listo para usar'],
-        ] as $locale => [$dashboard, $direct, $confirmation, $error, $plan, $tanks, $inventory, $ready]) {
+            'de' => ['Gerätewart – Übersicht', 'Direktausleihe am Schalter', 'Jetzt Direktausleihe anlegen?', 'Bitte 1 bis 30 verschiedene Gegenstände auswählen.', 'TÜV-Termin planen', 'Gerätewart – Tauchflaschen', 'Inventar und Gerätewart', 'Einsatzbereit', 'Kontrollierte Wiederfreigabe', 'Eine Begründung mit 10 bis 2000 Zeichen ist erforderlich.', 'Abrechnung der Füllungen', 'Einzelfüllung', 'Füllung ist kostenlos, schon bezahlt oder Zahlungsart ungültig.'],
+            'en' => ['Equipment manager – overview', 'Walk-in loan at the counter', 'Create this loan now?', 'Select between 1 and 30 different items.', 'Plan an inspection', 'Equipment manager – diving cylinders', 'Inventory and equipment management', 'Ready for use', 'Controlled release', 'A reason of 10 to 2000 characters is required.', 'Filling charges', 'Single fill', 'The fill is free, already paid, or the payment method is invalid.'],
+            'fr' => ['Responsable du matériel – aperçu', 'Prêt au guichet', 'Créer ce prêt maintenant ?', 'Choisissez entre 1 et 30 articles différents.', 'Planifier une inspection', 'Responsable du matériel – bouteilles de plongée', 'Inventaire et gestion du matériel', 'Prêt à l’emploi', 'Remise en service contrôlée', 'Un motif de 10 à 2000 caractères est requis.', 'Facturation des gonflages', 'Gonflage individuel', 'Le gonflage est gratuit, déjà payé ou le mode de paiement est invalide.'],
+            'es' => ['Responsable de equipo – resumen', 'Préstamo en el mostrador', '¿Crear el préstamo ahora?', 'Seleccione entre 1 y 30 artículos diferentes.', 'Planificar una inspección', 'Responsable de equipo – botellas de buceo', 'Inventario y gestión de equipo', 'Listo para usar', 'Habilitación controlada', 'Se requiere un motivo de 10 a 2000 caracteres.', 'Cobro de cargas', 'Carga individual', 'La carga es gratuita, ya está pagada o la forma de pago no es válida.'],
+        ] as $locale => [$dashboard, $direct, $confirmation, $error, $plan, $tanks, $inventory, $ready, $release, $reasonError, $billing, $fillLabel, $fillError]) {
             $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
             $this->client->request('GET', $url);
             self::assertResponseIsSuccessful();
@@ -1255,6 +1282,106 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $inventory);
             self::assertSelectorTextContains('table', $ready);
+            $crawler = $this->client->request('GET', '/equipment-manager/tanks/'.$tank->getId());
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $release);
+            $form = $crawler->filter('form[action$="/block"]')->form();
+            $params = $form->getPhpValues();
+            $params['reason'] = 'short';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $reasonError);
+            $crawler = $this->client->request('GET', '/equipment-manager/fill-billing');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $billing);
+            self::assertSelectorTextContains('table', $fillLabel);
+            $form = $crawler->filter('form[action$="/collect"]')->form();
+            $params = $form->getPhpValues();
+            $params['method'] = 'invalid';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $fillError);
+        }
+    }
+
+    public function testEquipmentCashPagesAndErrorsUseSelectedLanguage(): void
+    {
+        $super = $this->admin('cash-language-super', 'CashLanguageClub', User::ROLE_SUPER_ADMIN);
+        $club = $super->getMember()->getClub();
+        $this->em->getConnection()->executeStatement('CREATE TABLE equipment_cash_correction (id INTEGER PRIMARY KEY AUTOINCREMENT, club_id INT NOT NULL, source_type VARCHAR(20), source_id INT, direction VARCHAR(10), amount_cents INT, reason VARCHAR(500), created_by VARCHAR(180), created_at DATETIME)');
+        $fill = new \App\Entity\CompressorFillLog($club, $super, 'TEST', 'TEST', 40, 200);
+        $charge = new \App\Entity\EquipmentFillCharge($club, $fill, 350);
+        $charge->collect('cash', 'tester');
+        $this->em->persist($fill);
+        $this->em->persist($charge);
+        $this->em->flush();
+        $this->em->getConnection()->insert('equipment_cash_correction', [
+            'club_id' => $club->getId(), 'source_type' => 'fill', 'source_id' => $charge->getId(),
+            'direction' => 'out', 'amount_cents' => 350, 'reason' => 'Test correction',
+            'created_by' => 'tester', 'created_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ]);
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Gerätewart-Kasse', 'Tagesauswertung der Kassenbewegungen', 'Kassenkorrekturen', 'Barauszahlungen', 'Kassensturz und Tagesabschluss', 'Füllgebühr', 'Art, Beleg-ID und Begründung (10–500 Zeichen) prüfen.', 'Ungültiger Betrag.', 'Abschluss nicht möglich. Datum, Beträge oder bereits bestehende Abschlüsse prüfen.', 'Betrag EUR'],
+            'en' => ['Equipment cashbook', 'Daily cash movements report', 'Cash corrections', 'Cash payouts', 'Cash count and daily closing', 'Filling fee', 'Check the type, receipt ID and reason (10–500 characters).', 'Invalid amount.', 'Cannot close. Check the date, amounts and existing closings.', 'Amount EUR'],
+            'fr' => ['Caisse du matériel', 'Rapport journalier des mouvements de caisse', 'Corrections de caisse', 'Décaissements', 'Comptage et clôture journalière', 'Frais de gonflage', 'Vérifiez le type, l’ID du justificatif et le motif (10 à 500 caractères).', 'Montant invalide.', 'Clôture impossible. Vérifiez la date, les montants et les clôtures existantes.', 'Montant EUR'],
+            'es' => ['Caja de equipo', 'Informe diario de movimientos de caja', 'Correcciones de caja', 'Pagos en efectivo', 'Recuento y cierre diario', 'Tarifa de carga', 'Compruebe el tipo, el ID del justificante y el motivo (10–500 caracteres).', 'Importe no válido.', 'No se puede cerrar. Compruebe la fecha, los importes y los cierres existentes.', 'Importe EUR'],
+        ] as $locale => [$journal, $day, $corrections, $payouts, $closing, $fillLabel, $correctionError, $payoutError, $closingError, $csvAmount]) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            $this->client->request('GET', '/equipment-manager/cashbook');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $journal);
+            self::assertSelectorTextContains('table', $fillLabel);
+            $this->client->request('GET', '/equipment-manager/cashbook/day');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $day);
+            self::assertSelectorTextContains('table', $fillLabel);
+            self::assertCount(7, $this->client->getCrawler()->filter('tbody tr')->first()->filter('td'));
+            $this->client->request('GET', '/equipment-manager/cashbook/day.csv');
+            self::assertResponseIsSuccessful();
+            $csv = $this->client->getInternalResponse()->getContent();
+            self::assertStringContainsString($csvAmount, $csv);
+            self::assertStringContainsString($fillLabel, $csv);
+
+            $crawler = $this->client->request('GET', '/equipment-manager/cashbook/corrections');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $corrections);
+            self::assertSelectorTextContains('table', $fillLabel);
+            $form = $crawler->filter('form[method="post"]')->form();
+            $params = $form->getPhpValues();
+            $params['reference_id'] = '0';
+            $params['reason'] = 'bad';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $correctionError);
+
+            $crawler = $this->client->request('GET', '/equipment-manager/cashbook/payouts');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $payouts);
+            $form = $crawler->filter('form[method="post"]')->form();
+            $params = $form->getPhpValues();
+            $params['amount'] = 'invalid';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $payoutError);
+
+            $crawler = $this->client->request('GET', '/equipment-manager/cashbook/closing');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $closing);
+            $form = $crawler->filter('form[method="post"]')->form();
+            $params = $form->getPhpValues();
+            $params['opening'] = 'invalid';
+            $params['counted'] = '0';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $closingError);
         }
     }
 

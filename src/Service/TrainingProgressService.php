@@ -11,7 +11,10 @@ use App\Repository\TrainingUnitResultRepository;
 
 final class TrainingProgressService
 {
-    public function __construct(private readonly TrainingUnitResultRepository $results) {}
+    public function __construct(
+        private readonly TrainingUnitResultRepository $results,
+        private readonly AdminClubContext $clubContext,
+    ) {}
 
     public function calculate(CourseParticipant $participant): array
     {
@@ -41,6 +44,8 @@ final class TrainingProgressService
         }
 
         $seen = [];
+        $backend = $this->clubContext->isBackendRequest();
+        $courseClubId = $course->getClub()?->getId();
         foreach ($this->results->findBy(['courseParticipant' => $participant]) as $result) {
             if (!$result instanceof TrainingUnitResult) {
                 continue;
@@ -50,6 +55,14 @@ final class TrainingProgressService
             $id = $type?->getId();
             if ($id === null || !isset($requirements[$id]) || $schedule?->getCourses()?->getId() !== $course->getId()) {
                 continue;
+            }
+            if ($backend) {
+                $instructor = $schedule->getInstructor();
+                $assessor = $result->getAssessor();
+                if (($instructor !== null && ($courseClubId === null || $instructor->getClub()?->getId() !== $courseClubId))
+                    || ($assessor !== null && ($courseClubId === null || $assessor->getClub()?->getId() !== $courseClubId))) {
+                    continue;
+                }
             }
             $scheduleId = $schedule->getId();
             if ($scheduleId === null || isset($seen[$scheduleId])) {

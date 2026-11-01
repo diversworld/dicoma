@@ -86,11 +86,16 @@ Kurstermine mit einem vereinsfremden Ausbilder werden in den geprüften
 Kalender-, Kursmatrix- und Ausbildungsnachweisansichten ausgeblendet und
 bei den zugehörigen Bearbeitungsaktionen abgelehnt. Die Daten werden dabei
 nicht automatisch geändert.
+Bei Backendanfragen berücksichtigt die Fortschrittsberechnung außerdem
+keine Nachweise mit vereinsfremdem Ausbilder oder Prüfer. Dies gilt auch
+für die damit verbundenen Abschlussprüfungen; die Berechnung im öffentlichen
+Ausbildungsportal bleibt unverändert.
 Die zuletzt in der Verwaltung oder im Portal gewählte Sprache bleibt beim
 Wechsel ins Gerätewartportal erhalten. Gerätewart-Übersicht, Direktausleihe,
-Flaschen- und Inventarlisten sowie die Masken für Flaschenprüfung, Wartung
-und die bearbeiteten TÜV-Ansichten sind übersetzt; weitere Gerätewart- und
-Verleihansichten sowie Meldungen sind noch nicht vollständig übersetzt.
+Flaschen- und Inventarlisten, Flaschendetails, Füllgebühren sowie die Masken
+für Flaschenprüfung, Wartung und die bearbeiteten TÜV-Ansichten sind
+übersetzt; weitere Gerätewart- und Verleihansichten sowie Meldungen sind
+noch nicht vollständig übersetzt.
 Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
 weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf diesen

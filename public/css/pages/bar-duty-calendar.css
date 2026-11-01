@@ -1,0 +1,76 @@
+.bar-calendar {
+    margin-bottom: 1.5rem;
+}
+
+.bar-calendar-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+.bar-calendar-button {
+    display: inline-block;
+    padding: .5rem .75rem;
+    border: 1px solid var(--dw-admin-border, var(--dw-neutral-300));
+    border-radius: .25rem;
+    background: var(--dw-admin-card-bg, var(--dw-surface));
+    color: var(--dw-admin-text, var(--dw-text));
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bar-calendar-button-primary {
+    background: var(--button-primary-bg, var(--dw-primary));
+    color: var(--button-primary-color, var(--dw-surface));
+}
+
+.bar-calendar-button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.bar-calendar-frame {
+    overflow-x: auto;
+    padding: 1rem;
+    border: 1px solid var(--dw-admin-border, var(--dw-neutral-200));
+    border-radius: .75rem;
+    background: var(--dw-admin-card-bg, var(--dw-surface));
+}
+
+.bar-calendar-table {
+    min-width: 760px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    color: inherit;
+}
+
+.bar-calendar-table caption {
+    caption-side: top;
+    text-align: left;
+}
+
+.bar-calendar-table th,
+.bar-calendar-table td {
+    padding: .25rem .5rem .5rem 0;
+    border: 1 solid;
+    vertical-align: top;
+    text-align: left;
+    overflow-wrap: anywhere;
+    padding: 1rem;
+    border: 1px solid var(--dw-admin-border, var(--dw-neutral-200));
+}
+
+.bar-calendar-event {
+    display: block;
+    margin-top: .25rem;
+    text-decoration: none;
+    background-color: var(--dw-muted);
+    padding: 0.6rem;
+}
+
+.bar-calendar-event:hover {
+    text-decoration: underline;
+}

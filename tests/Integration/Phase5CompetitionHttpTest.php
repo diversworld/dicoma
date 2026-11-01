@@ -124,7 +124,18 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         $otherTournament->setStartsAt(new \DateTimeImmutable('2027-01-02 10:00'));
         $otherTournament->setEndsAt(new \DateTimeImmutable('2027-01-02 18:00'));
         $otherTournament->setStatus(TournamentStatus::OPEN);
-        foreach ([$otherClub, $otherSport, $otherTeam, $ownTournament, $otherTournament] as $entity) {
+        $otherEntry = new TournamentEntry($otherTournament);
+        $otherEntry->setName('Other entry');
+        $otherOpponent = new TournamentEntry($otherTournament);
+        $otherOpponent->setName('Other opponent');
+        $otherPlayer = new TournamentPlayer($otherEntry);
+        $otherPlayer->setName('Other player');
+        $otherPlayer->setEligibilityEvidence('Evidence');
+        $otherMatch = new TournamentMatch($otherTournament);
+        $otherMatch->setHome($otherEntry);
+        $otherMatch->setAway($otherOpponent);
+        $otherDocument = new TournamentDocument($otherTournament, 'fixture.pdf', 'fixture.pdf', 'application/pdf', 1);
+        foreach ([$otherClub, $otherSport, $otherTeam, $ownTournament, $otherTournament, $otherEntry, $otherOpponent, $otherPlayer, $otherMatch, $otherDocument] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
@@ -147,6 +158,47 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/tournaments/new?club='.$otherClub->getId());
         self::assertResponseStatusCodeSame(403);
+        foreach ([
+            '/admin/tournaments/'.$otherTournament->getId().'/edit',
+            '/admin/tournaments/'.$otherTournament->getId().'/entry',
+            '/admin/tournaments/'.$otherTournament->getId().'/match/new',
+            '/admin/tournaments/'.$otherTournament->getId().'/generate',
+            '/admin/tournaments/entry/'.$otherEntry->getId(),
+            '/admin/tournaments/entry/'.$otherEntry->getId().'/payment',
+            '/admin/tournaments/match/'.$otherMatch->getId().'/edit',
+            '/admin/tournaments/match/'.$otherMatch->getId().'/result',
+            '/admin/tournaments/document/'.$otherDocument->getId(),
+        ] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403, $url);
+        }
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $csrf = static::getContainer()->get('security.csrf.token_manager');
+            $tokens = [
+                'entry' => $csrf->getToken('entry_withdraw_'.$otherEntry->getId())->getValue(),
+                'player' => $csrf->getToken('player_remove_'.$otherPlayer->getId())->getValue(),
+                'reset' => $csrf->getToken('tournament_reset_'.$otherTournament->getId())->getValue(),
+                'status' => $csrf->getToken('tournament_status_'.$otherTournament->getId())->getValue(),
+            ];
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        foreach ([
+            ['/admin/tournaments/entry/'.$otherEntry->getId().'/withdraw', ['_token' => $tokens['entry']]],
+            ['/admin/tournaments/player/'.$otherPlayer->getId().'/remove', ['_token' => $tokens['player']]],
+            ['/admin/tournaments/'.$otherTournament->getId().'/reset-schedule', ['_token' => $tokens['reset'], 'confirm' => '1']],
+            ['/admin/tournaments/'.$otherTournament->getId().'/status', ['_token' => $tokens['status'], 'status' => 'cancelled']],
+            ['/admin/tournaments/'.$otherTournament->getId().'/document', []],
+        ] as [$url, $parameters]) {
+            $this->client->request('POST', $url, $parameters);
+            self::assertResponseStatusCodeSame(403, $url);
+        }
+        self::assertFalse($otherEntry->isWithdrawn());
+        self::assertSame(TournamentStatus::OPEN, $otherTournament->getStatus());
+        self::assertNotNull($this->em->find(TournamentPlayer::class, $otherPlayer->getId()));
         $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
         self::assertResponseRedirects();
         $this->client->submit($staleTeamForm, ['form[name]' => 'Stale team', 'form[type]' => 'team']);
@@ -160,6 +212,10 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertSelectorTextNotContains('body', 'Own scoped tournament');
         $this->client->request('GET', '/admin/tournaments/'.$ownTournament->getId());
         self::assertResponseStatusCodeSame(403);
+        foreach (['/admin/tournaments/entry/'.$otherEntry->getId(), '/admin/tournaments/match/'.$otherMatch->getId().'/result'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
     }
 
     public function testDivisionAdministrationIsClubScopedAndPreservesExistingTeams(): void

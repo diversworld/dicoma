@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerDailyCashReportController extends AbstractController
@@ -27,26 +28,43 @@ final class EquipmentManagerDailyCashReportController extends AbstractController
     }
 
     #[Route('/equipment-manager/cashbook/day.csv', name: 'equipment_manager_cashbook_day_csv', methods: ['GET'])]
-    public function csv(Request $request, EntityManagerInterface $em): Response
+    public function csv(Request $request, EntityManagerInterface $em, TranslatorInterface $translator): Response
     {
         [$date, $rows, $summary] = $this->data($request, $em);
-        $response = new StreamedResponse(static function () use ($rows, $summary, $date): void {
+        $locale = $request->getLocale();
+        $response = new StreamedResponse(static function () use ($rows, $summary, $date, $translator, $locale): void {
+            $trans = static fn (string $message, array $parameters = []): string => $translator->trans($message, $parameters, 'messages', $locale);
+            $sourceLabels = ['tuv' => 'TÜV', 'rental' => 'Leihgebühr', 'fill' => 'Füllgebühr', 'payout' => 'Barauszahlung'];
+            $payoutLabels = ['certification' => 'Brevetierung', 'training_material' => 'Ausbildungsmaterial', 'equipment_material' => 'Material / Ersatzteile'];
             $out = fopen('php://output', 'wb');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Datum', $date], ';', escape: '\\');
-            fputcsv($out, ['Zeit', 'Art', 'Buchung', 'Zahlungsart', 'Betrag EUR', 'Kassiert von', 'Beleg-ID'], ';', escape: '\\');
+            fputcsv($out, [$trans('Datum'), $date], ';', escape: '\\');
+            fputcsv($out, array_map($trans, ['Zeit', 'Art', 'Buchung', 'Zahlungsart', 'Betrag EUR', 'Kassiert von', 'Beleg-ID']), ';', escape: '\\');
             foreach ($rows as $row) {
                 $r = $row['receipt'];
-                if ($row['type']==='correction') {fputcsv($out,[(new \DateTimeImmutable($r['created_at']))->format('d.m.Y H:i:s'),'Korrektur: '.$r['source_type'].' #'.$r['source_id'],$r['reason'],'Bar',number_format(($r['direction']==='in'?1:-1)*(int)$r['amount_cents']/100,2,',',''),$r['created_by'],'correction-'.$r['id']],';', escape: '\\');continue;}
-                fputcsv($out, [($row['type'] === 'payout' ? $r->getPaidAt() : $r->getCollectedAt())->format('d.m.Y H:i:s'), $row['type'] === 'payout' ? 'Barauszahlung: '.$r->getCategory().' / '.$r->getRecipient() : ($row['type'] === 'fill' ? 'Füllgebühr' : ($row['type'] === 'tuv' ? 'TÜV' : 'Leihgebühr')), $row['type'] === 'payout' ? $r->getPurpose() : ($row['type'] === 'fill' ? $r->getLabel() : $r->getBooking()->getId()), $row['type'] === 'payout' ? 'Bar ausgezahlt' : ($r->getMethod() === 'cash' ? 'Bar' : 'Überweisung'), number_format(($row['type'] === 'payout' ? -1 : 1)*$r->getAmountCents()/100, 2, ',', ''), $row['type'] === 'payout' ? $r->getPaidBy() : $r->getCollectedBy(), $row['type'].'-'.$r->getId()], ';', escape: '\\');
+                if ($row['type'] === 'correction') {
+                    fputcsv($out, [(new \DateTimeImmutable($r['created_at']))->format('d.m.Y H:i:s'), $trans('Korrektur').': '.$trans($sourceLabels[$r['source_type']] ?? $r['source_type']).' #'.$r['source_id'], $r['reason'], $trans('Bar'), number_format(($r['direction'] === 'in' ? 1 : -1)*(int) $r['amount_cents']/100, 2, ',', ''), $r['created_by'], 'correction-'.$r['id']], ';', escape: '\\');
+                    continue;
+                }
+                $type = $trans($sourceLabels[$row['type']] ?? $row['type']);
+                if ($row['type'] === 'payout') {
+                    $type .= ': '.$trans($payoutLabels[$r->getCategory()] ?? $r->getCategory()).' / '.$r->getRecipient();
+                    $booking = $r->getPurpose();
+                } elseif ($row['type'] === 'fill') {
+                    $log = $r->getLog();
+                    $booking = $trans($log ? 'Einzelfüllung #%id%' : 'Viererfüllung #%id%', ['%id%' => $log ? $log->getId() : $r->getBatch()->getId()]);
+                } else {
+                    $booking = $r->getBooking()->getId();
+                }
+                fputcsv($out, [($row['type'] === 'payout' ? $r->getPaidAt() : $r->getCollectedAt())->format('d.m.Y H:i:s'), $type, $booking, $trans($row['type'] === 'payout' ? 'Bar ausgezahlt' : ($r->getMethod() === 'cash' ? 'Bar' : 'Überweisung')), number_format(($row['type'] === 'payout' ? -1 : 1)*$r->getAmountCents()/100, 2, ',', ''), $row['type'] === 'payout' ? $r->getPaidBy() : $r->getCollectedBy(), $row['type'].'-'.$r->getId()], ';', escape: '\\');
             }
-            fputcsv($out, ['Bar-Einnahmen EUR', number_format(($summary['cash']+$summary['correction_in'])/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Bar-Auszahlungen EUR', number_format(($summary['payout']+$summary['correction_out'])/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Bar-Korrekturen Eingang EUR', number_format($summary['correction_in']/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Bar-Korrekturen Ausgang EUR', number_format($summary['correction_out']/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Netto-Barbewegung EUR', number_format(($summary['cash']+$summary['correction_in']-$summary['payout']-$summary['correction_out'])/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Überweisung EUR', number_format($summary['bank']/100, 2, ',', '')], ';', escape: '\\');
-            fputcsv($out, ['Gesamt EUR', number_format(($summary['cash']+$summary['bank'])/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Bar-Einnahmen EUR'), number_format(($summary['cash']+$summary['correction_in'])/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Bar-Auszahlungen EUR'), number_format(($summary['payout']+$summary['correction_out'])/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Bar-Korrekturen Eingang EUR'), number_format($summary['correction_in']/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Bar-Korrekturen Ausgang EUR'), number_format($summary['correction_out']/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Netto-Barbewegung EUR'), number_format(($summary['cash']+$summary['correction_in']-$summary['payout']-$summary['correction_out'])/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Überweisung EUR'), number_format($summary['bank']/100, 2, ',', '')], ';', escape: '\\');
+            fputcsv($out, [$trans('Gesamt EUR'), number_format(($summary['cash']+$summary['bank'])/100, 2, ',', '')], ';', escape: '\\');
             fclose($out);
         });
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');

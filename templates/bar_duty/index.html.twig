@@ -2,25 +2,29 @@
 {% import 'bar_duty/_forms.html.twig' as f %}
 {% block stylesheets %}
     {{ parent() }}
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-calendar-index.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/pages/bar-duty-calendar.css') }}">
+{% endblock %}
+{% block head_stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('css/pages/bar-duty-calendar.css') }}">
 {% endblock %}
 {% block duty_body %}
-    <section class="course-calendar mb-4" data-bar-duty-calendar>
+    <section class="bar-calendar" data-bar-duty-calendar>
         <h3>Dienstkalender {{ month|date('m/Y') }}</h3>
-        <form method="get" action="{{ path(duty_route_prefix ~ 'bar_duty') }}" class="d-flex flex-wrap gap-2 mb-3">
+        <form method="get" action="{{ path(duty_route_prefix ~ 'bar_duty') }}" class="bar-calendar-controls">
             <label>Monat <input type="month" name="month" value="{{ month|date('Y-m') }}" required></label>
-            <button class="btn btn-primary">Kalender anzeigen</button>
-            <a class="btn btn-secondary" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
-            <a class="btn btn-secondary" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
+            <button class="bar-calendar-button bar-calendar-button-primary">Kalender anzeigen</button>
+            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
+            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
         </form>
         <p>Veranstaltung anklicken, um den Thekendienst zu übernehmen. Die eingeteilten Mitglieder und noch freien Plätze stehen direkt im Kalender.</p>
         {% if manager %}
             <p>
-                <a class="btn btn-primary" href="{{ path(duty_route_prefix ~ 'bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.
+                <a class="bar-calendar-button bar-calendar-button-primary" href="{{ path(duty_route_prefix ~ 'bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.
             </p>
         {% endif %}
-        <div class="scroll">
-            <table class="card card-body mb-4 month">
+        <div class="bar-calendar-frame">
+            <table class="bar-calendar-table">
                 <caption>Veranstaltungen und Thekendienste {{ month|date('m/Y') }}</caption>
                 <thead>
                     <tr>
@@ -33,7 +37,7 @@
                     {% for week in weeks %}
                         <tr>
                             {% for day in week %}
-                                <td class="{{ day.currentMonth ? '' : 'outside' }}" data-calendar-date="{{ day.date|date('Y-m-d') }}">
+                                <td class="{{ day.currentMonth ? '' : 'bar-calendar-outside' }}" data-calendar-date="{{ day.date|date('Y-m-d') }}">
                                     <time datetime="{{ day.date|date('Y-m-d') }}"><strong>{{ day.date|date('d.m.') }}</strong></time>
                                     {% if manager and day.date >= date('today') %}
                                         <div>
@@ -42,13 +46,13 @@
                                     {% endif %}
                                     {% for shift in day.shifts %}
                                         {% set assigned = roster[shift.id] %}
-                                        <a class="event{{ shift.status == 'open' and assigned|length < shift.capacity ? ' incomplete' : '' }}" href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
+                                        <a class="bar-calendar-event" href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
                                             <strong>{{ shift.title }}</strong>
-                                            <small>{{ shift.startsAt|date('H:i') }} – {{ shift.endsAt|date('d.m.') != shift.startsAt|date('d.m.') ? shift.endsAt|date('d.m. H:i') : shift.endsAt|date('H:i') }} · {{ shift.location }}</small>
+                                            <br><small>{{ shift.startsAt|date('H:i') }} – {{ shift.endsAt|date('d.m.') != shift.startsAt|date('d.m.') ? shift.endsAt|date('d.m. H:i') : shift.endsAt|date('H:i') }} · {{ shift.location }}</small>
                                             <small>{{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status] }}</small>
                                             {% if shift.status != 'cancelled' %}
-                                                <span>Dienst: {% for assignment in assigned %}{{ assignment.member }}{{ assignment.member.id == app.user.member.id ? ' (du)' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}Noch niemand eingeteilt{% endfor %}</span>
-                                                <small>{{ assigned|length }} / {{ shift.capacity }} besetzt{% if shift.status == 'open' %} · {{ shift.capacity - assigned|length }} frei{% endif %}</small>
+                                                <br><span>Dienst: {% for assignment in assigned %}{{ assignment.member }}{{ assignment.member.id == app.user.member.id ? ' (du)' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}Noch niemand eingeteilt{% endfor %}</span>
+                                                <br><small>{{ assigned|length }} / {{ shift.capacity }} besetzt{% if shift.status == 'open' %} · {{ shift.capacity - assigned|length }} frei{% endif %}</small>
                                             {% endif %}
                                         </a>
                                     {% endfor %}

@@ -148,7 +148,11 @@ Die Flaschenprüfübersicht in EasyAdmin berücksichtigt nur Flaschen des
 ausgewählten Vereins. Kurstermine mit vereinsfremdem Ausbilder werden in
 den geprüften Kalender-, Kursmatrix- und Ausbildungsnachweisansichten
 ausgeblendet und die zugehörigen Bearbeitungsaktionen verweigert; vorhandene
-Zuordnungen werden nicht automatisch korrigiert.
+Zuordnungen werden nicht automatisch korrigiert. Bei Backendanfragen werden
+Nachweise mit vereinsfremdem Ausbilder oder Prüfer nicht auf den
+Ausbildungsfortschritt oder die davon abhängigen Abschlussprüfungen
+angerechnet; die Berechnung im öffentlichen Ausbildungsportal bleibt
+unverändert.
 Andere Backendbereiche, insbesondere weitere Kalender- und Sportaktionen,
 sind noch nicht durchgehend auf diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
 automatisch geändert und betroffene Detailansichten oder Aktionen abgelehnt.
