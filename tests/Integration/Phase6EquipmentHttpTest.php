@@ -399,7 +399,10 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         $session = new CompressorFillSession($this->club, $this->manager, 'Compressor batch', 100, null);
         $this->em->persist($session); $this->em->flush();
         $crawler = $this->client->request('GET', '/equipment-manager/compressor-evenings?session='.$session->getId());
-        $this->client->submit($crawler->filter('form')->reduce(static fn ($node): bool => $node->filter('input[name="action"][value="batch"]')->count() > 0)->form(), [
+        $batchForm = $crawler->filter('form')->reduce(static fn ($node): bool => $node->filter('input[name="action"][value="batch"]')->count() > 0);
+        self::assertCount(4, $batchForm->filter('input[name^="volume_"]'));
+        self::assertStringNotContainsString('\n', $batchForm->text());
+        $this->client->submit($batchForm->form(), [
             'tank_1' => (string) $tank->getId(), 'pressure' => '200', 'fee' => '2,50', 'cylinder_check' => '1',
         ]);
         self::assertResponseRedirects();

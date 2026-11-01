@@ -35,21 +35,21 @@
       {% endif %}
       <p class="mb-2"><strong>{{ 'Mitglied'|trans }}:</strong> {{ booking.member }}</p>
       {% if booking.approvedAt %}
-        <p>Genehmigt durch {{ booking.approvedBy }} am {{ booking.approvedAt|date('d.m.Y H:i') }}.</p>
+        <p>{{ 'Genehmigt durch %user% am %date%.'|trans({'%user%': booking.approvedBy, '%date%': booking.approvedAt|date('d.m.Y H:i')}) }}</p>
       {% elseif booking.status == 'reserved' %}
-        <p>{{ booking.approvalRequired ? 'Gerätewart-Genehmigung vor Ausgabe erforderlich.' : 'Keine zusätzliche Genehmigung hinterlegt; bei geänderter Gerätefreigabe wird vor Ausgabe erneut geprüft.' }}</p>
+        <p>{{ (booking.approvalRequired ? 'Gerätewart-Genehmigung vor Ausgabe erforderlich.' : 'Keine zusätzliche Genehmigung hinterlegt; bei geänderter Gerätefreigabe wird vor Ausgabe erneut geprüft.')|trans }}</p>
         <form method="post" action="{{ path('equipment_manager_loan_workflow', {id:booking.id, operation:'approve'}) }}" class="mb-3">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_workflow_approve_' ~ booking.id) }}">
-          <button class="btn btn-outline-primary">Reservierung genehmigen</button>
+          <button class="btn btn-outline-primary">{{ 'Reservierung genehmigen'|trans }}</button>
         </form>
       {% endif %}
       {% if booking.status == 'returned' %}
         <form method="post" action="{{ path('equipment_manager_loan_workflow', {id:booking.id, operation:'close'}) }}" class="mb-3">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_workflow_close_' ~ booking.id) }}">
-          <button class="btn btn-success">Verleihvorgang abschließen</button>
-          <small>Voraussetzung: vollständig zurückgegeben, Gebühr bezahlt oder kostenlos, Schäden bearbeitet und technisch freigegeben.</small>
+          <button class="btn btn-success">{{ 'Verleihvorgang abschließen'|trans }}</button>
+          <small>{{ 'Voraussetzung: vollständig zurückgegeben, Gebühr bezahlt oder kostenlos, Schäden bearbeitet und technisch freigegeben.'|trans }}</small>
         </form>
-      {% elseif booking.closedAt %}<p>Abgeschlossen durch {{ booking.closedBy }} am {{ booking.closedAt|date('d.m.Y H:i') }}.</p>{% endif %}
+      {% elseif booking.closedAt %}<p>{{ 'Abgeschlossen durch %user% am %date%.'|trans({'%user%': booking.closedBy, '%date%': booking.closedAt|date('d.m.Y H:i')}) }}</p>{% endif %}
       {% if booking.status == 'reserved' %}
         <form method="post" action="{{ path('equipment_manager_loan_cancel', {bookingId:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm({{ 'Diese Reservierung verbindlich stornieren?'|trans|json_encode|e('html_attr') }})">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_cancel_' ~ booking.id) }}">
@@ -64,43 +64,43 @@
       {% if booking.agreedRentalFeeCents is null and booking.status not in ['closed', 'cancelled'] %}
         <form method="post" action="{{ path('equipment_manager_loan_workflow', {id:booking.id, operation:'confirm-fee'}) }}" class="mb-3">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_workflow_confirm-fee_' ~ booking.id) }}">
-          <label>Altbuchung: vereinbarte Leihgebühr einmalig bestätigen (EUR) <input name="amount" inputmode="decimal" required></label>
-          <button class="btn btn-outline-primary">Altpreis festschreiben</button>
+          <label>{{ 'Altbuchung: vereinbarte Leihgebühr einmalig bestätigen (EUR)'|trans }} <input name="amount" inputmode="decimal" required></label>
+          <button class="btn btn-outline-primary">{{ 'Altpreis festschreiben'|trans }}</button>
         </form>
       {% endif %}
       <div class="alert alert-info py-2 mb-2">
-        <strong>Voraussichtliche Leihgebühr: {{ (expectedCents / 100)|number_format(2, ',', '.') }} €</strong>
-        {% if missingFee %}<span class="d-block small text-danger">Nicht vollständig berechenbar: Für mindestens einen Gegenstand ist kein auswertbarer Leihpreis hinterlegt (z. B. Flasche). Betrag bitte prüfen.</span>{% endif %}
-        <span class="d-block small">{# DICOMA_AGREED_FEE_DISPLAY_V1 #}{% if booking.agreedRentalFeeCents is not null %}Bei Buchung festgeschriebener Gesamtpreis.{% else %}Summe der aktuell hinterlegten Einzelpreise; noch kein festgeschriebener Buchungspreis.{% endif %}</span>
+        <strong>{{ 'Voraussichtliche Leihgebühr'|trans }}: {{ (expectedCents / 100)|number_format(2, ',', '.') }} €</strong>
+        {% if missingFee %}<span class="d-block small text-danger">{{ 'Nicht vollständig berechenbar: Für mindestens einen Gegenstand ist kein auswertbarer Leihpreis hinterlegt (z. B. Flasche). Betrag bitte prüfen.'|trans }}</span>{% endif %}
+        <span class="d-block small">{# DICOMA_AGREED_FEE_DISPLAY_V1 #}{{ (booking.agreedRentalFeeCents is not null ? 'Bei Buchung festgeschriebener Gesamtpreis.' : 'Summe der aktuell hinterlegten Einzelpreise; noch kein festgeschriebener Buchungspreis.')|trans }}</span>
       </div>
       {# DICOMA_CHECKOUT_RETURN_V1 #}
       {% if app.request.query.get('checkout') %}
-        <p class="small text-muted">Ausgabe und Geldannahme werden getrennt dokumentiert. Nach der Zahlung bleibt diese Buchung geöffnet.</p>
+        <p class="small text-muted">{{ 'Ausgabe und Geldannahme werden getrennt dokumentiert. Nach der Zahlung bleibt diese Buchung geöffnet.'|trans }}</p>
       {% endif %}
       {% set payment = rentalReceipts[booking.id] ?? null %}
       {% if payment %}
         <div class="alert alert-success py-2 mb-3" role="status">
-          <strong>✓ Leihgebühr bezahlt</strong> – {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} €
-          ({{ payment.method == 'cash' ? 'Barzahlung' : 'Überweisung' }})
-          am {{ payment.collectedAt|date('d.m.Y H:i') }}
-          <span class="d-block small">Kassiert von: {{ payment.collectedBy }}</span>
+          <strong>✓ {{ 'Leihgebühr bezahlt'|trans }}</strong> – {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} €
+          ({{ (payment.method == 'cash' ? 'Barzahlung' : 'Überweisung')|trans }})
+          {{ 'am %date%'|trans({'%date%': payment.collectedAt|date('d.m.Y H:i')}) }}
+          <span class="d-block small">{{ 'Kassiert von'|trans }}: {{ payment.collectedBy }}</span>
         </div>
       {% elseif booking.agreedRentalFeeCents is null %}
-        <p class="text-warning">Vereinbarte Leihgebühr vor der Zahlung oder dem Abschluss ausdrücklich bestätigen; 0 bedeutet kostenlos.</p>
+        <p class="text-warning">{{ 'Vereinbarte Leihgebühr vor der Zahlung oder dem Abschluss ausdrücklich bestätigen; 0 bedeutet kostenlos.'|trans }}</p>
       {% elseif expectedCents == 0 and not missingFee %}
-        <p class="text-muted">Kostenloser Verleih; keine Zahlung erforderlich.</p>
+        <p class="text-muted">{{ 'Kostenloser Verleih; keine Zahlung erforderlich.'|trans }}</p>
       {% elseif booking.status in ['partially_issued','issued','partially_returned','returned'] %}
-        <div class="alert alert-warning py-2 mb-2" role="status"><strong>Leihgebühr noch offen</strong> – für diese Buchung ist keine Zahlung erfasst.</div>
-        <form method="post" action="{{ path('equipment_manager_collect_rental_fee', {id:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm('Leihgebühr jetzt verbindlich kassieren? Bereits kassierte Buchungen werden abgewiesen.')">
+        <div class="alert alert-warning py-2 mb-2" role="status"><strong>{{ 'Leihgebühr noch offen'|trans }}</strong> – {{ 'für diese Buchung ist keine Zahlung erfasst.'|trans }}</div>
+        <form method="post" action="{{ path('equipment_manager_collect_rental_fee', {id:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm({{ 'Leihgebühr jetzt verbindlich kassieren? Bereits kassierte Buchungen werden abgewiesen.'|trans|json_encode|e('html_attr') }})">
           <input type="hidden" name="_token" value="{{ csrf_token('rental_collect_' ~ booking.id) }}">
-          <label class="form-label mb-0">Leihgebühr kassieren</label>
+          <label class="form-label mb-0">{{ 'Leihgebühr kassieren'|trans }}</label>
           <input type="text" inputmode="decimal" name="amount" class="form-control form-control-sm dw-max-width-110px"  placeholder="EUR" {% if not missingFee and expectedCents > 0 %}value="{{ (expectedCents / 100)|number_format(2, ',', '') }}"{% endif %} required>
-          <select name="method" class="form-select form-select-sm dw-max-width-140px" ><option value="cash">Bar erhalten</option><option value="bank">Überweisung</option></select>
-          <input type="text" name="note" class="form-control form-control-sm dw-max-width-180px"  maxlength="500" placeholder="Bemerkung">
-          <button type="submit" class="btn btn-sm btn-success">Zahlung erfassen</button>
+          <select name="method" class="form-select form-select-sm dw-max-width-140px" ><option value="cash">{{ 'Bar erhalten'|trans }}</option><option value="bank">{{ 'Überweisung'|trans }}</option></select>
+          <input type="text" name="note" class="form-control form-control-sm dw-max-width-180px" maxlength="500" placeholder="{{ 'Bemerkung'|trans }}">
+          <button type="submit" class="btn btn-sm btn-success">{{ 'Zahlung erfassen'|trans }}</button>
         </form>
       {% else %}
-        <p class="text-muted small mb-3"><strong>Leihgebühr:</strong> Noch keine Zahlung erfasst. Zahlung bei Ausgabe kassieren.</p>
+        <p class="text-muted small mb-3"><strong>{{ 'Leihgebühr'|trans }}:</strong> {{ 'Noch keine Zahlung erfasst. Zahlung bei Ausgabe kassieren.'|trans }}</p>
       {% endif %}
       {# DICOMA_BATCH_ISSUE_V1 #}
       {% set pendingIssue = 0 %}
@@ -108,39 +108,39 @@
         {% if line.loanStatus == 'reserved' %}{% set pendingIssue = pendingIssue + 1 %}{% endif %}
       {% endfor %}
       {% if pendingIssue > 0 and booking.status in ['reserved', 'partially_issued', 'partially_returned'] %}
-        <form method="post" action="{{ path('equipment_manager_loan_issue_all', {bookingId: booking.id}) }}" class="mb-3" onsubmit="return confirm('Alle {{ pendingIssue }} reservierten Gegenstände jetzt tatsächlich ausgeben?')">
+        <form method="post" action="{{ path('equipment_manager_loan_issue_all', {bookingId: booking.id}) }}" class="mb-3" onsubmit="return confirm({{ 'Alle %count% reservierten Gegenstände jetzt tatsächlich ausgeben?'|trans({'%count%': pendingIssue})|json_encode|e('html_attr') }})">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_issue_all_' ~ booking.id) }}">
-          <button type="submit" class="btn btn-primary">Alle {{ pendingIssue }} Gegenstände ausgeben</button>
-          <span class="small text-muted ms-2">Alles oder nichts: Bei einer fehlgeschlagenen Prüfung wird nichts neu ausgegeben.</span>
+          <button type="submit" class="btn btn-primary">{{ 'Alle %count% Gegenstände ausgeben'|trans({'%count%': pendingIssue}) }}</button>
+          <span class="small text-muted ms-2">{{ 'Alles oder nichts: Bei einer fehlgeschlagenen Prüfung wird nichts neu ausgegeben.'|trans }}</span>
         </form>
       {% endif %}
-      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Gegenstand</th><th>Inventar</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>{{ 'Gegenstand'|trans }}</th><th>{{ 'Inventar'|trans }}</th><th>{{ 'Status'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead><tbody>
       {% for line in booking.items %}
         <tr><td><a href="{{ path('equipment_manager_inventory_detail', {type:line.assetType, id:(line.equipmentItem ?? line.regulator ?? line.tank).id}) }}">{{ line.assetLabel }}</a></td><td>{{ line.assetInventory }}</td>
-        <td>{{ {'reserved':'Reserviert','issued':'Ausgegeben','returned':'Zurückgegeben'}[line.loanStatus] ?? line.loanStatus }}</td>
+        <td>{{ ({'reserved':'Reserviert','issued':'Ausgegeben','returned':'Zurückgegeben'}[line.loanStatus] ?? line.loanStatus)|trans }}</td>
         <td>
           {% if line.loanStatus == 'reserved' and booking.status != 'cancelled' %}
-            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'issue'}) }}" onsubmit="return confirm('Diesen Gegenstand tatsächlich ausgeben?')">
+            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'issue'}) }}" onsubmit="return confirm({{ 'Diesen Gegenstand tatsächlich ausgeben?'|trans|json_encode|e('html_attr') }})">
               <input type="hidden" name="_token" value="{{ csrf_token('loan_' ~ booking.id ~ '_' ~ line.id ~ '_issue') }}">
-              <button class="btn btn-sm btn-primary" type="submit">Ausgabe bestätigen</button>
+              <button class="btn btn-sm btn-primary" type="submit">{{ 'Ausgabe bestätigen'|trans }}</button>
             </form>
           {% elseif line.loanStatus == 'issued' %}
-            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'return'}) }}" onsubmit="return confirm('Rücknahme mit angegebenem Zustand bestätigen?')">
+            <form method="post" action="{{ path('equipment_manager_loan_action', {bookingId:booking.id,lineId:line.id,operation:'return'}) }}" onsubmit="return confirm({{ 'Rücknahme mit angegebenem Zustand bestätigen?'|trans|json_encode|e('html_attr') }})">
               <input type="hidden" name="_token" value="{{ csrf_token('loan_' ~ booking.id ~ '_' ~ line.id ~ '_return') }}">
-              <label class="visually-hidden" for="condition-{{ line.id }}">Rückgabezustand</label>
+              <label class="visually-hidden" for="condition-{{ line.id }}">{{ 'Rückgabezustand'|trans }}</label>
               <select id="condition-{{ line.id }}" name="condition" class="form-select form-select-sm mb-2" required>
-                <option value="ready">In Ordnung</option><option value="maintenance">Wartung erforderlich</option><option value="damaged">Beschädigt</option>
+                <option value="ready">{{ 'In Ordnung'|trans }}</option><option value="maintenance">{{ 'Wartung erforderlich'|trans }}</option><option value="damaged">{{ 'Beschädigt'|trans }}</option>
               </select>
-              <label class="visually-hidden" for="notes-{{ line.id }}">Bemerkung</label>
-              <input id="notes-{{ line.id }}" class="form-control form-control-sm mb-2" name="notes" maxlength="2000" placeholder="Bei Schaden / Wartung mindestens 10 Zeichen, sonst optional">
-              <button class="btn btn-sm btn-success" type="submit">Rücknahme bestätigen</button>
+              <label class="visually-hidden" for="notes-{{ line.id }}">{{ 'Bemerkung'|trans }}</label>
+              <input id="notes-{{ line.id }}" class="form-control form-control-sm mb-2" name="notes" maxlength="2000" placeholder="{{ 'Bei Schaden / Wartung mindestens 10 Zeichen, sonst optional'|trans }}">
+              <button class="btn btn-sm btn-success" type="submit">{{ 'Rücknahme bestätigen'|trans }}</button>
             </form>
-          {% else %}<span class="text-muted">Keine Aktion</span>{% endif %}
+          {% else %}<span class="text-muted">{{ 'Keine Aktion'|trans }}</span>{% endif %}
         </td></tr>
-      {% else %}<tr><td colspan="4">Keine Positionen vorhanden.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="4">{{ 'Keine Positionen vorhanden.'|trans }}</td></tr>{% endfor %}
       </tbody></table></div>
     </div></div>
-  {% else %}<div class="alert alert-info">Für diesen Filter liegen keine Buchungen vor.</div>{% endfor %}
-  {% if bookings|length >= 100 %}<p class="text-muted small">Es werden maximal die 100 neuesten Buchungen angezeigt.</p>{% endif %}
+  {% else %}<div class="alert alert-info">{{ 'Für diesen Filter liegen keine Buchungen vor.'|trans }}</div>{% endfor %}
+  {% if bookings|length >= 100 %}<p class="text-muted small">{{ 'Es werden maximal die 100 neuesten Buchungen angezeigt.'|trans }}</p>{% endif %}
 </div></section>
 {% endblock %}

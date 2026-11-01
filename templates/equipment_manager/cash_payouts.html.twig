@@ -24,6 +24,6 @@
 {% for p in payouts %}<tr><td>{{ p.paidAt|date('d.m.Y H:i') }}</td><td>{{ p.recipient }}</td><td>{{ (p.category == 'certification' ? 'Brevetierung' : (p.category == 'training_material' ? 'Ausbildungsmaterial' : 'Gerätewart-Material'))|trans }}</td><td>{{ p.purpose }}</td><td>−{{ (p.amountCents / 100)|number_format(2, ',', '.') }} €</td><td>{{ p.paidBy }}</td><td>{{ p.documentReference ?: ('AUS-' ~ p.id) }}</td></tr>
 {% else %}<tr><td colspan="7">{{ 'Noch keine Auszahlungen erfasst.'|trans }}</td></tr>{% endfor %}
 </tbody></table></div>
-<p class="text-muted small">{{ 'Auszahlungen können nicht nachträglich geändert oder gelöscht werden. Belege bitte außerhalb dieser Maske sicher aufbewahren. Kassensturz und Korrekturbuchungen folgen in einem eigenen Schritt.'|trans }}</p>
+<p class="text-muted small">{{ 'Auszahlungen können nicht nachträglich geändert oder gelöscht werden. Belege bitte außerhalb dieser Maske sicher aufbewahren. Kassensturz und Korrekturbuchungen werden separat erfasst.'|trans }}</p>
 </main>
 {% endblock %}

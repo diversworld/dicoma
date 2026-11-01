@@ -1,97 +1,97 @@
 {% extends 'equipment_manager/layout.html.twig' %}
-{% block title %}Kompressor-Fülllogbuch | DICOMA{% endblock %}
+{% block title %}{{ 'Kompressor-Fülllogbuch'|trans }} | DICOMA{% endblock %}
 {% block body %}
 	<main class="container py-4 dw-max-width-1150px" >
-		<a href="{{ path('equipment_manager_dashboard') }}">← Gerätewart-Übersicht</a>
-		<h1 class="h2 mt-3">Kompressor-Fülllogbuch</h1>
-		<p class="text-muted">Dokumentation abgeschlossener Atemluftfüllungen. Nur tatsächlich geprüfte und durchgeführte Vorgänge eintragen. Die Bestätigungen ersetzen keine Messung, Wartung oder Unterweisung.</p>
+		<a href="{{ path('equipment_manager_dashboard') }}">← {{ 'Gerätewart-Übersicht'|trans }}</a>
+		<h1 class="h2 mt-3">{{ 'Kompressor-Fülllogbuch'|trans }}</h1>
+		<p class="text-muted">{{ 'Dokumentation abgeschlossener Atemluftfüllungen. Nur tatsächlich geprüfte und durchgeführte Vorgänge eintragen. Die Bestätigungen ersetzen keine Messung, Wartung oder Unterweisung.'|trans }}</p>
 		{% for message in app.flashes('success') %}
 			<div class="alert alert-success">
-				{{ message }}
+				{{ message|trans }}
 			</div>
 		{% endfor %}
 		{% for message in app.flashes('danger') %}
 			<div class="alert alert-danger">
-				{{ message }}
+				{{ message|trans }}
 			</div>
 		{% endfor %}
 		<section class="card card-body mb-4">
-			<h2 class="h5">Füllung dokumentieren</h2>
-			<form method="post" class="row g-3" onsubmit="return confirm('Füllung verbindlich ins Logbuch eintragen?')">
+			<h2 class="h5">{{ 'Füllung dokumentieren'|trans }}</h2>
+			<form method="post" class="row g-3" onsubmit="return confirm({{ 'Füllung verbindlich ins Logbuch eintragen?'|trans|json_encode|e('html_attr') }})">
 				<input type="hidden" name="_token" value="{{ csrf_token('compressor_fill_create_' ~ equipment_manager_club().id) }}">
-				<div class="col-md-6"><label class="form-label">Flaschenkennzeichnung *</label>
-					<input class="form-control" name="cylinder" maxlength="100" required placeholder="Seriennummer / Kennzeichnung">
+				<div class="col-md-6"><label class="form-label">{{ 'Flaschenkennzeichnung'|trans }} *</label>
+					<input class="form-control" name="cylinder" maxlength="100" required placeholder="{{ 'Seriennummer / Kennzeichnung'|trans }}">
 				</div>
 				<div class="col-md-6">
-					<label class="form-label">Vereinsflasche (optional)</label>
+					<label class="form-label">{{ 'Vereinsflasche (optional)'|trans }}</label>
 					<select class="form-select" name="tank_id">
-						<option value="">Externe oder nicht zugeordnete Flasche</option>
+						<option value="">{{ 'Externe oder nicht zugeordnete Flasche'|trans }}</option>
 						{% for tank in tanks %}
 							<option value="{{ tank.id }}">{{ tank.inventory }} – {{ tank.serialnumber }}</option>
 						{% endfor %}
 					</select>
 				</div>
 				<div class="col-md-6">
-					<label class="form-label">Kompressor / Anlage *</label>
-					<input class="form-control" name="compressor" maxlength="100" required placeholder="Anlagenkennung">
+					<label class="form-label">{{ 'Kompressor / Anlage'|trans }} *</label>
+					<input class="form-control" name="compressor" maxlength="100" required placeholder="{{ 'Anlagenkennung'|trans }}">
 				</div>
 				<div class="col-md-3">
-					<label class="form-label">Anfangsdruck (bar) *</label>
+					<label class="form-label">{{ 'Anfangsdruck (bar)'|trans }} *</label>
 					<input class="form-control" name="start_bar" type="number" min="0" max="349" required>
 				</div>
 				<div class="col-md-3">
-					<label class="form-label">Enddruck (bar) *</label>
+					<label class="form-label">{{ 'Enddruck (bar)'|trans }} *</label>
 					<input class="form-control" name="end_bar" type="number" min="1" max="350" required>
 				</div>
 				<div class="col-md-4">
-					<label class="form-label">Kompressor-Betriebsstunden</label>
-					<input class="form-control" name="hours" inputmode="decimal" placeholder="z. B. 123,4">
+					<label class="form-label">{{ 'Kompressor-Betriebsstunden'|trans }}</label>
+					<input class="form-control" name="hours" inputmode="decimal" placeholder="{{ 'z. B. 123,4'|trans }}">
 				</div>
 				<div class="col-md-8">
-					<label class="form-label">Filterpatrone / Filterwechsel-Referenz</label>
-					<input class="form-control" name="filter" maxlength="120" placeholder="Patronennummer oder Wartungsbezug">
+					<label class="form-label">{{ 'Filterpatrone / Filterwechsel-Referenz'|trans }}</label>
+					<input class="form-control" name="filter" maxlength="120" placeholder="{{ 'Patronennummer oder Wartungsbezug'|trans }}">
 				</div>
 				<div class="col-12">
-					<label class="form-label">Bemerkungen</label>
-					<textarea class="form-control" name="notes" maxlength="2000" rows="2" placeholder="Besonderheiten, Abweichungen, Messprotokoll-Referenz"></textarea>
+					<label class="form-label">{{ 'Bemerkungen'|trans }}</label>
+					<textarea class="form-control" name="notes" maxlength="2000" rows="2" placeholder="{{ 'Besonderheiten, Abweichungen, Messprotokoll-Referenz'|trans }}"></textarea>
 				</div>
-                <div class="col-12"><label>Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos) <input name="fee" inputmode="decimal" required></label> <a href="{{ path('equipment_manager_fill_billing') }}">Füllgebühren und Zahlungen</a></div>
+                <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> <a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a></div>
 				<div class="col-12">
 					<div class="alert alert-warning">
-						<strong>Sicherheitskontrollen vor Freigabe</strong><div class="form-check">
+						<strong>{{ 'Sicherheitskontrollen vor Freigabe'|trans }}</strong><div class="form-check">
 						<input class="form-check-input" type="checkbox" name="cylinder_check" value="1" id="cylinder_check" required>
-						<label class="form-check-label" for="cylinder_check">Flaschenkennzeichnung, Zustand und Prüffrist tatsächlich kontrolliert</label>
+						<label class="form-check-label" for="cylinder_check">{{ 'Flaschenkennzeichnung, Zustand und Prüffrist tatsächlich kontrolliert'|trans }}</label>
 					</div>
 					<div class="form-check">
 						<input class="form-check-input" type="checkbox" name="air_quality_check" value="1" id="air_quality_check" required>
-						<label class="form-check-label" for="air_quality_check">Atemluftqualität / betriebliche Freigabe gemäß Prüfnachweisen bestätigt</label>
+						<label class="form-check-label" for="air_quality_check">{{ 'Atemluftqualität / betriebliche Freigabe gemäß Prüfnachweisen bestätigt'|trans }}</label>
 					</div>
 					<div class="form-check">
 						<input class="form-check-input" type="checkbox" name="filter_check" value="1" id="filter_check" required>
-						<label class="form-check-label" for="filter_check">Filter- und Anlagenstatus gemäß Betriebsanweisung kontrolliert</label>
+						<label class="form-check-label" for="filter_check">{{ 'Filter- und Anlagenstatus gemäß Betriebsanweisung kontrolliert'|trans }}</label>
 					</div>
 				</div>
 			</div>
 				<div class="col-12">
-					<button class="btn btn-primary" type="submit">Füllung verbindlich speichern</button>
+					<button class="btn btn-primary" type="submit">{{ 'Füllung verbindlich speichern'|trans }}</button>
 				</div>
 			</form>
 		</section>
 		<div class="d-flex justify-content-between align-items-center mb-2">
-			<h2 class="h5">Letzte 200 Füllungen</h2>
-			<a class="btn btn-outline-secondary btn-sm" href="{{ path('equipment_manager_compressor_log_csv') }}">Vollständiges CSV exportieren</a>
+			<h2 class="h5">{{ 'Letzte 200 Füllungen'|trans }}</h2>
+			<a class="btn btn-outline-secondary btn-sm" href="{{ path('equipment_manager_compressor_log_csv') }}">{{ 'Vollständiges CSV exportieren'|trans }}</a>
 		</div>
 		<div class="table-responsive">
 			<table class="table table-striped table-sm align-middle">
 				<thead>
 					<tr>
-						<th>Datum</th>
-						<th>Flasche</th>
-						<th>Kompressor</th>
-						<th>Druck</th>
-						<th>Stunden</th>
-						<th>Füller</th>
-						<th>Notiz</th>
+						<th>{{ 'Datum'|trans }}</th>
+						<th>{{ 'Flasche'|trans }}</th>
+						<th>{{ 'Kompressor'|trans }}</th>
+						<th>{{ 'Druck'|trans }}</th>
+						<th>{{ 'Stunden'|trans }}</th>
+						<th>{{ 'Füller'|trans }}</th>
+						<th>{{ 'Notiz'|trans }}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -107,12 +107,12 @@
 						</tr>
 					{% else %}
 						<tr>
-							<td colspan="7">Noch keine Füllungen dokumentiert.</td>
+							<td colspan="7">{{ 'Noch keine Füllungen dokumentiert.'|trans }}</td>
 						</tr>
 					{% endfor %}
 				</tbody>
 			</table>
 		</div>
-		<p class="small text-muted">Einträge können in dieser Oberfläche weder geändert noch gelöscht werden. Nur Atemluftfüllungen; Nitrox-/Sauerstofffüllungen sind nicht Bestandteil dieses Moduls.</p>
+		<p class="small text-muted">{{ 'Einträge können in dieser Oberfläche weder geändert noch gelöscht werden. Nur Atemluftfüllungen; Nitrox-/Sauerstofffüllungen sind nicht Bestandteil dieses Moduls.'|trans }}</p>
 	</main>
 {% endblock %}

@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerLoanController extends AbstractController
@@ -139,7 +140,7 @@ final class EquipmentManagerLoanController extends AbstractController
         }
         try {
             $workflow->cancel($bookingId, $clubId, $this->getUser()->getUserIdentifier(), $reason);
-            $this->addFlash('success', 'Reservierung #'.$bookingId.' wurde storniert.');
+            $this->addFlash('success', new TranslatableMessage('Reservierung #%id% wurde storniert.', ['%id%' => $bookingId]));
         } catch (\DomainException $e) {
             $this->addFlash('danger', $e->getMessage());
         }
@@ -160,9 +161,9 @@ final class EquipmentManagerLoanController extends AbstractController
         $this->equipmentScope->assertBooking($booking);
         try {
             $count = $service->issueAll($bookingId);
-            $this->addFlash('success', $count.' Gegenstaende ausgegeben.');
+            $this->addFlash('success', new TranslatableMessage('%count% Gegenstände ausgegeben.', ['%count%' => $count]));
         } catch (\DomainException $e) {
-            $this->addFlash('danger', $e->getMessage().' Es wurde kein weiterer Gegenstand ausgegeben.');
+            $this->addFlash('danger', new TranslatableMessage('%reason% Es wurde kein weiterer Gegenstand ausgegeben.', ['%reason%' => new TranslatableMessage($e->getMessage())]));
         }
         return $this->redirectToRoute('equipment_manager_loans', ['checkout' => $bookingId], Response::HTTP_SEE_OTHER);
     }

@@ -1295,7 +1295,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $crawler = $this->client->request('GET', '/equipment-manager/fill-billing');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $billing);
-            self::assertSelectorTextContains('body', $fillLabel);
+            self::assertSelectorTextContains('table', $fillLabel);
             $form = $crawler->filter('form[action$="/collect"]')->form();
             $params = $form->getPhpValues();
             $params['method'] = 'invalid';
@@ -1335,7 +1335,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $this->client->request('GET', '/equipment-manager/cashbook');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $journal);
-            self::assertSelectorTextContains('table', $fillLabel);
+            self::assertSelectorTextContains('body', $fillLabel);
             $this->client->request('GET', '/equipment-manager/cashbook/day');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $day);
@@ -1351,19 +1351,20 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $corrections);
             self::assertSelectorTextContains('table', $fillLabel);
-            $form = $crawler->filter('form[method="post"]')->form();
+            $form = $crawler->filter('main form[method="post"]')->form();
+            self::assertSame('http://localhost/equipment-manager/cashbook/corrections', $form->getUri());
             $params = $form->getPhpValues();
             $params['reference_id'] = '0';
             $params['reason'] = 'bad';
             $this->client->request('POST', $form->getUri(), $params);
-            self::assertResponseRedirects();
+            self::assertResponseRedirects('/equipment-manager/cashbook/corrections');
             $this->client->followRedirect();
             self::assertSelectorTextContains('.alert-danger', $correctionError);
 
             $crawler = $this->client->request('GET', '/equipment-manager/cashbook/payouts');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $payouts);
-            $form = $crawler->filter('form[method="post"]')->form();
+            $form = $crawler->filter('main form[method="post"]')->form();
             $params = $form->getPhpValues();
             $params['amount'] = 'invalid';
             $this->client->request('POST', $form->getUri(), $params);
@@ -1374,7 +1375,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $crawler = $this->client->request('GET', '/equipment-manager/cashbook/closing');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('h1', $closing);
-            $form = $crawler->filter('form[method="post"]')->form();
+            $form = $crawler->filter('main form[method="post"]')->form();
             $params = $form->getPhpValues();
             $params['opening'] = 'invalid';
             $params['counted'] = '0';
@@ -1382,6 +1383,92 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertResponseRedirects();
             $this->client->followRedirect();
             self::assertSelectorTextContains('.alert-danger', $closingError);
+        }
+    }
+
+    public function testCompressorLogUsesSelectedLanguageForFormsMessagesAndCsv(): void
+    {
+        $super = $this->admin('compressor-language-super', 'CompressorLanguageClub', User::ROLE_SUPER_ADMIN);
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Kompressor-Fülllogbuch', 'Füllung dokumentieren', 'Alle drei Sicherheitsbestätigungen sind erforderlich.', 'Füllung #', 'Flasche geprüft', 'ja'],
+            'en' => ['Compressor filling log', 'Record fill', 'All three safety confirmations are required.', 'Fill #', 'Cylinder checked', 'yes'],
+            'fr' => ['Journal de gonflage du compresseur', 'Documenter le gonflage', 'Les trois confirmations de sécurité sont requises.', 'Gonflage n°', 'Bouteille vérifiée', 'oui'],
+            'es' => ['Registro de cargas del compresor', 'Documentar carga', 'Se requieren las tres confirmaciones de seguridad.', 'Carga n.º', 'Botella comprobada', 'sí'],
+        ] as $locale => [$heading, $button, $error, $success, $csvHeading, $yes]) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            $crawler = $this->client->request('GET', '/equipment-manager/compressor-log');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('main h2', $button);
+            $form = $crawler->filter('main form')->form();
+            $params = $form->getPhpValues();
+            $params['cylinder'] = 'TEST';
+            $params['compressor'] = 'TEST';
+            $params['start_bar'] = '40';
+            $params['end_bar'] = '200';
+            $params['fee'] = '0';
+            unset($params['cylinder_check'], $params['air_quality_check'], $params['filter_check']);
+            $this->client->request('POST', '/equipment-manager/compressor-log', $params);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('.alert-danger', $error);
+            $params['cylinder_check'] = $params['air_quality_check'] = $params['filter_check'] = '1';
+            $this->client->request('POST', '/equipment-manager/compressor-log', $params);
+            self::assertResponseRedirects('/equipment-manager/compressor-log');
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-success', $success);
+            $this->client->request('GET', '/equipment-manager/compressor-log/export.csv');
+            self::assertResponseIsSuccessful();
+            $csv = $this->client->getInternalResponse()->getContent();
+            self::assertStringContainsString($csvHeading, $csv);
+            self::assertStringContainsString(';'.$yes.';'.$yes.';'.$yes.';', $csv);
+        }
+    }
+
+    public function testLoanWorkflowUsesSelectedLanguageForBookingAndMessages(): void
+    {
+        $super = $this->admin('loan-language-super', 'LoanLanguageClub', User::ROLE_SUPER_ADMIN);
+        $club = $super->getMember()->getClub();
+        $category = (new EquipmentCategory())->setClub($club)->setCode('loan-test')->setName('Test category');
+        $item = (new EquipmentItem())->setClub($club)->setCategory($category)->setInventoryNumber('LOAN-TEST')->setName('Test item')->setRentalFee('5.00');
+        $this->em->persist($category);
+        $this->em->persist($item);
+        $this->em->persist((new \App\Entity\EquipmentAssetRecord($item))->setApprovalRequired(true));
+        $this->em->flush();
+        $booking = (new EquipmentBooking())->setMember($super->getMember())->setStartsAt(new \DateTimeImmutable('-1 hour'))->setEndsAt(new \DateTimeImmutable('+2 days'));
+        $booking->addItem((new EquipmentBookingItem())->setEquipmentItem($item));
+        static::getContainer()->get(\App\Service\EquipmentBookingService::class)->saveNew($booking);
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Reservierung genehmigen', 'Voraussichtliche Leihgebühr', 'Alle 1 Gegenstände ausgeben', 'Bitte einen Stornogrund mit 5 bis 500 Zeichen eingeben.', 'Diese Buchung muss zuerst vom Gerätewart genehmigt werden.', 'Es wurde kein weiterer Gegenstand ausgegeben.'],
+            'en' => ['Approve reservation', 'Estimated rental fee', 'Issue all 1 items', 'Enter a cancellation reason of 5 to 500 characters.', 'This booking must first be approved by the equipment manager.', 'No additional items were issued.'],
+            'fr' => ['Approuver la réservation', 'Frais de location estimés', 'Remettre les 1 articles', 'Saisissez un motif d’annulation de 5 à 500 caractères.', 'Cette réservation doit d’abord être approuvée par le responsable.', 'Aucun article supplémentaire n’a été remis.'],
+            'es' => ['Aprobar reserva', 'Tarifa de alquiler estimada', 'Entregar los 1 artículos', 'Introduzca un motivo de cancelación de 5 a 500 caracteres.', 'Esta reserva debe ser aprobada primero por el responsable.', 'No se entregó ningún artículo adicional.'],
+        ] as $locale => [$approve, $fee, $issue, $cancelError, $approvalError, $noneIssued]) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            $crawler = $this->client->request('GET', '/equipment-manager/loans');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $approve);
+            self::assertSelectorTextContains('body', $fee);
+            self::assertSelectorTextContains('body', $issue);
+            $form = $crawler->filter('form[action$="/cancel"]')->form();
+            $params = $form->getPhpValues();
+            $params['reason'] = 'bad';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $crawler = $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $cancelError);
+            $form = $crawler->filter('form[action$="/issue-all"]')->form();
+            self::assertStringContainsString('confirm(', $crawler->filter('form[action$="/issue-all"]')->attr('onsubmit'));
+            $this->client->request('POST', $form->getUri(), $form->getPhpValues());
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $approvalError);
+            self::assertSelectorTextContains('.alert-danger', $noneIssued);
         }
     }
 

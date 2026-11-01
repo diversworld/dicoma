@@ -35,7 +35,9 @@
 						{% for i in 1..4 %}
 							<div class="col-md-3">
 								<label class="form-label">Flasche {{ i }}</label>
-								<input class="form-control mb-1" name="cylinder_{{ i }}" maxlength="100" placeholder="Kennung / Vereinsnummer">\n                                <label class="form-label small">Flaschengröße (Liter)</label>\n                                <input class="form-control mb-1" type="number" name="volume_{{ i }}" min="0.1" max="100" step="0.1" placeholder="z. B. 7, 10, 12, 15">
+								<input class="form-control mb-1" name="cylinder_{{ i }}" maxlength="100" placeholder="Kennung / Vereinsnummer">
+								<label class="form-label small">Flaschengröße (Liter)</label>
+								<input class="form-control mb-1" type="number" name="volume_{{ i }}" min="0.1" max="100" step="0.1" placeholder="z. B. 7, 10, 12, 15">
 								<select class="form-select" name="tank_{{ i }}">
 									<option value="">Externe Flasche / Kennung oben</option>
 									{% for tank in tanks %}

@@ -7,6 +7,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request,Response,StreamedResponse};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCompressorLogController extends AbstractController
 {
@@ -65,7 +67,7 @@ final class EquipmentManagerCompressorLogController extends AbstractController
                     $this->addFlash('danger', $e->getMessage());
                     return $this->redirectToRoute('equipment_manager_compressor_log', [], Response::HTTP_SEE_OTHER);
                 }
-                $this->addFlash('success','Füllung #'.$log->getId().' dokumentiert.');
+                $this->addFlash('success', new TranslatableMessage('Füllung #%id% dokumentiert.', ['%id%' => $log->getId()]));
                 return $this->redirectToRoute('equipment_manager_compressor_log',[],Response::HTTP_SEE_OTHER);
             }
         }
@@ -74,17 +76,19 @@ final class EquipmentManagerCompressorLogController extends AbstractController
         return $this->render('equipment_manager/compressor_log.html.twig',['logs'=>$logs,'tanks'=>$tanks]);
     }
     #[Route('/equipment-manager/compressor-log/export.csv', name:'equipment_manager_compressor_log_csv', methods:['GET'])]
-    public function csv(EntityManagerInterface $em): Response
+    public function csv(Request $request, EntityManagerInterface $em, TranslatorInterface $translator): Response
     {
         $club=$this->club($em);
         $logs=$em->getRepository(CompressorFillLog::class)->findBy(['club'=>$club],['filledAt'=>'ASC','id'=>'ASC']);
-        $response=new StreamedResponse(static function() use ($logs): void {
+        $locale=$request->getLocale();
+        $response=new StreamedResponse(static function() use ($logs, $translator, $locale): void {
+            $trans=static fn(string $message): string => $translator->trans($message, [], 'messages', $locale);
             $out=fopen('php://output','wb');
             fwrite($out,"\xEF\xBB\xBF");
-            fputcsv($out,['ID','Datum','Flasche','Kompressor','Gas','Anfangsdruck bar','Enddruck bar','Betriebsstunden','Filter','Flasche geprüft','Luftqualität bestätigt','Filter geprüft','Füller','Bemerkung'],';');
+            fputcsv($out,array_map($trans,['ID','Datum','Flasche','Kompressor','Gas','Anfangsdruck bar','Enddruck bar','Betriebsstunden','Filter','Flasche geprüft','Luftqualität bestätigt','Filter geprüft','Füller','Bemerkung']),';', escape: '\\');
             foreach ($logs as $log) {
                 $safe=static function(string $s): string { return preg_match('/^[=+@\-\t\r]/u',$s) ? "'".$s : $s; };
-                fputcsv($out,[$log->getId(),$log->getFilledAt()->format('Y-m-d H:i:s'),$safe($log->getCylinderIdentification()),$safe($log->getCompressorIdentification()),$log->getGasType(),$log->getStartPressureBar(),$log->getEndPressureBar(),$log->getOperatingHoursTenths()===null?'':number_format($log->getOperatingHoursTenths()/10,1,',',''),$safe($log->getFilterReference()??''),'ja','ja','ja',$safe((string)$log->getRecordedBy()),$safe($log->getNotes()??'')],';');
+                fputcsv($out,[$log->getId(),$log->getFilledAt()->format('Y-m-d H:i:s'),$safe($log->getCylinderIdentification()),$safe($log->getCompressorIdentification()),$log->getGasType(),$log->getStartPressureBar(),$log->getEndPressureBar(),$log->getOperatingHoursTenths()===null?'':number_format($log->getOperatingHoursTenths()/10,1,',',''),$safe($log->getFilterReference()??''),$trans('ja'),$trans('ja'),$trans('ja'),$safe((string)$log->getRecordedBy()),$safe($log->getNotes()??'')],';', escape: '\\');
             }
             fclose($out);
         });
