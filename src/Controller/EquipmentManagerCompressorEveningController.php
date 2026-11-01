@@ -9,11 +9,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCompressorEveningController extends AbstractController {
+ use EquipmentManagerClubTrait;
  private function club(EntityManagerInterface $em):Club {
-  $u=$this->getUser();$id=$u instanceof User?$u->getMember()?->getClub()?->getId():null;
-  $club=$id?$em->find(Club::class,$id):null;
-  if (!$club) throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-  return $club;
+  return $this->equipmentClub();
  }
  private function user():User {$u=$this->getUser();if (!$u instanceof User)throw $this->createAccessDeniedException();return $u;}
  private function hours(string $raw):?int {if (!preg_match('/^\d{1,6}([.,]\d)?$/D',$raw))return null;return (int)round((float)str_replace(',','.',$raw)*10);}
@@ -22,7 +20,7 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
   $club=$this->club($em);$action=(string)$request->request->get('action','');
   if ($request->isMethod('POST')) {
    $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
-   if (!$this->isCsrfTokenValid('compressor_evening_'.$action,(string)$request->request->get('_token','')))throw $this->createAccessDeniedException('CSRF');
+   if (!$this->isCsrfTokenValid('compressor_evening_'.$action.'_'.$club->getId(),(string)$request->request->get('_token','')))throw $this->createAccessDeniedException('CSRF');
    if ($action==='open') {
     $name=trim((string)$request->request->get('compressor',''));
     $hours=$this->hours(trim((string)$request->request->get('hours','')));

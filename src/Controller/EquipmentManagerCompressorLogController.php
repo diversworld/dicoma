@@ -10,13 +10,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCompressorLogController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function club(EntityManagerInterface $em): Club
     {
-        $user=$this->getUser();
-        $id=$user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        $club=$id ? $em->find(Club::class,$id) : null;
-        if (!$club) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
-        return $club;
+        return $this->equipmentClub();
     }
     #[Route('/equipment-manager/compressor-log', name:'equipment_manager_compressor_log', methods:['GET','POST'])]
     public function index(Request $request, EntityManagerInterface $em, \App\Service\EquipmentFillingService $filling): Response
@@ -24,7 +21,7 @@ final class EquipmentManagerCompressorLogController extends AbstractController
         $club=$this->club($em);
         if ($request->isMethod('POST')) {
             $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
-            if (!$this->isCsrfTokenValid('compressor_fill_create',(string)$request->request->get('_token',''))) {
+            if (!$this->isCsrfTokenValid('compressor_fill_create_'.$club->getId(),(string)$request->request->get('_token',''))) {
                 throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
             }
             $cylinder=trim((string)$request->request->get('cylinder',''));

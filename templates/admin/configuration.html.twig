@@ -1,44 +1,44 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section] }} – {{ ownClub.name }}{% endblock %}
+{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section]|trans }} – {{ ownClub.name }}{% endblock %}
 {% block main %}
-    <p><a href="{{ path('admin_settings') }}">Zurück zu den Einstellungen</a></p>
+    <p><a href="{{ path('admin_settings') }}">{{ 'Zurück zu den Einstellungen'|trans }}</a></p>
     {% if websiteForm %}
         {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}        
-        <p>Seitengröße für Startseite und Übersichten, jeweils zwischen 1 und 100 Karten.</p>
+        <p>{{ 'Seitengröße für Startseite und Übersichten, jeweils zwischen 1 und 100 Karten.'|trans }}</p>
         {{ form_start(websiteForm) }}
             {{ form_errors(websiteForm) }}
             {{ form_widget(websiteForm) }}
-            <button class="btn btn-primary">Anzeige speichern</button>
+            <button class="btn btn-primary">{{ 'Anzeige speichern'|trans }}</button>
         {{ form_end(websiteForm) }}
     {% endif %}
     {% if policyForm %}
         {% form_theme policyForm 'bootstrap_5_layout.html.twig' %}
-        <p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.</p>
+        <p>{{ 'Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.'|trans }}</p>
         {{ form_start(policyForm) }}
         {{ form_errors(policyForm) }}
         {{ form_widget(policyForm) }}
-        <button class="btn btn-primary">Vereinsregeln speichern</button>
+        <button class="btn btn-primary">{{ 'Vereinsregeln speichern'|trans }}</button>
         {{ form_end(policyForm) }}
     {% endif %}
     {% if classForm %}
         {% form_theme classForm 'bootstrap_5_layout.html.twig' %}
-        <h3>Definierte Beitragsklassen</h3>
-        <p>Änderungen gelten nur für zukünftige Forderungen; bestehende Forderungen bleiben unverändert.</p>
+        <h3>{{ 'Definierte Beitragsklassen'|trans }}</h3>
+        <p>{{ 'Änderungen gelten nur für zukünftige Forderungen; bestehende Forderungen bleiben unverändert.'|trans }}</p>
         {% for item in classForms %}
             {% form_theme item.form 'bootstrap_5_layout.html.twig' %}
             <details class="my-3" {% if item.form.vars.submitted %}open{% endif %}><summary>{{ item.class.name }}</summary>
                 {{ form_start(item.form) }}
                 {{ form_errors(item.form) }}
                 {{ form_widget(item.form) }}
-                <button class="btn btn-primary">Beitragsklasse speichern</button>
+                <button class="btn btn-primary">{{ 'Beitragsklasse speichern'|trans }}</button>
                 {{ form_end(item.form) }}
             </details>
         {% endfor %}
-        <h3>Beitragsklasse anlegen</h3>
+        <h3>{{ 'Beitragsklasse anlegen'|trans }}</h3>
         {{ form_start(classForm) }}
             {{ form_errors(classForm) }}
             {{ form_widget(classForm) }}
-            <button class="btn btn-primary">Beitragsklasse anlegen</button>
+            <button class="btn btn-primary">{{ 'Beitragsklasse anlegen'|trans }}</button>
         {{ form_end(classForm) }}
     {% endif %}
     {% if canBar %}
@@ -47,24 +47,24 @@
         {{ form_start(yearForm, {attr: {class: 'my-3'}}) }}
             {{ form_errors(yearForm) }}
             {{ form_widget(yearForm) }}
-            <button class="btn btn-secondary">Jahr auswählen</button>
+            <button class="btn btn-secondary">{{ 'Jahr auswählen'|trans }}</button>
         {{ form_end(yearForm) }}
         {{ form_start(barForm, {attr: {class: 'card card-body mb-3'}}) }}
-            <p>Regel für {{ year }}. {{ barPolicy ? 'Bereits konfiguriert.' : 'Noch nicht konfiguriert; es wird keine Pflicht automatisch angenommen.' }}</p>
+            <p>{{ 'Regel für %year%.'|trans({'%year%': year}) }} {{ (barPolicy ? 'Bereits konfiguriert.' : 'Noch nicht konfiguriert; es wird keine Pflicht automatisch angenommen.')|trans }}</p>
             {{ form_errors(barForm) }}
             <div class="row">
                 <div class="col-12 col-md-4">{{ form_row(barForm.minutes) }}</div>
                 <div class="col-12 col-md-8">{{ form_row(barForm.cash) }}</div>
                 <div class="col-12">{{ form_row(barForm.reason) }}</div>
             </div>
-            <button class="btn btn-primary">Jahresregel speichern</button>
+            <button class="btn btn-primary">{{ 'Jahresregel speichern'|trans }}</button>
         {{ form_end(barForm) }}
         {% if barPolicy %}
             <details>
-                <summary>Änderungshistorie</summary>
+                <summary>{{ 'Änderungshistorie'|trans }}</summary>
                 <ul>
                     {% for event in barPolicy.history %}
-                        <li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.minutes }} Minuten · Kasse {{ event.cash ? 'aktiviert' : 'deaktiviert' }} · {{ event.reason }}</li>
+                        <li>{{ event.at|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.minutes }} {{ 'Minuten'|trans }} · {{ 'Kasse'|trans }} {{ (event.cash ? 'aktiviert' : 'deaktiviert')|trans }} · {{ event.reason }}</li>
                     {% endfor %}
                 </ul>
             </details>

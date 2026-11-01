@@ -16,12 +16,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCashClosingController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function club(EntityManagerInterface $em): Club
     {
-        $user=$this->getUser();
-        $id=$user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if (!$id || !$club=$em->find(Club::class,$id)) {throw $this->createAccessDeniedException('Kein Verein zugeordnet.');}
-        return $club;
+        return $this->equipmentClub();
     }
     private function cents(string $value): ?int
     {

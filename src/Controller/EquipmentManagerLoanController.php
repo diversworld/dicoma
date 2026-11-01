@@ -21,14 +21,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerLoanController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function clubId(): int
     {
-        $user = $this->getUser();
-        $clubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if ($clubId === null) {
-            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-        }
-        return $clubId;
+        return $this->equipmentClubId();
     }
 
     #[Route('/equipment-manager/loans', name: 'equipment_manager_loans', methods: ['GET'])]
@@ -77,6 +73,9 @@ final class EquipmentManagerLoanController extends AbstractController
         if ($ids !== []) {
             $bookings = $qb->andWhere('b.id IN (:ids)')->setParameter('ids', $ids)->getQuery()->getResult();
         }
+        foreach ($bookings as $booking) {
+            $this->equipmentScope->assertBooking($booking);
+        }
         if ($directCheckout !== null && $bookings === []) {
             throw $this->createNotFoundException('Booking not found.');
         }
@@ -124,12 +123,15 @@ final class EquipmentManagerLoanController extends AbstractController
     }
 
     #[Route('/equipment-manager/loans/{bookingId}/cancel', name: 'equipment_manager_loan_cancel', methods: ['POST'], requirements: ['bookingId' => '\d+'])]
-    public function cancel(int $bookingId, Request $request, EquipmentBookingWorkflow $workflow): Response
+    public function cancel(int $bookingId, Request $request, EquipmentBookingWorkflow $workflow, EntityManagerInterface $em): Response
     {
         $clubId = $this->clubId();
         if (!$this->isCsrfTokenValid('loan_cancel_'.$bookingId, (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
         }
+        $booking = $em->find(EquipmentBooking::class, $bookingId);
+        if (!$booking) { throw $this->createNotFoundException('Buchung nicht gefunden.'); }
+        $this->equipmentScope->assertBooking($booking);
         $reason = trim((string) $request->request->get('reason', ''));
         if (mb_strlen($reason) < 5 || mb_strlen($reason) > 500) {
             $this->addFlash('danger', 'Bitte einen Stornogrund mit 5 bis 500 Zeichen eingeben.');
@@ -155,6 +157,7 @@ final class EquipmentManagerLoanController extends AbstractController
         if (!$booking || $booking->getMember()?->getClub()?->getId() !== $this->clubId()) {
             throw $this->createNotFoundException('Buchung nicht gefunden.');
         }
+        $this->equipmentScope->assertBooking($booking);
         try {
             $count = $service->issueAll($bookingId);
             $this->addFlash('success', $count.' Gegenstaende ausgegeben.');
@@ -183,9 +186,8 @@ final class EquipmentManagerLoanController extends AbstractController
             throw $this->createNotFoundException('Buchung oder Position nicht gefunden.');
         }
         $asset = $line->getEquipmentItem() ?? $line->getRegulator() ?? $line->getTank();
-        if (!$asset || $asset->getClub()?->getId() !== $clubId) {
-            throw $this->createAccessDeniedException('Gegenstand gehört nicht zu deinem Verein.');
-        }
+        $this->equipmentScope->assertBooking($booking);
+        $this->equipmentScope->assertAsset($asset);
         $condition = null;
         $notes = null;
         if ($operation === 'return') {

@@ -19,13 +19,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerTuvWorkflowController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function clubId(): int
     {
-        $user = $this->getUser();
-        if (!$user instanceof User || ($club = $user->getMember()?->getClub()) === null || $club->getId() === null) {
-            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-        }
-        return (int) $club->getId();
+        return $this->equipmentClubId();
     }
 
     private function ownedBooking(EntityManagerInterface $em, int $id, int $clubId): MemberTankCheckBooking
@@ -36,9 +33,9 @@ final class EquipmentManagerTuvWorkflowController extends AbstractController
         }
         $belongs = $em->createQueryBuilder()->select('b.id')
             ->from(MemberTankCheckBooking::class, 'b')
-            ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')
+            ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')->leftJoin('b.memberTank', 'mt')
             ->where('b.id = :id')
-            ->andWhere('(IDENTITY(ct.club) = :clubId OR IDENTITY(m.club) = :clubId)')
+            ->andWhere('((ct.id IS NOT NULL AND IDENTITY(ct.club) = :clubId AND b.member IS NULL AND b.memberTank IS NULL) OR (ct.id IS NULL AND IDENTITY(m.club) = :clubId AND IDENTITY(mt.member) = m.id))')
             ->setParameter('id', $id)->setParameter('clubId', $clubId)
             ->getQuery()->getOneOrNullResult();
         if ($belongs === null) {
@@ -52,7 +49,7 @@ final class EquipmentManagerTuvWorkflowController extends AbstractController
     {
         $this->clubId();
         if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('tuv_plan', (string) $request->request->get('_token', ''))) {
+            if (!$this->isCsrfTokenValid('tuv_plan_'.$this->equipmentClubId(), (string) $request->request->get('_token', ''))) {
                 throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
             }
             $rawDate = $request->request->get('date');
@@ -87,8 +84,8 @@ final class EquipmentManagerTuvWorkflowController extends AbstractController
             if (!$booking) { throw $this->createNotFoundException(); }
             // GET scope check without acquiring a pessimistic lock.
             $scope = $em->createQueryBuilder()->select('b.id')->from(MemberTankCheckBooking::class, 'b')
-                ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')
-                ->where('b.id = :id')->andWhere('(IDENTITY(ct.club) = :clubId OR IDENTITY(m.club) = :clubId)')
+                ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')->leftJoin('b.memberTank', 'mt')
+                ->where('b.id = :id')->andWhere('((ct.id IS NOT NULL AND IDENTITY(ct.club) = :clubId AND b.member IS NULL AND b.memberTank IS NULL) OR (ct.id IS NULL AND IDENTITY(m.club) = :clubId AND IDENTITY(mt.member) = m.id))')
                 ->setParameter('id', $id)->setParameter('clubId', $clubId)->getQuery()->getOneOrNullResult();
             if (!$scope) { throw $this->createAccessDeniedException(); }
             $existing = $em->getRepository(MemberTankCheckResult::class)->findOneBy(['booking' => $booking]);

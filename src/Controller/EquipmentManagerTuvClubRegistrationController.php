@@ -19,13 +19,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerTuvClubRegistrationController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/tuv/{id}/club-tanks', name: 'equipment_manager_tuv_club_register', methods: ['GET', 'POST'], requirements: ['id' => '\\d+'])]
     public function register(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        if (!$user instanceof User || null === ($club = $user->getMember()?->getClub()) || null === $club->getId()) {
+        if (!$user instanceof User) {
             throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
         }
+        $club = $this->equipmentClub();
         $check = $em->find(TankCheck::class, $id);
         if (!$check instanceof TankCheck || !$check->isPublished() || $check->getCheckDate() === null || $check->getCheckDate() < new \DateTimeImmutable('today')) {
             throw $this->createNotFoundException('Dieser Prüftermin ist nicht zur Anmeldung verfügbar.');

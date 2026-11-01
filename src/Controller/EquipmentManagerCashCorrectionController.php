@@ -15,12 +15,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCashCorrectionController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/cashbook/corrections', name: 'equipment_manager_cash_corrections', methods: ['GET','POST'])]
     public function index(Request $request, EntityManagerInterface $em, EquipmentCashGuard $guard): Response
     {
         $user=$this->getUser();
-        $clubId=$user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if (!$clubId) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
+        $clubId=$this->equipmentClubId();
         $db=$em->getConnection();
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('cash_correction_'.$clubId, (string)$request->request->get('_token',''))) {throw $this->createAccessDeniedException('CSRF-Prüfung fehlgeschlagen.');}

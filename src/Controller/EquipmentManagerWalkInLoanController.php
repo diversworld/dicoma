@@ -15,17 +15,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerWalkInLoanController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/loans/direct', name: 'equipment_manager_loans_direct', methods: ['GET','POST'])]
     public function direct(Request $request, EntityManagerInterface $em, EquipmentBookingService $bookingService, EquipmentAssetAvailability $availability): Response
     {
-        $user = $this->getUser();
-        $club = $user instanceof User ? $user->getMember()?->getClub() : null;
-        if (!$club || !$club->getId()) {
-            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-        }
+        $club = $this->equipmentClub();
 
         if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('equipment_manager_walkin', (string) $request->request->get('_token', ''))) {
+            if (!$this->isCsrfTokenValid('equipment_manager_walkin_'.$club->getId(), (string) $request->request->get('_token', ''))) {
                 throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
             }
             $memberId = filter_var($request->request->get('member_id'), FILTER_VALIDATE_INT);

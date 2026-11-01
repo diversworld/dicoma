@@ -17,6 +17,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentInspectionController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/tanks/{id}/inspection', name: 'equipment_manager_tank_inspection', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function show(int $id, EntityManagerInterface $em): Response
     {
@@ -54,10 +55,6 @@ final class EquipmentInspectionController extends AbstractController
 
     private function clubId(): int
     {
-        $user = $this->getUser();
-        if (!$user instanceof User || $user->getMember()?->getClub()?->getId() === null) {
-            throw $this->createAccessDeniedException('Keine gültige Vereinszuordnung.');
-        }
-        return $user->getMember()->getClub()->getId();
+        return $this->equipmentClubId();
     }
 }

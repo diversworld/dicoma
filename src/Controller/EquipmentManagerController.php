@@ -21,19 +21,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private const PAGE_SIZE = 25;
 
     private function clubId(): int
     {
-        $user = $this->getUser();
-        if (!$user instanceof User) {
-            throw $this->createAccessDeniedException('Anmeldung erforderlich.');
-        }
-        $id = $user->getMember()?->getClub()?->getId();
-        if ($id === null) {
-            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-        }
-        return $id;
+        return $this->equipmentClubId();
     }
 
     private function scopedTank(EntityManagerInterface $em, int $id): Tank
@@ -154,7 +147,7 @@ final class EquipmentManagerController extends AbstractController
     #[Route('/equipment-manager/tanks', name: 'equipment_manager_tanks', methods: ['GET'])]
     public function tanks(Request $request, EntityManagerInterface $em): Response
     {
-        $club = $this->getUser()->getMember()->getClub();
+        $club = $this->equipmentClub();
         $this->clubId();
 
         $filter = $request->query->get('filter', 'all');

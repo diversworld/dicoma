@@ -11,7 +11,7 @@
         <div class="p-3">
             {{ form_start(clubSelection) }}
                 {{ form_row(clubSelection.club) }}
-                <button class="btn btn-secondary btn-sm" type="submit">Verein wechseln</button>
+                <button class="btn btn-secondary btn-sm" type="submit">{{ 'Verein wechseln'|trans }}</button>
             {{ form_end(clubSelection) }}
         </div>
     {% endif %}
@@ -19,9 +19,9 @@
         <twig:ea:ActionMenu:ActionList:Divider />
         <form method="post" action="{{ path('app_logout') }}" class="dicoma-admin-logout-form">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-            <button type="submit" class="dicoma-admin-logout" aria-label="Abmelden">
+            <button type="submit" class="dicoma-admin-logout" aria-label="{{ 'Abmelden'|trans }}">
                 <i class="fa fa-right-from-bracket" aria-hidden="true"></i>
-                <span>Abmelden</span>
+                <span>{{ 'Abmelden'|trans }}</span>
             </button>
         </form>
     {% endif %}
@@ -30,7 +30,7 @@
 {% block header_custom_menu %}
     {% if is_granted('ROLE_ADMIN') %}
         <span class="me-3" data-sport-club-context>
-            Verein: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt' }} <small>(Filterung noch nicht backendweit)</small>
+            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>
         </span>
     {% endif %}
     {{ parent() }}
@@ -40,7 +40,7 @@
     {{ parent() }}
     {% if is_granted('ROLE_ADMIN') %}
         <span class="ms-2" data-sport-club-context>
-            Verein: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt' }} <small>(Filterung noch nicht backendweit)</small>
+            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>
         </span>
     {% endif %}
 {% endblock responsive_header_logo %}

@@ -122,10 +122,12 @@ Backup und Schemafreigabe durchführen.
 
 Die Sportarten-Einstellungen unter `/admin/settings/sports`, die
 Kurs-Spartenprüfung, das Ausbildungsportal, die Mitglieder-,
-Mitgliedsqualifikations-, Sportzuordnungs-, Kurs-, Kurstermin-, Teilnehmer-
+Mitgliedsqualifikations-, Sportzuordnungs-, Kurs-, Kurstermin-, Teilnehmer-,
+Ausbildungsnachweis-
 und Inventargegenstands-CRUDs, Mannschafts- und Mannschaftsmitglieds-CRUDs,
 die Ausrüstungskategorien, Hersteller, Unterarten, Größen, Modelle und
-Kategorie-Merkmale sowie die EasyAdmin-Einzel- und Sammelreservierungen,
+Kategorie-Merkmale, die technischen Atemreglerdaten zu Inventargegenständen
+sowie die EasyAdmin-Einzel- und Sammelreservierungen,
 das Wettbewerbsportal, den Kurskalender und den gemeinsamen Kalender sowie
 die Mitgliedschafts-, Veranstaltungs- und Dateiverwaltung
 sowie die oben genannten Einstellungen und die Verwaltungsübersicht verwenden
@@ -136,10 +138,14 @@ zuordnen. Qualifikationen vereinsloser Mitglieder werden nach deren
 Vereinszuordnung in der Qualifikationsverwaltung sichtbar; der gemeinsame
 Qualifikationskatalog bleibt unverändert. Sportzuordnungen mit fehlenden
 oder widersprüchlichen Vereinsbezügen werden weder automatisch verändert
-noch in der regulären Vereinsliste angezeigt. Andere Backendbereiche,
-insbesondere weitere Gerätewart- und Verleihwege, technische Ausrüstungsdaten
-sowie weitere Kalender- und Sportaktionen, sind noch nicht durchgehend auf
-diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
+noch in der regulären Vereinsliste angezeigt. Im Gerätewartportal verwenden
+Superadmins den ausgewählten Verein, andere Gerätewarte ihren Mitgliedsverein.
+Vereinsgebundene Formulare müssen nach einem Vereinswechsel neu geöffnet
+werden. TÜV-Termine bleiben global; widersprüchliche Flaschenanmeldungen
+werden im Gerätewartportal ausgeblendet und nicht bearbeitet.
+Andere Backendbereiche, insbesondere die separaten EasyAdmin-CRUDs für
+Flaschen und Atemregler sowie weitere Kalender- und Sportaktionen, sind
+noch nicht durchgehend auf diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
 automatisch geändert und betroffene Detailansichten oder Aktionen abgelehnt.
 TÜV-Benachrichtigungsvorlagen
 und die Übersicht der Vertretungsnachweise sind weiterhin systemweit.

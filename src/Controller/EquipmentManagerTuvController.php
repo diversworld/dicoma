@@ -21,14 +21,16 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerTuvController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/tuv', name: 'equipment_manager_tuv', methods: ['GET'])]
     public function index(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        if (!$user instanceof User || null === ($club = $user->getMember()?->getClub()) || null === $club->getId()) {
+        if (!$user instanceof User) {
             throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
         }
-        $clubId = $club->getId();
+        $club = $this->equipmentClub();
+        $clubId = $this->equipmentClubId();
         $status = $request->query->get('status', 'all');
         $allowed = ['all', 'requested', 'received', 'sent', 'returned', 'completed', 'cancelled'];
         if (!is_string($status) || !in_array($status, $allowed, true)) {
@@ -44,7 +46,7 @@ final class EquipmentManagerTuvController extends AbstractController
             ->leftJoin('b.memberTank', 'mt')
             ->leftJoin('b.clubTank', 'ct')
             ->leftJoin('b.member', 'm')
-            ->where('(IDENTITY(ct.club) = :clubId OR IDENTITY(m.club) = :clubId)')
+            ->where('((ct.id IS NOT NULL AND IDENTITY(ct.club) = :clubId AND b.member IS NULL AND b.memberTank IS NULL) OR (ct.id IS NULL AND IDENTITY(m.club) = :clubId AND IDENTITY(mt.member) = m.id))')
             ->setParameter('clubId', $clubId)
             ->orderBy('tc.checkDate', 'DESC')
             ->addOrderBy('b.id', 'DESC')
@@ -108,10 +110,10 @@ final class EquipmentManagerTuvController extends AbstractController
             throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
         }
         $user = $this->getUser();
-        if (!$user instanceof User || null === ($club = $user->getMember()?->getClub()) || null === $club->getId()) {
+        if (!$user instanceof User) {
             throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
         }
-        $clubId = $club->getId();
+        $clubId = $this->equipmentClubId();
         $em->wrapInTransaction(function (EntityManagerInterface $em) use ($id, $clubId, $user): void {
             $booking = $em->find(MemberTankCheckBooking::class, $id, LockMode::PESSIMISTIC_WRITE);
             if (!$booking instanceof MemberTankCheckBooking) {
@@ -119,9 +121,9 @@ final class EquipmentManagerTuvController extends AbstractController
             }
             $belongs = $em->createQueryBuilder()
                 ->select('b.id')->from(MemberTankCheckBooking::class, 'b')
-                ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')
+                ->leftJoin('b.clubTank', 'ct')->leftJoin('b.member', 'm')->leftJoin('b.memberTank', 'mt')
                 ->where('b.id = :id')
-                ->andWhere('(IDENTITY(ct.club) = :clubId OR IDENTITY(m.club) = :clubId)')
+                ->andWhere('((ct.id IS NOT NULL AND IDENTITY(ct.club) = :clubId AND b.member IS NULL AND b.memberTank IS NULL) OR (ct.id IS NULL AND IDENTITY(m.club) = :clubId AND IDENTITY(mt.member) = m.id))')
                 ->setParameter('id', $id)->setParameter('clubId', $clubId)
                 ->getQuery()->getOneOrNullResult();
             if ($belongs === null) {

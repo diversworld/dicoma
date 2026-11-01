@@ -25,7 +25,7 @@
 				<div class="row">
 					<input type="hidden" name="action" value="batch">
 					<input type="hidden" name="session_id" value="{{ selected.id }}">
-					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_batch') }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_batch_' ~ equipment_manager_club().id) }}">
 					<div class="col-md-4">
 						<label class="form-label">Gemeinsamer Enddruck (bar)</label>
 						<input class="form-control" type="number" name="pressure" value="210" min="1" max="350" required>
@@ -62,7 +62,7 @@
 				<form method="post" onsubmit="return confirm('Füllabend abschließen?')">
 					<input type="hidden" name="action" value="close">
 					<input type="hidden" name="session_id" value="{{ selected.id }}">
-					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_close') }}">
+					<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_close_' ~ equipment_manager_club().id) }}">
 					<label>Abschließende Betriebsstunden <input name="closing_hours" inputmode="decimal" required></label>
 					<button class="btn btn-outline-secondary">Füllabend abschließen</button>
 				</form>
@@ -109,7 +109,7 @@
 		<p class="small text-muted">Voraussetzung: gültiger Filterwechsel mit nächstem Fälligkeitsdatum im Wartungsbuch. Betriebsanleitung und betriebliche Prüfintervalle beachten.</p>
 		<form method="post" class="row g-3" onsubmit="return confirm('Anlagenkontrolle abgeschlossen und Füllabend freigeben?')">
 			<input type="hidden" name="action" value="open">
-			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_open') }}">
+			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_open_' ~ equipment_manager_club().id) }}">
 			<div class="col-md-6">
 				<label class="form-label">Kompressor / Anlagenkennung</label>
 				<input class="form-control" name="compressor" maxlength="100" required>
@@ -136,7 +136,7 @@
 		<p class="small text-muted">Filterwechsel nur bei tatsächlicher Durchführung dokumentieren. Jährliches Intervall ist ein Vereinsrichtwert; Hersteller- und Betriebsstundenvorgaben gehen vor. Luftanalyse nur bei tatsächlicher Messung erfassen.</p>
 		<form method="post" class="row g-2">
 			<input type="hidden" name="action" value="maintenance">
-			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_maintenance') }}">
+			<input type="hidden" name="_token" value="{{ csrf_token('compressor_evening_maintenance_' ~ equipment_manager_club().id) }}">
 			<div class="col-md-4">
 				<label class="form-label">Kompressor</label>
 				<input class="form-control" name="compressor" required maxlength="100">

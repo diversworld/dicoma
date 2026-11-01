@@ -18,6 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentFillBillingController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/fill-billing', name: 'equipment_manager_fill_billing', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
     {
@@ -46,9 +47,6 @@ final class EquipmentFillBillingController extends AbstractController
 
     private function clubId(): int
     {
-        $user = $this->getUser();
-        $id = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if (!$id) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
-        return $id;
+        return $this->equipmentClubId();
     }
 }

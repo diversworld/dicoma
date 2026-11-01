@@ -32,12 +32,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentInventoryController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function clubId(): int
     {
-        $user = $this->getUser();
-        $id = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if (!$id) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
-        return $id;
+        return $this->equipmentClubId();
     }
 
     #[Route('/equipment-manager/inventory', name: 'equipment_manager_inventory', methods: ['GET'])]

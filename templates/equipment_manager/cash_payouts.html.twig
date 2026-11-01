@@ -11,7 +11,7 @@
 <div class="alert alert-warning">Der rechnerische Bestand enthält nur in DICOMA erfasste Bar-Einnahmen und Auszahlungen. Ein vorhandener Anfangsbestand oder frühere externe Kassenbewegungen sind <strong>nicht</strong> berücksichtigt. Vor einer Auszahlung muss der Gerätewart zusätzlich das tatsächlich vorhandene Bargeld prüfen.</div>
 <h2 class="h4">Barauszahlung erfassen</h2>
 <form method="post" action="{{ path('equipment_manager_cash_payout_create') }}" onsubmit="return confirm('Bargeld wurde tatsächlich ausgezahlt und soll verbindlich gebucht werden?')" class="card card-body mb-4">
-<input type="hidden" name="_token" value="{{ csrf_token('cash_payout_' ~ app.user.member.club.id) }}">
+<input type="hidden" name="_token" value="{{ csrf_token('cash_payout_' ~ equipment_manager_club().id) }}">
 <div class="row g-3"><div class="col-md-6"><label class="form-label" for="category">Verwendungszweck</label><select class="form-select" name="category" id="category" required><option value="certification">Brevetierung (Ausbilder)</option><option value="training_material">Ausbildungsmaterial (Ausbilder)</option><option value="equipment_material">Material / Ersatzteile (Gerätewart)</option></select></div>
 <div class="col-md-6"><label class="form-label" for="recipient">Empfänger</label><input class="form-control" name="recipient" id="recipient" maxlength="180" required></div>
 <div class="col-md-4"><label class="form-label" for="amount">Ausgezahlter Betrag in EUR</label><input class="form-control" name="amount" id="amount" inputmode="decimal" placeholder="25,00" required></div>

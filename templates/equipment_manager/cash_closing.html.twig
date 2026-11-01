@@ -24,7 +24,7 @@
 {% if later %}<div class="alert alert-warning">Für diesen Verein besteht bereits ein späterer Tagesabschluss. Ein rückwirkender Abschluss ist nicht möglich.</div>{% endif %}
 <p><strong>Bareinnahmen:</strong> {{ (movements.in/100)|number_format(2,',','.') }} € · <strong>Barauszahlungen:</strong> {{ (movements.out/100)|number_format(2,',','.') }} € · <strong>Bewegungen:</strong> {{ movements.count }}</p>
 <form method="post" class="card card-body" onsubmit="return confirm('Tagesabschluss unwiderruflich speichern?')">
-<input type="hidden" name="_token" value="{{ csrf_token('cash_close_' ~ app.user.member.club.id ~ '_' ~ date) }}"><input type="hidden" name="date" value="{{ date }}">
+<input type="hidden" name="_token" value="{{ csrf_token('cash_close_' ~ equipment_manager_club().id ~ '_' ~ date) }}"><input type="hidden" name="date" value="{{ date }}">
 {% if opening is null %}<div class="mb-3"><label class="form-label" for="opening">Erster dokumentierter Anfangsbestand (€)</label><input class="form-control" id="opening" name="opening" inputmode="decimal" required placeholder="0,00"><small>Den tatsächlichen Bestand vor den Tagesbewegungen eintragen. Die erstmalige Erfassung ist zu begründen.</small></div>
 {% else %}<p>Übernommener Anfangsbestand aus letztem Abschluss: <strong>{{ (opening/100)|number_format(2,',','.') }} €</strong></p>{% endif %}
 <div class="mb-3"><label class="form-label" for="counted">Gezählter Bargeldbestand (€)</label><input class="form-control" id="counted" name="counted" inputmode="decimal" required placeholder="0,00"></div>

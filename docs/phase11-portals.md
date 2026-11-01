@@ -54,9 +54,10 @@ Bezeichnung, Kurzbezeichnung, Beschreibung und Sortierung bearbeiten.
 Superadmins wählen den Verein im Benutzermenü; die Auswahl gilt derzeit
 für die Sportarten-Einstellungen, Mitglieder-, Mitgliedsqualifikations-,
 Sportzuordnungs-, Mannschafts-, Mannschaftsmitglieds-, Kurs-, Kurstermin-,
-Teilnehmer- und Inventargegenstands-CRUDs, die Kategorien, Hersteller,
+Teilnehmer-, Ausbildungsnachweis- und Inventargegenstands-CRUDs, die Kategorien, Hersteller,
 Unterarten, Größen, Modelle und Kategorie-Merkmale der Ausrüstung, die
-EasyAdmin-Ansichten für Einzel- und Sammelreservierungen,
+EasyAdmin-Ansichten für Einzel- und Sammelreservierungen und die technischen
+Atemreglerdaten zu Inventargegenständen,
 die Mitgliedschaftsverwaltung, die Veranstaltungs- und Dateiverwaltung,
 die oben genannten Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung
 sowie die Kennzahlen und Listen der Verwaltungsübersicht. Vereinslose
@@ -69,11 +70,17 @@ Wettbewerbsportal, Kurskalender und gemeinsamen Kalender gilt für Superadmins e
 ausgewählte Verein; bestehende vereinsübergreifende Wettbewerbsteilnahmen
 anderer berechtigter Rollen bleiben unverändert. Sportzuordnungen mit
 fehlenden oder widersprüchlichen Vereinszuordnungen werden nicht automatisch
-verändert und erscheinen nicht in der regulären Vereinsliste. Die Kopfzeile
+verändert und erscheinen nicht in der regulären Vereinsliste.
+Im Gerätewartportal gilt für Superadmins der ausgewählte, für andere
+Gerätewarte ihr eigener Mitgliedsverein. Alte Direktausleih-, Kompressor-,
+Kassen- und TÜV-Planungsformulare sind nach einem Vereinswechsel erneut
+zu öffnen. TÜV-Termine bleiben global; inkonsistente Anmeldungen werden
+in der Gerätewartansicht ausgeblendet und deren Bearbeitung abgelehnt.
+Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
-insbesondere weitere Gerätewart- und Verleihwege, technische Ausrüstungsdaten
-sowie weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf
-diesen Kontext umgestellt. Widersprüchliche Ausrüstungs- und
+insbesondere die separaten EasyAdmin-CRUDs für Flaschen und Atemregler sowie
+weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf diesen
+Kontext umgestellt. Widersprüchliche Ausrüstungs- und
 Mannschaftszuordnungen werden nicht automatisch korrigiert; betroffene
 Detailansichten und Aktionen werden abgelehnt. TÜV-Benachrichtigungsvorlagen
 und die Übersicht der Vertretungsnachweise gelten weiterhin systemweit

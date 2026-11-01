@@ -7,6 +7,7 @@ namespace App\Security\Voter;
 use App\Entity\Schedule;
 use App\Entity\User;
 use App\Enum\CourseStatus;
+use App\Service\AdminClubContext;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
@@ -15,7 +16,10 @@ final class TrainingAssessmentVoter extends Voter
 {
     public const ASSESS = 'TRAINING_ASSESS';
 
-    public function __construct(private readonly AuthorizationCheckerInterface $authorizationChecker) {}
+    public function __construct(
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
+        private readonly AdminClubContext $clubContext,
+    ) {}
 
     protected function supports(string $attribute, mixed $subject): bool
     {
@@ -34,7 +38,11 @@ final class TrainingAssessmentVoter extends Voter
         // Administrators may assess all non-completed courses.
         $user = $token->getUser();
         if (!$user instanceof User) { return false; }
-        if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) { return true; }
+        if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
+            if (!$this->clubContext->isBackendRequest()) { return true; }
+            $clubId = $this->clubContext->getClub()?->getId();
+            return $clubId !== null && $course->getClub()?->getId() === $clubId;
+        }
         $clubId = $user->getMember()?->getClub()?->getId();
         if ($clubId === null || $course->getClub()?->getId() !== $clubId) { return false; }
         if ($this->authorizationChecker->isGranted('ROLE_ADMIN')

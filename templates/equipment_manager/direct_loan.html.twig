@@ -18,7 +18,7 @@
 	
 	<p>Der Gerätewart wählt ein Mitglied und verfügbare Gegenstände aus. Die Ausgabe und die Zahlung werden anschließend getrennt bestätigt. Nicht verfügbare Artikel sind ausgeblendet. Der Leihbeginn ist heute.</p>
 	<form method="post" id="reservation-form">
-		<input type="hidden" name="_token" value="{{ csrf_token('equipment_manager_walkin') }}">
+		<input type="hidden" name="_token" value="{{ csrf_token('equipment_manager_walkin_' ~ equipment_manager_club().id) }}">
 		<div class="row g-3 mb-4">
             <div class="col-md-6"><label class="form-label" for="member_id">Mitglied *</label><select class="form-select" id="member_id" name="member_id" required><option value="">Bitte wählen</option>{% for m in members %}<option value="{{ m.id }}">{{ m.memberNumber }} – {{ m.fullName }}</option>{% endfor %}</select></div>
         </div>

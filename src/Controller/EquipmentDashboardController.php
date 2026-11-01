@@ -16,6 +16,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentDashboardController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager', name: 'equipment_manager_dashboard', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
     {
@@ -23,11 +24,8 @@ final class EquipmentDashboardController extends AbstractController
         if (!$user instanceof User) {
             throw $this->createAccessDeniedException('Anmeldung erforderlich.');
         }
-        $club = $user->getMember()?->getClub();
-        if ($club === null || $club->getId() === null) {
-            throw $this->createAccessDeniedException('Kein Verein zugeordnet.');
-        }
-        $clubId = $club->getId();
+        $club = $this->equipmentClub();
+        $clubId = $this->equipmentClubId();
         $today = new \DateTimeImmutable('today');
         $until = $today->modify('+30 days');
 

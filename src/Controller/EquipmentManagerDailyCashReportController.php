@@ -18,6 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerDailyCashReportController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/cashbook/day', name: 'equipment_manager_cashbook_day', methods: ['GET'])]
     public function day(Request $request, EntityManagerInterface $em): Response
     {
@@ -56,9 +57,7 @@ final class EquipmentManagerDailyCashReportController extends AbstractController
 
     private function data(Request $request, EntityManagerInterface $em): array
     {
-        $user = $this->getUser();
-        $clubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
-        if (!$clubId) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
+        $clubId = $this->equipmentClubId();
         $date = (string) $request->query->get('date', date('Y-m-d'));
         $start = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (!$start || $start->format('Y-m-d') !== $date) { throw $this->createNotFoundException('Ungültiges Datum.'); }

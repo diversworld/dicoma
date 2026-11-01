@@ -20,11 +20,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCashbookController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     private function clubId(): int
     {
-        $u=$this->getUser(); $id=$u instanceof User ? $u->getMember()?->getClub()?->getId() : null;
-        if (!$id) { throw $this->createAccessDeniedException('Kein Verein zugeordnet.'); }
-        return $id;
+        return $this->equipmentClubId();
     }
     #[Route('/equipment-manager/cashbook', name: 'equipment_manager_cashbook', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
@@ -91,6 +90,7 @@ final class EquipmentManagerCashbookController extends AbstractController
     {
         $clubId=$this->clubId(); $booking=$em->getRepository(EquipmentBooking::class)->find($id);
         if (!$booking || $booking->getMember()?->getClub()?->getId() !== $clubId) { throw $this->createNotFoundException(); }
+        $this->equipmentScope->assertBooking($booking);
         if (!$this->isCsrfTokenValid('rental_collect_'.$id,(string)$request->request->get('_token',''))) { throw $this->createAccessDeniedException('Ungueltiger CSRF-Token.'); }
         if (!in_array($booking->getStatus(),['partially_issued','issued','partially_returned','returned'],true)) {
             $this->addFlash('danger','Leihgebuehr erst nach tatsaechlicher Ausgabe erfassen.');

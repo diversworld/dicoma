@@ -17,14 +17,16 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentBookingWorkflowController extends AbstractController
 {
+    use EquipmentManagerClubTrait;
     #[Route('/equipment-manager/loans/{id}/{operation}', name: 'equipment_manager_loan_workflow', requirements: ['id' => '\d+', 'operation' => 'approve|close|confirm-fee'], methods: ['POST'])]
     public function change(int $id, string $operation, Request $request, EntityManagerInterface $em, EquipmentBookingWorkflow $workflow): Response
     {
         $user = $this->getUser();
-        $clubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
+        $clubId = $this->equipmentClubId();
         if (!$clubId || !$this->isCsrfTokenValid('loan_workflow_'.$operation.'_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
         $booking = $em->find(EquipmentBooking::class, $id);
         if (!$booking || $booking->getMember()?->getClub()?->getId() !== $clubId) { throw $this->createNotFoundException(); }
+        $this->equipmentScope->assertBooking($booking);
         try {
             match ($operation) {
                 'approve' => $workflow->approve($id, $clubId, $user->getUserIdentifier()),

@@ -8,3 +8,6 @@
         </div>
     <!--</div>-->
 </header><!-- header close -->
+{% if app.request.attributes.get('_route') starts with 'equipment_manager_' %}
+    <div class="container py-2"><strong>{{ 'Verein'|trans }}:</strong> {{ equipment_manager_club().name }}</div>
+{% endif %}

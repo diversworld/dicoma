@@ -18,7 +18,7 @@
 		<section class="card card-body mb-4">
 			<h2 class="h5">Füllung dokumentieren</h2>
 			<form method="post" class="row g-3" onsubmit="return confirm('Füllung verbindlich ins Logbuch eintragen?')">
-				<input type="hidden" name="_token" value="{{ csrf_token('compressor_fill_create') }}">
+				<input type="hidden" name="_token" value="{{ csrf_token('compressor_fill_create_' ~ equipment_manager_club().id) }}">
 				<div class="col-md-6"><label class="form-label">Flaschenkennzeichnung *</label>
 					<input class="form-control" name="cylinder" maxlength="100" required placeholder="Seriennummer / Kennzeichnung">
 				</div>
