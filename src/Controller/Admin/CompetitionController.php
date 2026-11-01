@@ -100,7 +100,11 @@ final class CompetitionController extends AbstractController
         $this->access->require($this->access->managesTeam($team));
         return $this->render('competition/team.html.twig', [
             'team' => $team,
-            'roster' => $this->em->getRepository(TeamMember::class)->findBy(['team' => $team], ['role' => 'ASC', 'id' => 'ASC']),
+            'roster' => $this->em->getRepository(TeamMember::class)->createQueryBuilder('assignment')
+                ->join('assignment.member', 'rosterMember')
+                ->where('assignment.team = :team AND rosterMember.club = :club')
+                ->setParameter('team', $team)->setParameter('club', $team->getSport()->getClub())
+                ->orderBy('assignment.role', 'ASC')->addOrderBy('assignment.id', 'ASC')->getQuery()->getResult(),
             'sessions' => $this->em->getRepository(TeamTraining::class)->findBy(['team' => $team], ['startsAt' => 'ASC']),
         ]);
     }
@@ -113,6 +117,9 @@ final class CompetitionController extends AbstractController
         if (!$assignment instanceof TeamMember || $assignment->getTeam() === null) { throw $this->createNotFoundException(); }
         $team = $assignment->getTeam();
         $this->access->require($this->access->managesTeam($team));
+        if ($assignmentId !== null && $assignment->getMember()?->getClub()?->getId() !== $team->getSport()?->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Mannschaftsmitglied gehört nicht zum Verein der Mannschaft.');
+        }
         $form = $this->createForm(TeamMemberType::class, $assignment, [
             'action' => $this->generateUrl($assignmentId === null ? 'competition_roster_new' : 'competition_roster_edit', $assignmentId === null ? ['id' => $id] : ['assignmentId' => $assignmentId]),
             'members' => $this->em->getRepository(Member::class)->findBy(['club' => $team->getSport()->getClub()]),

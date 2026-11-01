@@ -94,3 +94,17 @@ body[data-ea-dark-scheme-is-enabled] {
 .content-header-title h1 { font-weight: 700; letter-spacing: -.025em; }
 .datagrid td, .datagrid th { padding-block: var(--dw-admin-table-cell-padding); }
 .audit-changes td { white-space: pre-wrap; }
+
+tbody, td, tfoot, th, thead, tr {
+    border: 0 solid;
+    border-color: inherit;
+}
+
+.month td {
+    height: 130px;
+}
+
+.month th, .month td {
+    border: 1px solid var(--dw-neutral-200);
+    padding: 8px;
+}

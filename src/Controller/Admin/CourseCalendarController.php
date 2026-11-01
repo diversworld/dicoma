@@ -38,6 +38,10 @@ final class CourseCalendarController extends AbstractController
             || $course->getClub()?->getId() !== $clubContext->getClub()?->getId()) {
             throw $this->createAccessDeniedException('Termin gehört nicht zum ausgewählten Verein.');
         }
+        if ($schedule->getInstructor() !== null
+            && $schedule->getInstructor()->getClub()?->getId() !== $clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Ausbilder gehört nicht zum ausgewählten Verein.');
+        }
         $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
 
         // No bookings, attendance records or unique training-unit sequence are copied.
@@ -122,6 +126,7 @@ final class CourseCalendarController extends AbstractController
             ->leftJoin('s.instructor', 'i')->addSelect('i')
             ->leftJoin('c.club', 'club')
             ->andWhere('c.club = :selectedClub')
+            ->andWhere('(i.id IS NULL OR i.club = :selectedClub)')
             ->setParameter('selectedClub', $selectedClub)
             ->andWhere('s.startDate >= :from AND s.startDate < :until')
             ->setParameter('from', $rangeStart->format('Y-m-d'))
@@ -137,6 +142,7 @@ final class CourseCalendarController extends AbstractController
             ->leftJoin('s.instructor', 'i')->addSelect('i')
             ->leftJoin('c.club', 'club')->addSelect('club')
             ->andWhere('c.club = :selectedClub')->setParameter('selectedClub', $selectedClub)
+            ->andWhere('(i.id IS NULL OR i.club = :selectedClub)')
             ->getQuery()->getResult() as $schedule) {
             if (!$schedule instanceof Schedule) { continue; }
             $course = $schedule->getCourses();

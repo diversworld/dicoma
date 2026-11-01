@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Repository\CourseParticipantRepository;
 use App\Service\TrainingProgressService;
+use App\Service\AdminClubContext;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,7 +16,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class TrainingProgressController extends AbstractController
 {
     #[Route('/admin/training-progress/{id}', name: 'admin_training_progress', requirements: ['id' => '\\d+'], methods: ['GET'])]
-    public function show(int $id, CourseParticipantRepository $participants, TrainingProgressService $progress): Response
+    public function show(int $id, CourseParticipantRepository $participants, TrainingProgressService $progress, AdminClubContext $clubContext): Response
     {
         $participant = $participants->find($id);
         if ($participant === null) {
@@ -25,6 +26,9 @@ final class TrainingProgressController extends AbstractController
         $course = $participant->getCourse();
         if ($course === null) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
+        }
+        if ($clubContext->getClub()?->getId() === null || $course->getClub()?->getId() !== $clubContext->getClub()->getId()) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
         }
         $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
 

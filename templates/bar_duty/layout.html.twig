@@ -3,7 +3,8 @@
 {% block title %}Thekendienst | DICOMA{% endblock %}
 {% block content_title %}Thekendienste und Thekenkasse{% endblock %}
 {% block hero %}{% endblock %}
-{% block stylesheets %}{{ parent() }}
+{% block stylesheets %}
+{{ parent() }}
 <link rel="stylesheet" href="{{ asset('css/pages/bar-duty-portal.css') }}">
 {% endblock %}
 {% block body %}
@@ -15,7 +16,6 @@
 {% endblock %}
 {% block main %}<div data-bar-duty-portal>{{ block('duty_content') }}</div>{% endblock %}
 {% block duty_content %}
-    <h1>Thekendienst im Vereinsheim</h1>
     {% if duty_route_prefix %}
         <nav class="d-flex flex-wrap gap-3 mb-4" aria-label="Clubheimverwaltung">
             <a href="{{ path('admin_portal_bar_duty') }}">Dienstkalender</a>

@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Tank;
 use App\Entity\TankConditionHistory;
 use App\Service\TankStatusWorkflow;
+use App\Service\AdminEquipmentScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,12 +19,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class TankStatusController extends AbstractController
 {
     #[Route('/admin/{_locale}/tank-status/{id}', name: 'admin_tank_status', requirements: ['id' => '\\d+', '_locale' => 'de|en|fr|es'], defaults: ['_locale' => 'de'], methods: ['GET', 'POST'])]
-    public function show(int $id, Request $request, EntityManagerInterface $em, TankStatusWorkflow $workflow): Response
+    public function show(int $id, Request $request, EntityManagerInterface $em, TankStatusWorkflow $workflow, AdminEquipmentScope $scope): Response
     {
         $tank = $em->find(Tank::class, $id);
         if (!$tank) {
             throw $this->createNotFoundException('Tauchflasche nicht gefunden.');
         }
+        $scope->assertAsset($tank);
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('tank_status_'.$id, (string) $request->request->get('_token', ''))) {
                 throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');

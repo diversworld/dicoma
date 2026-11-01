@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Service\TankInspectionOverview;
+use App\Service\AdminClubContext;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,12 +17,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EquipmentCenterController extends AbstractController
 {
     #[Route('/admin/equipment-center', name: 'admin_equipment_center', methods: ['GET'])]
-    public function index(TankInspectionOverview $overview, AdminUrlGenerator $urls): Response
+    public function index(TankInspectionOverview $overview, AdminUrlGenerator $urls, AdminClubContext $clubContext): Response
     {
+        $club = $clubContext->getClub() ?? throw $this->createAccessDeniedException('Kein Verein ausgewählt.');
         $tankUrl = (clone $urls)->unsetAll()->setController(TankCrudController::class)->setAction(Crud::PAGE_INDEX)->generateUrl();
         $checkUrl = (clone $urls)->unsetAll()->setController(TankCheckCrudController::class)->setAction(Crud::PAGE_INDEX)->generateUrl();
         return $this->render('admin/equipment/center.html.twig', [
-            'overview' => $overview->getOverview(),
+            'overview' => $overview->getOverview($club),
             'tankUrl' => $tankUrl,
             'checkUrl' => $checkUrl,
         ]);

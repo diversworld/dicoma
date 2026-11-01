@@ -11,6 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request,Response};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerWalkInLoanController extends AbstractController
@@ -32,14 +33,14 @@ final class EquipmentManagerWalkInLoanController extends AbstractController
             }
             $selected = $request->request->all('items');
             if (count($selected) < 1 || count($selected) > 30 || count($selected) !== count(array_unique($selected))) {
-                $this->addFlash('danger', 'Bitte 1 bis 30 verschiedene Gegenstände auswählen.');
+                $this->addFlash('danger', new TranslatableMessage('Bitte 1 bis 30 verschiedene Gegenstände auswählen.'));
                 return $this->redirectToRoute('equipment_manager_loans_direct');
             }
             $endRaw = $request->request->get('end');
             $end = is_string($endRaw) ? \DateTimeImmutable::createFromFormat('!Y-m-d', $endRaw) : false;
             $start = new \DateTimeImmutable('today');
             if (!$end || $end->format('Y-m-d') !== $endRaw || $end <= $start || $end > $start->modify('+90 days')) {
-                $this->addFlash('danger', 'Rückgabe muss in der Zukunft und innerhalb von 90 Tagen liegen.');
+                $this->addFlash('danger', new TranslatableMessage('Rückgabe muss in der Zukunft und innerhalb von 90 Tagen liegen.'));
                 return $this->redirectToRoute('equipment_manager_loans_direct');
             }
             $booking = (new EquipmentBooking())->setMember($member)->setStartsAt($start)->setEndsAt($end)
@@ -56,11 +57,11 @@ final class EquipmentManagerWalkInLoanController extends AbstractController
                 $asset = $em->find($class, (int) $match[2]);
                 if (!$asset || $asset->getClub()?->getId() !== $club->getId() ||
                     !$asset->isLendable() || $asset->getConditionStatus() !== 'ready') {
-                    $this->addFlash('danger', 'Ein Gegenstand ist nicht verleihbar.');
+                    $this->addFlash('danger', new TranslatableMessage('Ein Gegenstand ist nicht verleihbar.'));
                     return $this->redirectToRoute('equipment_manager_loans_direct');
                 }
                 if ($asset instanceof EquipmentItem && $asset->getCategory() && !$asset->getCategory()->isActive()) {
-                    $this->addFlash('danger', 'Eine Ausrüstungskategorie ist deaktiviert.');
+                    $this->addFlash('danger', new TranslatableMessage('Eine Ausrüstungskategorie ist deaktiviert.'));
                     return $this->redirectToRoute('equipment_manager_loans_direct');
                 }
                 $line = new EquipmentBookingItem();
@@ -73,10 +74,10 @@ final class EquipmentManagerWalkInLoanController extends AbstractController
             }
             try {
                 $bookingService->saveNew($booking);
-                $this->addFlash('success', 'Direktausleihe #'.$booking->getId().' angelegt. Bitte die Ausgabe jedes Gegenstands unten ausdrücklich bestätigen.');
+                $this->addFlash('success', new TranslatableMessage('Direktausleihe #%id% angelegt. Bitte die Ausgabe jedes Gegenstands unten ausdrücklich bestätigen.', ['%id%' => $booking->getId()]));
                 return $this->redirectToRoute('equipment_manager_loans', ['status' => 'open'], Response::HTTP_SEE_OTHER);
             } catch (\DomainException $e) {
-                $this->addFlash('danger', 'Direktausleihe nicht möglich: '.$e->getMessage());
+                $this->addFlash('danger', new TranslatableMessage('Direktausleihe nicht möglich: %reason%', ['%reason%' => new TranslatableMessage($e->getMessage())]));
                 return $this->redirectToRoute('equipment_manager_loans_direct', [], Response::HTTP_SEE_OTHER);
             }
         }

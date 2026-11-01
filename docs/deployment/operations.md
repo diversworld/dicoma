@@ -127,7 +127,8 @@ Ausbildungsnachweis-
 und Inventargegenstands-CRUDs, Mannschafts- und Mannschaftsmitglieds-CRUDs,
 die Ausrüstungskategorien, Hersteller, Unterarten, Größen, Modelle und
 Kategorie-Merkmale, die technischen Atemreglerdaten zu Inventargegenständen
-sowie die EasyAdmin-Einzel- und Sammelreservierungen,
+sowie die EasyAdmin-Einzel- und Sammelreservierungen und die separaten
+Flaschen-, Atemregler- und Atemreglermodell-CRUDs,
 das Wettbewerbsportal, den Kurskalender und den gemeinsamen Kalender sowie
 die Mitgliedschafts-, Veranstaltungs- und Dateiverwaltung
 sowie die oben genannten Einstellungen und die Verwaltungsübersicht verwenden
@@ -143,9 +144,13 @@ Superadmins den ausgewählten Verein, andere Gerätewarte ihren Mitgliedsverein.
 Vereinsgebundene Formulare müssen nach einem Vereinswechsel neu geöffnet
 werden. TÜV-Termine bleiben global; widersprüchliche Flaschenanmeldungen
 werden im Gerätewartportal ausgeblendet und nicht bearbeitet.
-Andere Backendbereiche, insbesondere die separaten EasyAdmin-CRUDs für
-Flaschen und Atemregler sowie weitere Kalender- und Sportaktionen, sind
-noch nicht durchgehend auf diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
+Die Flaschenprüfübersicht in EasyAdmin berücksichtigt nur Flaschen des
+ausgewählten Vereins. Kurstermine mit vereinsfremdem Ausbilder werden in
+den geprüften Kalender-, Kursmatrix- und Ausbildungsnachweisansichten
+ausgeblendet und die zugehörigen Bearbeitungsaktionen verweigert; vorhandene
+Zuordnungen werden nicht automatisch korrigiert.
+Andere Backendbereiche, insbesondere weitere Kalender- und Sportaktionen,
+sind noch nicht durchgehend auf diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
 automatisch geändert und betroffene Detailansichten oder Aktionen abgelehnt.
 TÜV-Benachrichtigungsvorlagen
 und die Übersicht der Vertretungsnachweise sind weiterhin systemweit.

@@ -56,8 +56,9 @@ für die Sportarten-Einstellungen, Mitglieder-, Mitgliedsqualifikations-,
 Sportzuordnungs-, Mannschafts-, Mannschaftsmitglieds-, Kurs-, Kurstermin-,
 Teilnehmer-, Ausbildungsnachweis- und Inventargegenstands-CRUDs, die Kategorien, Hersteller,
 Unterarten, Größen, Modelle und Kategorie-Merkmale der Ausrüstung, die
-EasyAdmin-Ansichten für Einzel- und Sammelreservierungen und die technischen
-Atemreglerdaten zu Inventargegenständen,
+EasyAdmin-Ansichten für Einzel- und Sammelreservierungen, die separaten
+Flaschen-, Atemregler- und Atemreglermodell-CRUDs samt Flaschenstatus,
+Wartung und Prüfung sowie die technischen Atemreglerdaten zu Inventargegenständen,
 die Mitgliedschaftsverwaltung, die Veranstaltungs- und Dateiverwaltung,
 die oben genannten Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung
 sowie die Kennzahlen und Listen der Verwaltungsübersicht. Vereinslose
@@ -68,7 +69,10 @@ Mitglieds in der Qualifikationsverwaltung; vorhandene Daten bleiben erhalten.
 Der Qualifikationskatalog selbst ist weiterhin übergreifend. Im
 Wettbewerbsportal, Kurskalender und gemeinsamen Kalender gilt für Superadmins ebenfalls der
 ausgewählte Verein; bestehende vereinsübergreifende Wettbewerbsteilnahmen
-anderer berechtigter Rollen bleiben unverändert. Sportzuordnungen mit
+anderer berechtigter Rollen bleiben unverändert. Ausbildungsfortschritt und
+Kursmatrix zeigen nur Kurse des ausgewählten Vereins. Im Wettbewerbsportal
+werden widersprüchliche Mannschaftsmitgliedschaften ausgeblendet und deren
+Bearbeitung abgelehnt. Sportzuordnungen mit
 fehlenden oder widersprüchlichen Vereinszuordnungen werden nicht automatisch
 verändert und erscheinen nicht in der regulären Vereinsliste.
 Im Gerätewartportal gilt für Superadmins der ausgewählte, für andere
@@ -76,9 +80,19 @@ Gerätewarte ihr eigener Mitgliedsverein. Alte Direktausleih-, Kompressor-,
 Kassen- und TÜV-Planungsformulare sind nach einem Vereinswechsel erneut
 zu öffnen. TÜV-Termine bleiben global; inkonsistente Anmeldungen werden
 in der Gerätewartansicht ausgeblendet und deren Bearbeitung abgelehnt.
+Die Flaschenprüfübersicht in EasyAdmin zählt und zeigt nur Flaschen des
+ausgewählten Vereins; vereinslose Flaschen werden dort nicht berücksichtigt.
+Kurstermine mit einem vereinsfremden Ausbilder werden in den geprüften
+Kalender-, Kursmatrix- und Ausbildungsnachweisansichten ausgeblendet und
+bei den zugehörigen Bearbeitungsaktionen abgelehnt. Die Daten werden dabei
+nicht automatisch geändert.
+Die zuletzt in der Verwaltung oder im Portal gewählte Sprache bleibt beim
+Wechsel ins Gerätewartportal erhalten. Gerätewart-Übersicht, Direktausleihe,
+Flaschen- und Inventarlisten sowie die Masken für Flaschenprüfung, Wartung
+und die bearbeiteten TÜV-Ansichten sind übersetzt; weitere Gerätewart- und
+Verleihansichten sowie Meldungen sind noch nicht vollständig übersetzt.
 Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
-insbesondere die separaten EasyAdmin-CRUDs für Flaschen und Atemregler sowie
 weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf diesen
 Kontext umgestellt. Widersprüchliche Ausrüstungs- und
 Mannschaftszuordnungen werden nicht automatisch korrigiert; betroffene

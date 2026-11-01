@@ -1,99 +1,207 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 {% block content_title %}{{ 'Kurskalender'|trans }}{% endblock %}
+
 {% block head_stylesheets %}
-{{ parent() }}
-<link rel="stylesheet" href="{{ asset('css/pages/admin-calendar-index.css') }}">
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('css/pages/admin-calendar-index.css') }}">
 {% endblock %}
+
 {% block main %}
-<div class="course-calendar">
-<form class="card filters" method="get" action="{{ path('admin_course_calendar') }}">
-<input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="month" value="{{ month|date('Y-m') }}">
-{% if view == 'week' %}<input type="hidden" name="week" value="{{ weekStart|date('Y-m-d') }}">{% elseif view == 'day' %}<input type="hidden" name="day" value="{{ selectedDay|date('Y-m-d') }}">{% endif %}
-{% set filterDefinitions = [{key:'club',label:'Verein',values:options.clubs},{key:'course',label:'Kurs',values:options.courses},{key:'instructor',label:'Instruktor',values:options.instructors}] %}
-{% for filter in filterDefinitions %}
-<div><label for="filter-{{ filter.key }}">{{ filter.label|trans }}</label><select id="filter-{{ filter.key }}" name="{{ filter.key }}"><option value="">{{ 'Alle'|trans }}</option>{% for id,name in filter.values %}<option value="{{ id }}" {% if (filters[filter.key]|default('') ~ '') == (id ~ '') %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
-{% endfor %}
-<button class="btn primary" type="submit">{{ 'Filtern'|trans }}</button><a class="btn" href="{{ path('admin_course_calendar', {view:view,month:month|date('Y-m'),day:selectedDay|date('Y-m-d'),week:weekStart|date('Y-m-d')}) }}">{{ 'Zurücksetzen'|trans }}</a>
-</form>
-<div class="card jump"><a class="btn" href="{{ todayUrl }}">{{ 'Heute'|trans }}</a><form method="get" action="{{ path('admin_course_calendar') }}"><input type="hidden" name="view" value="day"><label for="jump-day">{{ 'Zu Datum springen'|trans }}</label><input type="date" id="jump-day" name="day" value="{{ selectedDay|date('Y-m-d') }}" required>{% for key, value in filters %}{% if value is not null %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}<button class="btn" type="submit">{{ 'Anzeigen'|trans }}</button></form></div>
-<div class="card nav"><div><a class="btn {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="btn {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="btn {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a></div><a class="btn" href="{{ prevUrl }}">← Zurück</a><h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}Woche ab {{ weekStart|date('d.m.Y') }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1><a class="btn" href="{{ nextUrl }}">Weiter →</a></div>
-{% if conflictPairs > 0 %}<div class="warning" role="status">Achtung: {{ conflictPairs }} Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.</div>{% endif %}
-<div class="card scroll">
-{% if view == 'month' %}
-<table class="month"><thead><tr>{% for name in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}<th>{{ name }}</th>{% endfor %}</tr></thead><tbody>
-{% for week in weeks %}<tr>{% for day in week %}<td class="{{ day.current ? '' : 'outside' }}"><strong>{{ day.number }}</strong>
-{% for event in day.events %}<a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }}{% if event.end %}–{{ event.end }}{% endif %} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}<small>{{ event.course }}</small>{% if event.instructor %}<small>{{ event.instructor }}</small>{% endif %}{% if event.location %}<small>{{ event.location }}</small>{% endif %}</a>{% endfor %}
-</td>{% endfor %}</tr>{% endfor %}
-</tbody></table>
-{% else %}
-{% set days = view == 'day' ? (weeks|first) : (weeks|first) %}
-<p class="hint">Stundenraster 06:00–23:00 Uhr. Gleichzeitige Termine werden nebeneinander dargestellt. Termine ohne vollständige Zeitangaben stehen im Tageskopf. Termine über Mitternacht werden am Starttag angezeigt.</p>
-<div class="week-grid {{ view == 'day' ? 'day-grid' : '' }}">
-<div class="week-head">Zeit</div>{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="week-head">{{ ['So','Mo','Di','Mi','Do','Fr','Sa'][day.date|date('w')] }} {{ day.label }}</div>{% endif %}{% endfor %}
-<div class="week-other">Weitere</div>
-{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="week-other">{% for event in day.events %}{% if event.incomplete or event.startMinutes < 360 or event.startMinutes >= 1380 %}<a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}</a>{% endif %}{% endfor %}</div>{% endif %}{% endfor %}
-<div class="time-axis">{% for hour in 6..22 %}<span class="time-mark" style="--dw-calendar-hour-offset:{{ (hour - 6) * 64 }}px">{{ '%02d'|format(hour) }}:00</span>{% endfor %}</div>
-{% for day in days %}{% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}<div class="day-track">
-{% for event in day.events %}
-{% if not event.incomplete and event.startMinutes >= 360 and event.startMinutes < 1380 %}
-{% set top = (event.startMinutes - 360) / 60 * 64 %}
-{% set fullHeight = event.durationMinutes / 60 * 64 %}
-{% set availableHeight = 1088 - top %}
-{% set height = fullHeight > availableHeight ? availableHeight : fullHeight %}
-{% set height = height > 22 ? height : 22 %}
-{% set laneWidth = 100 / event.layoutColumns %}
-<a class="week-event {{ event.conflict ? 'conflict' : '' }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}" title="{{ event.title }} · {{ event.course }} · {{ event.instructor }}" style="--dw-event-top:{{ top|round(0) }}px;--dw-event-height:{{ height|round(0) }}px;--dw-event-left:{{ (event.layoutColumn * laneWidth)|round(5) }}%;--dw-event-width:{{ laneWidth|round(5) }}%">{{ event.time }} {{ event.title }}{% if event.end %} – {{ event.end }}{% endif %}</a>
-{% endif %}
-{% endfor %}
-</div>{% endif %}{% endfor %}
-</div>
-{% endif %}
-</div>
-<dialog id="event-details" class="details" aria-labelledby="event-details-title">
-  <h2 id="event-details-title">{{ 'Termindetails'|trans }}</h2>
-  <dl>
-    <dt>{{ 'Datum'|trans }}</dt><dd id="detail-date"></dd>
-    <dt>{{ 'Uhrzeit'|trans }}</dt><dd id="detail-time"></dd>
-    <dt>{{ 'Kurs'|trans }}</dt><dd id="detail-course"></dd>
-    <dt>{{ 'Instruktor'|trans }}</dt><dd id="detail-instructor"></dd>
-    <dt>{{ 'Ort'|trans }}</dt><dd id="detail-location"></dd>
-    <dt>{{ 'Status'|trans }}</dt><dd id="detail-status"></dd>
-    <dt>{{ 'Überschneidungen'|trans }}</dt><dd id="detail-conflicts" class="conflict-list"></dd>
-  </dl>
-  <footer><form id="detail-duplicate" method="post" action=""><input type="hidden" name="_token" id="detail-duplicate-token"><button class="btn" type="submit" onclick="return confirm({{ 'Termin ohne Buchungen duplizieren?'|trans|json_encode|e('html_attr') }})">{{ 'Termin kopieren'|trans }}</button></form><form method="dialog"><button class="btn" type="submit">{{ 'Close'|trans }}</button></form><a class="btn primary" id="detail-edit" href="#">{{ 'Kurstermin bearbeiten'|trans }}</a></footer>
-</dialog>
-<script>
-(function () {
-  const messages = {{ {
-    conflict: 'Terminkonflikt'|trans,
-    incomplete: 'Planung unvollständig'|trans,
-    planned: 'Geplant'|trans,
-    none: 'Keine'|trans,
-    time: '%time% Uhr'|trans
-  }|json_encode(15)|raw }};
-  const dialog = document.getElementById('event-details');
-  if (!dialog || typeof dialog.showModal !== 'function') return;
-  document.addEventListener('click', function (event) {
-    const link = event.target.closest('a[data-event-detail]');
-    if (!link) return;
-    let data;
-    try { data = JSON.parse(link.getAttribute('data-event-detail')); } catch (e) { return; }
-    event.preventDefault();
-    const put = (id, value) => { document.getElementById(id).textContent = value || '—'; };
-    put('event-details-title', data.title);
-    put('detail-date', data.date ? data.date.split('-').reverse().join('.') : '');
-    put('detail-time', data.time ? messages.time.replace('%time%', data.time + (data.end ? ' – ' + data.end : '')) : '');
-    put('detail-course', data.course);
-    put('detail-instructor', data.instructor);
-    put('detail-location', data.location);
-    put('detail-status', data.conflict ? messages.conflict : (data.incomplete ? messages.incomplete : messages.planned));
-    put('detail-conflicts', Array.isArray(data.conflictWith) && data.conflictWith.length ? data.conflictWith.join(' · ') : messages.none);
-    document.getElementById('detail-duplicate').action = data.duplicateUrl;
-    document.getElementById('detail-duplicate-token').value = data.duplicateToken;
-    document.getElementById('detail-edit').href = link.href;
-    dialog.showModal();
-  });
-})();
-</script>
-</div>
+  <div class="course-calendar">
+    <form class="card filters" method="get" action="{{ path('admin_course_calendar') }}">
+      <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="month" value="{{ month|date('Y-m') }}">
+      {% if view == 'week' %}
+        <input type="hidden" name="week" value="{{ weekStart|date('Y-m-d') }}">
+      {% elseif view == 'day' %}
+        <input type="hidden" name="day" value="{{ selectedDay|date('Y-m-d') }}">
+      {% endif %}
+      {% set filterDefinitions = [{key:'club',label:'Verein',values:options.clubs},{key:'course',label:'Kurs',values:options.courses},{key:'instructor',label:'Instruktor',values:options.instructors}] %}
+      {% for filter in filterDefinitions %}
+      <div>
+        <label for="filter-{{ filter.key }}">{{ filter.label|trans }}</label>
+        <select id="filter-{{ filter.key }}" name="{{ filter.key }}">
+          <option value="">{{ 'Alle'|trans }}</option>
+          {% for id,name in filter.values %}
+            <option value="{{ id }}" {% if (filters[filter.key]|default('') ~ '') == (id ~ '') %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+      <button class="btn primary" type="submit">{{ 'Filtern'|trans }}</button>
+      <a class="btn" href="{{ path('admin_course_calendar', {view:view,month:month|date('Y-m'),day:selectedDay|date('Y-m-d'),week:weekStart|date('Y-m-d')}) }}">{{ 'Zurücksetzen'|trans }}</a>
+    </form>
+    <div class="card jump">
+      <a class="btn" href="{{ todayUrl }}">{{ 'Heute'|trans }}</a>
+      <form method="get" action="{{ path('admin_course_calendar') }}">
+        <input type="hidden" name="view" value="day">
+        <label for="jump-day">{{ 'Zu Datum springen'|trans }}</label>
+        <input type="date" id="jump-day" name="day" value="{{ selectedDay|date('Y-m-d') }}" required>
+        {% for key, value in filters %}
+          {% if value is not null %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+          {% endif %}
+        {% endfor %}
+        <button class="btn" type="submit">{{ 'Anzeigen'|trans }}</button>
+      </form>
+    </div>
+    <div class="card nav">
+      <div>
+        <a class="btn {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="btn {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="btn {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a>
+      </div>
+      <a class="btn" href="{{ prevUrl }}">← Zurück</a>
+      <h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}Woche ab {{ weekStart|date('d.m.Y') }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1>
+      <a class="btn" href="{{ nextUrl }}">Weiter →</a>
+    </div>
+    {% if conflictPairs > 0 %}
+      <div class="warning" role="status">
+        Achtung: {{ conflictPairs }} Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.
+      </div>
+    {% endif %}
+  <div class="card scroll">
+    {% if view == 'month' %}
+      <table class="month">
+        <thead>
+          <tr>
+            {% for name in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
+              <th>{{ name }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for day in week %}
+                <td class="{{ day.current ? '' : 'outside' }}">
+                  <strong>{{ day.number }}</strong>
+                  {% for event in day.events %}
+                    <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }}{% if event.end %}–{{ event.end }}{% endif %} · {{ event.title }}
+                    {% if event.incomplete %}
+                      <small>Planung unvollständig</small>
+                    {% endif %}
+                    <small>{{ event.course }}</small>
+                    {% if event.instructor %}
+                    <small>{{ event.instructor }}</small>
+                    {% endif %}
+                    {% if event.location %}
+                      <small>{{ event.location }}</small>
+                    {% endif %}</a>
+                  {% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% set days = view == 'day' ? (weeks|first) : (weeks|first) %}
+      <p class="hint">Stundenraster 06:00–23:00 Uhr. Gleichzeitige Termine werden nebeneinander dargestellt. Termine ohne vollständige Zeitangaben stehen im Tageskopf. Termine über Mitternacht werden am Starttag angezeigt.</p>
+      <div class="week-grid {{ view == 'day' ? 'day-grid' : '' }}">
+        <div class="week-head">Zeit</div>
+        {% for day in days %}
+          {% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}
+            <div class="week-head">
+              {{ ['So','Mo','Di','Mi','Do','Fr','Sa'][day.date|date('w')] }} {{ day.label }}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="week-other">Weitere</div>
+        {% for day in days %}
+          {% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}  
+            <div class="week-other">
+              {% for event in day.events %}
+                {% if event.incomplete or event.startMinutes < 360 or event.startMinutes >= 1380 %}
+                  <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="time-axis">
+          {% for hour in 6..22 %}
+              <span class="time-mark" style="--dw-calendar-hour-offset:{{ (hour - 6) * 64 }}px">{{ '%02d'|format(hour) }}:00</span>
+          {% endfor %}
+        </div>
+        {% for day in days %}
+          {% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}
+            <div class="day-track">
+              {% for event in day.events %}
+                {% if not event.incomplete and event.startMinutes >= 360 and event.startMinutes < 1380 %}
+                  {% set top = (event.startMinutes - 360) / 60 * 64 %}
+                  {% set fullHeight = event.durationMinutes / 60 * 64 %}
+                  {% set availableHeight = 1088 - top %}
+                  {% set height = fullHeight > availableHeight ? availableHeight : fullHeight %}
+                  {% set height = height > 22 ? height : 22 %}
+                  {% set laneWidth = 100 / event.layoutColumns %}
+                  <a class="week-event {{ event.conflict ? 'conflict' : '' }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}" title="{{ event.title }} · {{ event.course }} · {{ event.instructor }}" style="--dw-event-top:{{ top|round(0) }}px;--dw-event-height:{{ height|round(0) }}px;--dw-event-left:{{ (event.layoutColumn * laneWidth)|round(5) }}%;--dw-event-width:{{ laneWidth|round(5) }}%">{{ event.time }} {{ event.title }}
+                  {% if event.end %} – {{ event.end }}{% endif %}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+  <dialog id="event-details" class="details" aria-labelledby="event-details-title">
+    <h2 id="event-details-title">{{ 'Termindetails'|trans }}</h2>
+    <dl>
+      <dt>{{ 'Datum'|trans }}</dt>
+      <dd id="detail-date"></dd>
+      <dt>{{ 'Uhrzeit'|trans }}</dt>
+      <dd id="detail-time"></dd>
+      <dt>{{ 'Kurs'|trans }}</dt>
+      <dd id="detail-course"></dd>
+      <dt>{{ 'Instruktor'|trans }}</dt>
+      <dd id="detail-instructor"></dd>
+      <dt>{{ 'Ort'|trans }}</dt>
+      <dd id="detail-location"></dd>
+      <dt>{{ 'Status'|trans }}</dt>
+      <dd id="detail-status"></dd>
+      <dt>{{ 'Überschneidungen'|trans }}</dt><dd id="detail-conflicts" class="conflict-list"></dd>
+    </dl>
+    <footer>
+      <form id="detail-duplicate" method="post" action="">
+        <input type="hidden" name="_token" id="detail-duplicate-token">
+        <button class="btn" type="submit" onclick="return confirm({{ 'Termin ohne Buchungen duplizieren?'|trans|json_encode|e('html_attr') }})">{{ 'Termin kopieren'|trans }}</button>
+      </form>
+      <form method="dialog">
+        <button class="btn" type="submit">{{ 'Close'|trans }}</button>
+      </form>
+      <a class="btn primary" id="detail-edit" href="#">{{ 'Kurstermin bearbeiten'|trans }}</a>
+    </footer>
+  </dialog>
+  <script>
+  (function () {
+    const messages = {{ {
+      conflict: 'Terminkonflikt'|trans,
+      incomplete: 'Planung unvollständig'|trans,
+      planned: 'Geplant'|trans,
+      none: 'Keine'|trans,
+      time: '%time% Uhr'|trans
+    }|json_encode(15)|raw }};
+    const dialog = document.getElementById('event-details');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    document.addEventListener('click', function (event) {
+      const link = event.target.closest('a[data-event-detail]');
+      if (!link) return;
+      let data;
+      try { data = JSON.parse(link.getAttribute('data-event-detail')); } catch (e) { return; }
+      event.preventDefault();
+      const put = (id, value) => { document.getElementById(id).textContent = value || '—'; };
+      put('event-details-title', data.title);
+      put('detail-date', data.date ? data.date.split('-').reverse().join('.') : '');
+      put('detail-time', data.time ? messages.time.replace('%time%', data.time + (data.end ? ' – ' + data.end : '')) : '');
+      put('detail-course', data.course);
+      put('detail-instructor', data.instructor);
+      put('detail-location', data.location);
+      put('detail-status', data.conflict ? messages.conflict : (data.incomplete ? messages.incomplete : messages.planned));
+      put('detail-conflicts', Array.isArray(data.conflictWith) && data.conflictWith.length ? data.conflictWith.join(' · ') : messages.none);
+      document.getElementById('detail-duplicate').action = data.duplicateUrl;
+      document.getElementById('detail-duplicate-token').value = data.duplicateToken;
+      document.getElementById('detail-edit').href = link.href;
+      dialog.showModal();
+    });
+  })();
+  </script>
+  </div>
 {% endblock %}

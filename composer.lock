@@ -1163,16 +1163,16 @@
         },
         {
             "name": "doctrine/orm",
-            "version": "2.20.13",
+            "version": "2.20.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/orm.git",
-                "reference": "f525f32e11efc60a34f5eecd88093f476c90f90e"
+                "reference": "68d6a262e35c7e4622a718e02af68eba0e9657a2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/orm/zipball/f525f32e11efc60a34f5eecd88093f476c90f90e",
-                "reference": "f525f32e11efc60a34f5eecd88093f476c90f90e",
+                "url": "https://api.github.com/repos/doctrine/orm/zipball/68d6a262e35c7e4622a718e02af68eba0e9657a2",
+                "reference": "68d6a262e35c7e4622a718e02af68eba0e9657a2",
                 "shasum": ""
             },
             "require": {
@@ -1258,9 +1258,9 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/orm/issues",
-                "source": "https://github.com/doctrine/orm/tree/2.20.13"
+                "source": "https://github.com/doctrine/orm/tree/2.20.14"
             },
-            "time": "2026-05-25T05:46:05+00:00"
+            "time": "2026-09-12T18:45:41+00:00"
         },
         {
             "name": "doctrine/persistence",
@@ -7505,16 +7505,16 @@
         },
         {
             "name": "symfonycasts/reset-password-bundle",
-            "version": "v1.25.0",
+            "version": "v1.26.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SymfonyCasts/reset-password-bundle.git",
-                "reference": "084aac1cc40ef75b26134c7967d1e423eeff72f4"
+                "reference": "58d7c18cdb7aca8520b8bd7b57a2bc18d8089889"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SymfonyCasts/reset-password-bundle/zipball/084aac1cc40ef75b26134c7967d1e423eeff72f4",
-                "reference": "084aac1cc40ef75b26134c7967d1e423eeff72f4",
+                "url": "https://api.github.com/repos/SymfonyCasts/reset-password-bundle/zipball/58d7c18cdb7aca8520b8bd7b57a2bc18d8089889",
+                "reference": "58d7c18cdb7aca8520b8bd7b57a2bc18d8089889",
                 "shasum": ""
             },
             "require": {
@@ -7523,7 +7523,8 @@
                 "symfony/config": "^5.4 | ^6.0 | ^7.0 | ^8.0",
                 "symfony/dependency-injection": "^5.4 | ^6.0 | ^7.0 | ^8.0",
                 "symfony/deprecation-contracts": "^2.2 | ^3.0",
-                "symfony/http-kernel": "^5.4 | ^6.0 | ^7.0 | ^8.0"
+                "symfony/http-kernel": "^5.4 | ^6.0 | ^7.0 | ^8.0",
+                "symfony/property-access": "^5.4 | ^6.0 | ^7.0 | ^8.0"
             },
             "require-dev": {
                 "doctrine/annotations": "^1.0 | ^2.0",
@@ -7547,9 +7548,15 @@
             "description": "Symfony bundle that adds password reset functionality.",
             "support": {
                 "issues": "https://github.com/SymfonyCasts/reset-password-bundle/issues",
-                "source": "https://github.com/SymfonyCasts/reset-password-bundle/tree/v1.25.0"
+                "source": "https://github.com/SymfonyCasts/reset-password-bundle/tree/v1.26.1"
             },
-            "time": "2026-03-26T10:16:40+00:00"
+            "funding": [
+                {
+                    "url": "https://symfonycasts.com",
+                    "type": "custom"
+                }
+            ],
+            "time": "2026-10-30T13:10:27+00:00"
         },
         {
             "name": "symfonycasts/verify-email-bundle",

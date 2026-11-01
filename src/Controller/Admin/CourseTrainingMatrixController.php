@@ -12,6 +12,7 @@ use App\Repository\CourseParticipantRepository;
 use App\Repository\ScheduleRepository;
 use App\Repository\TrainingUnitResultRepository;
 use App\Service\TrainingProgressService;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
@@ -31,13 +32,17 @@ final class CourseTrainingMatrixController extends AbstractController
         ScheduleRepository $schedules,
         TrainingUnitResultRepository $results,
         TrainingProgressService $progress,
-        AdminUrlGenerator $adminUrls
+        AdminUrlGenerator $adminUrls,
+        AdminClubContext $clubContext
     ): Response {
         $course = $em->getRepository(Courses::class)->find($id);
         if (!$course instanceof Courses) {
             throw $this->createNotFoundException('Kurs nicht gefunden.');
         }
 
+        if ($clubContext->getClub()?->getId() === null || $course->getClub()?->getId() !== $clubContext->getClub()->getId()) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
+        }
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
 
         $requirements = [];
@@ -53,7 +58,11 @@ final class CourseTrainingMatrixController extends AbstractController
                 'required' => $unit->isRequired(),
             ];
         }
-        $courseSchedules = $schedules->findBy(['courses' => $course], ['startDate' => 'ASC', 'id' => 'ASC']);
+        $courseSchedules = array_values(array_filter(
+            $schedules->findBy(['courses' => $course], ['startDate' => 'ASC', 'id' => 'ASC']),
+            static fn ($schedule): bool => $schedule->getInstructor() === null
+                || $schedule->getInstructor()->getClub()?->getId() === $course->getClub()?->getId(),
+        ));
         // Group actual Schedule records. Dates come exclusively from Schedule::getStartDate().
         $scheduleGroups = [];
         foreach ($courseSchedules as $schedule) {

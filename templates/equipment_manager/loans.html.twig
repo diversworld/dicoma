@@ -1,39 +1,39 @@
 {% extends 'equipment_manager/layout.html.twig' %}
-{% block title %}Ausleihe und Rücknahme | DICOMA{% endblock %}
+{% block title %}{{ 'Ausleihe und Rücknahme'|trans }} | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
 <section class="section"><div class="container py-4">
-  <a href="{{ path('equipment_manager_dashboard') }}">← Gerätewart-Übersicht</a>
-  	<h1 class="h2 mt-3">Ausleihe und Rücknahme
-  		<p><a class="btn btn-primary" href="{{ path('equipment_manager_loans_direct') }}">+ Direktausleihe am Schalter</a></p>
+  <a href="{{ path('equipment_manager_dashboard') }}">← {{ 'Gerätewart – Übersicht'|trans }}</a>
+    <h1 class="h2 mt-3">{{ 'Ausleihe und Rücknahme'|trans }}
+        <p><a class="btn btn-primary" href="{{ path('equipment_manager_loans_direct') }}">+ {{ 'Direktausleihe am Schalter'|trans }}</a></p>
 	</h1>
-  <p><a class="btn btn-outline-primary btn-sm" href="{{ path('equipment_manager_cashbook') }}">Gerätewart-Kasse öffnen</a></p>
-  <p class="text-muted">Reservierungen deines Vereins. Ausgabe und Rücknahme werden je Gegenstand bestätigt.</p>
+  <p><a class="btn btn-outline-primary btn-sm" href="{{ path('equipment_manager_cashbook') }}">{{ 'Gerätewart-Kasse öffnen'|trans }}</a></p>
+  <p class="text-muted">{{ 'Reservierungen deines Vereins. Ausgabe und Rücknahme werden je Gegenstand bestätigt.'|trans }}</p>
   <div class="d-flex flex-wrap gap-2 mb-4">
     {% for value, label in {'open':'Offene Vorgänge','all':'Alle','returned':'Zurückgegeben','closed':'Abgeschlossen','cancelled':'Storniert'} %}
-      <a class="btn btn-sm {{ filter == value ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ path('equipment_manager_loans', {status:value}) }}">{{ label }}</a>
+      <a class="btn btn-sm {{ filter == value ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ path('equipment_manager_loans', {status:value}) }}">{{ label|trans }}</a>
     {% endfor %}
   </div>
-  {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
-  {% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message }}</div>{% endfor %}
+  {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message|trans }}</div>{% endfor %}
+  {% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message|trans }}</div>{% endfor %}
   {% if app.request.query.get('checkout') %}
     <div class="alert alert-primary">
-      <strong>Ausgabe und Kassieren</strong>
-      <p class="mb-1">Inventar und Gebühr prüfen, Gegenstände tatsächlich ausgeben und anschließend die Zahlung separat bestätigen.</p>
-      <a href="{{ path('equipment_manager_loans') }}">Zurück zu allen offenen Ausleihen</a>
+      <strong>{{ 'Ausgabe und Kassieren'|trans }}</strong>
+      <p class="mb-1">{{ 'Inventar und Gebühr prüfen, Gegenstände tatsächlich ausgeben und anschließend die Zahlung separat bestätigen.'|trans }}</p>
+      <a href="{{ path('equipment_manager_loans') }}">{{ 'Zurück zu allen offenen Ausleihen'|trans }}</a>
     </div>
   {% endif %}
   {% for booking in bookings %}
     <div class="card shadow-sm mb-3"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <strong>Buchung #{{ booking.id }}</strong>
+      <strong>{{ 'Buchung'|trans }} #{{ booking.id }}</strong>
       <span>{{ booking.startsAt|date('d.m.Y') }} – {{ booking.endsAt|date('d.m.Y') }}</span>
-      <span class="badge bg-secondary">{{ {'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[booking.status] ?? booking.status }}</span>
+      <span class="badge bg-secondary">{{ ({'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[booking.status] ?? booking.status)|trans }}</span>
     </div><div class="card-body">
       {# DICOMA_CHECKOUT_WORKSPACE_V1 #}
       {% if not app.request.query.get('checkout') %}
-        <p><a class="btn btn-sm btn-outline-primary" href="{{ path('equipment_manager_loans', {checkout: booking.id}) }}">Ausgabe und Kassieren öffnen</a></p>
+        <p><a class="btn btn-sm btn-outline-primary" href="{{ path('equipment_manager_loans', {checkout: booking.id}) }}">{{ 'Ausgabe und Kassieren öffnen'|trans }}</a></p>
       {% endif %}
-      <p class="mb-2"><strong>Mitglied:</strong> {{ booking.member }}</p>
+      <p class="mb-2"><strong>{{ 'Mitglied'|trans }}:</strong> {{ booking.member }}</p>
       {% if booking.approvedAt %}
         <p>Genehmigt durch {{ booking.approvedBy }} am {{ booking.approvedAt|date('d.m.Y H:i') }}.</p>
       {% elseif booking.status == 'reserved' %}
@@ -51,10 +51,10 @@
         </form>
       {% elseif booking.closedAt %}<p>Abgeschlossen durch {{ booking.closedBy }} am {{ booking.closedAt|date('d.m.Y H:i') }}.</p>{% endif %}
       {% if booking.status == 'reserved' %}
-        <form method="post" action="{{ path('equipment_manager_loan_cancel', {bookingId:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm('Diese Reservierung verbindlich stornieren?')">
+        <form method="post" action="{{ path('equipment_manager_loan_cancel', {bookingId:booking.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mb-3" onsubmit="return confirm({{ 'Diese Reservierung verbindlich stornieren?'|trans|json_encode|e('html_attr') }})">
           <input type="hidden" name="_token" value="{{ csrf_token('loan_cancel_' ~ booking.id) }}">
-          <input type="text" name="reason" class="form-control form-control-sm dw-max-width-380px"  minlength="5" maxlength="500" placeholder="Stornogrund (erforderlich)" required>
-          <button type="submit" class="btn btn-sm btn-outline-danger">Reservierung stornieren</button>
+          <input type="text" name="reason" class="form-control form-control-sm dw-max-width-380px"  minlength="5" maxlength="500" placeholder="{{ 'Stornogrund (erforderlich)'|trans }}" required>
+          <button type="submit" class="btn btn-sm btn-outline-danger">{{ 'Reservierung stornieren'|trans }}</button>
         </form>
       {% endif %}
       {% if booking.status == 'cancelled' and booking.notes %}<p class="small text-muted">{{ booking.notes|nl2br }}</p>{% endif %}

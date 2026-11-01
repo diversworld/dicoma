@@ -91,18 +91,21 @@ class ScheduleCrudController extends AbstractCrudController
         $query = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
         $club = $this->clubContext->getClub();
         return $club === null ? $query->andWhere('1 = 0')
-            : $query->join('entity.courses', 'managedCourse')->andWhere('managedCourse.club = :scheduleClub')->setParameter('scheduleClub', $club);
+            : $query->join('entity.courses', 'managedCourse')->leftJoin('entity.instructor', 'scopedInstructor')
+                ->andWhere('managedCourse.club = :scheduleClub')
+                ->andWhere('(scopedInstructor.id IS NULL OR scopedInstructor.club = :scheduleClub)')
+                ->setParameter('scheduleClub', $club);
     }
 
     public function edit(AdminContext $context)
     {
-        $this->assertCourse($context->getEntity()->getInstance()->getCourses());
+        $this->assertSchedule($context->getEntity()->getInstance());
         return parent::edit($context);
     }
 
     public function detail(AdminContext $context)
     {
-        $this->assertCourse($context->getEntity()->getInstance()->getCourses());
+        $this->assertSchedule($context->getEntity()->getInstance());
         return parent::detail($context);
     }
 
@@ -120,7 +123,7 @@ class ScheduleCrudController extends AbstractCrudController
     public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if ($entityInstance instanceof Schedule) {
-            $this->assertCourse($entityInstance->getCourses());
+            $this->assertSchedule($entityInstance);
         }
         parent::deleteEntity($entityManager, $entityInstance);
     }
@@ -136,7 +139,7 @@ class ScheduleCrudController extends AbstractCrudController
             }
             $schedule = $this->em->find(Schedule::class, (int) $id);
             if ($schedule !== null) {
-                $this->assertCourse($schedule->getCourses());
+                $this->assertSchedule($schedule);
             }
         }
         return parent::batchDelete($context, $batchActionDto);
@@ -539,7 +542,7 @@ class ScheduleCrudController extends AbstractCrudController
         if (!$schedule instanceof Schedule) {
             throw $this->createNotFoundException('Kurstermin nicht gefunden.');
         }
-        $this->assertCourse($schedule->getCourses());
+        $this->assertSchedule($schedule);
         if ($schedule->getCourses() !== null) {
             if ($schedule->getCourses()->getStatus() === CourseStatus::COMPLETED) {
                 throw $this->createAccessDeniedException('Abgeschlossene Kurse duerfen nicht veraendert werden.');

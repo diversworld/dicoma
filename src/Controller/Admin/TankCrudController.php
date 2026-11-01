@@ -35,6 +35,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[IsGranted('ROLE_SUPER_ADMIN')]
 class TankCrudController extends AbstractCrudController
 {
+    use ClubEquipmentCrudTrait;
     public function __construct(
         private readonly AdminUrlGenerator $adminUrls,
         private readonly EntityManagerInterface $em,
@@ -47,6 +48,7 @@ class TankCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'tank_crud_'.$this->clubEquipmentScope->club()->getId()])
             ->setEntityLabelInSingular('Tauchflasche')
             ->setEntityLabelInPlural('Tauchflaschen')
             ->setDefaultSort(['inventory' => 'ASC'])
@@ -75,6 +77,7 @@ class TankCrudController extends AbstractCrudController
         if (!$tank instanceof Tank || $tank->getId() === null) {
             throw $this->createNotFoundException('Vereinsflasche nicht gefunden.');
         }
+        $this->assertClubEquipment($tank);
         $id = $tank->getId();
         $errors = [];
         if ($request->isMethod('POST')) {
@@ -135,6 +138,7 @@ class TankCrudController extends AbstractCrudController
         if (!$entity instanceof Tank || null === $entity->getId()) {
             throw $this->createNotFoundException('Tauchflasche nicht gefunden.');
         }
+        $this->assertClubEquipment($entity);
         $id = $entity->getId();
         if (!$request->isMethod('GET') && !$request->isMethod('POST')) {
             throw $this->createNotFoundException('Methode nicht unterstützt.');
@@ -178,6 +182,7 @@ class TankCrudController extends AbstractCrudController
         if (!$tank instanceof Tank || null === $tank->getId()) {
             throw $this->createNotFoundException('Tauchflasche nicht gefunden.');
         }
+        $this->assertClubEquipment($tank);
         $tankId = $tank->getId();
         if (!$request->isMethod('GET') && !$request->isMethod('POST')) {
             throw $this->createNotFoundException('Methode nicht unterstützt.');
@@ -256,7 +261,9 @@ class TankCrudController extends AbstractCrudController
 
         yield FormField::addFieldset('Inventar und Verein');
         yield IdField::new('id', 'ID')->onlyOnIndex();
-        yield AssociationField::new('club', 'Verein')->setRequired(true)->setColumns(4);
+        yield AssociationField::new('club', 'Verein')
+            ->setFormTypeOption('choices', [$this->clubEquipmentScope->club()])
+            ->setFormTypeOption('disabled', true)->setRequired(true)->setColumns(4);
         yield TextField::new('inventory', 'Inventarnummer')->setRequired(true)->setColumns(4);
         yield TextField::new('serialnumber', 'Seriennummer')->setRequired(true)->setColumns(4);
 

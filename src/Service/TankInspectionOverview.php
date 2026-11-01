@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Tank;
+use App\Entity\Club;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Read-only overview. An unknown next check date is never treated as valid. */
@@ -12,13 +13,13 @@ final class TankInspectionOverview
 {
     public function __construct(private readonly EntityManagerInterface $em) {}
 
-    public function getOverview(): array
+    public function getOverview(Club $club): array
     {
         $today = new \DateTimeImmutable('today');
         $soon = $today->modify('+30 days');
         $counts = ['total' => 0, 'overdue' => 0, 'dueSoon' => 0, 'valid' => 0, 'unknown' => 0];
         $attention = [];
-        foreach ($this->em->getRepository(Tank::class)->findAll() as $tank) {
+        foreach ($this->em->getRepository(Tank::class)->findBy(['club' => $club]) as $tank) {
             ++$counts['total'];
             $date = $tank->getNextCheckDate();
             if ($date === null) {

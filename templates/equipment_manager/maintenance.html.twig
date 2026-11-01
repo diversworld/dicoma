@@ -1,41 +1,41 @@
 {% extends 'equipment_manager/layout.html.twig' %}
-{% block title %}Wartung – {{ tank.inventory }} | DICOMA{% endblock %}
+{% block title %}{{ 'Wartung'|trans }} – {{ tank.inventory }} | DICOMA{% endblock %}
 
 {% block body %}
 <section class="section"><div class="container">
-  <p><a href="{{ path('equipment_manager_tanks') }}">← Zur Flaschenübersicht</a></p>
-  <h1>Wartungsaufträge: {{ tank.inventory }}</h1>
-  <p>{{ clubName }} · Zustand: {{ tank.conditionStatus }} · Verleih: {{ tank.lendable ? 'Freigegeben' : 'Gesperrt' }}</p>
-  {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message }}</div>{% endfor %}{% endfor %}
+  <p><a href="{{ path('equipment_manager_tanks') }}">← {{ 'Zur Flaschenübersicht'|trans }}</a></p>
+  <h1>{{ 'Wartungsaufträge'|trans }}: {{ tank.inventory }}</h1>
+  <p>{{ clubName }} · {{ 'Zustand'|trans }}: {{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }} · {{ 'Verleih'|trans }}: {{ (tank.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</p>
+  {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message|trans }}</div>{% endfor %}{% endfor %}
   {% set openOrders = orders|filter(o => o.status == 'open') %}
   {% if openOrders|length == 0 %}
-    <h2>Wartungsauftrag eröffnen</h2>
-    <form method="post" novalidate onsubmit="if (window.tinymce) { tinymce.triggerSave(); } action="{{ path('equipment_manager_maintenance_submit', {id: tank.id}) }}">
+    <h2>{{ 'Wartungsauftrag eröffnen'|trans }}</h2>
+    <form method="post" novalidate onsubmit="if (window.tinymce) { tinymce.triggerSave(); }" action="{{ path('equipment_manager_maintenance_submit', {id: tank.id}) }}">
       <input type="hidden" name="_token" value="{{ csrf_token('equipment_maintenance_' ~ tank.id) }}">
       <input type="hidden" name="operation" value="open">
-      <div class="form-group"><label for="description">Beschreibung (10–2000 Zeichen)</label>
+      <div class="form-group"><label for="description">{{ 'Beschreibung (10–2000 Zeichen)'|trans }}</label>
       <textarea id="description" name="description" class="form-control"></textarea></div>
-      <button class="btn btn-warning" type="submit">Eröffnen und Flasche sperren</button>
+      <button class="btn btn-warning" type="submit">{{ 'Eröffnen und Flasche sperren'|trans }}</button>
     </form>
-  {% else %}<p class="alert alert-warning">Es besteht bereits ein offener Wartungsauftrag.</p>{% endif %}
-  <h2 class="mt-4">Wartungshistorie (letzte 100)</h2>
+  {% else %}<p class="alert alert-warning">{{ 'Es besteht bereits ein offener Wartungsauftrag.'|trans }}</p>{% endif %}
+  <h2 class="mt-4">{{ 'Wartungshistorie (letzte 100)'|trans }}</h2>
   <div class="table-responsive"><table class="table table-striped">
-    <thead><tr><th>Nr.</th><th>Eröffnet</th><th>Beschreibung</th><th>Status</th><th>Abschluss</th><th>Aktion</th></tr></thead>
+    <thead><tr><th>{{ 'Nr.'|trans }}</th><th>{{ 'Eröffnet'|trans }}</th><th>{{ 'Beschreibung'|trans }}</th><th>{{ 'Status'|trans }}</th><th>{{ 'Abschluss'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead>
     <tbody>{% for order in orders %}<tr>
       <td>{{ order.id }}</td><td>{{ order.createdAt|date('d.m.Y H:i') }}</td><td>{{ order.description }}</td>
-      <td>{{ order.status == 'open' ? 'Offen' : 'Abgeschlossen' }}</td>
+      <td>{{ (order.status == 'open' ? 'Offen' : 'Abgeschlossen')|trans }}</td>
       <td>{% if order.closedAt %}{{ order.closedAt|date('d.m.Y H:i') }} · {{ order.closedBy }} · {{ order.resolution }}{% else %}—{% endif %}</td>
       <td>{% if order.status == 'open' %}
-        <form method="post" novalidate onsubmit="if (window.tinymce) { tinymce.triggerSave(); } action="{{ path('equipment_manager_maintenance_submit', {id: tank.id}) }}">
+        <form method="post" novalidate onsubmit="if (window.tinymce) { tinymce.triggerSave(); }" action="{{ path('equipment_manager_maintenance_submit', {id: tank.id}) }}">
           <input type="hidden" name="_token" value="{{ csrf_token('equipment_maintenance_' ~ tank.id) }}">
           <input type="hidden" name="operation" value="close"><input type="hidden" name="order_id" value="{{ order.id }}">
-          <label for="resolution_{{ order.id }}">Abschlussbericht</label>
+          <label for="resolution_{{ order.id }}">{{ 'Abschlussbericht'|trans }}</label>
           <textarea id="resolution_{{ order.id }}" name="resolution" class="form-control"></textarea>
-          <button type="submit" class="btn btn-primary mt-2">Auftrag abschließen</button>
+          <button type="submit" class="btn btn-primary mt-2">{{ 'Auftrag abschließen'|trans }}</button>
         </form>
       {% else %}—{% endif %}</td>
-    </tr>{% else %}<tr><td colspan="6">Keine Wartungsaufträge vorhanden.</td></tr>{% endfor %}</tbody>
+    </tr>{% else %}<tr><td colspan="6">{{ 'Keine Wartungsaufträge vorhanden.'|trans }}</td></tr>{% endfor %}</tbody>
   </table></div>
-  <p class="text-muted">Ein abgeschlossener Auftrag gibt die Flasche nicht automatisch für den Verleih frei.</p>
+  <p class="text-muted">{{ 'Ein abgeschlossener Auftrag gibt die Flasche nicht automatisch für den Verleih frei.'|trans }}</p>
 </div></section>
 {% endblock %}

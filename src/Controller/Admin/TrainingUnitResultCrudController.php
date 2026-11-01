@@ -62,7 +62,7 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         $participant = $this->entityManager->find(CourseParticipant::class, (int) $participantId);
         $schedule = $this->entityManager->find(Schedule::class, (int) $scheduleId);
         if ($participant instanceof CourseParticipant) { $this->assertCourse($participant->getCourse()); }
-        if ($schedule instanceof Schedule) { $this->assertCourse($schedule->getCourses()); }
+        if ($schedule instanceof Schedule) { $this->assertSchedule($schedule); }
         if ($participant instanceof CourseParticipant && $schedule instanceof Schedule
             && $participant->getCourse()?->getId() === $schedule->getCourses()?->getId()
             && $participant->getCourse() !== null) {
@@ -88,15 +88,25 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
     private function assertResult(TrainingUnitResult $result): void
     {
         $participantCourse = $result->getCourseParticipant()?->getCourse();
-        $scheduleCourse = $result->getSchedule()?->getCourses();
+        $schedule = $result->getSchedule();
+        $scheduleCourse = $schedule?->getCourses();
         $this->assertCourse($participantCourse);
-        $this->assertCourse($scheduleCourse);
+        $this->assertSchedule($schedule);
         if ($participantCourse?->getId() !== $scheduleCourse?->getId()) {
             throw $this->createAccessDeniedException('Termin und Teilnehmer gehören nicht zum selben Kurs.');
         }
         $assessor = $result->getAssessor();
         if ($assessor !== null && $assessor->getClub()?->getId() !== $this->clubContext->getClub()?->getId()) {
             throw $this->createAccessDeniedException('Prüfer gehört nicht zum ausgewählten Verein.');
+        }
+    }
+
+    private function assertSchedule(?Schedule $schedule): void
+    {
+        $this->assertCourse($schedule?->getCourses());
+        $instructor = $schedule?->getInstructor();
+        if ($instructor !== null && $instructor->getClub()?->getId() !== $this->clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Ausbilder gehört nicht zum ausgewählten Verein.');
         }
     }
 
@@ -108,8 +118,10 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         return $query->join('entity.courseParticipant', 'resultParticipant')->join('resultParticipant.course', 'resultCourse')
             ->join('entity.schedule', 'resultSchedule')->join('resultSchedule.courses', 'resultScheduleCourse')
             ->leftJoin('entity.assessor', 'resultAssessor')
+            ->leftJoin('resultSchedule.instructor', 'resultInstructor')
             ->andWhere('resultCourse.club = :resultClub AND resultScheduleCourse = resultCourse')
             ->andWhere('resultAssessor.id IS NULL OR resultAssessor.club = :resultClub')
+            ->andWhere('resultInstructor.id IS NULL OR resultInstructor.club = :resultClub')
             ->setParameter('resultClub', $club);
     }
 
@@ -139,7 +151,7 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
             $schedule = $original['schedule'] ?? null;
             $assessor = $original['assessor'] ?? null;
             $this->assertCourse($participant instanceof CourseParticipant ? $participant->getCourse() : null);
-            $this->assertCourse($schedule instanceof Schedule ? $schedule->getCourses() : null);
+            $this->assertSchedule($schedule instanceof Schedule ? $schedule : null);
             if ($assessor instanceof Member && $assessor->getClub()?->getId() !== $this->clubContext->getClub()?->getId()) {
                 throw $this->createAccessDeniedException('Prüfer gehört nicht zum ausgewählten Verein.');
             }
@@ -249,8 +261,14 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         $club = $this->clubContext->getClub();
         return static function (EntityRepository $repository) use ($relation, $club): QueryBuilder {
             $query = $repository->createQueryBuilder('choice')->join('choice.'.$relation, 'choiceCourse');
-            return $club === null ? $query->andWhere('1 = 0')
-                : $query->andWhere('choiceCourse.club = :club')->setParameter('club', $club);
+            if ($club === null) {
+                return $query->andWhere('1 = 0');
+            }
+            if ($relation === 'courses') {
+                $query->leftJoin('choice.instructor', 'choiceInstructor')
+                    ->andWhere('choiceInstructor.id IS NULL OR choiceInstructor.club = :club');
+            }
+            return $query->andWhere('choiceCourse.club = :club')->setParameter('club', $club);
         };
     }
 
@@ -311,9 +329,15 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
         $current = $editId ? $entityManager->find(TrainingUnitResult::class, $editId) : null;
         $currentId = $current instanceof TrainingUnitResult
             && $current->getCourseParticipant()?->getId() === $participant->getId()
+            && ($current->getAssessor() === null
+                || $current->getAssessor()->getClub()?->getId() === $this->clubContext->getClub()?->getId())
             ? $current->getSchedule()?->getId() : null;
 
         foreach ($schedules as $schedule) {
+            if ($schedule->getInstructor() !== null
+                && $schedule->getInstructor()->getClub()?->getId() !== $this->clubContext->getClub()?->getId()) {
+                continue;
+            }
             $id = $schedule->getId();
             if ($id === null) {
                 continue;
@@ -327,7 +351,9 @@ final class TrainingUnitResultCrudController extends AbstractCrudController
             }
             // Bereits erfasste Nachweise niemals erneut anlegen.
             // Offene und fehlgeschlagene Ergebnisse können bearbeitet werden.
-            if ($result->getStatus() !== TrainingUnitResultStatus::PASSED) {
+            if ($result->getStatus() !== TrainingUnitResultStatus::PASSED
+                && ($result->getAssessor() === null
+                    || $result->getAssessor()->getClub()?->getId() === $this->clubContext->getClub()?->getId())) {
                 $toEdit[] = [
                     'text' => $label,
                     'status' => $result->getStatus()->label(),

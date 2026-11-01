@@ -45,6 +45,7 @@ use App\Entity\EquipmentBooking;
 use App\Entity\EquipmentBookingItem;
 use App\Entity\EquipmentReservation;
 use App\Entity\EquipmentRegulatorDetails;
+use App\Entity\Tank;
 use App\Entity\TrainingUnitResult;
 use App\Entity\ClubEvent;
 use App\Entity\Team;
@@ -649,7 +650,8 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $own = (new Schedule())->setCourses($ownCourse)->setTitle('Calendar own appointment')->setStartDate(new \DateTime('2026-11-10'));
         $foreign = (new Schedule())->setCourses($otherCourse)->setTitle('Calendar foreign appointment')->setStartDate(new \DateTime('2026-11-10'));
         $unassigned = (new Schedule())->setCourses($unassignedCourse)->setTitle('Calendar unassigned appointment')->setStartDate(new \DateTime('2026-11-10'));
-        foreach ([$ownCourse, $otherCourse, $unassignedCourse, $own, $foreign, $unassigned] as $entity) {
+        $inconsistent = (new Schedule())->setCourses($ownCourse)->setInstructor($other->getMember())->setTitle('Calendar inconsistent instructor')->setStartDate(new \DateTime('2026-11-10'));
+        foreach ([$ownCourse, $otherCourse, $unassignedCourse, $own, $foreign, $unassigned, $inconsistent] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
@@ -661,6 +663,13 @@ final class Phase2FoundationHttpTest extends WebTestCase
         self::assertSelectorTextContains('body', 'Calendar own appointment');
         self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
         self::assertSelectorTextNotContains('body', 'Calendar unassigned appointment');
+        self::assertSelectorTextNotContains('body', 'Calendar inconsistent instructor');
+        self::assertSelectorNotExists('select[name="instructor"] option[value="'.$other->getMember()->getId().'"]');
+        $this->client->request('GET', '/admin/course-training-matrix/'.$ownCourse->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Calendar inconsistent instructor');
+        $this->client->request('GET', '/admin/training-results/batch/'.$inconsistent->getId());
+        self::assertResponseStatusCodeSame(403);
         $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
         $this->client->request('GET', '/admin/course-calendar?month=2026-11&club='.$other->getMember()->getClub()->getId());
         self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
@@ -668,7 +677,8 @@ final class Phase2FoundationHttpTest extends WebTestCase
         self::assertSelectorTextContains('table.datagrid', 'Calendar own appointment');
         self::assertSelectorTextNotContains('table.datagrid', 'Calendar foreign appointment');
         self::assertSelectorTextNotContains('table.datagrid', 'Calendar unassigned appointment');
-        foreach ([$foreignId, $unassigned->getId()] as $id) {
+        self::assertSelectorTextNotContains('table.datagrid', 'Calendar inconsistent instructor');
+        foreach ([$foreignId, $unassigned->getId(), $inconsistent->getId()] as $id) {
             foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
                 $this->client->request('GET', $this->adminUrl(ScheduleCrudController::class, $action, $id));
                 self::assertResponseStatusCodeSame(403);
@@ -694,12 +704,15 @@ final class Phase2FoundationHttpTest extends WebTestCase
         try {
             $tokens = static::getContainer()->get('security.csrf.token_manager');
             $duplicateToken = $tokens->getToken('calendar_duplicate_'.$foreignId)->getValue();
+            $inconsistentToken = $tokens->getToken('calendar_duplicate_'.$inconsistent->getId())->getValue();
             $batchToken = $tokens->getToken('ea-batch-action-batchDelete-'.Schedule::class)->getValue();
             $this->client->getRequest()->getSession()->save();
         } finally {
             $stack->pop();
         }
         $this->client->request('POST', '/admin/course-calendar/duplicate/'.$foreignId, ['_token' => $duplicateToken]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/course-calendar/duplicate/'.$inconsistent->getId(), ['_token' => $inconsistentToken]);
         self::assertResponseStatusCodeSame(403);
         $this->client->request('POST', $this->adminUrl(ScheduleCrudController::class, 'batchDelete'), [
             'batchActionName' => 'batchDelete', 'entityFqcn' => Schedule::class, 'batchActionCsrfToken' => $batchToken,
@@ -794,13 +807,19 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $otherClub = $other->getMember()->getClub();
         $ownCourse = (new Courses())->setClub($ownClub)->setTitle('Own assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
         $otherCourse = (new Courses())->setClub($otherClub)->setTitle('Foreign assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
+        $unassignedCourse = (new Courses())->setTitle('Unassigned assessment course')->setCategory('training')->setStatus(CourseStatus::OPEN);
         $ownParticipant = (new CourseParticipant())->setCourse($ownCourse)->setMember($super->getMember());
         $otherParticipant = (new CourseParticipant())->setCourse($otherCourse)->setMember($other->getMember());
+        $unassignedParticipant = (new CourseParticipant())->setCourse($unassignedCourse)->setMember($super->getMember());
         $ownSchedule = (new Schedule())->setCourses($ownCourse)->setTitle('Own assessment session')->setStartDate(new \DateTime('2026-11-10'));
         $otherSchedule = (new Schedule())->setCourses($otherCourse)->setTitle('Foreign assessment session')->setStartDate(new \DateTime('2026-11-10'));
+        $inconsistentSchedule = (new Schedule())->setCourses($ownCourse)->setInstructor($other->getMember())->setTitle('Inconsistent assessment session')->setStartDate(new \DateTime('2026-11-11'));
+        $foreignAssessorSchedule = (new Schedule())->setCourses($ownCourse)->setTitle('Foreign assessor session')->setStartDate(new \DateTime('2026-11-12'));
         $ownResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($ownSchedule);
         $otherResult = (new TrainingUnitResult())->setCourseParticipant($otherParticipant)->setSchedule($otherSchedule);
-        foreach ([$ownCourse, $otherCourse, $ownParticipant, $otherParticipant, $ownSchedule, $otherSchedule, $ownResult, $otherResult] as $entity) {
+        $inconsistentResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($inconsistentSchedule);
+        $foreignAssessorResult = (new TrainingUnitResult())->setCourseParticipant($ownParticipant)->setSchedule($foreignAssessorSchedule)->setAssessor($other->getMember());
+        foreach ([$ownCourse, $otherCourse, $unassignedCourse, $ownParticipant, $otherParticipant, $unassignedParticipant, $ownSchedule, $otherSchedule, $inconsistentSchedule, $foreignAssessorSchedule, $ownResult, $otherResult, $inconsistentResult, $foreignAssessorResult] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
@@ -809,24 +828,52 @@ final class Phase2FoundationHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('table.datagrid', 'Own assessment session');
         self::assertSelectorTextNotContains('table.datagrid', 'Foreign assessment session');
+        self::assertSelectorTextNotContains('table.datagrid', 'Inconsistent assessment session');
+        self::assertSelectorTextNotContains('table.datagrid', 'Foreign assessor session');
         $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
         foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
             $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class, $action, $otherResult->getId()));
             self::assertResponseStatusCodeSame(403);
+            $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class, $action, $inconsistentResult->getId()));
+            self::assertResponseStatusCodeSame(403);
+            $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class, $action, $foreignAssessorResult->getId()));
+            self::assertResponseStatusCodeSame(403);
         }
+        $this->client->request('GET', '/admin/training-unit-result/schedules?participant='.$ownParticipant->getId());
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Own assessment session', $this->client->getResponse()->getContent());
+        self::assertStringNotContainsString('Inconsistent assessment session', $this->client->getResponse()->getContent());
+        self::assertStringNotContainsString('Foreign assessor session', $this->client->getResponse()->getContent());
+        $this->client->request('GET', '/admin/training-unit-result/schedules?participant='.$ownParticipant->getId().'&edit='.$foreignAssessorResult->getId());
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('Foreign assessor session', $this->client->getResponse()->getContent());
         $this->client->request('GET', '/admin/training-unit-result/schedules?participant='.$otherParticipant->getId());
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/training-results/batch/'.$otherSchedule->getId());
         self::assertResponseStatusCodeSame(403);
+        foreach (['/admin/course-training-matrix/'.$otherCourse->getId(), '/admin/course-training-matrix/'.$unassignedCourse->getId(),
+            '/admin/training-progress/'.$otherParticipant->getId(), '/admin/training-progress/'.$unassignedParticipant->getId()] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+        foreach (['/admin/course-training-matrix/'.$ownCourse->getId(), '/admin/training-progress/'.$ownParticipant->getId()] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
         $crawler = $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class, Crud::PAGE_NEW));
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('select[name="TrainingUnitResult[courseParticipant]"] option[value="'.$otherParticipant->getId().'"]');
         self::assertSelectorNotExists('select[name="TrainingUnitResult[schedule]"] option[value="'.$otherSchedule->getId().'"]');
+        self::assertSelectorNotExists('select[name="TrainingUnitResult[schedule]"] option[value="'.$inconsistentSchedule->getId().'"]');
         self::assertSelectorNotExists('select[name="TrainingUnitResult[assessor]"] option[value="'.$other->getMember()->getId().'"]');
         $form = $crawler->filter('form[name="TrainingUnitResult"]')->form();
         $forged = $form->getPhpValues();
         $forged['TrainingUnitResult']['courseParticipant'] = (string) $otherParticipant->getId();
         $forged['TrainingUnitResult']['schedule'] = (string) $otherSchedule->getId();
+        $this->client->request('POST', $form->getUri(), $forged);
+        self::assertResponseStatusCodeSame(422);
+        $forged['TrainingUnitResult']['courseParticipant'] = (string) $ownParticipant->getId();
+        $forged['TrainingUnitResult']['schedule'] = (string) $inconsistentSchedule->getId();
         $this->client->request('POST', $form->getUri(), $forged);
         self::assertResponseStatusCodeSame(422);
         $this->client->request('GET', $this->adminUrl(TrainingUnitResultCrudController::class));
@@ -843,7 +890,7 @@ final class Phase2FoundationHttpTest extends WebTestCase
             'batchActionEntityIds' => [(string) $ownResult->getId(), (string) $otherResult->getId()],
         ]);
         self::assertResponseStatusCodeSame(403);
-        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM training_unit_result'));
+        self::assertSame(4, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM training_unit_result'));
         $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
         self::assertResponseRedirects();
         $this->client->submit($form);
@@ -1165,6 +1212,78 @@ final class Phase2FoundationHttpTest extends WebTestCase
         }
     }
 
+    public function testEquipmentManagerUsesSelectedLanguage(): void
+    {
+        $super = $this->admin('equipment-language-super', 'LanguageClub', User::ROLE_SUPER_ADMIN);
+        $tank = (new Tank())->setClub($super->getMember()->getClub())->setInventory('LANG-TANK')
+            ->setSerialnumber('LANG-SERIAL')->setSize(12)->setLastCheckDate(new \DateTime('2025-01-01'));
+        $this->em->persist($tank);
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Gerätewart – Übersicht', 'Direktausleihe am Schalter', 'Jetzt Direktausleihe anlegen?', 'Bitte 1 bis 30 verschiedene Gegenstände auswählen.', 'TÜV-Termin planen', 'Gerätewart – Tauchflaschen', 'Inventar und Gerätewart', 'Einsatzbereit'],
+            'en' => ['Equipment manager – overview', 'Walk-in loan at the counter', 'Create this loan now?', 'Select between 1 and 30 different items.', 'Plan an inspection', 'Equipment manager – diving cylinders', 'Inventory and equipment management', 'Ready for use'],
+            'fr' => ['Responsable du matériel – aperçu', 'Prêt au guichet', 'Créer ce prêt maintenant ?', 'Choisissez entre 1 et 30 articles différents.', 'Planifier une inspection', 'Responsable du matériel – bouteilles de plongée', 'Inventaire et gestion du matériel', 'Prêt à l’emploi'],
+            'es' => ['Responsable de equipo – resumen', 'Préstamo en el mostrador', '¿Crear el préstamo ahora?', 'Seleccione entre 1 y 30 artículos diferentes.', 'Planificar una inspección', 'Responsable de equipo – botellas de buceo', 'Inventario y gestión de equipo', 'Listo para usar'],
+        ] as $locale => [$dashboard, $direct, $confirmation, $error, $plan, $tanks, $inventory, $ready]) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class));
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            $this->client->request('GET', '/equipment-manager');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $dashboard);
+            $crawler = $this->client->request('GET', '/equipment-manager/loans/direct');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $direct);
+            self::assertSame(1, preg_match('/confirm: ("(?:\\\\.|[^"\\\\])*")/', $this->client->getResponse()->getContent(), $match));
+            self::assertStringContainsString($confirmation, json_decode($match[1], true, flags: JSON_THROW_ON_ERROR));
+            $form = $crawler->filter('#reservation-form')->form();
+            $params = $form->getPhpValues();
+            $params['member_id'] = (string) $super->getMember()->getId();
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $error);
+            $this->client->request('GET', '/equipment-manager/tuv/plan');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $plan);
+            $this->client->request('GET', '/equipment-manager/tanks');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $tanks);
+            self::assertSelectorTextContains('table', $ready);
+            $this->client->request('GET', '/equipment-manager/inventory?type=tank');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $inventory);
+            self::assertSelectorTextContains('table', $ready);
+        }
+    }
+
+    public function testEquipmentManagerCylinderFormsSubmitToCorrectRoutes(): void
+    {
+        $super = $this->admin('equipment-forms-super', 'FormsClub', User::ROLE_SUPER_ADMIN);
+        $tank = (new \App\Entity\Tank())->setClub($super->getMember()->getClub())
+            ->setInventory('FORMS-TANK')->setSerialnumber('FORMS')->setSize(12)->setLastCheckDate(new \DateTime('2025-01-01'));
+        $this->em->persist($tank);
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/equipment-manager/tanks/'.$tank->getId().'/inspection');
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/inspection"]')->form();
+        $this->client->submit($form, [
+            'performed_at' => '2026-01-01',
+            'next_at' => '2028-07-01',
+            'reference' => 'Inspected and recorded by test provider',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame('2026-01-01', $this->em->getConnection()->fetchOne('SELECT last_check_date FROM tank WHERE id = ?', [$tank->getId()]));
+        $crawler = $this->client->request('GET', '/equipment-manager/tanks/'.$tank->getId().'/maintenance');
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/maintenance"]')->form();
+        $this->client->submit($form, ['description' => 'Valve repair required for this cylinder']);
+        self::assertResponseRedirects();
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM tank_maintenance_order'));
+    }
+
     public function testEquipmentManagerTuvRejectsInconsistentBookings(): void
     {
         $super = $this->admin('tuv-scope-super', 'TuvOwn', User::ROLE_SUPER_ADMIN);
@@ -1174,10 +1293,11 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $ownMemberTank = (new \App\Entity\MemberTank())->setMember($super->getMember())->setLabel('TUV-MEMBER-OWN')->setSerialNumber('OWN-MEMBER');
         $foreignMemberTank = (new \App\Entity\MemberTank())->setMember($other->getMember())->setLabel('TUV-MEMBER-FOREIGN')->setSerialNumber('FOREIGN');
         $check = new \App\Entity\TankCheck();
-        $clubBooking = (new \App\Entity\MemberTankCheckBooking())->setClubTank($clubTank)->setTankCheck($check);
+        $clubBooking = (new \App\Entity\MemberTankCheckBooking())->setClubTank($clubTank)->setTankCheck($check)->setStatus('completed');
+        $result = new \App\Entity\MemberTankCheckResult($clubBooking);
         $memberBooking = (new \App\Entity\MemberTankCheckBooking())->setMember($super->getMember())->setMemberTank($ownMemberTank)->setTankCheck($check);
         $invalid = (new \App\Entity\MemberTankCheckBooking())->setMember($super->getMember())->setMemberTank($foreignMemberTank)->setTankCheck($check)->setStatus('returned');
-        foreach ([$clubTank, $ownMemberTank, $foreignMemberTank, $check, $clubBooking, $memberBooking, $invalid] as $entity) {
+        foreach ([$clubTank, $ownMemberTank, $foreignMemberTank, $check, $clubBooking, $memberBooking, $invalid, $result] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
@@ -1189,6 +1309,9 @@ final class Phase2FoundationHttpTest extends WebTestCase
         self::assertSelectorTextNotContains('body', 'TUV-MEMBER-FOREIGN');
         $this->client->request('GET', '/equipment-manager/tuv/booking/'.$invalid->getId().'/result');
         self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/equipment-manager/tuv/booking/'.$clubBooking->getId().'/result');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Prüfergebnis bereits erfasst');
     }
 
     public function testRegulatorModelOptionsRespectSelectedClub(): void
@@ -1215,6 +1338,113 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/api/regulator-model-options', ['club' => $ownClub->getId(), 'manufacturer' => $otherManufacturer->getId()]);
         self::assertResponseIsSuccessful();
         self::assertStringNotContainsString('Inconsistent model', $this->client->getResponse()->getContent());
+    }
+
+    public function testLegacyScheduleEditingRespectsSelectedClub(): void
+    {
+        $super = $this->admin('legacy-schedule-super', 'ScheduleOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('legacy-schedule-other', 'ScheduleOther', User::ROLE_ADMIN);
+        $ownCourse = (new Courses())->setClub($super->getMember()->getClub())->setTitle('Legacy own course')->setCategory('beginner');
+        $foreignCourse = (new Courses())->setClub($other->getMember()->getClub())->setTitle('Legacy foreign course')->setCategory('beginner');
+        $own = (new Schedule())->setCourses($ownCourse)->setTitle('Own schedule')->setStartDate(new \DateTime('2026-11-10'));
+        $foreign = (new Schedule())->setCourses($foreignCourse)->setTitle('Foreign schedule')->setStartDate(new \DateTime('2026-11-10'));
+        foreach ([$ownCourse, $foreignCourse, $own, $foreign] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $this->client->request('GET', '/schedule/new');
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="Schedule[courses]"] option[value="'.$ownCourse->getId().'"]');
+        self::assertSelectorNotExists('select[name="Schedule[courses]"] option[value="'.$foreignCourse->getId().'"]');
+        $this->client->request('GET', '/schedule/'.$foreign->getId().'/edit');
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/schedule/'.$foreign->getId());
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('GET', '/schedule/'.$own->getId().'/edit');
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testTankAndRegulatorCrudsRespectSelectedClub(): void
+    {
+        $super = $this->admin('assets-crud-super', 'AssetsOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('assets-crud-other', 'AssetsOther', User::ROLE_ADMIN);
+        $ownClub = $super->getMember()->getClub();
+        $otherClub = $other->getMember()->getClub();
+        $ownManufacturer = (new EquipmentManufacturer())->setClub($ownClub)->setName('Own asset manufacturer');
+        $otherManufacturer = (new EquipmentManufacturer())->setClub($otherClub)->setName('Foreign asset manufacturer');
+        $ownFirst = (new \App\Entity\RegulatorModel())->setClub($ownClub)->setManufacturer($ownManufacturer)->setName('Own first');
+        $ownSecond = (new \App\Entity\RegulatorModel())->setClub($ownClub)->setManufacturer($ownManufacturer)->setStage('second')->setName('Own second');
+        $otherFirst = (new \App\Entity\RegulatorModel())->setClub($otherClub)->setManufacturer($otherManufacturer)->setName('Foreign first');
+        $otherSecond = (new \App\Entity\RegulatorModel())->setClub($otherClub)->setManufacturer($otherManufacturer)->setStage('second')->setName('Foreign second');
+        $own = (new \App\Entity\Regulator())->setClub($ownClub)->setManufacturer($ownManufacturer)->setFirstStageModel($ownFirst)->setPrimarySecondStageModel($ownSecond)->setInventoryNumber('REG-OWN')->setFirstStageSerial('OWN');
+        $foreign = (new \App\Entity\Regulator())->setClub($otherClub)->setManufacturer($otherManufacturer)->setFirstStageModel($otherFirst)->setPrimarySecondStageModel($otherSecond)->setInventoryNumber('REG-FOREIGN')->setFirstStageSerial('FOREIGN');
+        $ownTank = (new \App\Entity\Tank())->setClub($ownClub)->setInventory('TANK-OWN')->setSerialnumber('OWN')->setSize(12)->setLastCheckDate(new \DateTime());
+        $foreignTank = (new \App\Entity\Tank())->setClub($otherClub)->setInventory('TANK-FOREIGN')->setSerialnumber('FOREIGN')->setSize(12)->setLastCheckDate(new \DateTime());
+        foreach ([$ownManufacturer, $otherManufacturer, $ownFirst, $ownSecond, $otherFirst, $otherSecond, $own, $foreign, $ownTank, $foreignTank] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ([
+            [\App\Controller\Admin\TankCrudController::class, $ownTank, $foreignTank, 'TANK-OWN', 'TANK-FOREIGN'],
+            [\App\Controller\Admin\RegulatorCrudController::class, $own, $foreign, 'REG-OWN', 'REG-FOREIGN'],
+            [\App\Controller\Admin\RegulatorModelCrudController::class, $ownFirst, $otherFirst, 'Own first', 'Foreign first'],
+        ] as [$controller, $ownEntity, $foreignEntity, $ownText, $foreignText]) {
+            $this->client->request('GET', $this->adminUrl($controller));
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('table.datagrid', $ownText);
+            self::assertSelectorTextNotContains('table.datagrid', $foreignText);
+            foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+                $this->client->request('GET', $this->adminUrl($controller, $action, $foreignEntity->getId()));
+                self::assertResponseStatusCodeSame(403);
+            }
+            $this->client->request('GET', $this->adminUrl($controller, Crud::PAGE_NEW));
+            self::assertResponseIsSuccessful();
+            $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+            $stack->push($this->client->getRequest());
+            try {
+                $token = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-batch-action-batchDelete-'.$controller::getEntityFqcn())->getValue();
+                $this->client->getRequest()->getSession()->save();
+            } finally {
+                $stack->pop();
+            }
+            $this->client->request('POST', $this->adminUrl($controller, 'batchDelete'), [
+                'batchActionName' => 'batchDelete', 'entityFqcn' => $controller::getEntityFqcn(), 'batchActionCsrfToken' => $token,
+                'batchActionEntityIds' => [(string) $ownEntity->getId(), (string) $foreignEntity->getId()],
+            ]);
+            self::assertResponseStatusCodeSame(403);
+            self::assertNotNull($this->em->find($controller::getEntityFqcn(), $ownEntity->getId()));
+        }
+        foreach (['tankStatus', 'tankMaintenance', 'clubInspection'] as $action) {
+            $this->client->request('GET', $this->adminUrl(\App\Controller\Admin\TankCrudController::class, $action, $foreignTank->getId()));
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('POST', '/admin/tuv/club-tank/'.$foreignTank->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(\App\Controller\Admin\RegulatorCrudController::class, Crud::PAGE_NEW));
+        self::assertSelectorNotExists('select[name="Regulator[manufacturer]"] option[value="'.$otherManufacturer->getId().'"]');
+        self::assertSelectorNotExists('select[name="Regulator[firstStageModel]"] option[value="'.$otherFirst->getId().'"]');
+        $crawler = $this->client->request('GET', $this->adminUrl(\App\Controller\Admin\RegulatorModelCrudController::class, Crud::PAGE_NEW));
+        self::assertSelectorNotExists('select[name="RegulatorModel[manufacturer]"] option[value="'.$otherManufacturer->getId().'"]');
+        $form = $crawler->filter('form[name="RegulatorModel"]')->form();
+        $this->client->submit($form, ['RegulatorModel[manufacturer]' => (string) $ownManufacturer->getId(), 'RegulatorModel[stage]' => 'first', 'RegulatorModel[name]' => 'Created model']);
+        self::assertResponseRedirects();
+        self::assertSame($ownClub->getId(), (int) $this->em->getConnection()->fetchOne("SELECT club_id FROM regulator_model WHERE name = 'Created model'"));
+        $crawler = $this->client->request('GET', $this->adminUrl(\App\Controller\Admin\RegulatorModelCrudController::class, Crud::PAGE_NEW));
+        $staleForm = $crawler->filter('form[name="RegulatorModel"]')->form();
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm, ['RegulatorModel[manufacturer]' => (string) $ownManufacturer->getId(), 'RegulatorModel[stage]' => 'first', 'RegulatorModel[name]' => 'Stale model']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne("SELECT COUNT(*) FROM regulator_model WHERE name = 'Stale model'"));
     }
 
     public function testEquipmentTechnicalDetailsRespectSelectedClub(): void
@@ -1268,6 +1498,27 @@ final class Phase2FoundationHttpTest extends WebTestCase
         ]);
         self::assertResponseStatusCodeSame(403);
         self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment_regulator_details'));
+    }
+
+    public function testCompetitionRosterHidesInconsistentMemberships(): void
+    {
+        $super = $this->admin('roster-scope-super', 'RosterOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('roster-scope-other', 'RosterOther', User::ROLE_ADMIN);
+        $sport = (new Sport())->setClub($super->getMember()->getClub())->setName('Roster sport');
+        $team = (new Team())->setSport($sport)->setName('Roster team');
+        $own = (new TeamMember())->setMember($super->getMember())->setTeam($team);
+        $inconsistent = (new TeamMember())->setMember($other->getMember())->setTeam($team);
+        foreach ([$sport, $team, $own, $inconsistent] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $this->client->request('GET', '/admin/teams/'.$team->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', $super->getMember()->getFullName());
+        self::assertSelectorTextNotContains('body', $other->getMember()->getFullName());
+        $this->client->request('GET', '/admin/teams/roster/'.$inconsistent->getId().'/edit');
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testTeamAndTeamMemberCrudRespectSelectedClub(): void
@@ -1440,6 +1691,43 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $this->client->request('GET', $path);
             self::assertResponseStatusCodeSame(403);
         }
+    }
+
+    public function testEquipmentCenterUsesSelectedClubAndLocale(): void
+    {
+        $super = $this->admin('center-super', 'CenterOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('center-other', 'CenterOther', User::ROLE_ADMIN);
+        foreach ([
+            [$super->getMember()->getClub(), 'CENTER-OWN'],
+            [$other->getMember()->getClub(), 'CENTER-OTHER'],
+            [null, 'CENTER-UNASSIGNED'],
+        ] as [$club, $inventory]) {
+            $this->em->persist((new Tank())->setClub($club)->setInventory($inventory)->setSerialnumber($inventory)
+                ->setSize(12)->setLastCheckDate(new \DateTime('2020-01-01')));
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Prüfungen mit Handlungsbedarf', 'Unbekannt'],
+            'en' => ['Inspections requiring action', 'Unknown'],
+            'fr' => ['Inspections nécessitant une action', 'Inconnu'],
+            'es' => ['Inspecciones que requieren atención', 'Desconocido'],
+        ] as $locale => [$heading, $status]) {
+            $crawler = $this->client->request('GET', '/admin/'.$locale.'/equipment-center');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $heading);
+            self::assertSelectorTextContains('table', $status);
+            self::assertSelectorTextContains('table', 'CENTER-OWN');
+            self::assertSelectorTextNotContains('table', 'CENTER-OTHER');
+            self::assertSelectorTextNotContains('table', 'CENTER-UNASSIGNED');
+        }
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $other->getMember()->getClub()->getId()]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/de/equipment-center');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table', 'CENTER-OTHER');
+        self::assertSelectorTextNotContains('table', 'CENTER-OWN');
     }
 
     public function testDashboardQualificationDataAndGlobalEquipmentActionsRespectClubScope(): void

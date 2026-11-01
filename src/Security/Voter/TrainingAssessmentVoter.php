@@ -38,6 +38,11 @@ final class TrainingAssessmentVoter extends Voter
         // Administrators may assess all non-completed courses.
         $user = $token->getUser();
         if (!$user instanceof User) { return false; }
+        if ($this->clubContext->isBackendRequest() && $subject->getInstructor() !== null
+            && ($course->getClub()?->getId() === null
+                || $subject->getInstructor()->getClub()?->getId() !== $course->getClub()->getId())) {
+            return false;
+        }
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
             if (!$this->clubContext->isBackendRequest()) { return true; }
             $clubId = $this->clubContext->getClub()?->getId();

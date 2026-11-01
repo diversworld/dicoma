@@ -80,6 +80,7 @@ class DashboardController extends AbstractDashboardController
     public function equipmentCenter(TankInspectionOverview $overview): Response
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
+        $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Kein Verein ausgewählt.');
         $tankUrl = (clone $this->adminUrlGenerator)
             ->unsetAll()->setController(TankCrudController::class)
             ->setAction(Crud::PAGE_INDEX)->generateUrl();
@@ -88,7 +89,7 @@ class DashboardController extends AbstractDashboardController
             ->setAction(Crud::PAGE_INDEX)->generateUrl();
 
         return $this->render('admin/equipment/center.html.twig', [
-            'overview' => $overview->getOverview(),
+            'overview' => $overview->getOverview($club),
             'tankUrl' => $tankUrl,
             'checkUrl' => $checkUrl,
         ]);

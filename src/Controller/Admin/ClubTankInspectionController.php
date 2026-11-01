@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 use App\Entity\Tank;
 use App\Entity\TankInspectionResult;
 use App\Service\TuvNextInspectionDateCalculator;
+use App\Service\AdminEquipmentScope;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
@@ -19,7 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ClubTankInspectionController extends AbstractController
 {
     #[Route('/admin/tuv/club-tank/{id}', name: 'admin_tuv_club_tank_inspection', requirements: ['id' => '\\d+'], methods: ['GET', 'POST'])]
-    public function index(int $id, Request $request, EntityManagerInterface $em, AdminUrlGenerator $urls, TuvNextInspectionDateCalculator $calculator): Response
+    public function index(int $id, Request $request, EntityManagerInterface $em, AdminUrlGenerator $urls, TuvNextInspectionDateCalculator $calculator, AdminEquipmentScope $scope): Response
     {
         $easyAdminUrl = (clone $urls)->unsetAll()->setController(TankCrudController::class)
             ->setAction('clubInspection')->setEntityId($id)->generateUrl();
@@ -28,6 +29,7 @@ final class ClubTankInspectionController extends AbstractController
         }
         $tank = $em->getRepository(Tank::class)->find($id);
         if (!$tank instanceof Tank) { throw $this->createNotFoundException('Vereinsflasche nicht gefunden.'); }
+        $scope->assertAsset($tank);
         $backUrl = $urls->unsetAll()->setController(TankCrudController::class)->setAction(Action::INDEX)->generateUrl();
         $history = $em->getRepository(TankInspectionResult::class)->findBy(['tank' => $tank], ['createdAt' => 'DESC', 'id' => 'DESC']);
         $errors = [];

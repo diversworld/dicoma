@@ -18,7 +18,7 @@ class RegulatorModel
     #[ORM\ManyToOne(targetEntity: EquipmentManufacturer::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')] private ?EquipmentManufacturer $manufacturer = null;
     #[ORM\Column(length: 10)]
-    #[Assert\Choice(['first','second'])] private string $stage = 'first';
+    #[Assert\Choice(choices: ['first','second'])] private string $stage = 'first';
     #[ORM\Column(length: 120)]
     #[Assert\NotBlank] private ?string $name = null;
     #[ORM\Column] private bool $active = true;
