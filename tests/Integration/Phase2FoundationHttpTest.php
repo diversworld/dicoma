@@ -7,6 +7,19 @@ namespace App\Tests\Integration;
 use App\Controller\Admin\DashboardController;
 use App\Controller\Admin\MemberCrudController;
 use App\Controller\Admin\MemberQualificationCrudController;
+use App\Controller\Admin\MemberSportCrudController;
+use App\Controller\Admin\ScheduleCrudController;
+use App\Controller\Admin\EquipmentItemCrudController;
+use App\Controller\Admin\EquipmentCategoryCrudController;
+use App\Controller\Admin\EquipmentManufacturerCrudController;
+use App\Controller\Admin\EquipmentSubTypeCrudController;
+use App\Controller\Admin\EquipmentSizeCrudController;
+use App\Controller\Admin\EquipmentModelCrudController;
+use App\Controller\Admin\EquipmentAttributeCrudController;
+use App\Controller\Admin\EquipmentBookingCrudController;
+use App\Controller\Admin\EquipmentReservationCrudController;
+use App\Controller\Admin\TeamCrudController;
+use App\Controller\Admin\TeamMemberCrudController;
 use App\Controller\Admin\CoursesCrudController;
 use App\Controller\Admin\CourseParticipantCrudController;
 use App\Controller\Admin\PersonCrudController;
@@ -17,6 +30,21 @@ use App\Entity\MembershipApplication;
 use App\Entity\Schedule;
 use App\Entity\Member;
 use App\Entity\MemberQualification;
+use App\Entity\MemberSport;
+use App\Entity\Sport;
+use App\Entity\EquipmentItem;
+use App\Entity\EquipmentCategory;
+use App\Entity\EquipmentManufacturer;
+use App\Entity\EquipmentAttribute;
+use App\Entity\EquipmentSubType;
+use App\Entity\EquipmentSize;
+use App\Entity\EquipmentModel;
+use App\Entity\EquipmentBooking;
+use App\Entity\EquipmentBookingItem;
+use App\Entity\EquipmentReservation;
+use App\Entity\ClubEvent;
+use App\Entity\Team;
+use App\Entity\TeamMember;
 use App\Entity\Person;
 use App\Entity\Qualification;
 use App\Entity\User;
@@ -521,6 +549,573 @@ final class Phase2FoundationHttpTest extends WebTestCase
         self::assertResponseRedirects();
         self::assertSame(0, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_qualification WHERE id = ?', [$ownId]));
         self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_qualification WHERE id = ?', [$foreignId]));
+    }
+
+    public function testMemberSportAssignmentsRespectSelectedClub(): void
+    {
+        $super = $this->admin('sport-scope-super', 'SportOwnMember', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('sport-scope-other', 'SportOtherMember', User::ROLE_ADMIN);
+        $ownClub = $super->getMember()->getClub();
+        $otherClub = $other->getMember()->getClub();
+        $ownSport = (new Sport())->setClub($ownClub)->setName('Own sport scope');
+        $otherSport = (new Sport())->setClub($otherClub)->setName('Foreign sport scope');
+        $inactive = (new Sport())->setClub($ownClub)->setName('Inactive sport scope')->setActive(false);
+        $own = (new MemberSport())->setSport($inactive);
+        $foreign = (new MemberSport())->setSport($otherSport);
+        $super->getMember()->addSport($own);
+        $other->getMember()->addSport($foreign);
+        foreach ([$ownSport, $otherSport, $inactive, $own, $foreign] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownId = $own->getId();
+        $foreignId = $foreign->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'Inactive sport scope');
+        self::assertSelectorTextNotContains('table.datagrid', 'Foreign sport scope');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class, Crud::PAGE_EDIT, $foreignId));
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class, Crud::PAGE_EDIT, $ownId));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="MemberSport[sport]"] option[value="'.$inactive->getId().'"]');
+        self::assertSelectorNotExists('select[name="MemberSport[sport]"] option[value="'.$otherSport->getId().'"]');
+        $this->client->submit($crawler->filter('form[name="MemberSport"]')->form(), ['MemberSport[notes]' => 'edited']);
+        self::assertResponseRedirects();
+        self::assertSame('edited', $this->em->getConnection()->fetchOne('SELECT notes FROM member_sport WHERE id = ?', [$ownId]));
+
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberCrudController::class, Crud::PAGE_EDIT, $super->getMember()->getId()));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name^="Member[sports]"] option[value="'.$inactive->getId().'"]');
+        self::assertSelectorNotExists('select[name^="Member[sports]"] option[value="'.$otherSport->getId().'"]');
+        $crawler = $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class, Crud::PAGE_NEW));
+        $staleForm = $crawler->filter('form[name="MemberSport"]')->form();
+        self::assertSelectorNotExists('select[name="MemberSport[member]"] option[value="'.$other->getMember()->getId().'"]');
+        self::assertSelectorNotExists('select[name="MemberSport[sport]"] option[value="'.$otherSport->getId().'"]');
+        $values = $staleForm->getPhpValues();
+        $values['MemberSport']['member'] = (string) $super->getMember()->getId();
+        $values['MemberSport']['sport'] = (string) $otherSport->getId();
+        $this->client->request('POST', $staleForm->getUri(), $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_sport'));
+        $this->client->submit($staleForm, [
+            'MemberSport[member]' => (string) $super->getMember()->getId(),
+            'MemberSport[sport]' => (string) $ownSport->getId(),
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_sport WHERE member_id = ? AND sport_id = ?', [$super->getMember()->getId(), $ownSport->getId()]));
+
+        $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-batch-action-batchDelete-'.MemberSport::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $payload = ['batchActionName' => 'batchDelete', 'entityFqcn' => MemberSport::class, 'batchActionCsrfToken' => $token, 'batchActionEntityIds' => [(string) $ownId, (string) $foreignId]];
+        $url = $this->adminUrl(MemberSportCrudController::class, 'batchDelete');
+        $this->client->request('POST', $url, $payload);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(3, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_sport'));
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', $this->adminUrl(MemberSportCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Foreign sport scope');
+        self::assertSelectorTextNotContains('table.datagrid', 'Inactive sport scope');
+        $payload['batchActionEntityIds'] = [(string) $foreignId];
+        $this->client->request('POST', $url, $payload);
+        self::assertResponseRedirects();
+        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM member_sport'));
+    }
+
+    public function testCalendarAndScheduleCrudRespectSelectedClub(): void
+    {
+        $super = $this->admin('calendar-super', 'CalendarOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('calendar-other', 'CalendarOther', User::ROLE_ADMIN);
+        $ownCourse = (new Courses())->setClub($super->getMember()->getClub())->setTitle('Calendar own course')->setCategory('beginner');
+        $otherCourse = (new Courses())->setClub($other->getMember()->getClub())->setTitle('Calendar foreign course')->setCategory('beginner');
+        $unassignedCourse = (new Courses())->setTitle('Calendar unassigned course')->setCategory('beginner');
+        $own = (new Schedule())->setCourses($ownCourse)->setTitle('Calendar own appointment')->setStartDate(new \DateTime('2026-11-10'));
+        $foreign = (new Schedule())->setCourses($otherCourse)->setTitle('Calendar foreign appointment')->setStartDate(new \DateTime('2026-11-10'));
+        $unassigned = (new Schedule())->setCourses($unassignedCourse)->setTitle('Calendar unassigned appointment')->setStartDate(new \DateTime('2026-11-10'));
+        foreach ([$ownCourse, $otherCourse, $unassignedCourse, $own, $foreign, $unassigned] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownId = $own->getId();
+        $foreignId = $foreign->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/course-calendar?month=2026-11');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Calendar own appointment');
+        self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
+        self::assertSelectorTextNotContains('body', 'Calendar unassigned appointment');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->request('GET', '/admin/course-calendar?month=2026-11&club='.$other->getMember()->getClub()->getId());
+        self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
+        $crawler = $this->client->request('GET', $this->adminUrl(ScheduleCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Calendar own appointment');
+        self::assertSelectorTextNotContains('table.datagrid', 'Calendar foreign appointment');
+        self::assertSelectorTextNotContains('table.datagrid', 'Calendar unassigned appointment');
+        foreach ([$foreignId, $unassigned->getId()] as $id) {
+            foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+                $this->client->request('GET', $this->adminUrl(ScheduleCrudController::class, $action, $id));
+                self::assertResponseStatusCodeSame(403);
+            }
+            $this->client->request('GET', '/admin/schedule/'.$id.'/sync-participants');
+            self::assertResponseStatusCodeSame(403);
+        }
+        $crawler = $this->client->request('GET', $this->adminUrl(ScheduleCrudController::class, Crud::PAGE_NEW));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('select[name="Schedule[courses]"] option[value="'.$otherCourse->getId().'"]');
+        self::assertSelectorNotExists('select[name="Schedule[instructor]"] option[value="'.$other->getMember()->getId().'"]');
+        $staleForm = $crawler->filter('form[name="Schedule"]')->form();
+        $this->client->submit($staleForm, [
+            'Schedule[title]' => 'New calendar appointment',
+            'Schedule[courses]' => (string) $ownCourse->getId(),
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame($ownCourse->getId(), (int) $this->em->getConnection()->fetchOne("SELECT courses_id FROM schedule WHERE title = 'New calendar appointment'"));
+        $this->client->request('GET', $this->adminUrl(ScheduleCrudController::class, Crud::PAGE_EDIT, $ownId));
+        self::assertResponseIsSuccessful();
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $tokens = static::getContainer()->get('security.csrf.token_manager');
+            $duplicateToken = $tokens->getToken('calendar_duplicate_'.$foreignId)->getValue();
+            $batchToken = $tokens->getToken('ea-batch-action-batchDelete-'.Schedule::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', '/admin/course-calendar/duplicate/'.$foreignId, ['_token' => $duplicateToken]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', $this->adminUrl(ScheduleCrudController::class, 'batchDelete'), [
+            'batchActionName' => 'batchDelete', 'entityFqcn' => Schedule::class, 'batchActionCsrfToken' => $batchToken,
+            'batchActionEntityIds' => [(string) $ownId, (string) $foreignId],
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM schedule WHERE id IN (?, ?)', [$ownId, $foreignId]));
+        $this->client->submit($selection, ['admin_club[club]' => (string) $other->getMember()->getClub()->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', '/admin/course-calendar?month=2026-11');
+        self::assertSelectorTextContains('body', 'Calendar foreign appointment');
+        self::assertSelectorTextNotContains('body', 'Calendar own appointment');
+    }
+
+    public function testSharedCalendarUsesSelectedClubOnlyInBackend(): void
+    {
+        $super = $this->admin('shared-calendar-super', 'CalendarOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('shared-calendar-other', 'CalendarOther', User::ROLE_ADMIN);
+        $start = new \DateTimeImmutable('2026-11-10 10:00:00');
+        foreach ([
+            [$super->getMember()->getClub(), 'Own calendar event', 'paid'],
+            [$other->getMember()->getClub(), 'Foreign calendar event', 'members_free'],
+        ] as [$club, $title, $pricing]) {
+            $event = new ClubEvent($club);
+            $event->setTitle($title);
+            $event->setDescription('Calendar event');
+            $event->setLocation('Club');
+            $event->setPricing($pricing);
+            $event->setStartsAt($start);
+            $event->setEndsAt($start->modify('+1 hour'));
+            $event->setPublished(true);
+            $this->em->persist($event);
+        }
+        foreach ([
+            [$super->getMember()->getClub(), 'Own shared course'],
+            [$other->getMember()->getClub(), 'Foreign shared course'],
+            [null, 'Unassigned shared course'],
+        ] as [$club, $title]) {
+            $course = (new Courses())->setClub($club)->setTitle($title)->setCategory('training')->setStatus(CourseStatus::OPEN);
+            $schedule = (new Schedule())->setCourses($course)->setTitle($title.' appointment')->setStartDate($start);
+            $this->em->persist($course);
+            $this->em->persist($schedule);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(TeamCrudController::class));
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->request('GET', '/admin/calendar?month=2026-11');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-club-calendar]', 'Own calendar event');
+        self::assertSelectorTextContains('[data-club-calendar]', 'Own shared course');
+        self::assertSelectorTextNotContains('[data-club-calendar]', 'Foreign calendar event');
+        self::assertSelectorTextNotContains('[data-club-calendar]', 'Unassigned shared course');
+        $this->client->submit($selection, ['admin_club[club]' => (string) $other->getMember()->getClub()->getId()]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/calendar?month=2026-11');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-club-calendar]', 'Foreign calendar event');
+        self::assertSelectorTextContains('[data-club-calendar]', 'Foreign shared course');
+        self::assertSelectorTextNotContains('[data-club-calendar]', 'Own calendar event');
+        self::assertSelectorTextNotContains('[data-club-calendar]', 'Unassigned shared course');
+        $this->client->request('GET', '/calendar?month=2026-11');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-club-calendar]', 'Own calendar event');
+        self::assertSelectorTextNotContains('[data-club-calendar]', 'Foreign calendar event');
+    }
+
+    public function testEquipmentInventoryAndOptionsRespectSelectedClub(): void
+    {
+        $super = $this->admin('equipment-super', 'EquipmentOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('equipment-other', 'EquipmentOther', User::ROLE_ADMIN);
+        $ownClub = $super->getMember()->getClub();
+        $otherClub = $other->getMember()->getClub();
+        $ownCategory = (new EquipmentCategory())->setClub($ownClub)->setName('Own category')->setCode('own');
+        $otherCategory = (new EquipmentCategory())->setClub($otherClub)->setName('Other category')->setCode('other');
+        $maker = (new EquipmentManufacturer())->setClub($otherClub)->setName('Foreign maker');
+        $own = (new EquipmentItem())->setClub($ownClub)->setCategory($ownCategory)->setName('Own equipment')->setInventoryNumber('O-1');
+        $foreign = (new EquipmentItem())->setClub($otherClub)->setCategory($otherCategory)->setName('Foreign equipment')->setInventoryNumber('F-1');
+        foreach ([$ownCategory, $otherCategory, $maker, $own, $foreign] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownId = $own->getId();
+        $foreignId = $foreign->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'Own equipment');
+        self::assertSelectorTextNotContains('table.datagrid', 'Foreign equipment');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+            $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class, $action, $foreignId));
+            self::assertResponseStatusCodeSame(403);
+        }
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class, Crud::PAGE_NEW));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="EquipmentItem[club]"][disabled]');
+        self::assertSelectorExists('select[name="EquipmentItem[category]"] option[value="'.$ownCategory->getId().'"]');
+        self::assertSelectorNotExists('select[name="EquipmentItem[category]"] option[value="'.$otherCategory->getId().'"]');
+        self::assertSelectorNotExists('select[name="EquipmentItem[manufacturer]"] option[value="'.$maker->getId().'"]');
+        $staleForm = $crawler->filter('form[name="EquipmentItem"]')->form();
+        $forged = $staleForm->getPhpValues();
+        $forged['EquipmentItem']['category'] = (string) $otherCategory->getId();
+        $forged['EquipmentItem']['name'] = 'Forged equipment';
+        $forged['EquipmentItem']['inventoryNumber'] = 'X-1';
+        $this->client->request('POST', $staleForm->getUri(), $forged);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne("SELECT COUNT(*) FROM equipment_item WHERE inventory_number = 'X-1'"));
+        $this->client->submit($staleForm, [
+            'EquipmentItem[category]' => (string) $ownCategory->getId(),
+            'EquipmentItem[inventoryNumber]' => 'O-2',
+            'EquipmentItem[name]' => 'New own equipment',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame($ownClub->getId(), (int) $this->em->getConnection()->fetchOne("SELECT club_id FROM equipment_item WHERE inventory_number = 'O-2'"));
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class, Crud::PAGE_EDIT, $ownId));
+        $this->client->submit($crawler->filter('form[name="EquipmentItem"]')->form(), ['EquipmentItem[name]' => 'Updated own equipment']);
+        self::assertResponseRedirects();
+        self::assertSame('Updated own equipment', $this->em->getConnection()->fetchOne('SELECT name FROM equipment_item WHERE id = ?', [$ownId]));
+        foreach ([
+            '/admin/equipment-attribute-schema?categoryId='.$otherCategory->getId(),
+            '/admin/equipment/inventory-options?club='.$otherClub->getId().'&category='.$otherCategory->getId(),
+            '/admin/api/equipment-manufacturers?club='.$otherClub->getId(),
+        ] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('GET', '/admin/equipment-attribute-schema?categoryId='.$ownCategory->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-batch-action-batchDelete-'.EquipmentItem::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $payload = ['batchActionName' => 'batchDelete', 'entityFqcn' => EquipmentItem::class, 'batchActionCsrfToken' => $token, 'batchActionEntityIds' => [(string) $ownId, (string) $foreignId]];
+        $this->client->request('POST', $this->adminUrl(EquipmentItemCrudController::class, 'batchDelete'), $payload);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(3, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment_item'));
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', $this->adminUrl(EquipmentItemCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Foreign equipment');
+        self::assertSelectorTextNotContains('table.datagrid', 'Updated own equipment');
+    }
+
+    public function testEquipmentMasterDataRespectSelectedClub(): void
+    {
+        $super = $this->admin('master-super', 'MasterOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('master-other', 'MasterOther', User::ROLE_ADMIN);
+        $ownClub = $super->getMember()->getClub();
+        $otherClub = $other->getMember()->getClub();
+        $ownCategory = (new EquipmentCategory())->setClub($ownClub)->setName('Own category')->setCode('own-master');
+        $foreignCategory = (new EquipmentCategory())->setClub($otherClub)->setName('Foreign category')->setCode('foreign-master');
+        $ownMaker = (new EquipmentManufacturer())->setClub($ownClub)->setName('Own maker');
+        $foreignMaker = (new EquipmentManufacturer())->setClub($otherClub)->setName('Foreign maker');
+        $pairs = [
+            [EquipmentCategoryCrudController::class, $ownCategory, $foreignCategory],
+            [EquipmentManufacturerCrudController::class, $ownMaker, $foreignMaker],
+            [EquipmentSubTypeCrudController::class, (new EquipmentSubType())->setClub($ownClub)->setCategory($ownCategory)->setName('Own subtype'), (new EquipmentSubType())->setClub($otherClub)->setCategory($foreignCategory)->setName('Foreign subtype')],
+            [EquipmentSizeCrudController::class, (new EquipmentSize())->setClub($ownClub)->setCategory($ownCategory)->setManufacturer($ownMaker)->setName('Own size'), (new EquipmentSize())->setClub($otherClub)->setCategory($foreignCategory)->setManufacturer($foreignMaker)->setName('Foreign size')],
+            [EquipmentModelCrudController::class, (new EquipmentModel())->setClub($ownClub)->setCategory($ownCategory)->setManufacturer($ownMaker)->setName('Own model'), (new EquipmentModel())->setClub($otherClub)->setCategory($foreignCategory)->setManufacturer($foreignMaker)->setName('Foreign model')],
+            [EquipmentAttributeCrudController::class, (new EquipmentAttribute())->setCategory($ownCategory)->setCode('own-attr')->setLabel('Own attribute'), (new EquipmentAttribute())->setCategory($foreignCategory)->setCode('foreign-attr')->setLabel('Foreign attribute')],
+        ];
+        foreach ($pairs as [, $own, $foreign]) {
+            $this->em->persist($own);
+            $this->em->persist($foreign);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ($pairs as [$controller, $own, $foreign]) {
+            $crawler = $this->client->request('GET', $this->adminUrl($controller));
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('table.datagrid', 'Own');
+            self::assertSelectorTextNotContains('table.datagrid', 'Foreign');
+            foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+                $this->client->request('GET', $this->adminUrl($controller, $action, $foreign->getId()));
+                self::assertResponseStatusCodeSame(403);
+            }
+        }
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentModelCrudController::class, Crud::PAGE_NEW));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="EquipmentModel[club]"][disabled]');
+        self::assertSelectorExists('select[name="EquipmentModel[category]"] option[value="'.$ownCategory->getId().'"]');
+        self::assertSelectorNotExists('select[name="EquipmentModel[category]"] option[value="'.$foreignCategory->getId().'"]');
+        self::assertSelectorNotExists('select[name="EquipmentModel[manufacturer]"] option[value="'.$foreignMaker->getId().'"]');
+        $form = $crawler->filter('form[name="EquipmentModel"]')->form();
+        $forged = $form->getPhpValues();
+        $forged['EquipmentModel']['category'] = (string) $foreignCategory->getId();
+        $forged['EquipmentModel']['manufacturer'] = (string) $ownMaker->getId();
+        $forged['EquipmentModel']['name'] = 'Forged model';
+        $this->client->request('POST', $form->getUri(), $forged);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->submit($form, [
+            'EquipmentModel[category]' => (string) $ownCategory->getId(),
+            'EquipmentModel[manufacturer]' => (string) $ownMaker->getId(),
+            'EquipmentModel[name]' => 'New own model',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame($ownClub->getId(), (int) $this->em->getConnection()->fetchOne("SELECT club_id FROM equipment_model WHERE name = 'New own model'"));
+        $this->client->request('GET', $this->adminUrl(EquipmentModelCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-batch-action-batchDelete-'.EquipmentModel::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $ownModel = $pairs[4][1];
+        $foreignModel = $pairs[4][2];
+        $this->client->request('POST', $this->adminUrl(EquipmentModelCrudController::class, 'batchDelete'), [
+            'batchActionName' => 'batchDelete', 'entityFqcn' => EquipmentModel::class, 'batchActionCsrfToken' => $token,
+            'batchActionEntityIds' => [(string) $ownModel->getId(), (string) $foreignModel->getId()],
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(2, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment_model WHERE id IN (?, ?)', [$ownModel->getId(), $foreignModel->getId()]));
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentModelCrudController::class, Crud::PAGE_NEW));
+        $staleForm = $crawler->filter('form[name="EquipmentModel"]')->form();
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+    }
+
+    public function testEquipmentBookingsRespectSelectedClub(): void
+    {
+        $super = $this->admin('booking-super', 'BookingOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('booking-other', 'BookingOther', User::ROLE_ADMIN);
+        $ownClub = $super->getMember()->getClub();
+        $otherClub = $other->getMember()->getClub();
+        $ownCategory = (new EquipmentCategory())->setClub($ownClub)->setName('Own loan category')->setCode('loan-own');
+        $foreignCategory = (new EquipmentCategory())->setClub($otherClub)->setName('Foreign loan category')->setCode('loan-foreign');
+        $ownItem = (new EquipmentItem())->setClub($ownClub)->setCategory($ownCategory)->setName('Own loan item')->setInventoryNumber('LOAN-OWN');
+        $foreignItem = (new EquipmentItem())->setClub($otherClub)->setCategory($foreignCategory)->setName('Foreign loan item')->setInventoryNumber('LOAN-FOREIGN');
+        $start = new \DateTimeImmutable('+10 days');
+        $end = new \DateTimeImmutable('+11 days');
+        $ownBooking = (new EquipmentBooking())->setMember($super->getMember())->setStartsAt($start)->setEndsAt($end);
+        $ownBooking->addItem((new EquipmentBookingItem())->setEquipmentItem($ownItem));
+        $foreignBooking = (new EquipmentBooking())->setMember($other->getMember())->setStartsAt($start)->setEndsAt($end);
+        $foreignBooking->addItem((new EquipmentBookingItem())->setEquipmentItem($foreignItem));
+        $ownReservation = (new EquipmentReservation())->setMember($super->getMember())->setEquipmentItem($ownItem)->setStartsAt($start)->setEndsAt($end);
+        $foreignReservation = (new EquipmentReservation())->setMember($other->getMember())->setEquipmentItem($foreignItem)->setStartsAt($start)->setEndsAt($end);
+        foreach ([$ownCategory, $foreignCategory, $ownItem, $foreignItem, $ownBooking, $foreignBooking, $ownReservation, $foreignReservation] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        $this->client->request('GET', $this->adminUrl(EquipmentBookingCrudController::class));
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', $this->adminUrl(EquipmentBookingCrudController::class, Crud::PAGE_DETAIL, $foreignBooking->getId()));
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(EquipmentReservationCrudController::class));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'LOAN-OWN');
+        self::assertSelectorTextNotContains('table.datagrid', 'LOAN-FOREIGN');
+        $this->client->request('GET', $this->adminUrl(EquipmentReservationCrudController::class, Crud::PAGE_DETAIL, $foreignReservation->getId()));
+        self::assertResponseStatusCodeSame(403);
+
+        $crawler = $this->client->request('GET', '/admin/de/equipment-booking-basket');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[value="equipment:'.$ownItem->getId().'"]');
+        self::assertSelectorNotExists('input[value="equipment:'.$foreignItem->getId().'"]');
+        self::assertSelectorNotExists('select[name="member_id"] option[value="'.$other->getMember()->getId().'"]');
+        $basket = $crawler->filter('#equipment-basket-form')->form();
+        $params = $basket->getPhpValues();
+        $params['member_id'] = (string) $other->getMember()->getId();
+        $params['starts_at'] = '2030-01-01T10:00';
+        $params['ends_at'] = '2030-01-02T10:00';
+        $params['asset_ids'] = ['equipment:'.$foreignItem->getId()];
+        $this->client->request('POST', $basket->getUri(), $params);
+        self::assertResponseStatusCodeSame(403);
+        $params['member_id'] = (string) $super->getMember()->getId();
+        $this->client->request('POST', $basket->getUri(), $params);
+        self::assertResponseStatusCodeSame(403);
+        $params['asset_ids'] = ['equipment:'.$ownItem->getId()];
+        $this->client->request('POST', $basket->getUri(), $params);
+        self::assertResponseRedirects();
+        self::assertSame(3, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment_booking'));
+
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentReservationCrudController::class, Crud::PAGE_DETAIL, $ownReservation->getId()));
+        self::assertResponseIsSuccessful();
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $tokens = static::getContainer()->get('security.csrf.token_manager');
+            $token = $tokens->getToken('equipment_loan_issue_'.$foreignReservation->getId().'_'.$ownClub->getId())->getValue();
+            $positionToken = $tokens->getToken('equipment_booking_add_'.$foreignBooking->getId().'_'.$ownClub->getId())->getValue();
+            $actionToken = $tokens->getToken('equipment_booking_item_action_'.$ownClub->getId())->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', '/admin/equipment-loan/'.$foreignReservation->getId().'/issue', ['_token' => $token]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/equipment-booking/add-position', [
+            '_token' => $positionToken, 'booking_id' => $foreignBooking->getId(), 'equipment_item_id' => $ownItem->getId(),
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/de/equipment-booking/equipment-booking-item-action', [
+            '_token' => $actionToken, 'booking_id' => $foreignBooking->getId(),
+            'line_id' => $foreignBooking->getItems()->first()->getId(), 'operation' => 'issue',
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/de/equipment-booking-basket');
+        $staleBasket = $crawler->filter('#equipment-basket-form')->form();
+        $crawler = $this->client->request('GET', $this->adminUrl(EquipmentBookingCrudController::class));
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleBasket);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testTeamAndTeamMemberCrudRespectSelectedClub(): void
+    {
+        $super = $this->admin('team-scope-super', 'TeamOwn', User::ROLE_SUPER_ADMIN);
+        $other = $this->admin('team-scope-other', 'TeamOther', User::ROLE_ADMIN);
+        $ownSport = (new Sport())->setClub($super->getMember()->getClub())->setName('Own team sport');
+        $otherSport = (new Sport())->setClub($other->getMember()->getClub())->setName('Other team sport');
+        $ownTeam = (new Team())->setSport($ownSport)->setName('Own scoped team');
+        $otherTeam = (new Team())->setSport($otherSport)->setName('Other scoped team');
+        $ownAssignment = (new TeamMember())->setMember($super->getMember())->setTeam($ownTeam);
+        $otherAssignment = (new TeamMember())->setMember($other->getMember())->setTeam($otherTeam);
+        foreach ([$ownSport, $otherSport, $ownTeam, $otherTeam, $ownAssignment, $otherAssignment] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $ownTeamId = $ownTeam->getId();
+        $otherTeamId = $otherTeam->getId();
+        $ownAssignmentId = $ownAssignment->getId();
+        $otherAssignmentId = $otherAssignment->getId();
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', $this->adminUrl(TeamCrudController::class));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.datagrid', 'Own scoped team');
+        self::assertSelectorTextNotContains('table.datagrid', 'Other scoped team');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        foreach ([
+            'de' => 'Mitglieder und Zuordnungen',
+            'en' => 'Members and assignments',
+            'fr' => 'Membres et affectations',
+            'es' => 'Miembros y asignaciones',
+        ] as $locale => $heading) {
+            $url = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(TeamCrudController::class, Crud::PAGE_DETAIL, $ownTeamId));
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h3', $heading);
+        }
+        foreach ([
+            [TeamCrudController::class, $otherTeamId],
+            [TeamMemberCrudController::class, $otherAssignmentId],
+        ] as [$controller, $id]) {
+            foreach ([Crud::PAGE_EDIT, Crud::PAGE_DETAIL] as $action) {
+                $this->client->request('GET', $this->adminUrl($controller, $action, $id));
+                self::assertResponseStatusCodeSame(403);
+            }
+        }
+        $this->client->request('GET', $this->adminUrl(TeamMemberCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Own scoped team');
+        self::assertSelectorTextNotContains('table.datagrid', 'Other scoped team');
+        $crawler = $this->client->request('GET', $this->adminUrl(TeamCrudController::class, Crud::PAGE_NEW));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('select[name="Team[sport]"] option[value="'.$otherSport->getId().'"]');
+        $staleTeam = $crawler->filter('form[name="Team"]')->form();
+        $this->client->submit($staleTeam, ['Team[name]' => 'New scoped team', 'Team[sport]' => (string) $ownSport->getId()]);
+        self::assertResponseRedirects();
+        self::assertSame($ownSport->getId(), (int) $this->em->getConnection()->fetchOne("SELECT sport_id FROM team WHERE name = 'New scoped team'"));
+        $crawler = $this->client->request('GET', $this->adminUrl(TeamMemberCrudController::class, Crud::PAGE_NEW));
+        self::assertSelectorNotExists('select[name="TeamMember[member]"] option[value="'.$other->getMember()->getId().'"]');
+        self::assertSelectorNotExists('select[name="TeamMember[team]"] option[value="'.$otherTeamId.'"]');
+        $staleAssignment = $crawler->filter('form[name="TeamMember"]')->form();
+        $this->client->request('GET', '/admin/team-member/sport-check?member='.$other->getMember()->getId().'&team='.$otherTeamId);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(TeamMemberCrudController::class, Crud::PAGE_NEW).'?teamId='.$otherTeamId);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $this->adminUrl(TeamCrudController::class));
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $tokens = static::getContainer()->get('security.csrf.token_manager');
+            $teamToken = $tokens->getToken('ea-batch-action-batchDelete-'.Team::class)->getValue();
+            $assignmentToken = $tokens->getToken('ea-batch-action-batchDelete-'.TeamMember::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        foreach ([
+            [TeamCrudController::class, Team::class, $teamToken, $ownTeamId, $otherTeamId, 'team'],
+            [TeamMemberCrudController::class, TeamMember::class, $assignmentToken, $ownAssignmentId, $otherAssignmentId, 'team_member'],
+        ] as [$controller, $entity, $token, $ownId, $otherId, $table]) {
+            $this->client->request('POST', $this->adminUrl($controller, 'batchDelete'), [
+                'batchActionName' => 'batchDelete', 'entityFqcn' => $entity, 'batchActionCsrfToken' => $token,
+                'batchActionEntityIds' => [(string) $ownId, (string) $otherId],
+            ]);
+            self::assertResponseStatusCodeSame(403);
+            self::assertSame(2, (int) $this->em->getConnection()->fetchOne("SELECT COUNT(*) FROM $table WHERE id IN (?, ?)", [$ownId, $otherId]));
+        }
+        $this->client->submit($selection, ['admin_club[club]' => (string) $other->getMember()->getClub()->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleTeam);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->submit($staleAssignment);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        $this->client->request('GET', $this->adminUrl(TeamCrudController::class));
+        self::assertSelectorTextContains('table.datagrid', 'Other scoped team');
+        self::assertSelectorTextNotContains('table.datagrid', 'Own scoped team');
     }
 
     public function testInvoiceSettingsFollowSelectedClubAndRejectStaleForms(): void

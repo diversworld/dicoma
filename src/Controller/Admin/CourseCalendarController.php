@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use App\Repository\ScheduleRepository;
@@ -25,15 +26,17 @@ final class CourseCalendarController extends AbstractController
         Schedule $schedule,
         Request $request,
         EntityManagerInterface $entityManager,
-        AdminUrlGenerator $urls
+        AdminUrlGenerator $urls,
+        AdminClubContext $clubContext
     ): RedirectResponse {
         if (!$this->isCsrfTokenValid('calendar_duplicate_' . $schedule->getId(), (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
         }
 
         $course = $schedule->getCourses();
-        if ($course === null) {
-            throw $this->createAccessDeniedException('Termin ohne Kurszuordnung.');
+        if ($course === null || $clubContext->getClub()?->getId() === null
+            || $course->getClub()?->getId() !== $clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Termin gehört nicht zum ausgewählten Verein.');
         }
         $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
 
@@ -67,8 +70,9 @@ final class CourseCalendarController extends AbstractController
     }
 
     #[Route('/admin/course-calendar', name: 'admin_course_calendar', methods: ['GET'])]
-    public function index(Request $request, ScheduleRepository $repository, AdminUrlGenerator $urls, CsrfTokenManagerInterface $csrfTokenManager): Response
+    public function index(Request $request, ScheduleRepository $repository, AdminUrlGenerator $urls, CsrfTokenManagerInterface $csrfTokenManager, AdminClubContext $clubContext): Response
     {
+        $selectedClub = $clubContext->getClub() ?? throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
         $view = in_array($request->query->get('view'), ['month', 'week', 'day'], true)
             ? $request->query->get('view') : 'month';
         $monthValue = (string) $request->query->get('month', date('Y-m'));
@@ -117,6 +121,8 @@ final class CourseCalendarController extends AbstractController
             ->leftJoin('s.courses', 'c')->addSelect('c')
             ->leftJoin('s.instructor', 'i')->addSelect('i')
             ->leftJoin('c.club', 'club')
+            ->andWhere('c.club = :selectedClub')
+            ->setParameter('selectedClub', $selectedClub)
             ->andWhere('s.startDate >= :from AND s.startDate < :until')
             ->setParameter('from', $rangeStart->format('Y-m-d'))
             ->setParameter('until', $rangeEnd->format('Y-m-d'))
@@ -130,6 +136,7 @@ final class CourseCalendarController extends AbstractController
             ->leftJoin('s.courses', 'c')->addSelect('c')
             ->leftJoin('s.instructor', 'i')->addSelect('i')
             ->leftJoin('c.club', 'club')->addSelect('club')
+            ->andWhere('c.club = :selectedClub')->setParameter('selectedClub', $selectedClub)
             ->getQuery()->getResult() as $schedule) {
             if (!$schedule instanceof Schedule) { continue; }
             $course = $schedule->getCourses();

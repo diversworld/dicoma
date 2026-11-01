@@ -452,6 +452,7 @@ class MemberCrudController extends AbstractCrudController
 
         yield CollectionField::new('sports', 'Sportarten')
             ->setEntryType(MemberSportType::class)
+            ->setFormTypeOption('entry_options', ['club' => $this->clubContext->getClub()])
             ->allowAdd()
             ->allowDelete()
             ->setFormTypeOption('by_reference', false)

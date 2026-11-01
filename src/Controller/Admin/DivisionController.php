@@ -31,9 +31,11 @@ final class DivisionController extends AbstractController
     {
         $club = $this->clubContext->getClub();
         $requestedClub = $request->query->getString('club');
+
         if ($requestedClub !== '' && (!ctype_digit($requestedClub) || (int) $requestedClub !== $club?->getId())) {
             throw $this->createAccessDeniedException('Bitte zuerst den Verein im Benutzermenü auswählen.');
         }
+
         return $this->redirectToRoute('admin_sport_index', ['_locale' => $request->getLocale()]);
     }
 
@@ -41,6 +43,7 @@ final class DivisionController extends AbstractController
     public function functions(Sport $sport, EntityManagerInterface $em): Response
     {
         $this->assertClub($sport->getClub() ?? throw $this->createNotFoundException());
+
         return $this->render('admin/division/functions.html.twig', [
             'sport' => $sport,
             'assignments' => $em->getRepository(DivisionRoleAssignment::class)->findBy(['sport' => $sport], ['startsAt' => 'DESC', 'id' => 'DESC']),
@@ -51,6 +54,7 @@ final class DivisionController extends AbstractController
     public function create(Club $club, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($club);
+
         return $this->editForm((new Sport())->setClub($club), $request, $em);
     }
 
@@ -58,8 +62,13 @@ final class DivisionController extends AbstractController
     public function edit(Sport $sport, Request $request, EntityManagerInterface $em): Response
     {
         $club = $sport->getClub();
-        if ($club === null) { throw $this->createNotFoundException(); }
+    
+        if ($club === null) { 
+            throw $this->createNotFoundException(); 
+        }
+    
         $this->assertClub($club);
+    
         return $this->editForm($sport, $request, $em);
     }
 
@@ -67,6 +76,7 @@ final class DivisionController extends AbstractController
     public function createFunction(Sport $sport, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($sport->getClub() ?? throw $this->createNotFoundException());
+
         return $this->functionForm(new DivisionRoleAssignment($sport), $request, $em);
     }
 
@@ -74,22 +84,26 @@ final class DivisionController extends AbstractController
     public function editFunction(DivisionRoleAssignment $assignment, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($assignment->getSport()->getClub() ?? throw $this->createNotFoundException());
+
         return $this->functionForm($assignment, $request, $em);
     }
 
     private function functionForm(DivisionRoleAssignment $assignment, Request $request, EntityManagerInterface $em): Response
     {
         $sport = $assignment->getSport();
+
         $form = $this->createForm(DivisionRoleAssignmentType::class, $assignment, [
             'members' => $em->getRepository(Member::class)->findBy(['club' => $sport->getClub()]),
             'editing' => $assignment->getId() !== null,
         ])->handleRequest($request);
+        
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($assignment);
             $em->flush();
             $this->addFlash('success', 'Spartenfunktion gespeichert.');
             return $this->redirectToRoute('admin_division_functions', ['id' => $sport->getId()], Response::HTTP_SEE_OTHER);
         }
+        
         return $this->render('admin/division/function.html.twig', [
             'form' => $form->createView(), 'sport' => $sport,
         ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
@@ -99,8 +113,10 @@ final class DivisionController extends AbstractController
     {
         $club = $sport->getClub() ?? throw $this->createNotFoundException();
         $form = $this->createForm(DivisionType::class, $sport)->handleRequest($request);
+        
         if ($form->isSubmitted() && $form->isValid()) {
             $existing = $em->getRepository(Sport::class)->findOneBy(['club' => $club, 'name' => $sport->getName()]);
+        
             if ($existing !== null && $existing->getId() !== $sport->getId()) {
                 $form->get('name')->addError(new FormError('Diese Sparte existiert in diesem Verein bereits.'));
             } else {
@@ -126,6 +142,7 @@ final class DivisionController extends AbstractController
     private function assertClub(Club $club): void
     {
         $user = $this->getUser();
+        
         if (!$user instanceof User || $this->clubContext->getClub()?->getId() !== $club->getId()) {
             throw $this->createAccessDeniedException('Verein nicht im Verwaltungsbereich.');
         }

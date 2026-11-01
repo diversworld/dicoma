@@ -53,7 +53,10 @@ Sportarten (Sparten) anlegen und deren
 Bezeichnung, Kurzbezeichnung, Beschreibung und Sortierung bearbeiten.
 Superadmins wählen den Verein im Benutzermenü; die Auswahl gilt derzeit
 für die Sportarten-Einstellungen, Mitglieder-, Mitgliedsqualifikations-,
-Kurs- und Teilnehmer-CRUDs,
+Sportzuordnungs-, Mannschafts-, Mannschaftsmitglieds-, Kurs-, Kurstermin-,
+Teilnehmer- und Inventargegenstands-CRUDs, die Kategorien, Hersteller,
+Unterarten, Größen, Modelle und Kategorie-Merkmale der Ausrüstung, die
+EasyAdmin-Ansichten für Einzel- und Sammelreservierungen,
 die Mitgliedschaftsverwaltung, die Veranstaltungs- und Dateiverwaltung,
 die oben genannten Einstellungen, das Ausbildungsportal, die Kurs-Spartenprüfung
 sowie die Kennzahlen und Listen der Verwaltungsübersicht. Vereinslose
@@ -61,10 +64,18 @@ Mitglieder und Kurse können Superadmins über separate Listen in den
 Einstellungen prüfen und dem ausgewählten Verein zuordnen. Qualifikationen
 vereinsloser Mitglieder erscheinen erst nach der Vereinszuordnung des
 Mitglieds in der Qualifikationsverwaltung; vorhandene Daten bleiben erhalten.
-Der Qualifikationskatalog selbst ist weiterhin übergreifend. Die Kopfzeile
+Der Qualifikationskatalog selbst ist weiterhin übergreifend. Im
+Wettbewerbsportal, Kurskalender und gemeinsamen Kalender gilt für Superadmins ebenfalls der
+ausgewählte Verein; bestehende vereinsübergreifende Wettbewerbsteilnahmen
+anderer berechtigter Rollen bleiben unverändert. Sportzuordnungen mit
+fehlenden oder widersprüchlichen Vereinszuordnungen werden nicht automatisch
+verändert und erscheinen nicht in der regulären Vereinsliste. Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
-insbesondere Equipment, Sportwettkämpfe und Kalender sind noch nicht
-durchgehend auf diesen Kontext umgestellt. TÜV-Benachrichtigungsvorlagen
+insbesondere weitere Gerätewart- und Verleihwege, technische Ausrüstungsdaten
+sowie weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf
+diesen Kontext umgestellt. Widersprüchliche Ausrüstungs- und
+Mannschaftszuordnungen werden nicht automatisch korrigiert; betroffene
+Detailansichten und Aktionen werden abgelehnt. TÜV-Benachrichtigungsvorlagen
 und die Übersicht der Vertretungsnachweise gelten weiterhin systemweit
 und sind entsprechend gekennzeichnet.
 Die Sportartenverwaltung nutzt die EasyAdmin-Liste und -Formulare.

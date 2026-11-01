@@ -13,18 +13,18 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
-class EquipmentSizeCrudController extends AbstractCrudController
+class EquipmentSizeCrudController extends AbstractEquipmentMasterCrudController
 {
     public static function getEntityFqcn(): string { return EquipmentSize::class; }
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud->setEntityLabelInSingular('Größe')->setEntityLabelInPlural('Größen');
+        return $this->configureMasterCrud($crud)->setEntityLabelInSingular('Größe')->setEntityLabelInPlural('Größen');
     }
     public function configureFields(string $pageName): iterable
     {
-        yield AssociationField::new('club', 'Verein')->setRequired(true);
-        yield AssociationField::new('category', 'Ausrüstungsart')->setRequired(true);
-        yield AssociationField::new('manufacturer', 'Hersteller')->setRequired(true)->setHelp('Größen werden pro Verein, Ausrüstungsart und Hersteller definiert.');
+        yield $this->clubField();
+        yield $this->scopedField('category', 'Ausrüstungsart')->setRequired(true);
+        yield $this->scopedField('manufacturer', 'Hersteller')->setRequired(true)->setHelp('Größen werden pro Verein, Ausrüstungsart und Hersteller definiert.');
         yield TextField::new('name', 'Bezeichnung')->setRequired(true);
         yield BooleanField::new('active', 'Aktiv');
     }

@@ -109,6 +109,59 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
     }
 
+    public function testSuperAdminCompetitionUsesSelectedClub(): void
+    {
+        $otherClub = (new Club())->setName('Other Competition Club');
+        $otherSport = (new Sport())->setClub($otherClub)->setName('Other competition sport');
+        $otherTeam = (new Team())->setSport($otherSport)->setName('Other competition team');
+        $ownTournament = new Tournament($this->club);
+        $ownTournament->setName('Own scoped tournament');
+        $ownTournament->setStartsAt(new \DateTimeImmutable('2027-01-01 10:00'));
+        $ownTournament->setEndsAt(new \DateTimeImmutable('2027-01-01 18:00'));
+        $ownTournament->setStatus(TournamentStatus::OPEN);
+        $otherTournament = new Tournament($otherClub);
+        $otherTournament->setName('Other scoped tournament');
+        $otherTournament->setStartsAt(new \DateTimeImmutable('2027-01-02 10:00'));
+        $otherTournament->setEndsAt(new \DateTimeImmutable('2027-01-02 18:00'));
+        $otherTournament->setStatus(TournamentStatus::OPEN);
+        foreach ([$otherClub, $otherSport, $otherTeam, $ownTournament, $otherTournament] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $super = $this->account('scope-competition-super', User::ROLE_SUPER_ADMIN);
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/teams');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Own Team');
+        self::assertSelectorTextNotContains('body', 'Other competition team');
+        $selection = $crawler->filter('form[name="admin_club"]')->first()->form();
+        $crawler = $this->client->request('GET', '/admin/teams/new');
+        self::assertSelectorNotExists('select[name="form[sport]"] option[value="'.$otherSport->getId().'"]');
+        $staleTeamForm = $crawler->filter('form[name="form"]')->form();
+        $this->client->request('GET', '/admin/teams/'.$otherTeam->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/tournaments');
+        self::assertSelectorTextContains('body', 'Own scoped tournament');
+        self::assertSelectorTextNotContains('body', 'Other scoped tournament');
+        $this->client->request('GET', '/admin/tournaments/'.$otherTournament->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/tournaments/new?club='.$otherClub->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->submit($selection, ['admin_club[club]' => (string) $otherClub->getId()]);
+        self::assertResponseRedirects();
+        $this->client->submit($staleTeamForm, ['form[name]' => 'Stale team', 'form[type]' => 'team']);
+        self::assertSelectorTextContains('body', 'CSRF-Token');
+        self::assertSame(0, $this->em->getRepository(Team::class)->count(['name' => 'Stale team']));
+        $this->client->request('GET', '/admin/teams');
+        self::assertSelectorTextContains('body', 'Other competition team');
+        self::assertSelectorTextNotContains('body', 'Own Team');
+        $this->client->request('GET', '/admin/tournaments');
+        self::assertSelectorTextContains('body', 'Other scoped tournament');
+        self::assertSelectorTextNotContains('body', 'Own scoped tournament');
+        $this->client->request('GET', '/admin/tournaments/'.$ownTournament->getId());
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testDivisionAdministrationIsClubScopedAndPreservesExistingTeams(): void
     {
         $ownClubId = $this->club->getId();

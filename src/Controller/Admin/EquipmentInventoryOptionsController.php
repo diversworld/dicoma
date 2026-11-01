@@ -9,6 +9,7 @@ use App\Entity\EquipmentManufacturer;
 use App\Entity\EquipmentModel;
 use App\Entity\EquipmentSize;
 use App\Entity\EquipmentSubType;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +21,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EquipmentInventoryOptionsController extends AbstractController
 {
     #[Route('/admin/equipment/inventory-options', name: 'admin_equipment_inventory_options', methods: ['GET'])]
-    public function __invoke(Request $request, EntityManagerInterface $em): JsonResponse
+    public function __invoke(Request $request, EntityManagerInterface $em, AdminClubContext $clubContext): JsonResponse
     {
         $empty = ['subTypes' => [], 'models' => [], 'sizes' => []];
         $parse = static fn (mixed $raw): ?int => is_scalar($raw) && ctype_digit((string) $raw) && (int) $raw > 0 ? (int) $raw : null;
@@ -28,6 +29,9 @@ final class EquipmentInventoryOptionsController extends AbstractController
         $category = $parse($request->query->get('category'));
         $manufacturer = $parse($request->query->get('manufacturer'));
         if (!$club || !$category) return $this->json($empty);
+        if ($clubContext->getClub()?->getId() !== $club) {
+            throw $this->createAccessDeniedException('Verein entspricht nicht der aktuellen Auswahl.');
+        }
         $categoryEntity = $em->getRepository(EquipmentCategory::class)->find($category);
         if (!$categoryEntity || $categoryEntity->getClub()?->getId() !== $club) return $this->json($empty);
         if ($manufacturer) {

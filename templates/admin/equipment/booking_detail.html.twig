@@ -49,7 +49,7 @@
                     <td>
                         {% if line.loanStatus in ['reserved', 'issued'] %}
                         <form method="post" action="{{ path('admin_equipment_booking_equipment_booking_item_action', {'_locale': app.request.attributes.get('_locale')|default('de')}) }}" class="d-flex flex-wrap gap-2 align-items-end">
-                            <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_item_action') }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_item_action_' ~ booking.member.club.id) }}">
                             <input type="hidden" name="booking_id" value="{{ booking.id }}">
                             <input type="hidden" name="line_id" value="{{ line.id }}">
                             {% if line.loanStatus == 'reserved' %}
@@ -81,7 +81,7 @@
         <h3 class="h5">Gegenstand hinzufügen</h3>
         <p class="text-muted">Ausrüstungsart auswählen, danach den konkreten Inventargegenstand. Jeder Gegenstand wird einzeln erfasst.</p>
         <form method="post" action="{{ path('admin_equipment_booking_add_position') }}" id="equipment-add-position">
-            <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_add_' ~ booking.id) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_add_' ~ booking.id ~ '_' ~ booking.member.club.id) }}">
             <input type="hidden" name="booking_id" value="{{ booking.id }}">
             <div class="row g-2 align-items-end">
                 <div class="col-md-4"><label class="form-label" for="equipment-category">Inventarbereich / Ausrüstungsart</label>

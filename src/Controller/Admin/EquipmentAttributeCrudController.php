@@ -14,13 +14,13 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
-class EquipmentAttributeCrudController extends AbstractCrudController
+class EquipmentAttributeCrudController extends AbstractEquipmentMasterCrudController
 {
     public static function getEntityFqcn(): string { return EquipmentAttribute::class; }
-    public function configureCrud(Crud $crud): Crud { return $crud->setEntityLabelInSingular('Kategorie-Merkmal')->setEntityLabelInPlural('Kategorie-Merkmale'); }
+    public function configureCrud(Crud $crud): Crud { return $this->configureMasterCrud($crud)->setEntityLabelInSingular('Kategorie-Merkmal')->setEntityLabelInPlural('Kategorie-Merkmale'); }
     public function configureFields(string $pageName): iterable
     {
-        yield AssociationField::new('category', 'Kategorie')->setRequired(true);
+        yield $this->scopedField('category', 'Kategorie')->setRequired(true);
         yield TextField::new('code', 'Schlüssel');
         yield TextField::new('label', 'Bezeichnung');
         yield ChoiceField::new('dataType', 'Datentyp')->setChoices(['Text' => 'text', 'Zahl' => 'number', 'Ja/Nein' => 'boolean', 'Datum' => 'date']);

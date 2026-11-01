@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Service\EquipmentLoanService;
+use App\Service\AdminEquipmentScope;
+use App\Entity\EquipmentReservation;
+use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,14 +22,19 @@ final class EquipmentLoanActionController extends AbstractController
     public function __construct(
         private readonly EquipmentLoanService $loans,
         private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly AdminEquipmentScope $scope,
+        private readonly EntityManagerInterface $em,
     ) {}
 
     #[Route('/admin/equipment-loan/{id}/{action}', name: 'admin_equipment_loan_action', requirements: ['id' => '\\d+', 'action' => 'issue|return|cancel'], methods: ['POST'])]
     public function change(int $id, string $action, Request $request): RedirectResponse
     {
-        if (!$this->isCsrfTokenValid('equipment_loan_'.$action.'_'.$id, (string) $request->request->get('_token', ''))) {
+        if (!$this->isCsrfTokenValid('equipment_loan_'.$action.'_'.$id.'_'.$this->scope->club()->getId(), (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungueltiges CSRF-Token.');
         }
+        $reservation = $this->em->find(EquipmentReservation::class, $id);
+        if (!$reservation) { throw $this->createNotFoundException(); }
+        $this->scope->assertReservation($reservation);
         try {
             match ($action) {
                 'issue' => $this->loans->issue($id),

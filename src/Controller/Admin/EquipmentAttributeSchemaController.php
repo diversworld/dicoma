@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\EquipmentAttribute;
 use App\Entity\EquipmentCategory;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EquipmentAttributeSchemaController extends AbstractController
 {
     #[Route('/admin/equipment-attribute-schema', name: 'admin_equipment_attribute_schema', methods: ['GET'])]
-    public function __invoke(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function __invoke(Request $request, EntityManagerInterface $entityManager, AdminClubContext $clubContext): JsonResponse
     {
         $raw = $request->query->get('categoryId');
         if (!is_string($raw) || !ctype_digit($raw) || (int) $raw < 1) {
@@ -26,6 +27,9 @@ final class EquipmentAttributeSchemaController extends AbstractController
         $category = $entityManager->getRepository(EquipmentCategory::class)->find((int) $raw);
         if (!$category instanceof EquipmentCategory) {
             return $this->json(['error' => 'Kategorie nicht gefunden.'], 404);
+        }
+        if ($clubContext->getClub()?->getId() === null || $category->getClub()?->getId() !== $clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Kategorie gehört nicht zum ausgewählten Verein.');
         }
         $definitions = $entityManager->getRepository(EquipmentAttribute::class)
             ->findBy(['category' => $category], ['id' => 'ASC']);

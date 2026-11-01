@@ -21,18 +21,36 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class CompetitionAccess
 {
-    public function __construct(private readonly Security $security, private readonly EntityManagerInterface $em) {}
+    public function __construct(
+        private readonly Security $security,
+        private readonly EntityManagerInterface $em,
+        private readonly AdminClubContext $clubContext,
+    ) {}
+
+    private function matchesBackendSelection(?Club $club): bool
+    {
+        if (!$this->clubContext->isBackendRequest() || !$this->security->isGranted('ROLE_SUPER_ADMIN')) {
+            return true;
+        }
+        $selectedId = $this->clubContext->getClub()?->getId();
+        return $selectedId !== null && $club?->getId() === $selectedId;
+    }
+
+    public function currentBackendClubId(): ?int
+    {
+        return $this->clubContext->getClub()?->getId();
+    }
 
     public function managesClub(Club $club): bool
     {
         $user = $this->security->getUser();
-        return $user instanceof User && ($this->security->isGranted('ROLE_SUPER_ADMIN')
+        return $user instanceof User && $this->matchesBackendSelection($club) && ($this->security->isGranted('ROLE_SUPER_ADMIN')
             || ($this->security->isGranted('ROLE_ADMIN') && $club->getId() !== null && $user->getMember()?->getClub()?->getId() === $club->getId()));
     }
 
     public function managesTeam(Team $team): bool
     {
-        if ($team->getSport()?->getClub() === null) { return false; }
+        if ($team->getSport()?->getClub() === null || !$this->matchesBackendSelection($team->getSport()->getClub())) { return false; }
         if ($this->managesDivision($team->getSport())) { return true; }
         $member = $this->security->getUser() instanceof User ? $this->security->getUser()->getMember() : null;
         if ($member === null || !$member->isActiveMember() || !$team->isActive()
@@ -49,7 +67,7 @@ final class CompetitionAccess
     public function managesDivision(Sport $sport): bool
     {
         $club = $sport->getClub();
-        if ($club === null) { return false; }
+        if ($club === null || !$this->matchesBackendSelection($club)) { return false; }
         if ($this->managesClub($club)) { return true; }
         $user = $this->security->getUser();
         $member = $user instanceof User ? $user->getMember() : null;
@@ -70,10 +88,12 @@ final class CompetitionAccess
     {
         $user = $this->security->getUser();
         if (!$user instanceof User) { return []; }
-        $club = $user->getMember()?->getClub();
+        $club = $this->clubContext->isBackendRequest() && $this->security->isGranted('ROLE_SUPER_ADMIN')
+            ? $this->clubContext->getClub() : $user->getMember()?->getClub();
+        if ($this->clubContext->isBackendRequest() && $this->security->isGranted('ROLE_SUPER_ADMIN') && $club === null) { return []; }
         if (!$this->security->isGranted('ROLE_SUPER_ADMIN') && $club === null) { return []; }
         $sports = $this->em->getRepository(Sport::class)->findBy(
-            $this->security->isGranted('ROLE_SUPER_ADMIN') ? [] : ['club' => $club],
+            $this->security->isGranted('ROLE_SUPER_ADMIN') && !$this->clubContext->isBackendRequest() ? [] : ['club' => $club],
             ['name' => 'ASC'],
         );
         return array_values(array_filter($sports, $this->managesDivision(...)));
@@ -95,6 +115,7 @@ final class CompetitionAccess
 
     public function viewsTournament(Tournament $tournament): bool
     {
+        if (!$this->matchesBackendSelection($tournament->getClub())) { return false; }
         if ($this->managesClub($tournament->getClub())) { return true; }
         foreach ($this->em->getRepository(TournamentEntry::class)->findBy(['tournament' => $tournament]) as $entry) {
             if ($entry->getTeam() !== null && $this->managesTeam($entry->getTeam())) { return true; }
@@ -104,6 +125,7 @@ final class CompetitionAccess
 
     public function managesEntry(TournamentEntry $entry): bool
     {
+        if (!$this->matchesBackendSelection($entry->getTournament()->getClub())) { return false; }
         return $this->managesClub($entry->getTournament()->getClub())
             || ($entry->getTeam() !== null && $this->managesTeam($entry->getTeam()));
     }

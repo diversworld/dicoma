@@ -122,16 +122,26 @@ Backup und Schemafreigabe durchführen.
 
 Die Sportarten-Einstellungen unter `/admin/settings/sports`, die
 Kurs-Spartenprüfung, das Ausbildungsportal, die Mitglieder-,
-Mitgliedsqualifikations-, Kurs- und Teilnehmer-CRUDs, die Mitgliedschafts-, Veranstaltungs- und Dateiverwaltung
+Mitgliedsqualifikations-, Sportzuordnungs-, Kurs-, Kurstermin-, Teilnehmer-
+und Inventargegenstands-CRUDs, Mannschafts- und Mannschaftsmitglieds-CRUDs,
+die Ausrüstungskategorien, Hersteller, Unterarten, Größen, Modelle und
+Kategorie-Merkmale sowie die EasyAdmin-Einzel- und Sammelreservierungen,
+das Wettbewerbsportal, den Kurskalender und den gemeinsamen Kalender sowie
+die Mitgliedschafts-, Veranstaltungs- und Dateiverwaltung
 sowie die oben genannten Einstellungen und die Verwaltungsübersicht verwenden
 für Superadmins die sitzungsgebundene Vereinsauswahl im Benutzermenü.
 Sie ist CSRF-geschützt. Vereinslose Mitglieder und Kurse können Superadmins
 über separate Listen in den Einstellungen prüfen und dem ausgewählten Verein
 zuordnen. Qualifikationen vereinsloser Mitglieder werden nach deren
 Vereinszuordnung in der Qualifikationsverwaltung sichtbar; der gemeinsame
-Qualifikationskatalog bleibt unverändert. Andere Backendbereiche,
-insbesondere Equipment, Sportwettkämpfe und Kalender, sind noch nicht
-durchgehend auf diesen Kontext umgestellt. TÜV-Benachrichtigungsvorlagen
+Qualifikationskatalog bleibt unverändert. Sportzuordnungen mit fehlenden
+oder widersprüchlichen Vereinsbezügen werden weder automatisch verändert
+noch in der regulären Vereinsliste angezeigt. Andere Backendbereiche,
+insbesondere weitere Gerätewart- und Verleihwege, technische Ausrüstungsdaten
+sowie weitere Kalender- und Sportaktionen, sind noch nicht durchgehend auf
+diesen Kontext umgestellt. Inkonsistente Vereinszuordnungen werden nicht
+automatisch geändert und betroffene Detailansichten oder Aktionen abgelehnt.
+TÜV-Benachrichtigungsvorlagen
 und die Übersicht der Vertretungsnachweise sind weiterhin systemweit.
 Die Kopfzeile weist deshalb ausdrücklich darauf hin, dass noch keine
 backendweite Vereinsfilterung besteht.

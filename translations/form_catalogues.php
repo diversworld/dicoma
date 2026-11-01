@@ -6,6 +6,23 @@ declare(strict_types=1);
 return static function (string $domain, string $locale): array {
     $columns = ['de' => 0, 'en' => 1, 'fr' => 2, 'es' => 3];
     $messages = [
+        'Gruppe bearbeiten' => ['Edit group', 'Modifier le groupe', 'Editar grupo'],
+        'Mitglied hinzufügen' => ['Add member', 'Ajouter un membre', 'Añadir miembro'],
+        'Zuordnungen' => ['Assignments', 'Affectations', 'Asignaciones'],
+        'Gruppenstatus' => ['Group status', 'Statut du groupe', 'Estado del grupo'],
+        'Gruppentyp' => ['Group type', 'Type de groupe', 'Tipo de grupo'],
+        'Mitglieder und Zuordnungen' => ['Members and assignments', 'Membres et affectations', 'Miembros y asignaciones'],
+        'Alle Zuordnungen verwalten' => ['Manage all assignments', 'Gérer toutes les affectations', 'Gestionar todas las asignaciones'],
+        'Dieser Gruppe sind noch keine Mitglieder zugeordnet.' => ['No members have been assigned to this group yet.', 'Aucun membre n’est encore affecté à ce groupe.', 'Todavía no hay miembros asignados a este grupo.'],
+        'Ausrüstungskategorie' => ['Equipment category', 'Catégorie de matériel', 'Categoría de equipo'],
+        'Ausrüstungskategorien' => ['Equipment categories', 'Catégories de matériel', 'Categorías de equipo'],
+        'Ausrüstungsmodell' => ['Equipment model', 'Modèle de matériel', 'Modelo de equipo'],
+        'Ausrüstungsmodelle' => ['Equipment models', 'Modèles de matériel', 'Modelos de equipo'],
+        'Unterart' => ['Subtype', 'Sous-type', 'Subtipo'],
+        'Unterarten' => ['Subtypes', 'Sous-types', 'Subtipos'],
+        'Kategorie-Merkmal' => ['Category attribute', 'Caractéristique de catégorie', 'Atributo de categoría'],
+        'Kategorie-Merkmale' => ['Category attributes', 'Caractéristiques de catégorie', 'Atributos de categoría'],
+        'Größen werden pro Verein, Ausrüstungsart und Hersteller definiert.' => ['Sizes are defined per club, equipment type and manufacturer.', 'Les tailles sont définies par club, type de matériel et fabricant.', 'Las tallas se definen por club, tipo de equipo y fabricante.'],
         'Unser Verein' => ['Our club', 'Notre club', 'Nuestro club'],
         'Kontakt' => ['Contact', 'Contact', 'Contacto'],
         'Für diesen Verein sind noch keine öffentlichen Kontaktdaten hinterlegt.' => ['No public contact details have been provided for this club yet.', 'Aucune coordonnée publique n’a encore été renseignée pour ce club.', 'Todavía no se han indicado datos de contacto públicos para este club.'],

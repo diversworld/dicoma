@@ -12,6 +12,7 @@ use App\Entity\MemberSport;
 use App\Entity\Sport;
 use App\Entity\Team;
 use App\Entity\TeamMember;
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -19,6 +20,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * Integration tests for the real CRUD persistence path, never production DB.
@@ -107,6 +111,10 @@ final class TeamMemberPersistenceTest extends KernelTestCase
         }
         
 		$this->em->flush();
+        $actorMember = (new Member())->setClub($club);
+        $actor = (new User())->setUser('scope-test')->setRoles([User::ROLE_SUPER_ADMIN])->setMember($actorMember);
+        static::getContainer()->get(TokenStorageInterface::class)
+            ->setToken(new UsernamePasswordToken($actor, 'main', [User::ROLE_SUPER_ADMIN]));
         
 		return [(new TeamMember())->setMember($member)->setTeam($team), $member, $sport];
     }
@@ -153,7 +161,7 @@ final class TeamMemberPersistenceTest extends KernelTestCase
         try {
             $this->controller->persistEntity($this->em, $assignment);
             self::fail('Cross-club membership should be rejected.');
-        } catch (\LogicException $e) {
+        } catch (AccessDeniedException $e) {
             self::assertSame(0, $this->countRows('team_member'));
             self::assertSame(0, $this->countRows('member_sport'));
         }

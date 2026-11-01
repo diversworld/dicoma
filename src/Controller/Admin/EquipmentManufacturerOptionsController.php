@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\EquipmentManufacturer;
+use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,11 +17,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EquipmentManufacturerOptionsController extends AbstractController
 {
     #[Route('/admin/api/equipment-manufacturers', name: 'admin_equipment_manufacturer_options', methods: ['GET'])]
-    public function __invoke(Request $request, EntityManagerInterface $em): JsonResponse
+    public function __invoke(Request $request, EntityManagerInterface $em, AdminClubContext $clubContext): JsonResponse
     {
         $raw = $request->query->get('club');
         if (!is_scalar($raw) || !ctype_digit((string) $raw) || (int) $raw < 1) {
             return $this->json([], 200, ['Cache-Control' => 'no-store']);
+        }
+        if ($clubContext->getClub()?->getId() !== (int) $raw) {
+            throw $this->createAccessDeniedException('Verein entspricht nicht der aktuellen Auswahl.');
         }
 
         $manufacturers = $em->getRepository(EquipmentManufacturer::class)->findBy(

@@ -8,6 +8,12 @@ use App\Entity\EquipmentBooking;
 use App\Form\EquipmentBookingItemType;
 use App\Service\EquipmentBookingService;
 use App\Service\EquipmentBookingLoanService;
+use App\Service\AdminEquipmentScope;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,8 +44,20 @@ final class EquipmentBookingCrudController extends AbstractCrudController
             ->setRoute('admin_equipment_booking_basket')->generateUrl(), 303);
     }
 
-    public function __construct(private readonly EquipmentBookingService $bookingService, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly EquipmentBookingLoanService $loanService) {}
+    public function __construct(private readonly EquipmentBookingService $bookingService, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly EquipmentBookingLoanService $loanService, private readonly AdminEquipmentScope $scope, private readonly EntityManagerInterface $em) {}
     public static function getEntityFqcn(): string { return EquipmentBooking::class; }
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        return parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters)
+            ->join('entity.member', 'bookingMember')
+            ->andWhere('bookingMember.club = :bookingClub')->setParameter('bookingClub', $this->scope->club());
+    }
+
+    public function detail(AdminContext $context)
+    {
+        $this->scope->assertBooking($context->getEntity()->getInstance());
+        return parent::detail($context);
+    }
     public function configureCrud(Crud $crud): Crud
     {
         return $crud->setEntityLabelInSingular('Sammelreservierung')
@@ -83,7 +101,7 @@ final class EquipmentBookingCrudController extends AbstractCrudController
 			);
 		}
 		
-        if (!$this->isCsrfTokenValid('equipment_booking_item_action', (string) $request->request->get('_token', ''))) {
+        if (!$this->isCsrfTokenValid('equipment_booking_item_action_'.$this->scope->club()->getId(), (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungueltiger CSRF-Token.');
         }
         
@@ -91,6 +109,9 @@ final class EquipmentBookingCrudController extends AbstractCrudController
         $lineId = filter_var($request->request->get('line_id'), FILTER_VALIDATE_INT);
         
 		if (!$bookingId || !$lineId) { throw $this->createNotFoundException(); }
+        $booking = $this->em->find(EquipmentBooking::class, $bookingId);
+        if (!$booking) { throw $this->createNotFoundException(); }
+        $this->scope->assertBooking($booking);
         
 		$operation = (string) $request->request->get('operation', '');
         
@@ -117,6 +138,7 @@ final class EquipmentBookingCrudController extends AbstractCrudController
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if (!$entityInstance instanceof EquipmentBooking) { throw new \InvalidArgumentException('Ungültige Buchung.'); }
+        $this->scope->assertBooking($entityInstance);
         $this->bookingService->saveNew($entityInstance);
     }
 }

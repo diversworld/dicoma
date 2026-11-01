@@ -3,6 +3,16 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Schedule;
+use App\Entity\Courses;
+use App\Service\AdminClubContext;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\BatchActionDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use App\Enum\CourseStatus;
 use App\Enum\CourseParticipantStatus;
 use Symfony\Component\Routing\Attribute\Route;
@@ -37,12 +47,17 @@ use App\Enum\BookingAttendanceStatus;
 class ScheduleCrudController extends AbstractCrudController
 {
     public function __construct(
-        private readonly ScheduleParticipantSyncService $participantSyncService
+        private readonly ScheduleParticipantSyncService $participantSyncService,
+        private readonly AdminClubContext $clubContext,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
+        if ($entityInstance instanceof Schedule) {
+            $this->assertSchedule($entityInstance);
+        }
         parent::persistEntity($entityManager, $entityInstance);
 
         if ($entityInstance instanceof Schedule && $entityInstance->getCourses() !== null) {
@@ -53,6 +68,80 @@ class ScheduleCrudController extends AbstractCrudController
         }
     }
 
+    private function assertCourse(?Courses $course): void
+    {
+        $clubId = $this->clubContext->getClub()?->getId();
+        if ($clubId === null || $course?->getClub()?->getId() !== $clubId) {
+            throw $this->createAccessDeniedException('Kurstermin gehört nicht zum ausgewählten Verein.');
+        }
+        $this->denyAccessUnlessGranted('COURSE_MANAGE', $course);
+    }
+
+    private function assertSchedule(Schedule $schedule): void
+    {
+        $this->assertCourse($schedule->getCourses());
+        $instructor = $schedule->getInstructor();
+        if ($instructor !== null && $instructor->getClub()?->getId() !== $this->clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Ausbilder gehört nicht zum ausgewählten Verein.');
+        }
+    }
+
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        $query = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        $club = $this->clubContext->getClub();
+        return $club === null ? $query->andWhere('1 = 0')
+            : $query->join('entity.courses', 'managedCourse')->andWhere('managedCourse.club = :scheduleClub')->setParameter('scheduleClub', $club);
+    }
+
+    public function edit(AdminContext $context)
+    {
+        $this->assertCourse($context->getEntity()->getInstance()->getCourses());
+        return parent::edit($context);
+    }
+
+    public function detail(AdminContext $context)
+    {
+        $this->assertCourse($context->getEntity()->getInstance()->getCourses());
+        return parent::detail($context);
+    }
+
+    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof Schedule) {
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            $course = $original['courses'] ?? null;
+            $this->assertCourse($course instanceof Courses ? $course : null);
+            $this->assertSchedule($entityInstance);
+        }
+        parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof Schedule) {
+            $this->assertCourse($entityInstance->getCourses());
+        }
+        parent::deleteEntity($entityManager, $entityInstance);
+    }
+
+    public function batchDelete(AdminContext $context, BatchActionDto $batchActionDto): Response
+    {
+        if ($batchActionDto->getEntityFqcn() !== Schedule::class) {
+            throw new BadRequestHttpException('Ungültiger Kurstermin-Stapel.');
+        }
+        foreach ($batchActionDto->getEntityIds() as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string) $id) || (int) $id < 1) {
+                throw new BadRequestHttpException('Ungültige Kurstermin-ID.');
+            }
+            $schedule = $this->em->find(Schedule::class, (int) $id);
+            if ($schedule !== null) {
+                $this->assertCourse($schedule->getCourses());
+            }
+        }
+        return parent::batchDelete($context, $batchActionDto);
+    }
+
     public static function getEntityFqcn(): string
     {
         return Schedule::class;
@@ -61,6 +150,7 @@ class ScheduleCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'schedule_crud_'.($this->clubContext->getClub()?->getId() ?? 'none')])
             ->setEntityLabelInSingular('Kurstermin')
             ->setEntityLabelInPlural('Kurstermine')
             ->setPageTitle(
@@ -95,6 +185,7 @@ class ScheduleCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
+        $clubId = $this->clubContext->getClub()?->getId();
         /*
          * Termin
          */
@@ -158,6 +249,10 @@ class ScheduleCrudController extends AbstractCrudController
             ->collapsible();
 
 		yield AssociationField::new('courses','Kurs')
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $query = $repository->createQueryBuilder('courseChoice');
+                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('courseChoice.club = :club')->setParameter('club', $clubId);
+            })
             ->setRequired(true)
             ->setColumns(5);
 
@@ -173,6 +268,10 @@ class ScheduleCrudController extends AbstractCrudController
          * Qualifikationen/Rollen eingeschränkt.
          */
         yield AssociationField::new('instructor','Instruktor')
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $query = $repository->createQueryBuilder('instructorChoice');
+                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('instructorChoice.club = :club')->setParameter('club', $clubId);
+            })
             ->setColumns(4);
 
         /*
@@ -286,7 +385,8 @@ class ScheduleCrudController extends AbstractCrudController
 
 		$form = $this->createForm(
 			ScheduleAttendanceType::class,
-			$data
+			$data,
+			['csrf_token_id' => 'schedule_attendance_'.$schedule->getId().'_'.$this->clubContext->getClub()?->getId()]
 		);
 
 		$form->handleRequest($request);
@@ -319,7 +419,8 @@ class ScheduleCrudController extends AbstractCrudController
 
 			$form = $this->createForm(
 				ScheduleAttendanceType::class,
-				$data
+				$data,
+                ['csrf_token_id' => 'schedule_attendance_'.$schedule->getId().'_'.$this->clubContext->getClub()?->getId()]
 			);
 
 			$this->addFlash(
@@ -438,8 +539,8 @@ class ScheduleCrudController extends AbstractCrudController
         if (!$schedule instanceof Schedule) {
             throw $this->createNotFoundException('Kurstermin nicht gefunden.');
         }
+        $this->assertCourse($schedule->getCourses());
         if ($schedule->getCourses() !== null) {
-            $this->denyAccessUnlessGranted(\App\Security\Voter\CourseManagementVoter::MANAGE, $schedule->getCourses());
             if ($schedule->getCourses()->getStatus() === CourseStatus::COMPLETED) {
                 throw $this->createAccessDeniedException('Abgeschlossene Kurse duerfen nicht veraendert werden.');
             }

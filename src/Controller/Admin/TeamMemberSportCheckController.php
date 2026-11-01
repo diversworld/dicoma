@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Member;
 use App\Entity\MemberSport;
 use App\Entity\Team;
+use App\Service\AdminTeamScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class TeamMemberSportCheckController extends AbstractController
 {
     #[Route('/admin/team-member/sport-check', name: 'admin_team_member_sport_check', methods: ['GET'])]
-    public function __invoke(Request $request, EntityManagerInterface $em): JsonResponse
+    public function __invoke(Request $request, EntityManagerInterface $em, AdminTeamScope $scope): JsonResponse
     {
         $memberId = $request->query->get('member');
         $teamId = $request->query->get('team');
@@ -32,6 +33,8 @@ final class TeamMemberSportCheckController extends AbstractController
         if (!$member instanceof Member || !$team instanceof Team) {
             return $this->json(['state' => 'invalid'], 404);
         }
+        $scope->assertMember($member);
+        $scope->assertTeam($team);
 
         $sport = $team->getSport();
         if ($sport === null) {

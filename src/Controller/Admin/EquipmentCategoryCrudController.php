@@ -15,19 +15,19 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
-class EquipmentCategoryCrudController extends AbstractCrudController
+class EquipmentCategoryCrudController extends AbstractEquipmentMasterCrudController
 {
     public static function getEntityFqcn(): string { return EquipmentCategory::class; }
 
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud->setEntityLabelInSingular('Ausrüstungskategorie')
+        return $this->configureMasterCrud($crud)->setEntityLabelInSingular('Ausrüstungskategorie')
             ->setEntityLabelInPlural('Ausrüstungskategorien');
     }
 
     public function configureFields(string $pageName): iterable
     {
-        yield AssociationField::new('club', 'Verein')->setRequired(true);
+        yield $this->clubField();
         yield TextField::new('code', 'Schlüssel');
         yield TextField::new('name', 'Bezeichnung');
         yield BooleanField::new('active', 'Aktiv');

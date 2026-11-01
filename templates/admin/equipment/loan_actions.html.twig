@@ -3,16 +3,16 @@
     <div class="d-flex flex-wrap gap-3">
         {% if reservation.status == 'reserved' %}
             <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'issue'}) }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_issue_' ~ reservation.id) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_issue_' ~ reservation.id ~ '_' ~ reservation.member.club.id) }}">
                 <button type="submit" class="btn btn-primary">Ausrüstung ausgeben</button>
             </form>
             <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'cancel'}) }}" onsubmit="return confirm('Reservierung wirklich stornieren?');">
-                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_cancel_' ~ reservation.id) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_cancel_' ~ reservation.id ~ '_' ~ reservation.member.club.id) }}">
                 <button type="submit" class="btn btn-outline-danger">Reservierung stornieren</button>
             </form>
         {% elseif reservation.status == 'issued' %}
             <form method="post" action="{{ path('admin_equipment_loan_action', {id: reservation.id, action: 'return'}) }}" class="d-flex flex-column gap-2">
-                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_return_' ~ reservation.id) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('equipment_loan_return_' ~ reservation.id ~ '_' ~ reservation.member.club.id) }}">
                 <label for="loan-condition-{{ reservation.id }}">Zustand bei Rückgabe</label>
                 <select id="loan-condition-{{ reservation.id }}" name="condition" required class="form-select">
                     <option value="ready">Einsatzbereit</option>

@@ -133,6 +133,7 @@ final class MembershipController extends AbstractController
         }
 
         $section = $request->attributes->getString('configuration_section');
+
         if ($section === '') {
             $section = match ($request->query->getString('routeName')) {
                 'admin_settings_website' => 'website',
@@ -142,21 +143,28 @@ final class MembershipController extends AbstractController
                 default => throw $this->createNotFoundException('Unbekannter Konfigurationsbereich.'),
             };
         }
+
         $barOnly = $section === 'bar';
+        
         if (in_array($section, ['membership', 'contributions'], true)) {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
         }
+        
         if ($barOnly && !$barAccess->isManager()) {
             throw $this->createAccessDeniedException('Nur die Thekenleitung darf diese Einstellungen verwalten.');
         }
+        
         $user = $this->account();
         $ownClub = $user->getMember()?->getClub();
+        
         if ($barOnly) {
             $ownClub = $this->clubContext->getClub();
         }
+        
         if ($barOnly && $request->query->has('club')) {
             throw $this->createNotFoundException('Für die Thekendiensteinstellungen gilt der eigene Verein.');
         }
+        
         $club = null;
 
         if ($this->isGranted('ROLE_ADMIN')) {
@@ -170,6 +178,7 @@ final class MembershipController extends AbstractController
         if (in_array($section, ['membership', 'contributions'], true) && $club === null) {
             throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
         }
+        
         $websiteForm = $policyForm = $classForm = null;
         $classForms = [];
         $classEditSubmitted = false;

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Service\EquipmentBookingPositionService;
+use App\Service\AdminEquipmentScope;
+use App\Entity\EquipmentBooking;
+use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EquipmentBookingPositionController extends AbstractController
 {
     #[Route('/admin/equipment-booking/add-position', name: 'admin_equipment_booking_add_position', methods: ['POST'])]
-    public function add(Request $request, EquipmentBookingPositionService $service, AdminUrlGenerator $urls): Response
+    public function add(Request $request, EquipmentBookingPositionService $service, AdminUrlGenerator $urls, AdminEquipmentScope $scope, EntityManagerInterface $em): Response
     {
         $bookingId = filter_var($request->request->get('booking_id'), FILTER_VALIDATE_INT);
         $itemId = filter_var($request->request->get('equipment_item_id'), FILTER_VALIDATE_INT);
@@ -25,9 +28,12 @@ final class EquipmentBookingPositionController extends AbstractController
         if (!$bookingId || !$itemId) {
             throw $this->createNotFoundException();
         }
-        if (!$this->isCsrfTokenValid('equipment_booking_add_'.$bookingId, (string) $request->request->get('_token', ''))) {
+        if (!$this->isCsrfTokenValid('equipment_booking_add_'.$bookingId.'_'.$scope->club()->getId(), (string) $request->request->get('_token', ''))) {
             throw $this->createAccessDeniedException('Ungueltiger CSRF-Token.');
         }
+        $booking = $em->find(EquipmentBooking::class, $bookingId);
+        if (!$booking) { throw $this->createNotFoundException(); }
+        $scope->assertBooking($booking);
         try {
             $service->add($bookingId, $itemId, $type);
             $this->addFlash('success', 'Ausrüstungsposition hinzugefügt.');

@@ -1,7 +1,6 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}Kurs-Spartenzuordnungen prüfen{% endblock %}
+{% block content_title %}Kurs-Spartenzuordnungen prüfen – {{ club ? club.name : 'ohne Verein' }}{% endblock %}
 {% block main %}
-    <h1>Kurs-Spartenzuordnungen prüfen – {{ club ? club.name : 'ohne Verein' }}</h1>
     <p>Bestehende und neue Kurse bleiben ungeprüft, bis sie ausdrücklich als vereinsweit oder einer bzw. mehreren Sparten zugeordnet werden.</p>
     <ul>
         {% for course in courses %}

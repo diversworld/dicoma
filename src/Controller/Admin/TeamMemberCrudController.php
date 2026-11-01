@@ -7,7 +7,15 @@ use App\Entity\Member;
 use App\Entity\Team;
 use App\Entity\MemberSport;
 use App\Enum\TeamMemberRole;
+use App\Service\AdminTeamScope;
+use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\BatchActionDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -25,6 +33,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -35,7 +45,8 @@ class TeamMemberCrudController extends AbstractCrudController
 		private readonly EntityManagerInterface $memberEntityManager,
 		private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly ValidatorInterface $validator,
-        private readonly UrlGeneratorInterface $urlGenerator
+        private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly AdminTeamScope $scope,
 	) {
 	}
 
@@ -46,6 +57,7 @@ class TeamMemberCrudController extends AbstractCrudController
         if (is_scalar($raw) && ctype_digit((string) $raw) && (int) $raw > 0) {
             $member = $this->memberEntityManager->getRepository(Member::class)->find((int) $raw);
             if ($member instanceof Member) {
+                $this->scope->assertMember($member);
                 $item->setMember($member);
             }
         }
@@ -53,10 +65,66 @@ class TeamMemberCrudController extends AbstractCrudController
         if (is_scalar($teamRaw) && ctype_digit((string) $teamRaw) && (int) $teamRaw > 0) {
             $team = $this->memberEntityManager->getRepository(Team::class)->find((int) $teamRaw);
             if ($team instanceof Team) {
+                $this->scope->assertTeam($team);
                 $item->setTeam($team);
             }
         }
         return $item;
+    }
+
+    private function assertAssignment(TeamMember $assignment): void
+    {
+        $this->scope->assertMember($assignment->getMember());
+        $this->scope->assertTeam($assignment->getTeam());
+    }
+
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        $query = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        $clubId = $this->scope->clubId();
+        return $clubId === null ? $query->andWhere('1 = 0')
+            : $query->join('entity.member', 'assignmentMember')
+                ->join('entity.team', 'assignmentTeam')
+                ->join('assignmentTeam.sport', 'assignmentSport')
+                ->andWhere('assignmentMember.club = :assignmentClub AND assignmentSport.club = :assignmentClub')
+                ->setParameter('assignmentClub', $clubId);
+    }
+
+    public function edit(AdminContext $context)
+    {
+        $this->assertAssignment($context->getEntity()->getInstance());
+        return parent::edit($context);
+    }
+
+    public function detail(AdminContext $context)
+    {
+        $this->assertAssignment($context->getEntity()->getInstance());
+        return parent::detail($context);
+    }
+
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if ($entityInstance instanceof TeamMember) {
+            $this->assertAssignment($entityInstance);
+        }
+        parent::deleteEntity($entityManager, $entityInstance);
+    }
+
+    public function batchDelete(AdminContext $context, BatchActionDto $batchActionDto): Response
+    {
+        if ($batchActionDto->getEntityFqcn() !== TeamMember::class) {
+            throw new BadRequestHttpException('Ungültiger Mannschaftszuordnungs-Stapel.');
+        }
+        foreach ($batchActionDto->getEntityIds() as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string) $id) || (int) $id < 1) {
+                throw new BadRequestHttpException('Ungültige Mannschaftszuordnungs-ID.');
+            }
+            $assignment = $this->memberEntityManager->find(TeamMember::class, (int) $id);
+            if ($assignment !== null) {
+                $this->assertAssignment($assignment);
+            }
+        }
+        return parent::batchDelete($context, $batchActionDto);
     }
 
     protected function getRedirectResponseAfterSave(
@@ -174,6 +242,7 @@ class TeamMemberCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
+            ->setFormOptions(['csrf_token_id' => 'team_member_crud_'.($this->scope->clubId() ?? 'none')])
             ->setEntityLabelInSingular('Gruppenmitglied')
             ->setEntityLabelInPlural('Gruppenmitglieder')
             ->setPageTitle(
@@ -207,13 +276,22 @@ class TeamMemberCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
+        $clubId = $this->scope->clubId();
         yield FormField::addFieldset('Zuordnung');
 
         yield AssociationField::new('team', 'Gruppe / Mannschaft')
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $query = $repository->createQueryBuilder('teamChoice')->join('teamChoice.sport', 'teamChoiceSport');
+                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('teamChoiceSport.club = :club')->setParameter('club', $clubId);
+            })
             ->setRequired(true)
             ->setColumns(4);
 
         yield AssociationField::new('member', 'Mitglied')
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+                $query = $repository->createQueryBuilder('memberChoice');
+                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('memberChoice.club = :club')->setParameter('club', $clubId);
+            })
             ->setRequired(true)
             ->setColumns(4);
 
@@ -254,6 +332,13 @@ class TeamMemberCrudController extends AbstractCrudController
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
+        if ($entityInstance instanceof TeamMember) {
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            $member = $original['member'] ?? null;
+            $team = $original['team'] ?? null;
+            $this->scope->assertMember($member instanceof Member ? $member : null);
+            $this->scope->assertTeam($team instanceof Team ? $team : null);
+        }
         $this->saveWithOptionalSport($entityManager, $entityInstance);
     }
 
@@ -262,6 +347,7 @@ class TeamMemberCrudController extends AbstractCrudController
         if (!$entity instanceof TeamMember) {
             throw new \InvalidArgumentException('Expected TeamMember.');
         }
+        $this->assertAssignment($entity);
 
         $em->wrapInTransaction(function (EntityManagerInterface $manager) use ($entity): void {
             $team = $entity->getTeam();

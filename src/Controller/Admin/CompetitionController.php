@@ -76,7 +76,10 @@ final class CompetitionController extends AbstractController
         $sports = $this->access->manageableDivisions();
         $this->access->require($id === null ? ($this->isGranted('ROLE_ADMIN') || $sports !== []) : $this->access->managesTeam($team));
         if ($id !== null && !$this->isGranted('ROLE_ADMIN')) { $sports = [$team->getSport()]; }
-        $form = $this->createFormBuilder($team, ['action' => $this->generateUrl($id === null ? 'competition_team_new' : 'competition_team_edit', $id === null ? [] : ['id' => $id])])
+        $form = $this->createFormBuilder($team, [
+            'action' => $this->generateUrl($id === null ? 'competition_team_new' : 'competition_team_edit', $id === null ? [] : ['id' => $id]),
+            'csrf_token_id' => 'competition_team_'.($this->access->currentBackendClubId() ?? 'none'),
+        ])
             ->add('name', F\TextType::class, ['label' => 'Mannschaftsname'])
             ->add('sport', EntityType::class, ['class' => Sport::class, 'choices' => $sports, 'label' => 'Sportart', 'disabled' => $id !== null])
             ->add('type', F\EnumType::class, ['class' => TeamType::class, 'choice_label' => static fn (TeamType $t): string => $t->label(), 'label' => 'Typ'])
@@ -177,6 +180,7 @@ final class CompetitionController extends AbstractController
             }
             $form = $this->createForm(TournamentType::class, $tournament, [
                 'action' => $this->generateUrl($id === null ? 'competition_tournament_new' : 'competition_tournament_edit', $id === null ? ['club' => $tournament->getClub()->getId()] : ['id' => $id]),
+                'csrf_token_id' => 'competition_tournament_'.$tournament->getClub()->getId(),
             ]);
             $form->add('version', F\HiddenType::class, ['mapped' => false, 'data' => (string) $tournament->getVersion()]);
             $form->handleRequest($request);

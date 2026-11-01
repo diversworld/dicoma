@@ -24,18 +24,21 @@ final class ClubCalendar
         private readonly UrlGeneratorInterface $urls,
         private readonly ClubEventBooking $bookings,
         private readonly PublicWebsite $website,
+        private readonly AdminClubContext $clubContext,
     ) {}
 
     public function events(\DateTimeImmutable $from, \DateTimeImmutable $until, bool $backend = true): array
     {
         $events = [];
         $user = $this->security->getUser();
-        $club = $user instanceof \App\Entity\User ? $user->getMember()?->getClub() : null;
+        $selectedBackend = $backend && $this->security->isGranted('ROLE_SUPER_ADMIN');
+        $club = $selectedBackend ? $this->clubContext->getClub()
+            : ($user instanceof \App\Entity\User ? $user->getMember()?->getClub() : null);
         if ($club !== null) {
             foreach ($this->em->getRepository(ClubEvent::class)->createQueryBuilder('e')
                 ->where('e.club = :club AND e.published = true AND e.cancelled = false AND e.startsAt < :until AND e.endsAt > :from')
                 ->setParameter('club', $club)->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $event) {
-                if (!$this->bookings->canSee($event, $user)) { continue; }
+                if (!$selectedBackend && !$this->bookings->canSee($event, $user)) { continue; }
                 $url = null;
                 if ($backend && $this->security->isGranted('ROLE_ADMIN')) {
                     $url = $this->urls->generate('admin_club_event', ['id' => $event->getId()]);
@@ -46,7 +49,7 @@ final class ClubCalendar
                     'start' => $event->getStartsAt(), 'end' => $event->getEndsAt(), 'location' => $event->getLocation(), 'url' => $url];
             }
         }
-        if ($club !== null && ($this->security->isGranted('ROLE_BAR_MANAGER') || $user->getMember()->isActiveMember())) {
+        if ($club !== null && ($selectedBackend || $this->security->isGranted('ROLE_BAR_MANAGER') || $user->getMember()->isActiveMember())) {
             foreach ($this->em->getRepository(BarShift::class)->createQueryBuilder('s')
                 ->where('s.club = :club AND s.status != :cancelled AND s.startsAt < :until AND s.endsAt > :from')
                 ->setParameter('club', $club)->setParameter('cancelled', 'cancelled')->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $shift) {
@@ -77,7 +80,8 @@ final class ClubCalendar
         foreach ($this->em->getRepository(Schedule::class)->createQueryBuilder('s')->join('s.courses', 'c')->addSelect('c')
             ->where('s.startDate >= :from AND s.startDate < :until')->setParameter('from', $from->format('Y-m-d'))
             ->setParameter('until', $until->format('Y-m-d'))->getQuery()->getResult() as $schedule) {
-            if (!$this->security->isGranted('COURSE_MANAGE', $schedule->getCourses())
+            if (($selectedBackend && ($club === null || $schedule->getCourses()->getClub()?->getId() !== $club->getId()))
+                || !$this->security->isGranted('COURSE_MANAGE', $schedule->getCourses())
                 || in_array($schedule->getCourses()->getStatus()->value, ['draft', 'cancelled'], true)) { continue; }
             $start = new \DateTimeImmutable($schedule->getStartDate()->format('Y-m-d') . ' ' . ($schedule->getStartTime()?->format('H:i') ?? '00:00'));
             $events[] = ['key' => 'course-' . $schedule->getId(), 'kind' => 'Tauchausbildung',

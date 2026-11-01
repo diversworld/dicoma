@@ -12,20 +12,20 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
-class EquipmentModelCrudController extends AbstractCrudController
+class EquipmentModelCrudController extends AbstractEquipmentMasterCrudController
 {
     public static function getEntityFqcn(): string { return EquipmentModel::class; }
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud->setEntityLabelInSingular('Ausrüstungsmodell')
+        return $this->configureMasterCrud($crud)->setEntityLabelInSingular('Ausrüstungsmodell')
             ->setEntityLabelInPlural('Ausrüstungsmodelle')
             ->setDefaultSort(['name' => 'ASC']);
     }
     public function configureFields(string $pageName): iterable
     {
-        yield AssociationField::new('club', 'Verein')->setRequired(true);
-        yield AssociationField::new('category', 'Ausrüstungsart')->setRequired(true);
-        yield AssociationField::new('manufacturer', 'Hersteller')->setRequired(true);
+        yield $this->clubField();
+        yield $this->scopedField('category', 'Ausrüstungsart')->setRequired(true);
+        yield $this->scopedField('manufacturer', 'Hersteller')->setRequired(true);
         yield TextField::new('name', 'Modellbezeichnung')->setRequired(true);
         yield BooleanField::new('active', 'Aktiv');
     }

@@ -1,11 +1,9 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section] }}{% endblock %}
+{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section] }} – {{ ownClub.name }}{% endblock %}
 {% block main %}
-    <h1>{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section] }}</h1>
     <p><a href="{{ path('admin_settings') }}">Zurück zu den Einstellungen</a></p>
     {% if websiteForm %}
-        {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}
-        <h2>Website-Anzeige – {{ ownClub.name }}</h2>
+        {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}        
         <p>Seitengröße für Startseite und Übersichten, jeweils zwischen 1 und 100 Karten.</p>
         {{ form_start(websiteForm) }}
             {{ form_errors(websiteForm) }}
@@ -15,7 +13,6 @@
     {% endif %}
     {% if policyForm %}
         {% form_theme policyForm 'bootstrap_5_layout.html.twig' %}
-        <h2>Mitgliedschaft – {{ club.name }}</h2>
         <p>Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.</p>
         {{ form_start(policyForm) }}
         {{ form_errors(policyForm) }}
@@ -25,7 +22,7 @@
     {% endif %}
     {% if classForm %}
         {% form_theme classForm 'bootstrap_5_layout.html.twig' %}
-        <h2>Beitragsklassen</h2>
+        <h3>Definierte Beitragsklassen</h3>
         <p>Änderungen gelten nur für zukünftige Forderungen; bestehende Forderungen bleiben unverändert.</p>
         {% for item in classForms %}
             {% form_theme item.form 'bootstrap_5_layout.html.twig' %}
@@ -47,7 +44,6 @@
     {% if canBar %}
         {% form_theme yearForm 'bootstrap_5_layout.html.twig' %}
         {% form_theme barForm 'bootstrap_5_layout.html.twig' %}
-        <h2>Thekendienst-Jahresregel – {{ ownClub.name }}</h2>
         {{ form_start(yearForm, {attr: {class: 'my-3'}}) }}
             {{ form_errors(yearForm) }}
             {{ form_widget(yearForm) }}

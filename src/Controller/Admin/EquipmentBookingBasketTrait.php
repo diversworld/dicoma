@@ -12,6 +12,7 @@ use App\Entity\Regulator;
 use App\Entity\Tank;
 use App\Entity\Member;
 use App\Service\EquipmentBookingService;
+use App\Service\AdminEquipmentScope;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
@@ -22,18 +23,19 @@ use Symfony\Component\HttpFoundation\Response;
 trait EquipmentBookingBasketTrait
 {
     #[AdminRoute(path: '/equipment-booking-basket', name: 'equipment_booking_basket')]
-    public function equipmentBookingBasket(Request $request, EntityManagerInterface $em, EquipmentBookingService $bookingService, AdminUrlGenerator $adminUrlGenerator): Response
+    public function equipmentBookingBasket(Request $request, EntityManagerInterface $em, EquipmentBookingService $bookingService, AdminUrlGenerator $adminUrlGenerator, AdminEquipmentScope $scope): Response
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
-        $items = $em->getRepository(EquipmentItem::class)->findBy(['lendable' => true, 'conditionStatus' => 'ready'], ['name' => 'ASC']);
-        $regulators = $em->getRepository(Regulator::class)->findBy(['lendable' => true, 'conditionStatus' => 'ready'], ['id' => 'ASC']);
-        $tanks = $em->getRepository(Tank::class)->findBy([], ['id' => 'ASC']);
-        $categories = $em->getRepository(EquipmentCategory::class)->findBy(['active' => true], ['name' => 'ASC']);
-        $members = $em->getRepository(Member::class)->findOrderedByName();
+        $club = $scope->club();
+        $items = $em->getRepository(EquipmentItem::class)->findBy(['club' => $club, 'lendable' => true, 'conditionStatus' => 'ready'], ['name' => 'ASC']);
+        $regulators = $em->getRepository(Regulator::class)->findBy(['club' => $club, 'lendable' => true, 'conditionStatus' => 'ready'], ['id' => 'ASC']);
+        $tanks = $em->getRepository(Tank::class)->findBy(['club' => $club], ['id' => 'ASC']);
+        $categories = $em->getRepository(EquipmentCategory::class)->findBy(['club' => $club, 'active' => true], ['name' => 'ASC']);
+        $members = $em->getRepository(Member::class)->findOrderedByName($club);
         $errors = [];
         $submitted = [];
         if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('equipment_booking_basket', (string) $request->request->get('_token', ''))) {
+            if (!$this->isCsrfTokenValid('equipment_booking_basket_'.$club->getId(), (string) $request->request->get('_token', ''))) {
                 throw $this->createAccessDeniedException('Ungueltiger CSRF-Token.');
             }
             $submitted = $request->request->all();
@@ -47,6 +49,7 @@ trait EquipmentBookingBasketTrait
                 if (!$member instanceof Member || !$member->getClub() || !$start || !$end || $start >= $end) {
                     throw new \DomainException('Mitglied und gueltigen Zeitraum auswaehlen.');
                 }
+                $scope->assertMember($member);
                 $rawSelection = $submitted['asset_ids'] ?? [];
                 if (!is_array($rawSelection) || count($rawSelection) < 1 || count($rawSelection) > 100) {
                     throw new \DomainException('Bitte 1 bis 100 Gegenstaende auswaehlen.');
@@ -73,6 +76,7 @@ trait EquipmentBookingBasketTrait
                     if (!$asset) {
                         throw new \DomainException('Ein Gegenstand existiert nicht mehr.');
                     }
+                    $scope->assertAsset($asset);
                     $line = (new EquipmentBookingItem())->setQuantity(1);
                     match ($type) {
                         'equipment' => $line->setEquipmentItem($asset),
@@ -91,6 +95,6 @@ trait EquipmentBookingBasketTrait
                 $errors[] = $e->getMessage();
             }
         }
-        return $this->render('admin/equipment/booking_basket.html.twig', compact('items', 'regulators', 'tanks', 'categories', 'members', 'errors', 'submitted'));
+        return $this->render('admin/equipment/booking_basket.html.twig', compact('items', 'regulators', 'tanks', 'categories', 'members', 'errors', 'submitted', 'club'));
     }
 }
