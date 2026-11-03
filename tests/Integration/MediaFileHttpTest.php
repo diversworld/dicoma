@@ -55,6 +55,40 @@ final class MediaFileHttpTest extends WebTestCase
         parent::tearDown();
     }
 
+    public function testFileManagerAndFolderErrorsAreTranslated(): void
+    {
+        $this->client->loginUser($this->admin);
+        foreach ([
+            'de' => ['Dateiverwaltung', 'Ordner anlegen', 'Keine Unterordner vorhanden.', 'Der Ordnername muss', 'Erlaubt sind', '1 Datei(en) gespeichert.'],
+            'en' => ['File manager', 'Create folder', 'No subfolders.', 'The folder name must', 'Allowed formats are', '1 file(s) saved.'],
+            'fr' => ['Gestion des fichiers', 'Créer un dossier', 'Aucun sous-dossier.', 'Le nom du dossier doit', 'Formats autorisés', '1 fichier(s) enregistré(s).'],
+            'es' => ['Gestión de archivos', 'Crear carpeta', 'No hay subcarpetas.', 'El nombre de carpeta debe', 'Se permiten', '1 archivo(s) guardado(s).'],
+        ] as $locale => [$title, $button, $empty, $error, $uploadError, $saved]) {
+            $this->client->request('GET', '/admin/'.$locale);
+            self::assertResponseIsSuccessful();
+            $this->client->request('GET', '/admin/media');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $title);
+            self::assertSelectorTextContains('body', $button);
+            self::assertSelectorTextContains('body', $empty);
+            $token = $this->token('media_folder_create_'.$this->club->getId());
+            $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => '../invalid']);
+            self::assertResponseRedirects('/admin/media', 303);
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('body', $error);
+            $this->postUpload('invalid.svg', '<svg></svg>', 'media_upload_'.$this->club->getId());
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="status"]', 'invalid.svg: '.$uploadError);
+            $this->upload('test.pdf', "%PDF-1.4\n%%EOF\n");
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="status"]', $saved);
+        }
+        $this->postUpload('bad<img src=x onerror=alert(1)>.svg', '<svg></svg>', 'media_upload_'.$this->club->getId());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'bad<img src=x onerror=alert(1)>.svg');
+        self::assertSelectorNotExists('[role="status"] img');
+    }
+
     public function testProtectedUploadDownloadValidationAndClubIsolation(): void
     {
         $this->client->loginUser($this->press);
@@ -130,6 +164,7 @@ final class MediaFileHttpTest extends WebTestCase
             file_put_contents($path, $contents);
             $uploads[] = new UploadedFile($path, $name, null, null, true);
         }
+
         $uploadToken = $this->token('media_upload_'.$this->club->getId());
         $this->client->request('POST', '/admin/media/upload', [
             '_token' => $uploadToken, 'folder' => (string) $child->getId(), 'alt_text' => 'Gemeinsamer Text', 'selected_count' => '4',

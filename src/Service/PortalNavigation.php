@@ -123,6 +123,11 @@ final class PortalNavigation
                 ['label' => 'Kompressorlogbuch', 'route' => 'equipment_manager_compressor_evenings'],
                 ['label' => 'Füllgebühren', 'route' => 'equipment_manager_fill_billing'],
             ];
+        } elseif ($hasClub && $this->security->isGranted(User::ROLE_COMPRESSOR_OPERATOR)) {
+            $roles['Kompressor'] = [
+                ['label' => 'Kompressor – Füllabende', 'route' => 'equipment_manager_compressor_evenings'],
+                ['label' => 'Kompressor-Fülllogbuch', 'route' => 'equipment_manager_compressor_log'],
+            ];
         }
 
         return ['personal' => $personal, 'management' => $management, 'roles' => $roles];

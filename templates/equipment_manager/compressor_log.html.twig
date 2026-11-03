@@ -2,7 +2,7 @@
 {% block title %}{{ 'Kompressor-Fülllogbuch'|trans }} | DICOMA{% endblock %}
 {% block body %}
 	<main class="container py-4 dw-max-width-1150px" >
-		<a href="{{ path('equipment_manager_dashboard') }}">← {{ 'Gerätewart-Übersicht'|trans }}</a>
+		{% if is_granted('ROLE_EQUIPMENT_MANAGER') %}<a href="{{ path('equipment_manager_dashboard') }}">← {{ 'Gerätewart-Übersicht'|trans }}</a>{% else %}<a href="{{ path('app_portal', {'_locale': app.request.locale}) }}">← {{ 'Mein Bereich'|trans }}</a>{% endif %}
 		<h1 class="h2 mt-3">{{ 'Kompressor-Fülllogbuch'|trans }}</h1>
 		<p class="text-muted">{{ 'Dokumentation abgeschlossener Atemluftfüllungen. Nur tatsächlich geprüfte und durchgeführte Vorgänge eintragen. Die Bestätigungen ersetzen keine Messung, Wartung oder Unterweisung.'|trans }}</p>
 		{% for message in app.flashes('success') %}
@@ -55,7 +55,7 @@
 					<label class="form-label">{{ 'Bemerkungen'|trans }}</label>
 					<textarea class="form-control" name="notes" maxlength="2000" rows="2" placeholder="{{ 'Besonderheiten, Abweichungen, Messprotokoll-Referenz'|trans }}"></textarea>
 				</div>
-                <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> <a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a></div>
+                <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}<a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a>{% endif %}</div>
 				<div class="col-12">
 					<div class="alert alert-warning">
 						<strong>{{ 'Sicherheitskontrollen vor Freigabe'|trans }}</strong><div class="form-check">

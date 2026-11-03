@@ -17,12 +17,14 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route('/admin/media')]
 #[IsGranted('ROLE_PRESS_OFFICER')]
 final class MediaFileController extends AbstractController
 {
-    public function __construct(private readonly AdminClubContext $clubContext) {}
+    public function __construct(private readonly AdminClubContext $clubContext, private readonly TranslatorInterface $translator) {}
 
     #[Route('', name: 'admin_media_index', methods: ['GET'])]
     public function index(Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
@@ -104,10 +106,10 @@ final class MediaFileController extends AbstractController
                 }
                 ++$savedCount;
             } catch (\InvalidArgumentException $e) {
-                $this->addFlash('danger', $upload->getClientOriginalName().': '.$e->getMessage());
+                $this->addFlash('danger', $upload->getClientOriginalName().': '.$this->translator->trans($e->getMessage()));
             }
         }
-        if ($savedCount > 0) { $this->addFlash('success', $savedCount.' Datei(en) gespeichert.'); }
+        if ($savedCount > 0) { $this->addFlash('success', new TranslatableMessage('%count% Datei(en) gespeichert.', ['%count%' => $savedCount])); }
         return $this->redirectToRoute('admin_media_index', $this->folderParameters($folder), Response::HTTP_SEE_OTHER);
     }
 

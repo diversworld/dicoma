@@ -1,55 +1,55 @@
 {% extends 'base.html.twig' %}
-{% block title %}Mein Mitgliederbereich – DiCoMa{% endblock %}
+{% block title %}{{ 'Mein Mitgliederbereich'|trans }} – DiCoMa{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
 <section class="section dw-section-spacing" >
 <div class="container">
-<h1>Mein Mitgliederbereich</h1>
-<p>Persönliche Informationen, Qualifikationen, Gruppen und Dokumente.</p>
-{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
+<h1>{{ 'Mein Mitgliederbereich'|trans }}</h1>
+<p>{{ 'Persönliche Informationen, Qualifikationen, Gruppen und Dokumente.'|trans }}</p>
+{% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="status">{{ message|trans }}</div>{% endfor %}{% endfor %}
 <div class="row mb-4">
-<div class="col-md-3"><div class="card p-3"><strong>{{ qualifications|length }}</strong><span>Qualifikationen</span></div></div>
-<div class="col-md-3"><div class="card p-3"><strong>{{ expiringCount }}</strong><span>Laufen in 30 Tagen ab</span></div></div>
-<div class="col-md-3"><div class="card p-3"><strong>{{ groups|length }}</strong><span>Gruppenzuordnungen</span></div></div>
-<div class="col-md-3"><div class="card p-3"><strong>{{ documents|length }}</strong><span>Dokumente</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ qualifications|length }}</strong><span>{{ 'Qualifikationen'|trans }}</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ expiringCount }}</strong><span>{{ 'Laufen in 30 Tagen ab'|trans }}</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ groups|length }}</strong><span>{{ 'Gruppenzuordnungen'|trans }}</span></div></div>
+<div class="col-md-3"><div class="card p-3"><strong>{{ documents|length }}</strong><span>{{ 'Dokumente'|trans }}</span></div></div>
 </div>
-<div class="card mb-4"><div class="card-body"><h2>Persönliche Daten</h2>
-<dl class="row"><dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{ member.fullName }}</dd>
-<dt class="col-sm-3">Mitgliedsnummer</dt><dd class="col-sm-9">{{ member.memberNumber|default('—') }}</dd>
-<dt class="col-sm-3">Verein</dt><dd class="col-sm-9">{{ member.club ? member.club : '—' }}</dd>
-<dt class="col-sm-3">Mitgliedsstatus</dt><dd class="col-sm-9">{{ member.membershipStatus.value }}</dd>
-<dt class="col-sm-3">Eintritt</dt><dd class="col-sm-9">{{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }}</dd>
-<dt class="col-sm-3">Adresse</dt><dd class="col-sm-9">{{ member.street|default('') }} · {{ member.postalCode|default('') }} {{ member.city|default('') }}</dd>
-<dt class="col-sm-3">E-Mail</dt><dd class="col-sm-9">{{ member.email|default('—') }}</dd>
-<dt class="col-sm-3">Telefon</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd></dl>
-<p><a href="{{ path('membership_contact') }}">Kontakt- und Notfalldaten bearbeiten</a> · <a href="{{ path('membership_self') }}">Mitgliedschaft und Beiträge</a></p>
-<p class="text-muted">Name, Geburtstag, Mitgliedsnummer und Mitgliedschaftsdaten verwaltet weiterhin der Verein.</p></div></div>
-<div class="card mb-4"><div class="card-body"><h2>Meine Qualifikationen</h2>
-<div class="table-responsive"><table class="table"><thead><tr><th>Qualifikation</th><th>Erteilt</th><th>Gültig bis</th><th>Status</th></tr></thead><tbody>
+<div class="card mb-4"><div class="card-body"><h2>{{ 'Persönliche Daten'|trans }}</h2>
+<dl class="row"><dt class="col-sm-3">{{ 'Name'|trans }}</dt><dd class="col-sm-9">{{ member.fullName }}</dd>
+<dt class="col-sm-3">{{ 'Mitgliedsnummer'|trans }}</dt><dd class="col-sm-9">{{ member.memberNumber|default('—') }}</dd>
+<dt class="col-sm-3">{{ 'Verein'|trans }}</dt><dd class="col-sm-9">{{ member.club ? member.club : '—' }}</dd>
+<dt class="col-sm-3">{{ 'Mitgliedsstatus'|trans }}</dt><dd class="col-sm-9">{{ member.membershipStatus.label|trans }}</dd>
+<dt class="col-sm-3">{{ 'Eintritt'|trans }}</dt><dd class="col-sm-9">{{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }}</dd>
+<dt class="col-sm-3">{{ 'Adresse'|trans }}</dt><dd class="col-sm-9">{{ member.street|default('') }} · {{ member.postalCode|default('') }} {{ member.city|default('') }}</dd>
+<dt class="col-sm-3">{{ 'E-Mail'|trans }}</dt><dd class="col-sm-9">{{ member.email|default('—') }}</dd>
+<dt class="col-sm-3">{{ 'Telefon'|trans }}</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd></dl>
+<p><a href="{{ path('membership_contact') }}">{{ 'Kontakt- und Notfalldaten bearbeiten'|trans }}</a> · <a href="{{ path('membership_self') }}">{{ 'Mitgliedschaft und Beiträge'|trans }}</a></p>
+<p class="text-muted">{{ 'Name, Geburtstag, Mitgliedsnummer und Mitgliedschaftsdaten verwaltet weiterhin der Verein.'|trans }}</p></div></div>
+<div class="card mb-4"><div class="card-body"><h2>{{ 'Meine Qualifikationen'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Qualifikation'|trans }}</th><th>{{ 'Erteilt'|trans }}</th><th>{{ 'Gültig bis'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
 {% for item in qualifications %}
 {% set expired = item.validUntil and item.validUntil|date('Y-m-d') < 'now'|date('Y-m-d') %}
 {% set soon = item.validUntil and not expired and item.validUntil|date('Y-m-d') <= '+30 days'|date('Y-m-d') %}
-<tr><td>{{ item.qualification ? item.qualification.name : '—' }}</td><td>{{ item.issuedAt ? item.issuedAt|date('d.m.Y') : '—' }}</td><td>{{ item.validUntil ? item.validUntil|date('d.m.Y') : 'Unbefristet' }}</td><td>{% if expired %}<span class="text-danger">Abgelaufen</span>{% elseif soon %}<span class="text-warning">Läuft bald ab</span>{% else %}<span class="text-success">Gültig</span>{% endif %}</td></tr>
-{% else %}<tr><td colspan="4">Noch keine Qualifikationen hinterlegt.</td></tr>{% endfor %}
+<tr><td>{{ item.qualification ? item.qualification.name : '—' }}</td><td>{{ item.issuedAt ? item.issuedAt|date('d.m.Y') : '—' }}</td><td>{{ item.validUntil ? item.validUntil|date('d.m.Y') : 'Unbefristet'|trans }}</td><td>{% if expired %}<span class="text-danger">{{ 'Abgelaufen'|trans }}</span>{% elseif soon %}<span class="text-warning">{{ 'Läuft bald ab'|trans }}</span>{% else %}<span class="text-success">{{ 'Gültig'|trans }}</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="4">{{ 'Noch keine Qualifikationen hinterlegt.'|trans }}</td></tr>{% endfor %}
 </tbody></table></div></div></div>
-<div class="card mb-4"><div class="card-body"><h2>Meine Gruppen und Mannschaften</h2>
-<div class="table-responsive"><table class="table"><thead><tr><th>Gruppe</th><th>Sportart</th><th>Rolle</th><th>Seit</th><th>Bis</th></tr></thead><tbody>
-{% for assignment in groups %}<tr><td>{{ assignment.team ? assignment.team.name : '—' }}</td><td>{{ assignment.team and assignment.team.sport ? assignment.team.sport.name : '—' }}</td><td>{{ assignment.role.value }}</td><td>{{ assignment.joinedAt ? assignment.joinedAt|date('d.m.Y') : '—' }}</td><td>{{ assignment.leftAt ? assignment.leftAt|date('d.m.Y') : 'Aktuell' }}</td></tr>
-{% else %}<tr><td colspan="5">Keine Gruppenzuordnungen vorhanden.</td></tr>{% endfor %}
+<div class="card mb-4"><div class="card-body"><h2>{{ 'Meine Gruppen und Mannschaften'|trans }}</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Gruppe'|trans }}</th><th>{{ 'Sportart'|trans }}</th><th>{{ 'Rolle'|trans }}</th><th>{{ 'Seit'|trans }}</th><th>{{ 'Bis'|trans }}</th></tr></thead><tbody>
+{% for assignment in groups %}<tr><td>{{ assignment.team ? assignment.team.name : '—' }}</td><td>{{ assignment.team and assignment.team.sport ? assignment.team.sport.name : '—' }}</td><td>{{ assignment.role.label|trans }}</td><td>{{ assignment.joinedAt ? assignment.joinedAt|date('d.m.Y') : '—' }}</td><td>{{ assignment.leftAt ? assignment.leftAt|date('d.m.Y') : 'Aktuell'|trans }}</td></tr>
+{% else %}<tr><td colspan="5">{{ 'Keine Gruppenzuordnungen vorhanden.'|trans }}</td></tr>{% endfor %}
 </tbody></table></div></div></div>
-<div class="card mb-4"><div class="card-body"><h2>Meine Dokumente</h2>
-<p>Private Ablage: PDF, JPG oder PNG, maximal 5 MB. Dateien sind nur über den angemeldeten Mitgliederbereich abrufbar.</p>
+<div class="card mb-4"><div class="card-body"><h2>{{ 'Meine Dokumente'|trans }}</h2>
+<p>{{ 'Private Ablage: PDF, JPG oder PNG, maximal 5 MB. Dateien sind nur über den angemeldeten Mitgliederbereich abrufbar.'|trans }}</p>
 <form action="{{ path('app_profile_document_upload') }}" method="post" enctype="multipart/form-data" class="mb-3">
 <input type="hidden" name="_token" value="{{ csrf_token('member_document_upload') }}">
-<label for="member-document">Dokument auswählen</label>
+<label for="member-document">{{ 'Dokument auswählen'|trans }}</label>
 <input class="form-control mb-2" type="file" id="member-document" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
-<label for="member-document-kind">Dokumentart</label><select class="form-control mb-2" id="member-document-kind" name="kind"><option value="other">Sonstiges</option><option value="application">Mitgliedsantrag</option><option value="medical">Tauchtauglichkeit</option><option value="consent">Einwilligung</option></select>
-<button class="btn btn-primary" type="submit">Dokument hochladen</button>
+<label for="member-document-kind">{{ 'Dokumentart'|trans }}</label><select class="form-control mb-2" id="member-document-kind" name="kind"><option value="other">{{ 'Sonstiges'|trans }}</option><option value="application">{{ 'Mitgliedsantrag'|trans }}</option><option value="medical">{{ 'Tauchtauglichkeit'|trans }}</option><option value="consent">{{ 'Einwilligung'|trans }}</option></select>
+<button class="btn btn-primary" type="submit">{{ 'Dokument hochladen'|trans }}</button>
 </form>
-<div class="table-responsive"><table class="table"><thead><tr><th>Datei</th><th>Hochgeladen</th><th>Aktionen</th></tr></thead><tbody>
-{% for document in documents %}<tr><td>{{ document.originalName }}</td><td>{{ document.createdAt|date('d.m.Y H:i') }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ path('app_profile_document_download', {id: document.id}) }}">Herunterladen</a>
-<form class="dw-inline" method="post" action="{{ path('app_profile_document_delete', {id: document.id}) }}"  onsubmit="return confirm('Dokument wirklich löschen?')"><input type="hidden" name="_token" value="{{ csrf_token('delete_member_document_' ~ document.id) }}"><button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button></form></td></tr>
-{% else %}<tr><td colspan="3">Noch keine Dokumente hochgeladen.</td></tr>{% endfor %}
+<div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Datei'|trans }}</th><th>{{ 'Hochgeladen'|trans }}</th><th>{{ 'Aktionen'|trans }}</th></tr></thead><tbody>
+{% for document in documents %}<tr><td>{{ document.originalName }}</td><td>{{ document.createdAt|date('d.m.Y H:i') }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ path('app_profile_document_download', {id: document.id}) }}">{{ 'Herunterladen'|trans }}</a>
+<form class="dw-inline" method="post" action="{{ path('app_profile_document_delete', {id: document.id}) }}" onsubmit="return confirm({{ 'Dokument wirklich löschen?'|trans|json_encode|e('html_attr') }})"><input type="hidden" name="_token" value="{{ csrf_token('delete_member_document_' ~ document.id) }}"><button type="submit" class="btn btn-sm btn-outline-danger">{{ 'Löschen'|trans }}</button></form></td></tr>
+{% else %}<tr><td colspan="3">{{ 'Noch keine Dokumente hochgeladen.'|trans }}</td></tr>{% endfor %}
 </tbody></table></div></div></div>
 </div></section>
 {% endblock %}

@@ -671,6 +671,26 @@ final class Phase2FoundationHttpTest extends WebTestCase
             self::assertCount(1, $view->filter('.course-calendar [data-event-detail]'));
             self::assertSame(0, $view->filter('.course-calendar .card, .course-calendar .btn, .course-calendar .nav')->count());
         }
+        foreach ([
+            'de' => ['Monat', 'Mo', 'Woche ab 09.11.2026', 'Planung unvollständig'],
+            'en' => ['Month', 'Mon', 'Week starting 09.11.2026', 'Planning incomplete'],
+            'fr' => ['Mois', 'lun.', 'Semaine du 09.11.2026', 'Planification incomplète'],
+            'es' => ['Mes', 'lun.', 'Semana a partir del 09.11.2026', 'Planificación incompleta'],
+        ] as $locale => [$monthLabel, $weekday, $weekLabel, $incomplete]) {
+            $this->client->request('GET', '/admin/'.$locale);
+            self::assertResponseIsSuccessful();
+            $calendar = $this->client->request('GET', '/admin/course-calendar?month=2026-11&view=month');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('.calendar-nav', $monthLabel);
+            self::assertSame($weekday, trim($calendar->filter('[data-course-calendar-month] th')->first()->text()));
+            self::assertSelectorTextContains('[data-course-calendar-month]', $incomplete);
+            $this->client->request('GET', '/admin/course-calendar?week=2026-11-10&view=week');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('.calendar-nav', $weekLabel);
+            self::assertSelectorTextContains('.week-grid', $incomplete);
+        }
+        $this->client->request('GET', '/admin/de');
+        $this->client->request('GET', '/admin/course-calendar?day=2026-11-10&view=day');
         self::assertSelectorTextContains('body', 'Calendar own appointment');
         self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
         self::assertSelectorTextNotContains('body', 'Calendar unassigned appointment');
@@ -1624,6 +1644,43 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $this->client->submit($form, ['description' => 'Valve repair required for this cylinder']);
         self::assertResponseRedirects();
         self::assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM tank_maintenance_order'));
+    }
+
+    public function testTuvOperationsAreTranslatedInAllLocales(): void
+    {
+        $super = $this->admin('tuv-translation-super', 'TuvTranslation', User::ROLE_SUPER_ADMIN);
+        $check = new \App\Entity\TankCheck();
+        $booking = (new \App\Entity\MemberTankCheckBooking())->setMember($super->getMember())->setTankCheck($check);
+        $handover = new \App\Entity\TuvHandover($booking, 'sent', 'fixture', null);
+        $notification = new \App\Entity\TuvNotification($booking, 'translation-test', 'test@example.invalid', 'Fixture', 'Fixture');
+        foreach ([$check, $booking, $handover, $notification] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['TÜV-Abwicklung', 'An Prüfstelle übergeben', 'Vorgemerkt', 'Zustand / Bemerkung'],
+            'en' => ['Inspection processing', 'Hand over to inspection provider', 'Queued', 'Condition / note'],
+            'fr' => ['Gestion des inspections', 'Remettre à l’organisme d’inspection', 'En attente', 'État / remarque'],
+            'es' => ['Gestión de inspecciones', 'Entregar a la entidad inspectora', 'En cola', 'Estado / observación'],
+        ] as $locale => [$heading, $event, $state, $placeholder]) {
+            $this->client->request('GET', '/admin/'.$locale);
+            $url = (clone static::getContainer()->get(AdminUrlGenerator::class))->unsetAll()
+                ->setDashboard(DashboardController::class)
+                ->setController(\App\Controller\Admin\MemberTankCheckBookingCrudController::class)
+                ->setAction('operations')->setEntityId($booking->getId())->set('_locale', $locale)->generateUrl();
+            $crawler = $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $heading);
+            self::assertSelectorTextContains('table', $event);
+            self::assertSelectorTextContains('body', $state);
+            self::assertSame($placeholder, $crawler->filter('textarea[name="notes"]')->attr('placeholder'));
+            $handler = $crawler->filter('form[action^="/admin/tuv/invoice/issue/"]')->attr('onsubmit');
+            self::assertMatchesRegularExpression('/^return confirm\((.*)\)$/', $handler);
+            preg_match('/^return confirm\((.*)\)$/', $handler, $match);
+            self::assertSame(
+                static::getContainer()->get('translator')->trans('Rechnungsdatensatz unwiderruflich erstellen?', [], 'messages', $locale),
+                json_decode($match[1], true, 512, JSON_THROW_ON_ERROR)
+            );
+        }
     }
 
     public function testEquipmentManagerTuvRejectsInconsistentBookings(): void

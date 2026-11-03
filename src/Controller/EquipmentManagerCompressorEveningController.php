@@ -9,9 +9,10 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Contracts\Translation\TranslatorInterface;
-#[IsGranted('ROLE_EQUIPMENT_MANAGER')]
+#[IsGranted('ROLE_USER')]
 final class EquipmentManagerCompressorEveningController extends AbstractController {
  use EquipmentManagerClubTrait;
+ use CompressorAccessTrait;
  private function club(EntityManagerInterface $em):Club {
   return $this->equipmentClub();
  }
@@ -19,6 +20,7 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
  private function hours(string $raw):?int {if (!preg_match('/^\d{1,6}([.,]\d)?$/D',$raw))return null;return (int)round((float)str_replace(',','.',$raw)*10);}
  #[Route('/equipment-manager/compressor-evenings',name:'equipment_manager_compressor_evenings',methods:['GET','POST'])]
  public function index(Request $request,EntityManagerInterface $em,\App\Service\EquipmentFillingService $filling):Response {
+  $this->denyUnlessCompressorViewer();
   $club=$this->club($em);$action=(string)$request->request->get('action','');
   if ($request->isMethod('POST')) {
    $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
@@ -104,6 +106,7 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
  }
  #[Route('/equipment-manager/compressor-evenings/export.csv',name:'equipment_manager_compressor_evenings_csv',methods:['GET'])]
  public function csv(Request $request,EntityManagerInterface $em,TranslatorInterface $translator):Response {
+  $this->denyUnlessCompressorViewer();
   $club=$this->club($em);$sessions=$em->getRepository(CompressorFillSession::class)->findBy(['club'=>$club],['openedAt'=>'ASC']);
   $rows=[];foreach($sessions as $s)foreach($em->getRepository(CompressorFillBatch::class)->findBy(['session'=>$s],['filledAt'=>'ASC']) as $b)foreach($em->getRepository(CompressorFillCylinder::class)->findBy(['batch'=>$b]) as $c)$rows[]=[$s,$b,$c];
   $locale=$request->getLocale();

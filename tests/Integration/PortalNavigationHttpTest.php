@@ -3,8 +3,9 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, BarShiftDefinition, Club, Member, Person, User};
+use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, BarShiftDefinition, Club, Member, MemberDocument, MemberQualification, MemberTank, MemberTankCheckBooking, Person, Qualification, Sport, TankCheck, Team, TeamMember, User};
 use App\Enum\MembershipStatus;
+use App\Enum\TeamMemberRole;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use PHPUnit\Framework\Attributes\{DataProvider, PreserveGlobalState, RunTestsInSeparateProcesses};
@@ -159,6 +160,172 @@ final class PortalNavigationHttpTest extends WebTestCase
             '/equipment-manager/compressor-evenings', '/equipment-manager/fill-billing',
             '/instructor-portal', '/instructor-portal/courses', '/instructor-portal/tasks', '/bar-duty', '/bar-duty/cash', '/calendar'] as $path) {
             yield $path => [$path];
+        }
+    }
+
+    public function testProfileLanguagePersistsForEmptyAndPopulatedStates(): void
+    {
+        $user = $this->account('profile-translations');
+        $memberId = $user->getMember()->getId();
+        $clubId = $this->club->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Mein Mitgliederbereich', 'Noch keine Qualifikationen hinterlegt.', 'Abgelaufen', 'Läuft bald ab', 'Gültig', 'Unbefristet', 'Trainer/in', 'Dokument wirklich löschen?', 'Bitte eine Datei auswaehlen.'],
+            'en' => ['My member area', 'No qualifications recorded yet.', 'Expired', 'Expires soon', 'Valid', 'No expiry date', 'Coach', 'Really delete this document?', 'Please select a file.'],
+            'fr' => ['Mon espace membre', 'Aucune qualification enregistrée pour le moment.', 'Expirée', 'Expire bientôt', 'Valide', 'Sans expiration', 'Entraîneur / entraîneuse', 'Voulez-vous vraiment supprimer ce document ?', 'Veuillez sélectionner un fichier.'],
+            'es' => ['Mi área de socio', 'Aún no hay cualificaciones registradas.', 'Caducada', 'Caduca pronto', 'Válida', 'Sin vencimiento', 'Entrenador/a', '¿Eliminar realmente este documento?', 'Seleccione un archivo.'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/profile');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('body', $empty);
+        }
+
+        $member = $this->em->find(Member::class, $memberId);
+        $club = $this->em->find(Club::class, $clubId);
+        foreach (['-1 day', '+10 days', '+60 days', null] as $index => $expiry) {
+            $qualification = (new Qualification())->setName('Fixture qualification '.$index);
+            $record = (new MemberQualification())->setMember($member)->setQualification($qualification)
+                ->setValidUntil($expiry === null ? null : new \DateTimeImmutable($expiry));
+            $this->em->persist($qualification);
+            $this->em->persist($record);
+        }
+        $sport = (new Sport())->setClub($club)->setName('Fixture sport');
+        $team = (new Team())->setSport($sport)->setName('Fixture team');
+        $assignment = (new TeamMember())->setTeam($team)->setMember($member)->setRole(TeamMemberRole::TRAINER);
+        $document = new MemberDocument($member, str_repeat('a', 40).'.pdf', 'fixture.pdf', 'application/pdf', 100);
+        foreach ([$sport, $team, $assignment, $document] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+
+        foreach ($expectations as $locale => [$heading, $empty, $expired, $soon, $valid, $unlimited, $role, $confirm, $error]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $crawler = $this->client->request('GET', '/profile');
+            self::assertResponseIsSuccessful();
+            foreach ([$heading, $expired, $soon, $valid, $unlimited, $role, 'fixture.pdf'] as $text) {
+                self::assertSelectorTextContains('body', $text);
+            }
+            $deleteForm = $crawler->filter('form[action$="/delete"]');
+            self::assertSame('return confirm('.json_encode($confirm).')', $deleteForm->attr('onsubmit'));
+            $form = $crawler->filter('form[action="/profile/documents"]')->form();
+            $values = $form->getPhpValues();
+            $this->client->request('POST', '/profile/documents', $values);
+            self::assertResponseRedirects('/profile');
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="status"]', $error);
+        }
+    }
+
+    public function testFirstLocaleSelectionPersistsForAnonymousVisitor(): void
+    {
+        $this->client->request('GET', '/portal/fr');
+        self::assertResponseRedirects('/login');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('html[lang="fr"]');
+    }
+
+    public function testMemberDashboardIsTranslatedForEmptyAndPopulatedStates(): void
+    {
+        $user = $this->account('dashboard-translations');
+        $memberId = $user->getMember()->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Mein Mitgliederbereich', 'Du hast noch keine Flasche zum TÜV angemeldet.', '1 Prüffrist(en) bald fällig oder überfällig', 'Beim Gerätewart'],
+            'en' => ['My member area', 'You have not registered a cylinder for inspection yet.', '1 inspection deadline(s) approaching or overdue', 'With the equipment manager'],
+            'fr' => ['Mon espace membre', 'Vous n’avez pas encore inscrit de bouteille au contrôle.', '1 échéance(s) de contrôle proche(s) ou dépassée(s)', 'Chez le responsable du matériel'],
+            'es' => ['Mi área de socio', 'Aún no ha inscrito ninguna botella para inspección.', '1 plazo(s) de inspección próximo(s) o vencido(s)', 'Con el responsable del equipo'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/my');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('main', $empty);
+        }
+        $member = $this->em->find(Member::class, $memberId);
+        $tank = (new MemberTank())->setMember($member)->setLabel('Fixture cylinder')->setSerialNumber('FIXTURE-001')
+            ->setNextInspectionAt(new \DateTimeImmutable('yesterday'));
+        $check = (new TankCheck())->setCheckDate(new \DateTime('tomorrow'))->setIsPublished(true);
+        $booking = (new MemberTankCheckBooking())->setMember($member)->setMemberTank($tank)->setTankCheck($check)->setStatus('received');
+        foreach ([$tank, $check, $booking] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        foreach ($expectations as $locale => [$heading, $empty, $due, $status]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/my');
+            self::assertResponseIsSuccessful();
+            foreach ([$heading, $due, $status, 'Fixture cylinder'] as $text) {
+                self::assertSelectorTextContains('main', $text);
+            }
+            self::assertStringNotContainsString($empty, $this->client->getCrawler()->filter('main')->text());
+        }
+    }
+
+    public function testBarCashOverviewIsTranslatedWithAndWithoutAssignments(): void
+    {
+        $user = $this->account('bar-cash-translations');
+        $memberId = $user->getMember()->getId();
+        $clubId = $this->club->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Thekenkasse', 'Keine aktive eigene Diensteinteilung vorhanden.'],
+            'en' => ['Bar cash register', 'You have no active duty assignment.'],
+            'fr' => ['Caisse du bar', 'Vous n’avez aucune permanence active.'],
+            'es' => ['Caja del bar', 'No tiene ningún turno activo asignado.'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/bar-duty/cash');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h2', $heading);
+            self::assertSelectorTextContains('main', $empty);
+        }
+        $club = $this->em->find(Club::class, $clubId);
+        $member = $this->em->find(Member::class, $memberId);
+        $definition = new BarShiftDefinition($club, 'Fixture duty', 'Clubhouse', '18:00', 180, 2);
+        $shift = new BarShift($definition, new \DateTimeImmutable('tomorrow 18:00'));
+        $assignment = new BarDutyAssignment($shift, $member, 'fixture');
+        foreach ([$definition, $shift, $assignment] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/bar-duty/cash');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h2', $heading);
+            self::assertSelectorTextContains('main', 'Fixture duty');
+            self::assertSelectorExists('main a[href="/bar-duty/'.$shift->getId().'#thekenkasse"]');
+            self::assertStringNotContainsString($empty, $this->client->getCrawler()->filter('main')->text());
+        }
+    }
+
+    public function testBackendBarCalendarIsTranslatedInAllLocales(): void
+    {
+        $user = $this->account('calendar-admin', [User::ROLE_SUPER_ADMIN]);
+        $date = new \DateTimeImmutable('tomorrow 18:00');
+        $definition = new BarShiftDefinition($this->club, 'Test shift', 'Clubhouse', '18:00', 180, 2);
+        $shift = new BarShift($definition, $date);
+        $assignment = new BarDutyAssignment($shift, $user->getMember(), 'fixture');
+        foreach ([$definition, $shift, $assignment] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $this->client->loginUser($user);
+        foreach ([
+            'de' => ['Dienstkalender', 'Montag', '1 / 2 besetzt', '(du)', 'Noch keine Einteilungen.'],
+            'en' => ['Duty calendar', 'Monday', '1 / 2 filled', '(you)', 'No notifications.'],
+            'fr' => ['Calendrier des permanences', 'Lundi', '1 / 2 occupées', '(vous)', 'Aucune notification.'],
+            'es' => ['Calendario de turnos', 'Lunes', '1 / 2 ocupadas', '(usted)', 'No hay notificaciones.'],
+        ] as $locale => [$heading, $monday, $capacity, $you, $empty]) {
+            $this->client->request('GET', '/admin/'.$locale);
+            self::assertResponseIsSuccessful();
+            $this->client->request('GET', '/admin/bar-duty?month='.$date->format('Y-m'));
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('[data-bar-duty-calendar]', $heading);
+            self::assertSelectorTextContains('[data-bar-duty-calendar] th', $monday);
+            self::assertSelectorTextContains('[data-bar-event]', $capacity);
+            self::assertSelectorTextContains('[data-bar-event]', $you);
+            if ($locale !== 'de') {
+                self::assertSelectorTextContains('body', $empty);
+            }
         }
     }
 

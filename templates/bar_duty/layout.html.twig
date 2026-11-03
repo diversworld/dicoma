@@ -1,7 +1,7 @@
 {% extends app.request.attributes.get('routeCreatedByEasyAdmin') ? 'admin/portal_layout.html.twig' : 'base.html.twig' %}
 {% set duty_route_prefix = app.request.attributes.get('routeCreatedByEasyAdmin') ? 'admin_portal_' : '' %}
-{% block title %}Thekendienst | DICOMA{% endblock %}
-{% block content_title %}Thekendienste und Thekenkasse{% endblock %}
+{% block title %}{{ 'Thekendienst'|trans }} | DICOMA{% endblock %}
+{% block content_title %}{{ 'Thekendienste und Thekenkasse'|trans }}{% endblock %}
 {% block hero %}{% endblock %}
 {% block stylesheets %}
 {{ parent() }}
@@ -17,11 +17,11 @@
 {% block main %}<div data-bar-duty-portal>{{ block('duty_content') }}</div>{% endblock %}
 {% block duty_content %}
     {% if duty_route_prefix %}
-        <nav class="d-flex flex-wrap gap-3 mb-4" aria-label="Clubheimverwaltung">
-            <a href="{{ path('admin_portal_bar_duty') }}">Dienstkalender</a>
-            <a href="{{ path('admin_portal_bar_duty_plan') }}">Veranstaltung / Serie eintragen</a>
-            <a href="{{ path('admin_portal_bar_duty_settings') }}">Vorlagen und Pflichtstunden</a>
-            <a href="{{ path('admin_portal_bar_duty_report') }}">Stundenkonten und Thekenkassen</a>
+        <nav class="d-flex flex-wrap gap-3 mb-4" aria-label="{{ 'Clubheimverwaltung'|trans }}">
+            <a href="{{ path('admin_portal_bar_duty') }}">{{ 'Dienstkalender'|trans }}</a>
+            <a href="{{ path('admin_portal_bar_duty_plan') }}">{{ 'Veranstaltung / Serie eintragen'|trans }}</a>
+            <a href="{{ path('admin_portal_bar_duty_settings') }}">{{ 'Vorlagen und Pflichtstunden'|trans }}</a>
+            <a href="{{ path('admin_portal_bar_duty_report') }}">{{ 'Stundenkonten und Thekenkassen'|trans }}</a>
         </nav>
     {% endif %}
     {% for type, messages in app.flashes %}

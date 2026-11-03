@@ -122,6 +122,7 @@ security:
         - { path: ^/student, roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor-portal(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor, roles: ROLE_ADMIN }
+        - { path: ^/equipment-manager/compressor-(?:evenings|log)(?:/export\.csv)?$, roles: [ROLE_EQUIPMENT_MANAGER, ROLE_COMPRESSOR_OPERATOR] }
         - { path: ^/equipment-manager(?:/|$), roles: ROLE_EQUIPMENT_MANAGER }
 
         # ---------------------------------------------------------

@@ -9,10 +9,11 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Contracts\Translation\TranslatorInterface;
-#[IsGranted('ROLE_EQUIPMENT_MANAGER')]
+#[IsGranted('ROLE_USER')]
 final class EquipmentManagerCompressorLogController extends AbstractController
 {
     use EquipmentManagerClubTrait;
+    use CompressorAccessTrait;
     private function club(EntityManagerInterface $em): Club
     {
         return $this->equipmentClub();
@@ -20,6 +21,7 @@ final class EquipmentManagerCompressorLogController extends AbstractController
     #[Route('/equipment-manager/compressor-log', name:'equipment_manager_compressor_log', methods:['GET','POST'])]
     public function index(Request $request, EntityManagerInterface $em, \App\Service\EquipmentFillingService $filling): Response
     {
+        $this->denyUnlessCompressorViewer();
         $club=$this->club($em);
         if ($request->isMethod('POST')) {
             $this->denyAccessUnlessGranted('ROLE_COMPRESSOR_OPERATOR');
@@ -78,6 +80,7 @@ final class EquipmentManagerCompressorLogController extends AbstractController
     #[Route('/equipment-manager/compressor-log/export.csv', name:'equipment_manager_compressor_log_csv', methods:['GET'])]
     public function csv(Request $request, EntityManagerInterface $em, TranslatorInterface $translator): Response
     {
+        $this->denyUnlessCompressorViewer();
         $club=$this->club($em);
         $logs=$em->getRepository(CompressorFillLog::class)->findBy(['club'=>$club],['filledAt'=>'ASC','id'=>'ASC']);
         $locale=$request->getLocale();

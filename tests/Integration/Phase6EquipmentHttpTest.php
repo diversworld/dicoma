@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use App\Entity\Club;
 use App\Entity\CompressorFillLog;
 use App\Entity\CompressorFillBatch;
+use App\Entity\CompressorFillCylinder;
 use App\Entity\CompressorFillSession;
 use App\Entity\EquipmentAssetRecord;
 use App\Entity\EquipmentBooking;
@@ -416,10 +417,97 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         self::assertNotNull($fresh->getClosedAt());
     }
 
+    public function testStandaloneCompressorOperatorHasOnlyClubScopedFillingAccess(): void
+    {
+        $operator = $this->account('operator-only', [User::ROLE_COMPRESSOR_OPERATOR], $this->club);
+        $member = $this->account('ordinary-member', [], $this->club);
+        $otherClub = (new Club())->setName('Other compressor club');
+        $this->em->persist($otherClub);
+        $other = $this->account('foreign-operator', [User::ROLE_COMPRESSOR_OPERATOR], $otherClub);
+        $foreignSession = new CompressorFillSession($otherClub, $other, 'FOREIGN-COMPRESSOR', 100, null);
+        $foreignBatch = new CompressorFillBatch($foreignSession, $other, 200, null);
+        $foreignCylinder = new CompressorFillCylinder($foreignBatch, null, 'FOREIGN-BATCH-CYLINDER', '12.0');
+        $foreignLog = new CompressorFillLog($otherClub, $other, 'FOREIGN-CYLINDER', 'FOREIGN-COMPRESSOR', 10, 200);
+        $session = new CompressorFillSession($this->club, $operator, 'Own compressor', 100, null);
+        $this->em->persist($foreignSession);
+        $this->em->persist($foreignBatch);
+        $this->em->persist($foreignCylinder);
+        $this->em->persist($foreignLog);
+        $this->em->persist($session);
+        $this->em->flush();
+        $this->client->loginUser($operator);
+
+        $this->client->request('GET', '/my');
+        self::assertSelectorExists('#frontendNavbar a[href="/equipment-manager/compressor-evenings"]');
+        self::assertSelectorExists('#frontendNavbar a[href="/equipment-manager/compressor-log"]');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/equipment-manager"]');
+        foreach (['/equipment-manager/compressor-evenings', '/equipment-manager/compressor-log'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorNotExists('main a[href="/equipment-manager"]');
+            self::assertSelectorNotExists('main a[href="/equipment-manager/fill-billing"]');
+        }
+        $this->client->request('GET', '/equipment-manager/compressor-evenings?session='.$foreignSession->getId());
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/equipment-manager/compressor-log/export.csv');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('FOREIGN-CYLINDER', $this->client->getInternalResponse()->getContent());
+        $this->client->request('GET', '/equipment-manager/compressor-evenings/export.csv');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('FOREIGN-BATCH-CYLINDER', $this->client->getInternalResponse()->getContent());
+        $crawler = $this->client->request('GET', '/equipment-manager/compressor-evenings?session='.$session->getId());
+        $batchForm = $crawler->filter('form')->reduce(static fn ($node): bool => $node->filter('input[name="action"][value="batch"]')->count() > 0);
+        $this->client->submit($batchForm->form(), [
+            'session_id' => (string) $foreignSession->getId(), 'cylinder_1' => 'OWN-BATCH-CYLINDER',
+            'volume_1' => '12', 'pressure' => '200', 'fee' => '0', 'cylinder_check' => '1',
+        ]);
+        self::assertResponseStatusCodeSame(404);
+        $crawler = $this->client->request('GET', '/equipment-manager/compressor-evenings?session='.$session->getId());
+        $batchForm = $crawler->filter('form')->reduce(static fn ($node): bool => $node->filter('input[name="action"][value="batch"]')->count() > 0);
+        $this->client->submit($batchForm->form(), [
+            'cylinder_1' => 'OWN-BATCH-CYLINDER', 'volume_1' => '12',
+            'pressure' => '200', 'fee' => '0', 'cylinder_check' => '1',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(1, $this->em->getRepository(CompressorFillBatch::class)->count(['session' => $session]));
+        $this->client->request('GET', '/equipment-manager/compressor-evenings/export.csv');
+        self::assertStringContainsString('OWN-BATCH-CYLINDER', $this->client->getInternalResponse()->getContent());
+        foreach (['/equipment-manager', '/equipment-manager/inventory', '/equipment-manager/loans', '/equipment-manager/fill-billing', '/equipment-manager/cashbook'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('POST', '/equipment-manager/compressor-log', ['_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/equipment-manager/compressor-log');
+        $this->client->submit($crawler->selectButton('Füllung verbindlich speichern')->form(), [
+            'cylinder' => 'OWN-CYLINDER', 'compressor' => 'Own compressor',
+            'start_bar' => '40', 'end_bar' => '200', 'fee' => '0',
+            'cylinder_check' => '1', 'air_quality_check' => '1', 'filter_check' => '1',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(1, $this->em->getRepository(CompressorFillLog::class)->count(['club' => $this->club]));
+        $this->client->request('GET', '/equipment-manager/compressor-log/export.csv');
+        self::assertStringContainsString('OWN-CYLINDER', $this->client->getInternalResponse()->getContent());
+        self::assertStringNotContainsString('FOREIGN-CYLINDER', $this->client->getInternalResponse()->getContent());
+
+        $this->client->loginUser($member);
+        foreach (['/equipment-manager/compressor-evenings', '/equipment-manager/compressor-evenings/export.csv', '/equipment-manager/compressor-log', '/equipment-manager/compressor-log/export.csv'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+    }
+
     public function testNonOperatorCannotRecordFillAndGetCannotMutateWorkflow(): void
     {
         $manager = $this->account('not-an-operator', [User::ROLE_EQUIPMENT_MANAGER], $this->club);
         $this->client->loginUser($manager);
+        foreach (['/equipment-manager/compressor-evenings', '/equipment-manager/compressor-evenings/export.csv', '/equipment-manager/compressor-log', '/equipment-manager/compressor-log/export.csv'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
+        $crawler = $this->client->request('GET', '/equipment-manager/compressor-evenings');
+        $this->client->submit($crawler->selectButton('Füllabend eröffnen')->form());
+        self::assertResponseStatusCodeSame(403);
         $crawler = $this->client->request('GET', '/equipment-manager/compressor-log');
         $this->client->submit($crawler->selectButton('Füllung verbindlich speichern')->form());
         self::assertResponseStatusCodeSame(403);

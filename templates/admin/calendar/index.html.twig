@@ -46,15 +46,15 @@
     </div>
     <div class="calendar-panel calendar-nav">
       <div>
-        <a class="calendar-button {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="calendar-button {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="calendar-button {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a>
+        <a class="calendar-button {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">{{ 'Monat'|trans }}</a> <a class="calendar-button {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">{{ 'Woche'|trans }}</a> <a class="calendar-button {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">{{ 'Tag'|trans }}</a>
       </div>
-      <a class="calendar-button" href="{{ prevUrl }}">← Zurück</a>
-      <h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}Woche ab {{ weekStart|date('d.m.Y') }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1>
-      <a class="calendar-button" href="{{ nextUrl }}">Weiter →</a>
+      <a class="calendar-button" href="{{ prevUrl }}">← {{ 'Zurück'|trans }}</a>
+      <h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}{{ 'Woche ab %date%'|trans({'%date%': weekStart|date('d.m.Y')}) }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1>
+      <a class="calendar-button" href="{{ nextUrl }}">{{ 'Weiter'|trans }} →</a>
     </div>
     {% if conflictPairs > 0 %}
       <div class="warning" role="status">
-        Achtung: {{ conflictPairs }} Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.
+        {{ 'Achtung: %count% Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.'|trans({'%count%': conflictPairs}) }}
       </div>
     {% endif %}
   <div class="calendar-panel scroll">
@@ -62,8 +62,8 @@
       <table class="month" data-course-calendar-month>
         <thead>
           <tr>
-            {% for name in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
-              <th scope="col">{{ name }}</th>
+            {% for name in ['calendar.mon','calendar.tue','calendar.wed','calendar.thu','calendar.fri','calendar.sat','calendar.sun'] %}
+              <th scope="col">{{ name|trans }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -76,7 +76,7 @@
                   {% for event in day.events %}
                     <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }}{% if event.end %}–{{ event.end }}{% endif %} · {{ event.title }}
                     {% if event.incomplete %}
-                      <small>Planung unvollständig</small>
+                      <small>{{ 'Planung unvollständig'|trans }}</small>
                     {% endif %}
                     <small>{{ event.course }}</small>
                     {% if event.instructor %}
@@ -94,23 +94,23 @@
       </table>
     {% else %}
       {% set days = view == 'day' ? (weeks|first) : (weeks|first) %}
-      <p class="hint">Stundenraster 06:00–23:00 Uhr. Gleichzeitige Termine werden nebeneinander dargestellt. Termine ohne vollständige Zeitangaben stehen im Tageskopf. Termine über Mitternacht werden am Starttag angezeigt.</p>
+      <p class="hint">{{ 'Stundenraster 06:00–23:00 Uhr. Gleichzeitige Termine werden nebeneinander dargestellt. Termine ohne vollständige Zeitangaben stehen im Tageskopf. Termine über Mitternacht werden am Starttag angezeigt.'|trans }}</p>
       <div class="week-grid {{ view == 'day' ? 'day-grid' : '' }}">
-        <div class="week-head">Zeit</div>
+        <div class="week-head">{{ 'Zeit'|trans }}</div>
         {% for day in days %}
           {% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}
             <div class="week-head">
-              {{ ['So','Mo','Di','Mi','Do','Fr','Sa'][day.date|date('w')] }} {{ day.label }}
+              {{ ['calendar.sun','calendar.mon','calendar.tue','calendar.wed','calendar.thu','calendar.fri','calendar.sat'][day.date|date('w')]|trans }} {{ day.label }}
             </div>
           {% endif %}
         {% endfor %}
-        <div class="week-other">Weitere</div>
+        <div class="week-other">{{ 'Weitere'|trans }}</div>
         {% for day in days %}
           {% if view != 'day' or day.date == selectedDay|date('Y-m-d') %}  
             <div class="week-other">
               {% for event in day.events %}
                 {% if event.incomplete or event.startMinutes < 360 or event.startMinutes >= 1380 %}
-                  <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }} · {{ event.title }}{% if event.incomplete %}<small>Planung unvollständig</small>{% endif %}</a>
+                  <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }} · {{ event.title }}{% if event.incomplete %}<small>{{ 'Planung unvollständig'|trans }}</small>{% endif %}</a>
                 {% endif %}
               {% endfor %}
             </div>

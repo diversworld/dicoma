@@ -10,26 +10,26 @@
 {% endblock %}
 {% block duty_body %}
     <section class="bar-calendar" data-bar-duty-calendar>
-        <h3>Dienstkalender {{ month|date('m/Y') }}</h3>
+        <h3>{{ 'Dienstkalender'|trans }} {{ month|date('m/Y') }}</h3>
         <form method="get" action="{{ path(duty_route_prefix ~ 'bar_duty') }}" class="bar-calendar-controls">
-            <label>Monat <input type="month" name="month" value="{{ month|date('Y-m') }}" required></label>
-            <button class="bar-calendar-button bar-calendar-button-primary">Kalender anzeigen</button>
-            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">Vorheriger Monat</a>
-            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">Nächster Monat</a>
+            <label>{{ 'Monat'|trans }} <input type="month" name="month" value="{{ month|date('Y-m') }}" required></label>
+            <button class="bar-calendar-button bar-calendar-button-primary">{{ 'Kalender anzeigen'|trans }}</button>
+            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('-1 month')|date('Y-m')}) }}">{{ 'Vorheriger Monat'|trans }}</a>
+            <a class="bar-calendar-button" href="{{ path(duty_route_prefix ~ 'bar_duty', {month:month|date_modify('+1 month')|date('Y-m')}) }}">{{ 'Nächster Monat'|trans }}</a>
         </form>
-        <p>Veranstaltung anklicken, um den Thekendienst zu übernehmen. Die eingeteilten Mitglieder und noch freien Plätze stehen direkt im Kalender.</p>
+        <p>{{ 'Veranstaltung anklicken, um den Thekendienst zu übernehmen. Die eingeteilten Mitglieder und noch freien Plätze stehen direkt im Kalender.'|trans }}</p>
         {% if manager %}
             <p>
-                <a class="bar-calendar-button bar-calendar-button-primary" href="{{ path(duty_route_prefix ~ 'bar_duty_plan') }}">Veranstaltung oder Clubabend-Serie eintragen</a> Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.
+                <a class="bar-calendar-button bar-calendar-button-primary" href="{{ path(duty_route_prefix ~ 'bar_duty_plan') }}">{{ 'Veranstaltung oder Clubabend-Serie eintragen'|trans }}</a> {{ 'Oder bei einem Tag auf „Veranstaltung eintragen“ klicken.'|trans }}
             </p>
         {% endif %}
         <div class="bar-calendar-frame">
             <table class="bar-calendar-table">
-                <caption>Veranstaltungen und Thekendienste {{ month|date('m/Y') }}</caption>
+                <caption>{{ 'Veranstaltungen und Thekendienste'|trans }} {{ month|date('m/Y') }}</caption>
                 <thead>
                     <tr>
                     {% for weekday in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
-                        <th scope="col">{{ weekday }}</th>
+                        <th scope="col">{{ weekday|trans }}</th>
                     {% endfor %}
                     </tr>
                 </thead>
@@ -41,7 +41,7 @@
                                     <time datetime="{{ day.date|date('Y-m-d') }}"><strong>{{ day.date|date('d.m.') }}</strong></time>
                                     {% if manager and day.date >= date('today') %}
                                         <div>
-                                            <a href="{{ path(duty_route_prefix ~ 'bar_duty_plan', {date:day.date|date('Y-m-d')}) }}">Veranstaltung eintragen</a>
+                                            <a href="{{ path(duty_route_prefix ~ 'bar_duty_plan', {date:day.date|date('Y-m-d')}) }}">{{ 'Veranstaltung eintragen'|trans }}</a>
                                         </div>
                                     {% endif %}
                                     {% for shift in day.shifts %}
@@ -49,10 +49,10 @@
                                         <a class="bar-calendar-event" href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:shift.id}) }}" data-bar-event="{{ shift.id }}">
                                             <strong>{{ shift.title }}</strong>
                                             <br><small>{{ shift.startsAt|date('H:i') }} – {{ shift.endsAt|date('d.m.') != shift.startsAt|date('d.m.') ? shift.endsAt|date('d.m. H:i') : shift.endsAt|date('H:i') }} · {{ shift.location }}</small>
-                                            <small>{{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status] }}</small>
+                                            <small>{{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status]|trans }}</small>
                                             {% if shift.status != 'cancelled' %}
-                                                <br><span>Dienst: {% for assignment in assigned %}{{ assignment.member }}{{ assignment.member.id == app.user.member.id ? ' (du)' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}Noch niemand eingeteilt{% endfor %}</span>
-                                                <br><small>{{ assigned|length }} / {{ shift.capacity }} besetzt{% if shift.status == 'open' %} · {{ shift.capacity - assigned|length }} frei{% endif %}</small>
+                                                <br><span>{{ 'Dienst'|trans }}: {% for assignment in assigned %}{{ assignment.member }}{{ assignment.member.id == app.user.member.id ? ' (' ~ 'du'|trans ~ ')' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}{{ 'Noch niemand eingeteilt'|trans }}{% endfor %}</span>
+                                                <br><small>{{ '%assigned% / %capacity% besetzt'|trans({'%assigned%': assigned|length, '%capacity%': shift.capacity}) }}{% if shift.status == 'open' %} · {{ '%count% frei'|trans({'%count%': shift.capacity - assigned|length}) }}{% endif %}</small>
                                             {% endif %}
                                         </a>
                                     {% endfor %}
@@ -65,61 +65,61 @@
         </div>
     </section>
     <section class="card card-body mb-4">
-        <h3>Mein Dienststundenkonto {{ account.year }}</h3>
-        <p>Pflicht: <strong>{{ account.required is null ? 'Nicht konfiguriert' : (account.required / 60)|number_format(2, ',', '.') ~ ' h' }}</strong> ·
-        Bestätigt: <strong>{{ (account.earned / 60)|number_format(2, ',', '.') }} h</strong> ·
-        Geplant, nicht gutgeschrieben: {{ (account.planned / 60)|number_format(2, ',', '.') }} h ·
-        Offen: {{ account.remaining is null ? 'Nicht berechenbar' : (account.remaining / 60)|number_format(2, ',', '.') ~ ' h' }}</p>
-        <p class="small">Gutschrift erst nach bestätigter Anwesenheit. Maßgeblich ist das Jahr des Schichtbeginns; kein automatischer Übertrag ins Folgejahr.</p>
+        <h3>{{ 'Mein Dienststundenkonto'|trans }} {{ account.year }}</h3>
+        <p>{{ 'Pflicht'|trans }}: <strong>{{ account.required is null ? 'Nicht konfiguriert'|trans : (account.required / 60)|number_format(2, ',', '.') ~ ' h' }}</strong> ·
+        {{ 'Bestätigt'|trans }}: <strong>{{ (account.earned / 60)|number_format(2, ',', '.') }} h</strong> ·
+        {{ 'Geplant, nicht gutgeschrieben'|trans }}: {{ (account.planned / 60)|number_format(2, ',', '.') }} h ·
+        {{ 'Offen'|trans }}: {{ account.remaining is null ? 'Nicht berechenbar'|trans : (account.remaining / 60)|number_format(2, ',', '.') ~ ' h' }}</p>
+        <p class="small">{{ 'Gutschrift erst nach bestätigter Anwesenheit. Maßgeblich ist das Jahr des Schichtbeginns; kein automatischer Übertrag ins Folgejahr.'|trans }}</p>
         {% if account.exception %}
             <p>
-                Individuelle Pflicht: {{ account.exception.requiredMinutes is null ? 'Vereinsregel gilt wieder' : account.exception.requiredMinutes ~ ' Minuten' }}. Begründung: {{ (account.exception.history|last).reason }}
+                {{ 'Individuelle Pflicht'|trans }}: {{ account.exception.requiredMinutes is null ? 'Vereinsregel gilt wieder'|trans : '%count% Minuten'|trans({'%count%': account.exception.requiredMinutes}) }}. {{ 'Begründung'|trans }}: {{ (account.exception.history|last).reason }}
             </p>
         {% endif %}
     </section>
     <section class="card card-body mb-4">
-        <h3>Meine Einteilungen {{ account.year }}</h3>
+        <h3>{{ 'Meine Einteilungen'|trans }} {{ account.year }}</h3>
         <ul>
             {% for assignment in account.assignments %}
             <li>
                 <a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:assignment.shift.id}) }}">{{ assignment.shift.startsAt|date('d.m.Y H:i') }} · {{ assignment.shift.title }}</a> ·
-                {{ {'pending':'Anwesenheit offen', 'present':'Anwesend', 'absent':'Abwesend'}[assignment.attendance] }} · {{ assignment.creditedMinutes }} bestätigte Minuten</li>
+                {{ {'pending':'Anwesenheit offen', 'present':'Anwesend', 'absent':'Abwesend'}[assignment.attendance]|trans }} · {{ '%count% bestätigte Minuten'|trans({'%count%': assignment.creditedMinutes}) }}</li>
             {% else %}
-                <li>Noch keine Einteilungen.</li>
+                <li>{{ 'Noch keine Einteilungen.'|trans }}</li>
             {% endfor %}
         </ul>
     </section>
     <section class="card card-body mb-4">
-        <h3>Tausch und Vertretung</h3>
-        <p>Bis zur Annahme bleibt die bisherige Einteilung gültig. Eine Zustimmung der Thekenleitung ist nicht erforderlich.</p>
+        <h3>{{ 'Tausch und Vertretung'|trans }}</h3>
+        <p>{{ 'Bis zur Annahme bleibt die bisherige Einteilung gültig. Eine Zustimmung der Thekenleitung ist nicht erforderlich.'|trans }}</p>
         {% for exchange in exchanges %}
             <article class="card card-body mb-2">
-                <h3>Anfrage #{{ exchange.id }} · {{ exchange.counterpart ? 'Diensttausch' : 'Vertretung' }}</h3>
+                <h3>{{ 'Anfrage'|trans }} #{{ exchange.id }} · {{ (exchange.counterpart ? 'Diensttausch' : 'Vertretung')|trans }}</h3>
                 <p>{{ exchange.source.member }} → {{ exchange.target }} · {{ exchange.source.shift.startsAt|date('d.m.Y H:i') }} · {{ exchange.source.shift.title }} ·
-                    {% if exchange.counterpart %}Gegendienst: {{ exchange.counterpart.shift.startsAt|date('d.m.Y H:i') }} · {{ exchange.counterpart.shift.title }} · {% endif %}
-                    {{ {'pending':'Offen', 'accepted':'Angenommen', 'declined':'Abgelehnt', 'withdrawn':'Zurückgezogen'}[exchange.status] }}</p>
+                    {% if exchange.counterpart %}{{ 'Gegendienst'|trans }}: {{ exchange.counterpart.shift.startsAt|date('d.m.Y H:i') }} · {{ exchange.counterpart.shift.title }} · {% endif %}
+                    {{ {'pending':'Offen', 'accepted':'Angenommen', 'declined':'Abgelehnt', 'withdrawn':'Zurückgezogen'}[exchange.status]|trans }}</p>
                 {% if exchange.status == 'pending' %}
                     <div class="d-flex flex-wrap gap-2">
                     {% if exchange.target.id == app.user.member.id %}
                         {% for op, label in {'accept':'Tausch / Vertretung annehmen', 'decline':'Anfrage ablehnen'} %}
-                            <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:op, id:exchange.id}) }}">{{ f.token(op, exchange.id) }}<button class="btn btn-outline-primary">{{ label }}</button></form>
+                            <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:op, id:exchange.id}) }}">{{ f.token(op, exchange.id) }}<button class="btn btn-outline-primary">{{ label|trans }}</button></form>
                         {% endfor %}
                     {% else %}
-                        <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'retract', id:exchange.id}) }}">{{ f.token('retract', exchange.id) }}<button class="btn btn-outline-danger">Anfrage zurückziehen</button></form>
+                        <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'retract', id:exchange.id}) }}">{{ f.token('retract', exchange.id) }}<button class="btn btn-outline-danger">{{ 'Anfrage zurückziehen'|trans }}</button></form>
                     {% endif %}</div>
                 {% endif %}
             </article>
-        {% else %}<p>Keine Anfragen.</p>{% endfor %}
+        {% else %}<p>{{ 'Keine Anfragen.'|trans }}</p>{% endfor %}
     </section>
     <section class="mb-4">
-        <h3>Meine Benachrichtigungen (letzte 100)</h3>
+        <h3>{{ 'Meine Benachrichtigungen (letzte 100)'|trans }}</h3>
         {% for notification in notifications %}
             <article class="border rounded p-3 mb-2">
-                <h3>{{ notification.readAt ? '' : 'Neu: ' }}{{ notification.subject }}</h3>
+                <h3>{{ notification.readAt ? '' : 'Neu:'|trans ~ ' ' }}{{ notification.subject }}</h3>
                 <p>{{ notification.createdAt|date('d.m.Y H:i') }} · {{ notification.body }}</p>
-                <a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:notification.shift.id}) }}">Aktuellen Dienst anzeigen</a>
-                {% if not notification.readAt %}<form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'read', id:notification.id}) }}">{{ f.token('read', notification.id) }}<button class="btn btn-sm btn-outline-secondary">Als gelesen markieren</button></form>{% endif %}
+                <a href="{{ path(duty_route_prefix ~ 'bar_duty_shift', {id:notification.shift.id}) }}">{{ 'Aktuellen Dienst anzeigen'|trans }}</a>
+                {% if not notification.readAt %}<form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'read', id:notification.id}) }}">{{ f.token('read', notification.id) }}<button class="btn btn-sm btn-outline-secondary">{{ 'Als gelesen markieren'|trans }}</button></form>{% endif %}
             </article>
-        {% else %}<p>Keine Benachrichtigungen.</p>{% endfor %}
+        {% else %}<p>{{ 'Keine Benachrichtigungen.'|trans }}</p>{% endfor %}
     </section>
 {% endblock %}

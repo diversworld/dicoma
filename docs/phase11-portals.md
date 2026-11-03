@@ -80,6 +80,11 @@ Gerätewarte ihr eigener Mitgliedsverein. Alte Direktausleih-, Kompressor-,
 Kassen- und TÜV-Planungsformulare sind nach einem Vereinswechsel erneut
 zu öffnen. TÜV-Termine bleiben global; inkonsistente Anmeldungen werden
 in der Gerätewartansicht ausgeblendet und deren Bearbeitung abgelehnt.
+Kompressorbediener können auch ohne Gerätewartrolle vereinsbezogen auf
+Füllabende, Fülllogbuch und deren CSV-Exporte zugreifen und Füllvorgänge
+erfassen. Die übrigen Gerätewart-, Füllgebühren- und Kassenseiten bleiben
+ihnen ohne zusätzliche Rechte verwehrt. Gerätewarte ohne Kompressorrolle
+können die Kompressoransichten lesen, aber keine Einträge verändern.
 Die Flaschenprüfübersicht in EasyAdmin zählt und zeigt nur Flaschen des
 ausgewählten Vereins; vereinslose Flaschen werden dort nicht berücksichtigt.
 Kurstermine mit einem vereinsfremden Ausbilder werden in den geprüften
@@ -90,8 +95,11 @@ Bei Backendanfragen berücksichtigt die Fortschrittsberechnung außerdem
 keine Nachweise mit vereinsfremdem Ausbilder oder Prüfer. Dies gilt auch
 für die damit verbundenen Abschlussprüfungen; die Berechnung im öffentlichen
 Ausbildungsportal bleibt unverändert.
-Die zuletzt in der Verwaltung oder im Portal gewählte Sprache bleibt beim
-Wechsel ins Gerätewartportal erhalten. Gerätewart-Übersicht, Direktausleihe,
+Die zuletzt in der Verwaltung oder im Portal gewählte Sprache bleibt auch
+beim Wechsel auf nicht lokalisierte Anwendungsseiten erhalten. Das
+Mitglieder-Dashboard und Mitgliederprofil einschließlich Qualifikations- und
+Dokumentenzuständen sind in den vier konfigurierten Sprachen übersetzt.
+Gerätewart-Übersicht, Direktausleihe,
 Flaschen- und Inventarlisten, Flaschendetails, Füllgebühren sowie die Masken
 für Flaschenprüfung, Wartung und die bearbeiteten TÜV-Ansichten sind
 übersetzt. Auch Kassenjournal, Tagesauswertung samt CSV, Korrekturen,
@@ -99,6 +107,11 @@ Auszahlungen, Tagesabschluss, Kompressor-Einzelfülllogbuch und Füllabende
 mit ihren CSV-Exporten sowie Inventarakte und Verleihoberflächen sind
 übersetzbar. Bereits gespeicherte Freitexte und ältere erzeugte
 Historienbeschreibungen werden nicht nachträglich übersetzt.
+Der Thekendienstkalender, die Thekenkassenübersicht, die Dateiverwaltung und die EasyAdmin-Ansicht
+für die TÜV-Abwicklung stellen ihre bearbeiteten Oberflächentexte in
+Deutsch, Englisch, Französisch und Spanisch bereit. Andere Thekendienst-
+und TÜV-Ansichten sowie gespeicherte Benachrichtigungstexte sind damit
+nicht automatisch vollständig übersetzt.
 Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
 weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf diesen
