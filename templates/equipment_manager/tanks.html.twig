@@ -27,7 +27,7 @@
                         <tr>
                             <td><a href="{{ path('equipment_manager_tank_detail', {id: tank.id}) }}">{{ tank.inventory }}</a></td>
                             <td>{{ tank.serialnumber }}</td>
-                            <td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }}</td>
+                            <td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt', 'retired': 'Ausgemustert'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }}</td>
                             <td>{% if tank.lendable %}<span class="text-success">{{ 'Ja'|trans }}</span>{% else %}<span class="text-danger">{{ 'Nein'|trans }}</span>{% endif %}</td>
                             <td>{{ openCounts[tank.id]|default(0) }}</td>
                             <td><a class="btn btn-sm btn-outline-secondary" href="{{ path('equipment_manager_tank_detail', {id: tank.id}) }}">{{ 'Details'|trans }}</a> <a class="btn btn-sm btn-outline-primary" href="{{ path('equipment_manager_maintenance', {id: tank.id}) }}">{{ 'Wartung verwalten'|trans }}</a></td>

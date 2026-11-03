@@ -660,6 +660,17 @@ final class Phase2FoundationHttpTest extends WebTestCase
         $this->client->loginUser($super);
         $crawler = $this->client->request('GET', '/admin/course-calendar?month=2026-11');
         self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('[data-course-calendar-month]'));
+        self::assertCount(7, $crawler->filter('[data-course-calendar-month] thead th'));
+        self::assertSame(0, $crawler->filter('.course-calendar .card, .course-calendar .btn, .course-calendar .nav')->count());
+        self::assertCount(1, $crawler->filter('[data-course-calendar-month] [data-event-detail]'));
+        foreach (['week=2026-11-10&view=week', 'day=2026-11-10&view=day'] as $query) {
+            $view = $this->client->request('GET', '/admin/course-calendar?'.$query);
+            self::assertResponseIsSuccessful();
+            self::assertCount(1, $view->filter('.course-calendar .week-grid'));
+            self::assertCount(1, $view->filter('.course-calendar [data-event-detail]'));
+            self::assertSame(0, $view->filter('.course-calendar .card, .course-calendar .btn, .course-calendar .nav')->count());
+        }
         self::assertSelectorTextContains('body', 'Calendar own appointment');
         self::assertSelectorTextNotContains('body', 'Calendar foreign appointment');
         self::assertSelectorTextNotContains('body', 'Calendar unassigned appointment');
@@ -1494,6 +1505,98 @@ final class Phase2FoundationHttpTest extends WebTestCase
             $this->client->followRedirect();
             self::assertSelectorTextContains('.alert-danger', $approvalError);
             self::assertSelectorTextContains('.alert-danger', $noneIssued);
+            $detailUrl = str_replace('/admin/de/', '/admin/'.$locale.'/', $this->adminUrl(EquipmentBookingCrudController::class, Crud::PAGE_DETAIL, $booking->getId()));
+            $this->client->request('GET', $detailUrl);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', match ($locale) {
+                'de' => 'Reservierte Ausrüstungsgegenstände',
+                'en' => 'Reserved equipment items',
+                'fr' => 'Articles de matériel réservés',
+                'es' => 'Artículos de equipo reservados',
+            });
+        }
+    }
+
+    public function testEquipmentEveningInventoryAndBookingBasketUseSelectedLanguage(): void
+    {
+        $super = $this->admin('evening-language-super', 'EveningLanguageClub', User::ROLE_SUPER_ADMIN);
+        $club = $super->getMember()->getClub();
+        $category = (new EquipmentCategory())->setClub($club)->setCode('language')->setName('Language category');
+        $item = (new EquipmentItem())->setClub($club)->setCategory($category)->setInventoryNumber('LANG-INV')->setName('Language item')->setRentalFee('5.00');
+        $record = new \App\Entity\EquipmentAssetRecord($item);
+        $record->record('inventory_updated', 'tester', 'Stammdaten, Lagerort oder Prüfplanung aktualisiert.');
+        $session = new \App\Entity\CompressorFillSession($club, $super, 'LANG-COMP', 100, null);
+        foreach ([$category, $item, $record, $session] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->client->loginUser($super);
+        foreach ([
+            'de' => ['Kompressor – Füllabende und Viererfüllungen', 'Nächste Viererfüllung dokumentieren', 'Flaschenvolumen je Flasche erforderlich', 'Füllvorgang dokumentiert: Anzahl Flaschen 1, gemeinsamer Enddruck 200 bar.', 'Fuellabend', 'Inventarakte', 'Inventar aktualisiert', 'Verantwortliche Person erforderlich', 'Neue Ausrüstungsreservierung', 'Mitglied und gueltigen Zeitraum auswaehlen.'],
+            'en' => ['Compressor – filling evenings and groups of four', 'Record next group fill', 'Cylinder volume required for each cylinder', 'Fill recorded: number of cylinders 1, common final pressure 200 bar.', 'Filling evening', 'Inventory record', 'Inventory updated', 'Responsible person required', 'New equipment reservation', 'Select a member and a valid period.'],
+            'fr' => ['Compresseur – soirées et gonflages par groupes de quatre', 'Documenter le prochain gonflage groupé', 'Volume requis pour chaque bouteille', 'Gonflage documenté : nombre de bouteilles 1, pression finale commune 200 bar.', 'Soirée de gonflage', 'Fiche d’inventaire', 'Inventaire mis à jour', 'Responsable requis', 'Nouvelle réservation de matériel', 'Choisissez un membre et une période valide.'],
+            'es' => ['Compresor – jornadas y cargas en grupos de cuatro', 'Documentar la siguiente carga grupal', 'Se requiere el volumen de cada botella', 'Carga documentada: número de botellas 1, presión final común 200 bar.', 'Jornada de carga', 'Ficha de inventario', 'Inventario actualizado', 'Se requiere una persona responsable', 'Nueva reserva de equipo', 'Seleccione un socio y un período válido.'],
+        ] as $locale => [$heading, $batchHeading, $volumeError, $batchSuccess, $csvHeading, $inventoryHeading, $history, $maintenanceError, $basket, $basketError]) {
+            $crawler = $this->client->request('GET', '/admin/'.$locale.'/equipment-booking-basket');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', $basket);
+            $form = $crawler->filter('#equipment-basket-form')->form();
+            $this->client->request('POST', $form->getUri(), $form->getPhpValues());
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('.alert-danger', $basketError);
+
+            $crawler = $this->client->request('GET', '/equipment-manager/compressor-evenings?session='.$session->getId());
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('body', $batchHeading);
+            $batch = $crawler->filter('main form')->reduce(static fn ($node): bool => $node->filter('input[name="action"][value="batch"]')->count() > 0);
+            self::assertCount(4, $batch->filter('input[name^="volume_"]'));
+            $confirmation = $batch->attr('onsubmit');
+            self::assertIsString(json_decode(substr($confirmation, strlen('return confirm('), -1), true, 512, JSON_THROW_ON_ERROR));
+            $form = $batch->form();
+            $params = $form->getPhpValues();
+            $params['cylinder_1'] = 'SYNTHETIC';
+            $params['volume_1'] = '';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('.alert-danger', $volumeError);
+            $params['cylinder_1'] = '';
+            $params['volume_1'] = '12';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorExists('.alert-danger');
+            $params['cylinder_1'] = 'SYNTHETIC-'.$locale;
+            $params['pressure'] = '200';
+            $params['fee'] = '0';
+            $params['cylinder_check'] = '1';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-success', $batchSuccess);
+            $this->client->request('GET', '/equipment-manager/compressor-evenings/export.csv');
+            self::assertResponseIsSuccessful();
+            $csv = $this->client->getInternalResponse()->getContent();
+            self::assertStringContainsString($csvHeading, $csv);
+            self::assertStringContainsString('SYNTHETIC-'.$locale, $csv);
+
+            $crawler = $this->client->request('GET', '/equipment-manager/inventory/equipment/'.$item->getId());
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $inventoryHeading);
+            self::assertSelectorTextContains('body', $history);
+            self::assertSelectorTextContains('body', match ($locale) {
+                'de' => 'Eigentumsverhältnis',
+                'en' => 'Ownership',
+                'fr' => 'Propriété',
+                'es' => 'Propiedad',
+            });
+            $form = $crawler->filter('form[action$="/maintenance"]')->eq(1)->form();
+            $params = $form->getPhpValues();
+            $params['responsible'] = '';
+            $params['description'] = 'Synthetic maintenance description';
+            $this->client->request('POST', $form->getUri(), $params);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', $maintenanceError);
         }
     }
 

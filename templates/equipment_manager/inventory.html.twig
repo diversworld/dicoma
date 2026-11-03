@@ -17,7 +17,7 @@
                 <td>{{ type == 'equipment' ? asset.name : asset }}</td>
                 <td>{{ type == 'regulator' ? asset.firstStageSerial : asset.serialNumber }}</td>
                 <td>{{ type == 'equipment' ? asset.category : (type == 'tank' ? 'Tauchflasche'|trans : 'Atemregler'|trans) }}</td>
-                <td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[asset.conditionStatus] ?? asset.conditionStatus)|trans }}</td><td>{{ (asset.lendable ? 'Ja' : 'Nein')|trans }}</td>
+                <td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt', 'retired': 'Ausgemustert'}[asset.conditionStatus] ?? asset.conditionStatus)|trans }}</td><td>{{ (asset.lendable ? 'Ja' : 'Nein')|trans }}</td>
             </tr>
         {% else %}<tr><td colspan="6">{{ 'Keine Gegenstände vorhanden.'|trans }}</td></tr>{% endfor %}</tbody>
     </table></div>

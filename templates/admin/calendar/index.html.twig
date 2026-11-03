@@ -8,7 +8,7 @@
 
 {% block main %}
   <div class="course-calendar">
-    <form class="card filters" method="get" action="{{ path('admin_course_calendar') }}">
+    <form class="calendar-panel filters" method="get" action="{{ path('admin_course_calendar') }}">
       <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="month" value="{{ month|date('Y-m') }}">
       {% if view == 'week' %}
         <input type="hidden" name="week" value="{{ weekStart|date('Y-m-d') }}">
@@ -27,11 +27,11 @@
         </select>
       </div>
       {% endfor %}
-      <button class="btn primary" type="submit">{{ 'Filtern'|trans }}</button>
-      <a class="btn" href="{{ path('admin_course_calendar', {view:view,month:month|date('Y-m'),day:selectedDay|date('Y-m-d'),week:weekStart|date('Y-m-d')}) }}">{{ 'Zurücksetzen'|trans }}</a>
+      <button class="calendar-button primary" type="submit">{{ 'Filtern'|trans }}</button>
+      <a class="calendar-button" href="{{ path('admin_course_calendar', {view:view,month:month|date('Y-m'),day:selectedDay|date('Y-m-d'),week:weekStart|date('Y-m-d')}) }}">{{ 'Zurücksetzen'|trans }}</a>
     </form>
-    <div class="card jump">
-      <a class="btn" href="{{ todayUrl }}">{{ 'Heute'|trans }}</a>
+    <div class="calendar-panel jump">
+      <a class="calendar-button" href="{{ todayUrl }}">{{ 'Heute'|trans }}</a>
       <form method="get" action="{{ path('admin_course_calendar') }}">
         <input type="hidden" name="view" value="day">
         <label for="jump-day">{{ 'Zu Datum springen'|trans }}</label>
@@ -41,29 +41,29 @@
             <input type="hidden" name="{{ key }}" value="{{ value }}">
           {% endif %}
         {% endfor %}
-        <button class="btn" type="submit">{{ 'Anzeigen'|trans }}</button>
+        <button class="calendar-button" type="submit">{{ 'Anzeigen'|trans }}</button>
       </form>
     </div>
-    <div class="card nav">
+    <div class="calendar-panel calendar-nav">
       <div>
-        <a class="btn {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="btn {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="btn {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a>
+        <a class="calendar-button {{ view == 'month' ? 'active' : '' }}" href="{{ monthUrl }}">Monat</a> <a class="calendar-button {{ view == 'week' ? 'active' : '' }}" href="{{ weekUrl }}">Woche</a> <a class="calendar-button {{ view == 'day' ? 'active' : '' }}" href="{{ dayUrl }}">Tag</a>
       </div>
-      <a class="btn" href="{{ prevUrl }}">← Zurück</a>
+      <a class="calendar-button" href="{{ prevUrl }}">← Zurück</a>
       <h1>{% if view == 'day' %}{{ selectedDay|date('d.m.Y') }}{% elseif view == 'week' %}Woche ab {{ weekStart|date('d.m.Y') }}{% else %}{{ month|date('m.Y') }}{% endif %}</h1>
-      <a class="btn" href="{{ nextUrl }}">Weiter →</a>
+      <a class="calendar-button" href="{{ nextUrl }}">Weiter →</a>
     </div>
     {% if conflictPairs > 0 %}
       <div class="warning" role="status">
         Achtung: {{ conflictPairs }} Überschneidung(en) mit gleichem Instruktor im angezeigten Zeitraum. Betroffene Termine sind rot markiert.
       </div>
     {% endif %}
-  <div class="card scroll">
+  <div class="calendar-panel scroll">
     {% if view == 'month' %}
-      <table class="month">
+      <table class="month" data-course-calendar-month>
         <thead>
           <tr>
             {% for name in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
-              <th>{{ name }}</th>
+              <th scope="col">{{ name }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -71,8 +71,8 @@
           {% for week in weeks %}
             <tr>
               {% for day in week %}
-                <td class="{{ day.current ? '' : 'outside' }}">
-                  <strong>{{ day.number }}</strong>
+                <td class="{{ day.current ? '' : 'outside' }}" data-calendar-date="{{ day.date }}">
+                  <time datetime="{{ day.date }}"><strong>{{ day.number }}</strong></time>
                   {% for event in day.events %}
                     <a class="event {{ event.conflict ? 'conflict' : (event.incomplete ? 'incomplete' : '') }}" href="{{ event.url }}" data-event-detail="{{ {title:event.title, date:day.date, time:event.time, end:event.end, course:event.course, instructor:event.instructor, location:event.location, incomplete:event.incomplete, conflict:event.conflict, conflictWith:event.conflictWith, duplicateUrl:event.duplicateUrl, duplicateToken:event.duplicateToken, url:event.url}|json_encode|e('html_attr') }}">{{ event.time ?? '—' }}{% if event.end %}–{{ event.end }}{% endif %} · {{ event.title }}
                     {% if event.incomplete %}
@@ -162,12 +162,12 @@
     <footer>
       <form id="detail-duplicate" method="post" action="">
         <input type="hidden" name="_token" id="detail-duplicate-token">
-        <button class="btn" type="submit" onclick="return confirm({{ 'Termin ohne Buchungen duplizieren?'|trans|json_encode|e('html_attr') }})">{{ 'Termin kopieren'|trans }}</button>
+        <button class="calendar-button" type="submit" onclick="return confirm({{ 'Termin ohne Buchungen duplizieren?'|trans|json_encode|e('html_attr') }})">{{ 'Termin kopieren'|trans }}</button>
       </form>
       <form method="dialog">
-        <button class="btn" type="submit">{{ 'Close'|trans }}</button>
+        <button class="calendar-button" type="submit">{{ 'Close'|trans }}</button>
       </form>
-      <a class="btn primary" id="detail-edit" href="#">{{ 'Kurstermin bearbeiten'|trans }}</a>
+      <a class="calendar-button primary" id="detail-edit" href="#">{{ 'Kurstermin bearbeiten'|trans }}</a>
     </footer>
   </dialog>
   <script>

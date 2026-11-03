@@ -10,7 +10,7 @@
     <div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message|trans }}</div>
   {% endfor %}{% endfor %}
   <div class="table-responsive"><table class="table table-bordered"><tbody>
-    <tr><th scope="row">{{ 'Technischer Zustand'|trans }}</th><td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }}</td></tr>
+    <tr><th scope="row">{{ 'Technischer Zustand'|trans }}</th><td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt', 'retired': 'Ausgemustert'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }}</td></tr>
     <tr><th scope="row">{{ 'Verleih'|trans }}</th><td>{{ (tank.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</td></tr>
     <tr>
 		<th scope="row">{{ 'Nächste Prüfung'|trans }}
@@ -79,7 +79,7 @@
   <h2>{{ 'Technische Statushistorie (letzte 100)'|trans }}</h2>
   <div class="table-responsive"><table class="table table-striped"><thead><tr><th>{{ 'Zeitpunkt'|trans }}</th><th>{{ 'Ereignis'|trans }}</th><th>{{ 'Zustand'|trans }}</th><th>{{ 'Verleih'|trans }}</th><th>{{ 'Bemerkung'|trans }}</th></tr></thead><tbody>
   {% set eventLabels = {'return': 'Rückgabe', 'returned': 'Rückgabe', 'manual_block': 'Manuelle Sperrung', 'manual_release': 'Manuelle Freigabe', 'maintenance_opened': 'Wartungsauftrag eröffnet', 'maintenance_closed': 'Wartungsauftrag abgeschlossen', 'inspection_recorded': 'Prüfung dokumentiert'} %}
-  {% for entry in history %}<tr><td>{{ entry.occurredAt|date('d.m.Y H:i') }}</td><td>{{ (eventLabels[entry.eventType] ?? entry.eventType)|trans }}</td><td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[entry.conditionStatus] ?? entry.conditionStatus)|trans }}</td><td>{{ (entry.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</td><td>{{ entry.notes ?: '–' }}</td></tr>
+  {% for entry in history %}<tr><td>{{ entry.occurredAt|date('d.m.Y H:i') }}</td><td>{{ (eventLabels[entry.eventType] ?? entry.eventType)|trans }}</td><td>{{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt', 'retired': 'Ausgemustert'}[entry.conditionStatus] ?? entry.conditionStatus)|trans }}</td><td>{{ (entry.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</td><td>{{ entry.notes ?: '–' }}</td></tr>
   {% else %}<tr><td colspan="5">{{ 'Keine Statuseinträge vorhanden.'|trans }}</td></tr>{% endfor %}
   </tbody></table></div>
   <p class="text-muted">{{ 'Jede erfolgreiche Wiederfreigabe wird in der technischen Statushistorie dokumentiert.'|trans }}</p>

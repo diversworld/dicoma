@@ -103,7 +103,7 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         self::assertSame('2025-01-31', $record->getAsset()->getPurchasedAt()->format('Y-m-d'));
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
         $this->client->followRedirect();
-        self::assertSelectorTextContains('body', 'inventory_updated');
+        self::assertSelectorTextContains('body', 'Inventar aktualisiert');
     }
 
     public function testApprovalIssuePaymentDamagedReturnRepairReleaseAndStrictClosure(): void

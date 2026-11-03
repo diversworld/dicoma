@@ -95,10 +95,10 @@ Wechsel ins Gerätewartportal erhalten. Gerätewart-Übersicht, Direktausleihe,
 Flaschen- und Inventarlisten, Flaschendetails, Füllgebühren sowie die Masken
 für Flaschenprüfung, Wartung und die bearbeiteten TÜV-Ansichten sind
 übersetzt. Auch Kassenjournal, Tagesauswertung samt CSV, Korrekturen,
-Auszahlungen, Tagesabschluss, Kompressor-Einzelfülllogbuch samt CSV und
-wesentliche Elemente der Verleihübersicht sind übersetzbar. Weitere
-Gerätewart- und Verleihansichten einschließlich Kompressor-Füllabenden
-sowie einzelne Meldungen sind noch nicht vollständig übersetzt.
+Auszahlungen, Tagesabschluss, Kompressor-Einzelfülllogbuch und Füllabende
+mit ihren CSV-Exporten sowie Inventarakte und Verleihoberflächen sind
+übersetzbar. Bereits gespeicherte Freitexte und ältere erzeugte
+Historienbeschreibungen werden nicht nachträglich übersetzt.
 Die Kopfzeile
 weist weiterhin darauf hin, dass die Filterung nicht backendweit gilt:
 weitere Kalender- und Sportaktionen sind noch nicht durchgehend auf diesen

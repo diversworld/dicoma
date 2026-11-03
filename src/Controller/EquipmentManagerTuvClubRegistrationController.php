@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerTuvClubRegistrationController extends AbstractController
@@ -70,7 +71,7 @@ final class EquipmentManagerTuvClubRegistrationController extends AbstractContro
                 $this->addFlash('warning', 'Mindestens eine Flasche wurde zwischenzeitlich angemeldet. Bitte Auswahl aktualisieren.');
                 return $this->redirectToRoute('equipment_manager_tuv_club_register', ['id' => $id]);
             }
-            $this->addFlash('success', count($ids).' Vereinsflasche(n) zum TÜV-Termin angemeldet.');
+            $this->addFlash('success', new TranslatableMessage('%count% Vereinsflasche(n) zum TÜV-Termin angemeldet.', ['%count%' => count($ids)]));
             return $this->redirectToRoute('equipment_manager_tuv');
         }
         return $this->render('equipment_manager/tuv_club_register.html.twig', [

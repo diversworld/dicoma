@@ -5,7 +5,7 @@
 <section class="section"><div class="container">
   <p><a href="{{ path('equipment_manager_tanks') }}">← {{ 'Zur Flaschenübersicht'|trans }}</a></p>
   <h1>{{ 'Wartungsaufträge'|trans }}: {{ tank.inventory }}</h1>
-  <p>{{ clubName }} · {{ 'Zustand'|trans }}: {{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }} · {{ 'Verleih'|trans }}: {{ (tank.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</p>
+  <p>{{ clubName }} · {{ 'Zustand'|trans }}: {{ ({'ready': 'Einsatzbereit', 'maintenance': 'Wartung', 'damaged': 'Beschädigt', 'retired': 'Ausgemustert'}[tank.conditionStatus] ?? tank.conditionStatus)|trans }} · {{ 'Verleih'|trans }}: {{ (tank.lendable ? 'Freigegeben' : 'Gesperrt')|trans }}</p>
   {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message|trans }}</div>{% endfor %}{% endfor %}
   {% set openOrders = orders|filter(o => o.status == 'open') %}
   {% if openOrders|length == 0 %}

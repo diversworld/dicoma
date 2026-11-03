@@ -7,6 +7,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request,Response,StreamedResponse};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
 final class EquipmentManagerCompressorEveningController extends AbstractController {
  use EquipmentManagerClubTrait;
@@ -62,7 +64,7 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
      if ($name===''&&!$tankId&&$volumeRaw==='')continue;
      $tank=$tankId?$em->find(Tank::class,$tankId):null;
      if ($tankId&&(!$tank||$tank->getClub()?->getId()!==$club->getId())){$error='Vereinsflasche nicht gefunden.';break;}
-     if ($name==='')$name=(string)($tank->getInventory()?:$tank->getSerialnumber());
+     if ($name==='' && $tank)$name=(string)($tank->getInventory()?:$tank->getSerialnumber());
      if ($volumeRaw==='' && $tank) $volumeRaw=(string)$tank->getSize();
      $volumeRaw=str_replace(',','.',$volumeRaw);
      if (!preg_match('/^\\d{1,3}(\\.\\d)?$/D',$volumeRaw) || (float)$volumeRaw<=0 || (float)$volumeRaw>100) {
@@ -80,7 +82,7 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
      $entries=[];foreach($cylinders as $c)$entries[]=new CompressorFillCylinder($batch,$c[0],$c[1],$c[2]);
      try {$filling->save($club,$batch,$request->request->getString('fee'),$entries);}
      catch (\DomainException $e) {$this->addFlash('danger',$e->getMessage());return $this->redirectToRoute('equipment_manager_compressor_evenings',['session'=>$session->getId()],Response::HTTP_SEE_OTHER);}
-     $this->addFlash('success',count($cylinders).' Flaschen mit gemeinsamem Enddruck von '.$pressure.' bar dokumentiert.');
+     $this->addFlash('success',new TranslatableMessage('Füllvorgang dokumentiert: Anzahl Flaschen %count%, gemeinsamer Enddruck %pressure% bar.',['%count%'=>count($cylinders),'%pressure%'=>$pressure]));
      return $this->redirect($this->generateUrl('equipment_manager_compressor_evenings',['session'=>$session->getId()]).'#naechste-fuellung',Response::HTTP_SEE_OTHER);
     }
    } elseif ($action==='maintenance') {
@@ -101,10 +103,11 @@ final class EquipmentManagerCompressorEveningController extends AbstractControll
   return $this->render('equipment_manager/compressor_evenings.html.twig',['sessions'=>$sessions,'selected'=>$selected,'batches'=>$batches,'items'=>$items,'tanks'=>$em->getRepository(Tank::class)->findBy(['club'=>$club],['id'=>'ASC']),'maintenance'=>$em->getRepository(CompressorMaintenance::class)->findBy(['club'=>$club],['performedAt'=>'DESC'],30)]);
  }
  #[Route('/equipment-manager/compressor-evenings/export.csv',name:'equipment_manager_compressor_evenings_csv',methods:['GET'])]
- public function csv(EntityManagerInterface $em):Response {
+ public function csv(Request $request,EntityManagerInterface $em,TranslatorInterface $translator):Response {
   $club=$this->club($em);$sessions=$em->getRepository(CompressorFillSession::class)->findBy(['club'=>$club],['openedAt'=>'ASC']);
   $rows=[];foreach($sessions as $s)foreach($em->getRepository(CompressorFillBatch::class)->findBy(['session'=>$s],['filledAt'=>'ASC']) as $b)foreach($em->getRepository(CompressorFillCylinder::class)->findBy(['batch'=>$b]) as $c)$rows[]=[$s,$b,$c];
-  $response=new StreamedResponse(static function()use($rows):void {$out=fopen('php://output','wb');fwrite($out,"\xEF\xBB\xBF");fputcsv($out,['Fuellabend','Datum','Kompressor','Bediener','Betriebsstunden','Fuellvorgang','Fueller','Flasche','Enddruck bar'],';');foreach($rows as $row){[$s,$b,$c]=$row;$safe=static function($v):string {$v=(string)$v;return preg_match('/^[=+@\-\t\r]/u',$v)?"'".$v:$v;};fputcsv($out,[$s->getId(),$s->getOpenedAt()->format('Y-m-d H:i'),$safe($s->getCompressor()),$safe($s->getOperator()),$s->getOpeningHoursTenths()/10,$b->getId(),$safe($b->getRecordedBy()),$safe($c->getIdentification()),$b->getEndPressureBar()],';');}fclose($out);});
+  $locale=$request->getLocale();
+  $response=new StreamedResponse(static function()use($rows,$translator,$locale):void {$out=fopen('php://output','wb');fwrite($out,"\xEF\xBB\xBF");$headers=['Fuellabend','Datum','Kompressor','Bediener','Betriebsstunden','Fuellvorgang','Fueller','Flasche','Enddruck bar'];fputcsv($out,array_map(static fn(string $key):string=>$translator->trans($key,[],'messages',$locale),$headers),';',escape:'\\');foreach($rows as $row){[$s,$b,$c]=$row;$safe=static function($v):string {$v=(string)$v;return preg_match('/^[=+@\-\t\r]/u',$v)?"'".$v:$v;};fputcsv($out,[$s->getId(),$s->getOpenedAt()->format('Y-m-d H:i'),$safe($s->getCompressor()),$safe($s->getOperator()),$s->getOpeningHoursTenths()/10,$b->getId(),$safe($b->getRecordedBy()),$safe($c->getIdentification()),$b->getEndPressureBar()],';',escape:'\\');}fclose($out);});
   $response->headers->set('Content-Type','text/csv; charset=UTF-8');$response->headers->set('Content-Disposition','attachment; filename="kompressor-viererfuellungen.csv"');return $response;
  }
 }

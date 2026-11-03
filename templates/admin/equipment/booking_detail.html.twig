@@ -2,8 +2,8 @@
 {% block main %}
 {% set booking = entity.instance %}
 <div class="container-fluid px-0">
-    <h2 class="h4">Reservierung #{{ booking.id }}</h2>
-    <p>Genehmigung, Zahlung und Abschluss im Gerätewartbereich</p>
+    <h2 class="h4">{{ 'Reservierung'|trans }} #{{ booking.id }}</h2>
+    <p>{{ 'Genehmigung, Zahlung und Abschluss im Gerätewartbereich'|trans }}</p>
     {% set reservedCount = 0 %}
     {% set issuedCount = 0 %}
     {% set returnedCount = 0 %}
@@ -13,36 +13,36 @@
         {% if position.loanStatus == 'returned' %}{% set returnedCount = returnedCount + 1 %}{% endif %}
     {% endfor %}
     <div class="row g-2 mb-3">
-        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ booking.items|length }}</strong><div>Gegenstände</div></div></div></div>
-        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ reservedCount }}</strong><div>Reserviert</div></div></div></div>
-        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ issuedCount }}</strong><div>Ausgegeben</div></div></div></div>
-        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ returnedCount }}</strong><div>Zurückgegeben</div></div></div></div>
+        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ booking.items|length }}</strong><div>{{ 'Gegenstände'|trans }}</div></div></div></div>
+        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ reservedCount }}</strong><div>{{ 'Reserviert'|trans }}</div></div></div></div>
+        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ issuedCount }}</strong><div>{{ 'Ausgegeben'|trans }}</div></div></div></div>
+        <div class="col-md-3 col-6"><div class="card"><div class="card-body"><strong class="fs-4">{{ returnedCount }}</strong><div>{{ 'Zurückgegeben'|trans }}</div></div></div></div>
     </div>
     <div class="card mb-3"><div class="card-body">
         <div class="row g-3">
-            <div class="col-md-4"><strong>Mitglied</strong><div>{{ booking.member }}</div></div>
-            <div class="col-md-4"><strong>Beginn</strong><div>{{ booking.startsAt|date('d.m.Y H:i') }}</div></div>
-            <div class="col-md-4"><strong>Ende</strong><div>{{ booking.endsAt|date('d.m.Y H:i') }}</div></div>
-            <div class="col-md-4"><strong>Status</strong><div>{{ booking.status }}</div></div>
-            <div class="col-md-8"><strong>Bemerkungen</strong><div>{{ booking.notes|default('—') }}</div></div>
+            <div class="col-md-4"><strong>{{ 'Mitglied'|trans }}</strong><div>{{ booking.member }}</div></div>
+            <div class="col-md-4"><strong>{{ 'Beginn'|trans }}</strong><div>{{ booking.startsAt|date('d.m.Y H:i') }}</div></div>
+            <div class="col-md-4"><strong>{{ 'Ende'|trans }}</strong><div>{{ booking.endsAt|date('d.m.Y H:i') }}</div></div>
+            <div class="col-md-4"><strong>{{ 'Status'|trans }}</strong><div>{{ ({'reserved':'Reserviert','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurück','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[booking.status] ?? booking.status)|trans }}</div></div>
+            <div class="col-md-8"><strong>{{ 'Bemerkungen'|trans }}</strong><div>{{ booking.notes|default('—') }}</div></div>
         </div>
     </div></div>
     <section class="card mb-3"><div class="card-body">
-        <h3 class="h5">Reservierte Ausrüstungsgegenstände</h3>
+        <h3 class="h5">{{ 'Reservierte Ausrüstungsgegenstände'|trans }}</h3>
         <div class="table-responsive"><table class="table align-middle">
-            <thead><tr><th>Inventarbereich</th><th>Inventarnummer</th><th>Gegenstand</th><th>Status</th><th>Ausgegeben</th><th>Zurückgegeben</th><th>Rückgabezustand / Protokoll</th><th>Aktion</th></tr></thead>
+            <thead><tr><th>{{ 'Inventarbereich'|trans }}</th><th>{{ 'Inventarnummer'|trans }}</th><th>{{ 'Gegenstand'|trans }}</th><th>{{ 'Status'|trans }}</th><th>{{ 'Ausgegeben'|trans }}</th><th>{{ 'Zurückgegeben'|trans }}</th><th>{{ 'Rückgabezustand / Protokoll'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead>
             <tbody>
             {% for line in booking.items %}
                 <tr>
-                    <td>{% if line.assetType == 'tank' %}Tauchflasche{% elseif line.assetType == 'regulator' %}Atemregler{% else %}Allgemeine Ausrüstung{% endif %}</td>
+                    <td>{{ (line.assetType == 'tank' ? 'Tauchflasche' : (line.assetType == 'regulator' ? 'Atemregler' : 'Allgemeine Ausrüstung'))|trans }}</td>
                     <td>{{ line.assetInventory }}</td>
                     <td>{{ line.assetLabel }}</td>
-                    <td>{% if line.loanStatus == 'issued' %}<span class="badge bg-info text-dark">Ausgegeben</span>{% elseif line.loanStatus == 'returned' %}<span class="badge bg-success">Zurückgegeben</span>{% elseif line.loanStatus == 'reserved' %}<span class="badge bg-secondary">Reserviert</span>{% else %}{{ line.loanStatus }}{% endif %}</td>
+                    <td>{% if line.loanStatus == 'issued' %}<span class="badge bg-info text-dark">{{ 'Ausgegeben'|trans }}</span>{% elseif line.loanStatus == 'returned' %}<span class="badge bg-success">{{ 'Zurückgegeben'|trans }}</span>{% elseif line.loanStatus == 'reserved' %}<span class="badge bg-secondary">{{ 'Reserviert'|trans }}</span>{% else %}{{ line.loanStatus }}{% endif %}</td>
                     <td>{{ line.issuedAt ? line.issuedAt|date('d.m.Y H:i') : '—' }}</td>
                     <td>{{ line.returnedAt ? line.returnedAt|date('d.m.Y H:i') : '—' }}</td>
                     <td>
                         {% if line.loanStatus == 'returned' %}
-                            {% if line.returnCondition == 'ready' %}Einsatzbereit{% elseif line.returnCondition == 'maintenance' %}Wartung erforderlich{% elseif line.returnCondition == 'damaged' %}Beschädigt{% else %}{{ line.returnCondition|default('—') }}{% endif %}
+                            {{ ({'ready':'Einsatzbereit','maintenance':'Wartung erforderlich','damaged':'Beschädigt'}[line.returnCondition] ?? line.returnCondition|default('—'))|trans }}
                             {% if line.returnNotes %}<div class="small text-muted dw-pre-wrap" >{{ line.returnNotes }}</div>{% endif %}
                         {% else %}—{% endif %}
                     </td>
@@ -54,23 +54,23 @@
                             <input type="hidden" name="line_id" value="{{ line.id }}">
                             {% if line.loanStatus == 'reserved' %}
                                 <input type="hidden" name="operation" value="issue">
-                                <button class="btn btn-primary btn-sm" type="submit">Ausgeben</button>
+                                <button class="btn btn-primary btn-sm" type="submit">{{ 'Ausgeben'|trans }}</button>
                             {% else %}
                                 <input type="hidden" name="operation" value="return">
-                                <label>Zustand <select name="condition" class="form-select form-select-sm" required>
-                                    <option value="ready">Einsatzbereit</option>
-                                    <option value="maintenance">Wartung</option>
-                                    <option value="damaged">Beschädigt</option>
+                                <label>{{ 'Zustand'|trans }} <select name="condition" class="form-select form-select-sm" required>
+                                    <option value="ready">{{ 'Einsatzbereit'|trans }}</option>
+                                    <option value="maintenance">{{ 'Wartung'|trans }}</option>
+                                    <option value="damaged">{{ 'Beschädigt'|trans }}</option>
                                 </select></label>
-                                <label>Notiz <input name="notes" maxlength="2000" class="form-control form-control-sm"></label>
-                                <button class="btn btn-primary btn-sm" type="submit">Zurücknehmen</button>
+                                <label>{{ 'Notiz'|trans }} <input name="notes" maxlength="2000" class="form-control form-control-sm"></label>
+                                <button class="btn btn-primary btn-sm" type="submit">{{ 'Zurücknehmen'|trans }}</button>
                             {% endif %}
                         </form>
-                        {% else %}{{ line.returnCondition|default('Abgeschlossen') }}{% endif %}
+                        {% else %}{{ ({'ready':'Einsatzbereit','maintenance':'Wartung erforderlich','damaged':'Beschädigt'}[line.returnCondition] ?? line.returnCondition|default('Abgeschlossen'))|trans }}{% endif %}
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="8">Noch keine Ausrüstung hinzugefügt.</td></tr>
+                <tr><td colspan="8">{{ 'Noch keine Ausrüstung hinzugefügt.'|trans }}</td></tr>
             {% endfor %}
             </tbody>
         </table></div>
@@ -78,15 +78,15 @@
     {% if booking.status == 'reserved' %}
     {% set inventory = equipment_booking_inventory(booking) %}
     <section class="card mb-3"><div class="card-body">
-        <h3 class="h5">Gegenstand hinzufügen</h3>
-        <p class="text-muted">Ausrüstungsart auswählen, danach den konkreten Inventargegenstand. Jeder Gegenstand wird einzeln erfasst.</p>
+        <h3 class="h5">{{ 'Gegenstand hinzufügen'|trans }}</h3>
+        <p class="text-muted">{{ 'Ausrüstungsart auswählen, danach den konkreten Inventargegenstand. Jeder Gegenstand wird einzeln erfasst.'|trans }}</p>
         <form method="post" action="{{ path('admin_equipment_booking_add_position') }}" id="equipment-add-position">
             <input type="hidden" name="_token" value="{{ csrf_token('equipment_booking_add_' ~ booking.id ~ '_' ~ booking.member.club.id) }}">
             <input type="hidden" name="booking_id" value="{{ booking.id }}">
             <div class="row g-2 align-items-end">
-                <div class="col-md-4"><label class="form-label" for="equipment-category">Inventarbereich / Ausrüstungsart</label>
+                <div class="col-md-4"><label class="form-label" for="equipment-category">{{ 'Inventarbereich / Ausrüstungsart'|trans }}</label>
                     <select class="form-select" id="equipment-category" required>
-                        <option value="">Bitte wählen</option>
+                        <option value="">{{ 'Bitte wählen'|trans }}</option>
                         {% set groups = [] %}
                         {% for item in inventory %}
                             {% set key = item.type ~ ':' ~ item.categoryId %}
@@ -97,16 +97,16 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-6"><label class="form-label" for="equipment-item">Konkreter Inventargegenstand</label>
+                <div class="col-md-6"><label class="form-label" for="equipment-item">{{ 'Konkreter Inventargegenstand'|trans }}</label>
                     <input type="hidden" name="asset_type" id="equipment-asset-type" value="">
                     <select class="form-select" id="equipment-item" name="equipment_item_id" required disabled>
-                        <option value="">Bitte zuerst Ausrüstungsart wählen</option>
+                        <option value="">{{ 'Bitte zuerst Ausrüstungsart wählen'|trans }}</option>
                         {% for item in inventory %}
                             <option value="{{ item.id }}" data-group="{{ item.type }}:{{ item.categoryId }}" data-type="{{ item.type }}" disabled>{{ item.inventory }} – {{ item.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2"><button class="btn btn-primary" type="submit">Hinzufügen</button></div>
+                <div class="col-md-2"><button class="btn btn-primary" type="submit">{{ 'Hinzufügen'|trans }}</button></div>
             </div>
         </form>
         <script>

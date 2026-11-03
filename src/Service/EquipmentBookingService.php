@@ -60,7 +60,7 @@ final class EquipmentBookingService
             foreach ($booking->getItems() as $line) {
                 $asset = $line->getEquipmentItem() ?? $line->getRegulator() ?? $line->getTank();
                 $totalCents += EquipmentInventory::feeCents($asset);
-                if ($totalCents > 2147483647) { throw new \DomainException('Rental amount too large.'); }
+                if ($totalCents > 2147483647) { throw new \DomainException('Leihgebühr ist zu hoch.'); }
             }
             $booking->setAgreedRentalFeeCents($totalCents);
             $this->em->persist($booking);
