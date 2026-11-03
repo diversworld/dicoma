@@ -99,6 +99,13 @@ Die zuletzt in der Verwaltung oder im Portal gewählte Sprache bleibt auch
 beim Wechsel auf nicht lokalisierte Anwendungsseiten erhalten. Das
 Mitglieder-Dashboard und Mitgliederprofil einschließlich Qualifikations- und
 Dokumentenzuständen sind in den vier konfigurierten Sprachen übersetzt.
+Auch die Mitglieder-Ausrüstungsübersicht mit Flaschenbearbeitung,
+TÜV-Einzel- und Mehrfachanmeldung und TÜV-Anmeldedetails, die Reservierungsübersicht sowie Ausbildungsübersicht
+und Teilnahmeansicht sind übersetzbar. Automatisierte Vier-Sprachen-Tests
+prüfen ausgewählte Leer-, Fehler-, Anmelde-, Wartelisten- und
+Stornierungszustände; sie ersetzen keine vollständige Browserprüfung aller
+Rollen und Datenzustände. Weitere Rechnungs- und
+Ausbildungsansichten sind damit nicht automatisch vollständig übersetzt.
 Gerätewart-Übersicht, Direktausleihe,
 Flaschen- und Inventarlisten, Flaschendetails, Füllgebühren sowie die Masken
 für Flaschenprüfung, Wartung und die bearbeiteten TÜV-Ansichten sind

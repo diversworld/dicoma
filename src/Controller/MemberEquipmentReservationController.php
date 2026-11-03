@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request,Response};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_MEMBER')]
 final class MemberEquipmentReservationController extends AbstractController
@@ -45,8 +46,16 @@ final class MemberEquipmentReservationController extends AbstractController
                 match ($matches[1]) {'item'=>$line->setEquipmentItem($asset),'regulator'=>$line->setRegulator($asset),'tank'=>$line->setTank($asset)};
                 $booking->addItem($line);
             }
-            try { $service->saveNew($booking); $this->addFlash('success','Reservierung #'.$booking->getId().' erfolgreich gespeichert: '.count($selected).' Artikel vom '.$start->format('d.m.Y').' bis '.$end->format('d.m.Y').'. Sie ist sofort unter „Meine Reservierungen“ sichtbar.'); }
-            catch (\DomainException $e) { $this->addFlash('danger','Reservierung nicht gespeichert: '.$e->getMessage()); }
+            try {
+                $service->saveNew($booking);
+                $this->addFlash('success', new TranslatableMessage(
+                    'Reservierung #%id% erfolgreich gespeichert: %count% Artikel vom %start% bis %end%. Sie ist sofort unter „Meine Reservierungen“ sichtbar.',
+                    ['%id%' => $booking->getId(), '%count%' => count($selected), '%start%' => $start->format('d.m.Y'), '%end%' => $end->format('d.m.Y')]
+                ));
+            }
+            catch (\DomainException $e) {
+                $this->addFlash('danger', new TranslatableMessage('Reservierung nicht gespeichert: %reason%', ['%reason%' => new TranslatableMessage($e->getMessage())]));
+            }
             return $this->redirect($this->generateUrl('member_reservations').'#meine-reservierungen',Response::HTTP_SEE_OTHER);
         }
         $items=$em->getRepository(EquipmentItem::class)->createQueryBuilder('i')->leftJoin('i.category','c')->addSelect('c')->leftJoin('i.manufacturer','mf')->addSelect('mf')->leftJoin('i.size','sz')->addSelect('sz')->where('i.club = :club')->andWhere('i.lendable = true')->andWhere('i.conditionStatus = :ready')->andWhere('(c.id IS NULL OR c.active = :active)')->setParameter('active', true)->setParameter('club',$club)->setParameter('ready','ready')->orderBy('c.name','ASC')->addOrderBy('i.name','ASC')->getQuery()->getResult();

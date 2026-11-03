@@ -10,6 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_MEMBER')]
 final class MemberTankCheckBookingController extends AbstractController
@@ -69,7 +70,10 @@ final class MemberTankCheckBookingController extends AbstractController
                 $em->persist($item);
             }
             $em->flush();
-            $this->addFlash('success', sprintf('TÜV-Anmeldung gespeichert: %s € netto / %s € brutto.', TuvPriceCalculator::format($netTotal), TuvPriceCalculator::format($grossTotal)));
+            $this->addFlash('success', new TranslatableMessage('TÜV-Anmeldung gespeichert: %net% € netto / %gross% € brutto.', [
+                '%net%' => TuvPriceCalculator::format($netTotal),
+                '%gross%' => TuvPriceCalculator::format($grossTotal),
+            ]));
         } catch (\DomainException $e) {
             $this->addFlash('danger', $e->getMessage());
         } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {

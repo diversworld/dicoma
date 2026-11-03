@@ -1,89 +1,89 @@
 {% extends 'base.html.twig' %}
-{% block title %}Reservierungssystem | DICOMA{% endblock %}
+{% block title %}{{ 'Reservierungssystem'|trans }} | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
 <main class="container py-4 dw-max-width-1200px" >
-	<a href="{{ path('member_portal_dashboard') }}">← Mein Dashboard</a>
-	<h1 class="h2 mt-3 mb-3">Reservierungssystem</h1>
+	<a href="{{ path('member_portal_dashboard') }}">← {{ 'Mein Dashboard'|trans }}</a>
+	<h1 class="h2 mt-3 mb-3">{{ 'Reservierungssystem'|trans }}</h1>
 	{% for message in app.flashes('success') %}
 		<div class="alert alert-success" role="status">
-			{{ message }}
+			{{ message|trans }}
 		</div>
 	{% endfor %}
 	{% for message in app.flashes('danger') %}
 		<div class="alert alert-danger" role="alert">
-			{{ message }}
+			{{ message|trans }}
 		</div>
 	{% endfor %}
-	<a class="btn btn-outline-primary btn-sm mb-3" href="#meine-reservierungen">Meine Reservierungen ansehen</a>
-	<p>Zur Auswahl stehen nur aktuell angebotene, verleihbare und betriebsbereite Vereinsartikel. Deaktivierte Kategorien werden nicht angeboten. Stelle deine Ausrüstung in Ruhe zusammen. <strong>Vormerken ist noch keine Reservierung.</strong> Erst mit „Verbindlich reservieren“ werden alle vorgemerkten Artikel gemeinsam gebucht.</p>
+	<a class="btn btn-outline-primary btn-sm mb-3" href="#meine-reservierungen">{{ 'Meine Reservierungen ansehen'|trans }}</a>
+	<p>{{ 'Zur Auswahl stehen nur aktuell angebotene, verleihbare und betriebsbereite Vereinsartikel. Deaktivierte Kategorien werden nicht angeboten. Stelle deine Ausrüstung in Ruhe zusammen.'|trans }} <strong>{{ 'Vormerken ist noch keine Reservierung.'|trans }}</strong> {{ 'Erst mit „Verbindlich reservieren“ werden alle vorgemerkten Artikel gemeinsam gebucht.'|trans }}</p>
 	<form method="post" id="reservation-form">
 		<input type="hidden" name="_token" value="{{ csrf_token('member_equipment_reserve') }}">
 		<div class="row g-3 mb-4">
 			 <div class="">
-			 	<label class="form-label" for="category">Kategorie auswählen</label>
+				<label class="form-label" for="category">{{ 'Kategorie auswählen'|trans }}</label>
 	 			<select class="form-select" id="category">
-					<option value="all">Alle Kategorien</option>
+					<option value="all">{{ 'Alle Kategorien'|trans }}</option>
 	 				{% for item in items %}
 						{% if item.category %}
 							<option value="c{{ item.category.id }}">{{ item.category.name }}</option>
 						{% endif %}
 					{% endfor %}
-	 				<option value="cother">Sonstige Ausrüstung</option>
-					<option value="regulator">Atemregler / Automaten</option>
-					<option value="tank">Tauchflaschen</option>
+					<option value="cother">{{ 'Sonstige Ausrüstung'|trans }}</option>
+					<option value="regulator">{{ 'Atemregler / Automaten'|trans }}</option>
+					<option value="tank">{{ 'Tauchflaschen'|trans }}</option>
 				</select>
 			</div>
 		</div>
-		<h2 class="h4">Ausrüstungsgegenstände auswählen</h2>
-		<p class="text-muted small">Wähle beliebig viele Gegenstände aus unterschiedlichen Kategorien. „Vormerken“ fügt sie deiner Liste hinzu.</p>
+		<h2 class="h4">{{ 'Ausrüstungsgegenstände auswählen'|trans }}</h2>
+		<p class="text-muted small">{{ 'Wähle beliebig viele Gegenstände aus unterschiedlichen Kategorien. „Vormerken“ fügt sie deiner Liste hinzu.'|trans }}</p>
 		<div class="table-responsive">
 			<table class="table table-striped table-hover align-middle">
 				<thead>
 					<tr>
-						<th>Inventarnummer</th>
-						<th>Kategorie</th>
-						<th>Hersteller</th>
-						<th>Modell / Bezeichnung</th>
-						<th>Größe</th><th>Leihgebühr</th>
-						<th>Auswahl</th>
+						<th>{{ 'Inventarnummer'|trans }}</th>
+						<th>{{ 'Kategorie'|trans }}</th>
+						<th>{{ 'Hersteller'|trans }}</th>
+						<th>{{ 'Modell / Bezeichnung'|trans }}</th>
+						<th>{{ 'Größe'|trans }}</th><th>{{ 'Leihgebühr'|trans }}</th>
+						<th>{{ 'Auswahl'|trans }}</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for item in items %}
 						<tr data-category="c{{ item.category ? item.category.id : 'other' }}" data-key="item:{{ item.id }}" data-label="{{ (item.displayModel ?: item.name)|e('html_attr') }}" data-number="{{ item.inventoryNumber|e('html_attr') }}" data-fee="{{ item.rentalFee is not null ? item.rentalFee : '' }}">
 							<td>{{ item.inventoryNumber }}</td>
-							<td>{{ item.category ? item.category.name : 'Sonstige' }}</td>
+							<td>{{ item.category ? item.category.name : 'Sonstige'|trans }}</td>
 							<td>{{ item.manufacturer ? item.manufacturer.name : '–' }}</td>
 							<td>{{ item.displayModel ?: item.name }}</td>
 							<td>{{ item.size ? item.size.name : '–' }}</td>
-							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage' }}</td>
+							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage'|trans }}</td>
 							<td>
-								<button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button>
+								<button type="button" class="btn btn-sm btn-outline-primary js-add">{{ 'Vormerken'|trans }}</button>
 							</td>
 						</tr>
 					{% endfor %}
 					{% for item in regulators %}
-						<tr data-category="regulator" data-key="regulator:{{ item.id }}" data-label="{{ (item.firstStageModel ?: 'Atemregler')|e('html_attr') }}" data-number="{{ item.inventoryNumber|e('html_attr') }}" data-fee="{{ item.rentalFee is not null ? item.rentalFee : '' }}">
+						<tr data-category="regulator" data-key="regulator:{{ item.id }}" data-label="{{ (item.firstStageModel ?: 'Atemregler'|trans)|e('html_attr') }}" data-number="{{ item.inventoryNumber|e('html_attr') }}" data-fee="{{ item.rentalFee is not null ? item.rentalFee : '' }}">
 							<td>{{ item.inventoryNumber }}</td>
-							<td>Atemregler / Automaten</td>
+							<td>{{ 'Atemregler / Automaten'|trans }}</td>
 							<td>{{ item.manufacturer ? item.manufacturer.name : '–' }}</td>
-							<td>{{ item.firstStageModel ?: 'Atemregler' }}</td>
+							<td>{{ item.firstStageModel ?: 'Atemregler'|trans }}</td>
 							<td>–</td>
-							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage' }}</td>
-							<td><button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button></td>
+							<td>{{ item.rentalFee is not null ? (item.rentalFee|number_format(2, ',', '.') ~ ' €') : 'auf Anfrage'|trans }}</td>
+							<td><button type="button" class="btn btn-sm btn-outline-primary js-add">{{ 'Vormerken'|trans }}</button></td>
 						</tr>
 					{% endfor %}
 					{% for item in tanks %}
-						<tr data-category="tank" data-key="tank:{{ item.id }}" data-label="{{ (item.serialnumber ?: 'Tauchflasche')|e('html_attr') }}" data-number="{{ item.inventory|e('html_attr') }}" data-fee="">
+						<tr data-category="tank" data-key="tank:{{ item.id }}" data-label="{{ (item.serialnumber ?: 'Tauchflasche'|trans)|e('html_attr') }}" data-number="{{ item.inventory|e('html_attr') }}" data-fee="">
 							<td>{{ item.inventory }}</td>
-							<td>Tauchflaschen</td>
+							<td>{{ 'Tauchflaschen'|trans }}</td>
 							<td>–</td>
-							<td>{{ item.serialnumber ?: 'Flasche' }}</td>
+							<td>{{ item.serialnumber ?: 'Flasche'|trans }}</td>
 							<td>{{ item.size ?: '–' }} l</td>
-							<td>auf Anfrage</td>
+							<td>{{ 'auf Anfrage'|trans }}</td>
 							<td>
-								<button type="button" class="btn btn-sm btn-outline-primary js-add">Vormerken</button>
+								<button type="button" class="btn btn-sm btn-outline-primary js-add">{{ 'Vormerken'|trans }}</button>
 							</td>
 						</tr>
 					{% endfor %}
@@ -92,18 +92,18 @@
 		</div>
 		<div class="card shadow-sm mt-4" id="cart">
 			<div class="card-header">
-				<h2 class="h5 mb-0">Meine Vormerkliste <span class="badge bg-primary" id="cart-count">0</span></h2>
+				<h2 class="h5 mb-0">{{ 'Meine Vormerkliste'|trans }} <span class="badge bg-primary" id="cart-count">0</span></h2>
 			</div>
 			<div class="card-body">
-				<p id="cart-empty" class="text-muted">Noch keine Gegenstände vorgemerkt. Du kannst aus jeder Kategorie Artikel hinzufügen.</p>
+				<p id="cart-empty" class="text-muted">{{ 'Noch keine Gegenstände vorgemerkt. Du kannst aus jeder Kategorie Artikel hinzufügen.'|trans }}</p>
 				<div class="table-responsive">
 					<table class="table align-middle" id="cart-table" hidden>
 						<thead>
 							<tr>
-								<th>Inventarnummer</th>
-								<th>Artikel</th>
-								<th>Leihgebühr</th>
-								<th>Entfernen</th>
+								<th>{{ 'Inventarnummer'|trans }}</th>
+								<th>{{ 'Artikel'|trans }}</th>
+								<th>{{ 'Leihgebühr'|trans }}</th>
+								<th>{{ 'Entfernen'|trans }}</th>
 							</tr>
 						</thead>
 						<tbody id="cart-items">
@@ -111,75 +111,75 @@
 					</table>
 				</div>
 			<div id="cart-total" class="fw-bold text-end" hidden>
-				Summe der angezeigten Leihgebühren: <span id="fee-total">0,00 €</span>
+				{{ 'Summe der angezeigten Leihgebühren'|trans }}: <span id="fee-total">0,00 €</span>
 			</div>
 				<p id="cart-note" class="text-muted small mt-2" hidden>
-					Die Summe basiert auf den angezeigten Artikelgebühren. Gebühren „auf Anfrage“, zeitabhängige Kosten und mögliche Anzahlungen sind darin nicht enthalten. Der endgültige Betrag kann abweichen.
+					{{ 'Die Summe basiert auf den angezeigten Artikelgebühren. Gebühren „auf Anfrage“, zeitabhängige Kosten und mögliche Anzahlungen sind darin nicht enthalten. Der endgültige Betrag kann abweichen.'|trans }}
 				</p>
 				<div id="cart-fields"></div>
 				<div class="border rounded p-3 mt-3 bg-light row" id="booking-summary" aria-live="polite">
-					<strong>Gewählter Leihzeitraum</strong>
+					<strong>{{ 'Gewählter Leihzeitraum'|trans }}</strong>
 					<div id="booking-dates" class="mt-1 col-md-12">
-						Bitte Leihbeginn und Leihende auswählen.
+						{{ 'Bitte Leihbeginn und Leihende auswählen.'|trans }}
 					</div>
 					<div class="small text-muted mt-1 col-md-12">
-						Die Reservierung wird erst nach deiner verbindlichen Bestätigung gespeichert.
+						{{ 'Die Reservierung wird erst nach deiner verbindlichen Bestätigung gespeichert.'|trans }}
 					</div>
 					<div class="col-md-4">
-						<label class="form-label" for="start">Leihbeginn *</label>
+						<label class="form-label" for="start">{{ 'Leihbeginn'|trans }} *</label>
 						<input type="date" class="form-control" id="start" name="start" min="{{ 'now'|date('Y-m-d') }}" required>
 					</div>
 					<div class="col-md-4">
-						<label class="form-label" for="end">Leihende (exklusiv) *</label>
+						<label class="form-label" for="end">{{ 'Leihende (exklusiv)'|trans }} *</label>
 						<input type="date" class="form-control" id="end" name="end" min="{{ 'tomorrow'|date('Y-m-d') }}" required>
 					</div>
 
 				</div>
 				<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-					<button type="button" id="clear-cart" class="btn btn-outline-secondary" disabled>Vormerkliste leeren</button>
-					<button type="submit" id="submit-booking" class="btn btn-success" disabled>Verbindlich reservieren</button>
+					<button type="button" id="clear-cart" class="btn btn-outline-secondary" disabled>{{ 'Vormerkliste leeren'|trans }}</button>
+					<button type="submit" id="submit-booking" class="btn btn-success" disabled>{{ 'Verbindlich reservieren'|trans }}</button>
 				</div>
 			</div>
 		</div>
 	</form>
 	<section class="mt-5" id="meine-reservierungen">
-		<h2 class="h4">Meine Reservierungen</h2>
-		<p class="text-muted">Hier erscheinen gespeicherte Reservierungen sofort – auch bevor die Ausrüstung ausgegeben wurde.</p>
+		<h2 class="h4">{{ 'Meine Reservierungen'|trans }}</h2>
+		<p class="text-muted">{{ 'Hier erscheinen gespeicherte Reservierungen sofort – auch bevor die Ausrüstung ausgegeben wurde.'|trans }}</p>
 		{% for b in bookings %}
 			<div class="card mb-2">
 				<div class="card-body d-flex flex-wrap justify-content-between gap-2">
 					<div>
-						<strong>Buchung #{{ b.id }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }} 
+						<strong>{{ 'Buchung #%id%'|trans({'%id%': b.id}) }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }}
 							<span class="badge {{ b.status == 'reserved' ? 'bg-primary' : (b.status == 'cancelled' ? 'bg-secondary' : 'bg-success') }}">
-								{{ {'reserved':'Reserviert – Ausgabe ausstehend','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurückgegeben','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[b.status] ?? b.status }}
+								{{ ({'reserved':'Reserviert – Ausgabe ausstehend','partially_issued':'Teilweise ausgegeben','issued':'Ausgegeben','partially_returned':'Teilweise zurückgegeben','returned':'Zurückgegeben','cancelled':'Storniert','closed':'Abgeschlossen'}[b.status] ?? b.status)|trans }}
 							</span>
 						<ul class="small mb-0 mt-2">
 							{% for line in b.items %}
 								<li>{{ line.assetLabel }} 
-									<span class="text-muted">(Inventar: {{ line.assetInventory }})</span>
+									<span class="text-muted">({{ 'Inventar'|trans }}: {{ line.assetInventory }})</span>
 									{% if b.status == 'cancelled' %}
-										<span class="badge bg-secondary">Storniert</span>
+										<span class="badge bg-secondary">{{ 'Storniert'|trans }}</span>
 									{% elseif line.loanStatus == 'returned' %}
-										<span class="badge bg-success">Zurückgegeben</span>
-										{% if line.returnedAt %}<span class="text-muted">am {{ line.returnedAt|date('d.m.Y H:i') }}</span>{% endif %}
-										{% if line.returnCondition %}<span class="{{ line.returnCondition == 'ready' ? 'text-success' : 'text-danger' }}">{{ {'ready':'In Ordnung','maintenance':'Wartung erforderlich','damaged':'Beschädigt'}[line.returnCondition] ?? line.returnCondition }}</span>{% endif %}
+										<span class="badge bg-success">{{ 'Zurückgegeben'|trans }}</span>
+										{% if line.returnedAt %}<span class="text-muted">{{ 'am %date%'|trans({'%date%': line.returnedAt|date('d.m.Y H:i')}) }}</span>{% endif %}
+										{% if line.returnCondition %}<span class="{{ line.returnCondition == 'ready' ? 'text-success' : 'text-danger' }}">{{ ({'ready':'In Ordnung','maintenance':'Wartung erforderlich','damaged':'Beschädigt'}[line.returnCondition] ?? line.returnCondition)|trans }}</span>{% endif %}
 										{% if line.returnNotes %}<span class="text-muted">– {{ line.returnNotes }}</span>{% endif %}
 									{% elseif line.loanStatus == 'issued' %}
-										<span class="badge bg-info text-dark">Ausgegeben</span>
-										{% if line.issuedAt %}<span class="text-muted">am {{ line.issuedAt|date('d.m.Y H:i') }}</span>{% endif %}
+										<span class="badge bg-info text-dark">{{ 'Ausgegeben'|trans }}</span>
+										{% if line.issuedAt %}<span class="text-muted">{{ 'am %date%'|trans({'%date%': line.issuedAt|date('d.m.Y H:i')}) }}</span>{% endif %}
 									{% else %}
-										<span class="badge bg-primary">Reserviert</span>
+										<span class="badge bg-primary">{{ 'Reserviert'|trans }}</span>
 									{% endif %}
 							</li>
 								{% else %}
-								<li>Keine Positionen gespeichert</li>
+								<li>{{ 'Keine Positionen gespeichert'|trans }}</li>
 							{% endfor %}
 						</ul>
 					</div>
 					{% if b.status == 'reserved' and b.startsAt > date() %}
-						<form method="post" action="{{ path('member_reservation_cancel',{id:b.id}) }}" onsubmit="return confirm('Buchung stornieren?')">
+						<form method="post" action="{{ path('member_reservation_cancel',{id:b.id}) }}" onsubmit="return confirm({{ 'Buchung stornieren?'|trans|json_encode|e('html_attr') }})">
 							<input type="hidden" name="_token" value="{{ csrf_token('member_reservation_cancel_' ~ b.id) }}">
-							<button class="btn btn-outline-danger btn-sm">Stornieren</button>
+							<button class="btn btn-outline-danger btn-sm">{{ 'Stornieren'|trans }}</button>
 						</form>
 					{% endif %}
 				</div>
@@ -189,12 +189,12 @@
 			<div class="card mb-2">
 				<div class="card-body">
 					<strong>{{ b.equipmentItem.name }}</strong> · {{ b.startsAt|date('d.m.Y') }} – {{ b.endsAt|date('d.m.Y') }} 
-					<span class="badge bg-secondary">{{ b.status }}</span>
+					<span class="badge bg-secondary">{{ ({'reserved':'Reserviert','issued':'Ausgegeben','cancelled':'Storniert','returned':'Zurückgegeben'}[b.status] ?? b.status)|trans }}</span>
 				</div>
 			</div>
 		{% endfor %}
 		{% if bookings is empty and legacy is empty %}
-			<p class="text-muted">Es wurden noch keine Reservierungen vorgenommen.</p>
+			<p class="text-muted">{{ 'Es wurden noch keine Reservierungen vorgenommen.'|trans }}</p>
 		{% endif %}
 	</section>
 </main>
@@ -204,7 +204,18 @@
 	const form=document.getElementById('reservation-form'),category=document.getElementById('category');
 	const rows=Array.from(document.querySelectorAll('tr[data-key]'));
 	const selected=new Map();
-	const euro=new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'});
+	const euro=new Intl.NumberFormat({{ app.request.locale|json_encode(15)|raw }},{style:'currency',currency:'EUR'});
+	const labels={
+		dates: {{ 'Von %start% bis %end% (Enddatum exklusiv)'|trans|json_encode(15)|raw }},
+		selectDates: {{ 'Bitte Leihbeginn und Leihende auswählen.'|trans|json_encode(15)|raw }},
+		onRequest: {{ 'auf Anfrage'|trans|json_encode(15)|raw }},
+		remove: {{ 'Entfernen'|trans|json_encode(15)|raw }},
+		added: {{ 'Vorgemerkt ✓'|trans|json_encode(15)|raw }},
+		add: {{ 'Vormerken'|trans|json_encode(15)|raw }},
+		extraFees: {{ '+ Gebühren auf Anfrage'|trans|json_encode(15)|raw }},
+		maximum: {{ 'Es können höchstens 30 Gegenstände gemeinsam reserviert werden.'|trans|json_encode(15)|raw }},
+		confirm: {{ 'Verbindliche Reservierung\n\nZeitraum: %start% bis %end% (Enddatum exklusiv)\n\n%items%\n\nJetzt verbindlich reservieren?'|trans|json_encode(15)|raw }}
+	};
 	const body=document.getElementById('cart-items'),fields=document.getElementById('cart-fields');
 	const count=document.getElementById('cart-count'),empty=document.getElementById('cart-empty');
 	const table=document.getElementById('cart-table'),total=document.getElementById('cart-total');
@@ -213,18 +224,18 @@
 	const startInput=document.getElementById('start'),endInput=document.getElementById('end');
 	const dateSummary=document.getElementById('booking-dates');
 	function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return null;const [y,m,d]=v.split('-');return d+'.'+m+'.'+y;}
-	function updateDates(){const start=formatDate(startInput.value),end=formatDate(endInput.value);dateSummary.textContent=start&&end?'Von '+start+' bis '+end+' (Enddatum exklusiv)':'Bitte Leihbeginn und Leihende auswählen.';}
+	function updateDates(){const start=formatDate(startInput.value),end=formatDate(endInput.value);dateSummary.textContent=start&&end?labels.dates.replace('%start%',start).replace('%end%',end):labels.selectDates;}
 	startInput.addEventListener('change',updateDates);endInput.addEventListener('change',updateDates);updateDates();
 	function render(){
 	 body.replaceChildren();fields.replaceChildren();
 	 let sum=0,unknown=false;
 	 selected.forEach((item,key)=>{
 	  const tr=document.createElement('tr');
-	  [item.number,item.label,item.fee===null?'auf Anfrage':euro.format(item.fee)].forEach(value=>{
+	  [item.number,item.label,item.fee===null?labels.onRequest:euro.format(item.fee)].forEach(value=>{
 	   const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
 	  });
 	  const td=document.createElement('td'),remove=document.createElement('button');
-	  remove.type='button';remove.className='btn btn-sm btn-outline-danger';remove.textContent='Entfernen';
+	  remove.type='button';remove.className='btn btn-sm btn-outline-danger';remove.textContent=labels.remove;
 	  remove.addEventListener('click',()=>{selected.delete(key);render();});
 	  td.appendChild(remove);tr.appendChild(td);body.appendChild(tr);
 	  const hidden=document.createElement('input');hidden.type='hidden';hidden.name='items[]';hidden.value=key;fields.appendChild(hidden);
@@ -232,15 +243,15 @@
 	 });
 	 rows.forEach(row=>{
 	  const added=selected.has(row.dataset.key),btn=row.querySelector('.js-add');
-	  btn.disabled=added;btn.textContent=added?'Vorgemerkt ✓':'Vormerken';
+	  btn.disabled=added;btn.textContent=added?labels.added:labels.add;
 	 });
 	 count.textContent=String(selected.size);empty.hidden=selected.size>0;
 	 table.hidden=selected.size===0;total.hidden=selected.size===0;note.hidden=selected.size===0;
-	 document.getElementById('fee-total').textContent=euro.format(sum)+(unknown?' + Gebühren auf Anfrage':'');
+	 document.getElementById('fee-total').textContent=euro.format(sum)+(unknown?' '+labels.extraFees:'');
 	 clear.disabled=selected.size===0;submit.disabled=selected.size===0;
 	}
 	rows.forEach(row=>row.querySelector('.js-add').addEventListener('click',()=>{
-	 if(selected.size>=30){alert('Es können höchstens 30 Gegenstände gemeinsam reserviert werden.');return;}
+	 if(selected.size>=30){alert(labels.maximum);return;}
 	 const raw=row.dataset.fee.trim().replace(',','.');
 	 const fee=raw!==''&&Number.isFinite(Number(raw))?Number(raw):null;
 	 selected.set(row.dataset.key,{number:row.dataset.number,label:row.dataset.label,fee});
@@ -254,7 +265,7 @@
 	 const start=formatDate(startInput.value),end=formatDate(endInput.value);
 	 if(!start||!end){event.preventDefault();return;}
 	 const items=Array.from(selected.values()).map(x=>'• '+x.number+' – '+x.label).join('\n');
-	 if(!confirm('Verbindliche Reservierung\n\nZeitraum: '+start+' bis '+end+' (Enddatum exklusiv)\n\n'+items+'\n\nJetzt verbindlich reservieren?'))event.preventDefault();
+	 if(!confirm(labels.confirm.replace('%start%',start).replace('%end%',end).replace('%items%',items)))event.preventDefault();
 	});
 	render();
 	})();

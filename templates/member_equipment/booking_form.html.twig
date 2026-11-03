@@ -1,24 +1,24 @@
 {% extends 'base.html.twig' %}
-{% block title %}TÜV-Leistungen auswählen | DICOMA{% endblock %}
+{% block title %}{{ 'TÜV-Leistungen auswählen'|trans }} | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
 <section class="section"><div class="container">
-  <h1>TÜV-Leistungen auswählen</h1>
-  <p>{{ tank.label }} · {{ tank.serialNumber }} · {{ tank.volume ?: 'Größe unbekannt' }}{% if tank.volume and 'cuft' not in (tank.volume|lower) and 'liter' not in (tank.volume|lower) and ' l' not in (tank.volume|lower) %} L{% endif %} · Termin {{ check.checkDate|date('d.m.Y') }}</p>
+  <h1>{{ 'TÜV-Leistungen auswählen'|trans }}</h1>
+  <p>{{ tank.label }} · {{ tank.serialNumber }} · {{ tank.volume ?: 'Größe unbekannt'|trans }}{% if tank.volume and 'cuft' not in (tank.volume|lower) and 'liter' not in (tank.volume|lower) and ' l' not in (tank.volume|lower) %} L{% endif %} · {{ 'Termin'|trans }} {{ check.checkDate|date('d.m.Y') }}</p>
   {% for type, messages in app.flashes %}
     {% for message in messages %}
-      <div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message }}</div>
+      <div class="alert alert-{{ type == 'danger' ? 'danger' : 'success' }}" role="alert">{{ message|trans }}</div>
     {% endfor %}
   {% endfor %}
   {% if volume is null and 'cuft' not in (tank.volume|default('')|lower) %}
-    <div class="alert alert-warning">Die Flaschengröße ist nicht eindeutig. Größenabhängige Leistungen sind nicht verfügbar. Bitte die Größe im Profil in Litern hinterlegen.</div>
+    <div class="alert alert-warning">{{ 'Die Flaschengröße ist nicht eindeutig. Größenabhängige Leistungen sind nicht verfügbar. Bitte die Größe im Profil in Litern hinterlegen.'|trans }}</div>
   {% endif %}
   <form method="post" action="{{ path('member_tank_check_book', {id: check.id}) }}" id="tuv-booking-form">
     <input type="hidden" name="_token" value="{{ csrf_token('member_check_book_' ~ check.id) }}">
     <input type="hidden" name="member_tank_id" value="{{ tank.id }}">
     <div class="table-responsive">
       <table class="table table-striped">
-        <thead><tr><th>Auswahl</th><th>Leistung</th><th class="text-right">Netto</th><th class="text-right">Brutto</th></tr></thead>
+        <thead><tr><th>{{ 'Auswahl'|trans }}</th><th>{{ 'Leistung'|trans }}</th><th class="text-right">{{ 'Netto'|trans }}</th><th class="text-right">{{ 'Brutto'|trans }}</th></tr></thead>
         <tbody>
         {% for item in items %}
           <tr>
@@ -34,26 +34,26 @@
                      aria-label="{{ item.article.title }}">
               {% if item.mode == 'required' %}
                 {# Disabled controls are not submitted. The server independently adds required items. #}
-                <span class="sr-only">Pflichtleistung</span>
+                <span class="sr-only">{{ 'Pflichtleistung'|trans }}</span>
               {% endif %}
             </td>
-            <td>{{ item.article.title }} <small class="text-muted">({{ item.mode == 'required' ? 'Pflicht' : (item.mode == 'default' ? 'Standard, abwählbar' : 'optional') }})</small></td>
+            <td>{{ item.article.title }} <small class="text-muted">({{ (item.mode == 'required' ? 'Pflicht' : (item.mode == 'default' ? 'Standard, abwählbar' : 'optional'))|trans }})</small></td>
             <td class="text-right">{{ item.net|number_format(2, ',', '.') }} €</td>
             <td class="text-right">{{ item.gross|number_format(2, ',', '.') }} €</td>
           </tr>
         {% else %}
-          <tr><td colspan="4">Keine passenden Leistungen verfügbar.</td></tr>
+          <tr><td colspan="4">{{ 'Keine passenden Leistungen verfügbar.'|trans }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
     </div>
     <div class="border rounded p-3 mb-3" aria-live="polite" aria-atomic="true">
-      <p class="mb-1">Voraussichtliche Summe netto: <strong id="tuv-net-total">–</strong></p>
-      <p class="mb-1">Voraussichtliche Summe brutto: <strong id="tuv-gross-total">–</strong></p>
-      <small class="text-muted">Preisvorschau inklusive 19 % Umsatzsteuer. Die verbindliche Berechnung erfolgt beim Absenden auf dem Server anhand der dann gültigen Artikelpreise.</small>
+      <p class="mb-1">{{ 'Voraussichtliche Summe netto'|trans }}: <strong id="tuv-net-total">–</strong></p>
+      <p class="mb-1">{{ 'Voraussichtliche Summe brutto'|trans }}: <strong id="tuv-gross-total">–</strong></p>
+      <small class="text-muted">{{ 'Preisvorschau inklusive 19 % Umsatzsteuer. Die verbindliche Berechnung erfolgt beim Absenden auf dem Server anhand der dann gültigen Artikelpreise.'|trans }}</small>
     </div>
-    <button class="btn btn-primary" type="submit" {% if items is empty %}disabled{% endif %}>Auswahl anmelden</button>
-    <a href="{{ path('member_equipment_index') }}" class="btn btn-outline-secondary">Zurück</a>
+    <button class="btn btn-primary" type="submit" {% if items is empty %}disabled{% endif %}>{{ 'Auswahl anmelden'|trans }}</button>
+    <a href="{{ path('member_equipment_index') }}" class="btn btn-outline-secondary">{{ 'Zurück'|trans }}</a>
   </form>
 </div></section>
 <script>
@@ -62,7 +62,7 @@
   const form = document.getElementById('tuv-booking-form');
   if (!form) return;
   const boxes = Array.from(form.querySelectorAll('.tuv-item'));
-  const formatter = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'});
+  const formatter = new Intl.NumberFormat({{ app.request.locale|json_encode(15)|raw }}, {style: 'currency', currency: 'EUR'});
   function update() {
     let net = 0;
     let gross = 0;

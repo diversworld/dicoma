@@ -1,68 +1,68 @@
 {% extends 'training/layout.html.twig' %}
-{% block title %}{{ participant.course.title }} – Teilnahme{% endblock %}
+{% block title %}{{ participant.course.title }} – {{ 'Teilnahme'|trans }}{% endblock %}
 {% block training_body %}
-<h1>Teilnahmebestätigung: {{ participant.course.title }}</h1>
-<p>{{ participant.fullName }} · Anmeldung vom {{ participant.registeredAt|date('d.m.Y H:i') }} · {{ participant.statusLabel }}</p>
+<h1>{{ 'Teilnahmebestätigung'|trans }}: {{ participant.course.title }}</h1>
+<p>{{ participant.fullName }} · {{ 'Anmeldung vom %date%'|trans({'%date%': participant.registeredAt|date('d.m.Y H:i')}) }} · {{ participant.statusLabel|trans }}</p>
 {% if participant.status.value == 'waitlisted' %}
-    <p role="status">Du stehst auf der Warteliste. Frei werdende Plätze werden in der Reihenfolge der Anmeldung vergeben. Bis zum Nachrücken ist keine Zahlung fällig.</p>
+    <p role="status">{{ 'Du stehst auf der Warteliste. Frei werdende Plätze werden in der Reihenfolge der Anmeldung vergeben. Bis zum Nachrücken ist keine Zahlung fällig.'|trans }}</p>
 {% endif %}
-<h2>Zahlungsübersicht</h2>
-<p>Vereinbarte Kursgebühr: {{ (participant.feeCents / 100)|number_format(2, ',', '.') }} EUR.
-    Bezahlt: {{ (paid / 100)|number_format(2, ',', '.') }} EUR.
-    {% if participant.status.value == 'cancelled' %}Zur Erstattung offen: {{ (paid / 100)|number_format(2, ',', '.') }} EUR.
-    {% else %}Offen: {{ ((participant.feeCents - paid) / 100)|number_format(2, ',', '.') }} EUR.{% endif %}</p>
-<p>Zahlung per Überweisung oder bar nach Absprache mit dem Kursverein. Verwendungszweck: Kurs {{ participant.course.id }} / Anmeldung {{ participant.id }}.</p>
+<h2>{{ 'Zahlungsübersicht'|trans }}</h2>
+<p>{{ 'Vereinbarte Kursgebühr'|trans }}: {{ (participant.feeCents / 100)|number_format(2, ',', '.') }} EUR.
+    {{ 'Bezahlt'|trans }}: {{ (paid / 100)|number_format(2, ',', '.') }} EUR.
+    {% if participant.status.value == 'cancelled' %}{{ 'Zur Erstattung offen'|trans }}: {{ (paid / 100)|number_format(2, ',', '.') }} EUR.
+    {% else %}{{ 'Offen'|trans }}: {{ ((participant.feeCents - paid) / 100)|number_format(2, ',', '.') }} EUR.{% endif %}</p>
+<p>{{ 'Zahlung per Überweisung oder bar nach Absprache mit dem Kursverein. Verwendungszweck: Kurs %course% / Anmeldung %registration%.'|trans({'%course%': participant.course.id, '%registration%': participant.id}) }}</p>
 <ul>{% for payment in payments %}
     <li>{{ payment.recordedAt|date('d.m.Y H:i') }}: {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR
-        ({{ payment.method == 'cash' ? 'Barzahlung' : 'Überweisung' }}) – Beleg {{ payment.reference }}</li>
-{% else %}<li>Noch keine Zahlungen gebucht.</li>{% endfor %}</ul>
+        ({{ (payment.method == 'cash' ? 'Barzahlung' : 'Überweisung')|trans }}) – {{ 'Beleg'|trans }} {{ payment.reference }}</li>
+{% else %}<li>{{ 'Noch keine Zahlungen gebucht.'|trans }}</li>{% endfor %}</ul>
 {% set manage = training_route_prefix and is_granted('COURSE_MANAGE', participant.course) %}
 {% if manage %}
 <form method="post" action="{{ path('admin_portal_training_payment', {id: participant.id}) }}">
     <input type="hidden" name="_token" value="{{ csrf_token('training_payment_' ~ participant.id) }}">
-    <label>Betrag in EUR (Erstattungen negativ) <input name="amount" required inputmode="decimal"></label>
-    <label>Zahlungsart <select name="method"><option value="transfer">Überweisung</option><option value="cash">Barzahlung</option></select></label>
-    <label>Eindeutige Belegreferenz <input name="reference" required maxlength="120"></label>
-    <button type="submit">Zahlung / Erstattung buchen</button>
+    <label>{{ 'Betrag in EUR (Erstattungen negativ)'|trans }} <input name="amount" required inputmode="decimal"></label>
+    <label>{{ 'Zahlungsart'|trans }} <select name="method"><option value="transfer">{{ 'Überweisung'|trans }}</option><option value="cash">{{ 'Barzahlung'|trans }}</option></select></label>
+    <label>{{ 'Eindeutige Belegreferenz'|trans }} <input name="reference" required maxlength="120"></label>
+    <button type="submit">{{ 'Zahlung / Erstattung buchen'|trans }}</button>
 </form>
 {% endif %}
-<h2>Individueller Ausbildungsfortschritt: {{ progress.percent }} %</h2>
+<h2>{{ 'Individueller Ausbildungsfortschritt'|trans }}: {{ progress.percent }} %</h2>
 <ul>{% for requirement in progress.requirements %}
-    <li>{{ requirement.name }}: {{ requirement.credited }} / {{ requirement.target }} bestanden
-        ({{ requirement.required ? 'Pflicht' : 'Optional' }})
-        <ul>{% for session in requirement.sessions %}<li>{{ session.date }} – {{ session.title }}: {{ session.status }}</li>{% endfor %}</ul></li>
-{% else %}<li>Ausbildungsplan noch nicht hinterlegt.</li>{% endfor %}</ul>
-<h2>Ausbildungstermine</h2>
+    <li>{{ requirement.name }}: {{ requirement.credited }} / {{ requirement.target }} {{ 'bestanden'|trans }}
+        ({{ (requirement.required ? 'Pflicht' : 'Optional')|trans }})
+        <ul>{% for session in requirement.sessions %}<li>{{ session.date }} – {{ session.title }}: {{ session.status|trans }}</li>{% endfor %}</ul></li>
+{% else %}<li>{{ 'Ausbildungsplan noch nicht hinterlegt.'|trans }}</li>{% endfor %}</ul>
+<h2>{{ 'Ausbildungstermine'|trans }}</h2>
 {% if training_route_prefix or participant.course.schedulePublishedAt %}
 <ul>{% for session in participant.course.schedule %}
-    <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
+    <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen'|trans }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
         – {{ session.title }} – {{ session.location }} – {{ session.instructor }}</li>
-{% else %}<li>Noch keine Termine geplant.</li>{% endfor %}</ul>
+{% else %}<li>{{ 'Noch keine Termine geplant.'|trans }}</li>{% endfor %}</ul>
 {% if participant.course.schedulePublishedAt and (not training_route_prefix or manage) %}
-<p><a href="{{ training_route_prefix ? path('admin_training_timetable', {id: participant.course.id}) : path('student_course_timetable', {id: participant.id}) }}">Freigegebenen Terminplan anzeigen / herunterladen</a></p>
+<p><a href="{{ training_route_prefix ? path('admin_training_timetable', {id: participant.course.id}) : path('student_course_timetable', {id: participant.id}) }}">{{ 'Freigegebenen Terminplan anzeigen / herunterladen'|trans }}</a></p>
 {% endif %}
 {% else %}
-<p>Der Terminplan ist noch nicht freigegeben.</p>
+<p>{{ 'Der Terminplan ist noch nicht freigegeben.'|trans }}</p>
 {% endif %}
 {% if participant.certificateNumber %}
-    <p><a href="{{ path(training_route_prefix ~ 'training_certificate', {id: participant.id}) }}">Bescheinigung / Brevetierungsdaten drucken</a></p>
+    <p><a href="{{ path(training_route_prefix ~ 'training_certificate', {id: participant.id}) }}">{{ 'Bescheinigung / Brevetierungsdaten drucken'|trans }}</a></p>
 {% endif %}
 {% if participant.archivedAt %}
-    <p>Ausbildungsnachweise archiviert am {{ participant.archivedAt|date('d.m.Y H:i') }}.</p>
+    <p>{{ 'Ausbildungsnachweise archiviert am %date%.'|trans({'%date%': participant.archivedAt|date('d.m.Y H:i')}) }}</p>
 {% endif %}
 {% if participant.status.value in ['registered', 'active', 'waitlisted'] and participant.course.status.value != 'completed' %}
     {% if manage or participant.person == app.user.person %}
     <form method="post" action="{{ path(training_route_prefix ~ 'training_cancel', {id: participant.id}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('training_cancel_' ~ participant.id) }}">
-        <button type="submit">Teilnahme stornieren</button>
+        <button type="submit">{{ 'Teilnahme stornieren'|trans }}</button>
     </form>
     {% endif %}
     {% if manage and (is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_ADMIN')) %}
     <form method="post" action="{{ path('admin_portal_training_complete_participant', {id: participant.id}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('training_complete_' ~ participant.id) }}">
-        <label>Offizielle Brevetnummer (optional) <input name="brevetNumber" maxlength="120"></label>
-        <button type="submit" name="decision" value="passed">Bestanden und Nachweis ausstellen</button>
-        <button type="submit" name="decision" value="failed">Nicht bestanden</button>
+        <label>{{ 'Offizielle Brevetnummer (optional)'|trans }} <input name="brevetNumber" maxlength="120"></label>
+        <button type="submit" name="decision" value="passed">{{ 'Bestanden und Nachweis ausstellen'|trans }}</button>
+        <button type="submit" name="decision" value="failed">{{ 'Nicht bestanden'|trans }}</button>
     </form>
     {% endif %}
 {% endif %}

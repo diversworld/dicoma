@@ -1,28 +1,28 @@
 {% extends 'training/layout.html.twig' %}
-{% block title %}Ausbildungsportal{% endblock %}
+{% block title %}{{ 'Ausbildungsportal'|trans }}{% endblock %}
 {% block training_body %}
-<h1>Ausbildungsportal</h1>
+<h1>{{ 'Ausbildungsportal'|trans }}</h1>
 {% if not training_route_prefix %}
-<h2>Tauchschüler: Meine Kurse</h2>
+<h2>{{ 'Tauchschüler: Meine Kurse'|trans }}</h2>
 <ul>
 {% for enrollment in enrollments %}
-    <li><a href="{{ path('training_participant', {id: enrollment.id}) }}">{{ enrollment.course.title }}</a> – {{ enrollment.statusLabel }}</li>
-{% else %}<li>Noch keine Kursanmeldung vorhanden. Die Teilnahme ist auch ohne Vereinsmitgliedschaft möglich.</li>{% endfor %}
+    <li><a href="{{ path('training_participant', {id: enrollment.id}) }}">{{ enrollment.course.title }}</a> – {{ enrollment.statusLabel|trans }}</li>
+{% else %}<li>{{ 'Noch keine Kursanmeldung vorhanden. Die Teilnahme ist auch ohne Vereinsmitgliedschaft möglich.'|trans }}</li>{% endfor %}
 </ul>
 {% endif %}
 {% if training_route_prefix and (is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN')) %}
-    <h2>{% if is_granted('ROLE_TRAINING_MANAGER') %}Ausbildungsleitung{% elseif is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}Kursverwaltung{% else %}Ausbilder: Meine Kurse{% endif %}</h2>
+    <h2>{% if is_granted('ROLE_TRAINING_MANAGER') %}{{ 'Ausbildungsleitung'|trans }}{% elseif is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}{{ 'Kursverwaltung'|trans }}{% else %}{{ 'Ausbilder: Meine Kurse'|trans }}{% endif %}</h2>
     {% if is_granted('ROLE_TRAINING_MANAGER') or is_granted('ROLE_COURSE_ADMIN') or is_granted('ROLE_ADMIN') %}
-        <p><a class="btn btn-primary" href="{{ path('admin_portal_training_course_new') }}">Kurs anlegen</a></p>
+        <p><a class="btn btn-primary" href="{{ path('admin_portal_training_course_new') }}">{{ 'Kurs anlegen'|trans }}</a></p>
         {% if admin_club_context.club %}
-            <p><a href="{{ path('admin_course_division_review') }}">Ungeprüfte Kurs-Spartenzuordnungen</a></p>
+            <p><a href="{{ path('admin_course_division_review') }}">{{ 'Ungeprüfte Kurs-Spartenzuordnungen'|trans }}</a></p>
         {% endif %}
         {% if is_granted('ROLE_SUPER_ADMIN') %}
-            <p><a href="{{ path('admin_course_division_review', {club: 'unassigned'}) }}">Ungeprüfte Kurse ohne Verein</a></p>
+            <p><a href="{{ path('admin_course_division_review', {club: 'unassigned'}) }}">{{ 'Ungeprüfte Kurse ohne Verein'|trans }}</a></p>
         {% endif %}
     {% endif %}
     <ul>{% for course in courses %}
-        <li><a href="{{ path('admin_portal_training_course', {id: course.id}) }}">{{ course.title }}</a> – {{ course.status.label() }}</li>
-    {% else %}<li>Keine zugeordneten Kurse.</li>{% endfor %}</ul>
+        <li><a href="{{ path('admin_portal_training_course', {id: course.id}) }}">{{ course.title }}</a> – {{ course.status.label()|trans }}</li>
+    {% else %}<li>{{ 'Keine zugeordneten Kurse.'|trans }}</li>{% endfor %}</ul>
 {% endif %}
 {% endblock %}

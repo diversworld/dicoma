@@ -10,6 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 
 #[IsGranted('ROLE_MEMBER')]
 final class MemberTuvMultiBookingController extends AbstractController
@@ -88,7 +89,7 @@ final class MemberTuvMultiBookingController extends AbstractController
                         }
                     }
                 });
-                $this->addFlash('success', count($ids).' Flasche(n) gemeinsam zum TÜV angemeldet.');
+                $this->addFlash('success', new TranslatableMessage('%count% Flasche(n) gemeinsam zum TÜV angemeldet.', ['%count%' => count($ids)]));
                 return $this->redirectToRoute('member_equipment_index', [], Response::HTTP_SEE_OTHER);
             } catch (\DomainException $e) {
                 $this->addFlash('danger', $e->getMessage());

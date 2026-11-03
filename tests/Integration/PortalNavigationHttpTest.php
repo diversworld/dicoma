@@ -3,7 +3,8 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, BarShiftDefinition, Club, Member, MemberDocument, MemberQualification, MemberTank, MemberTankCheckBooking, Person, Qualification, Sport, TankCheck, Team, TeamMember, User};
+use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, BarShiftDefinition, Club, CourseParticipant, Courses, EquipmentCategory, EquipmentItem, Member, MemberDocument, MemberQualification, MemberTank, MemberTankCheckBooking, Person, Qualification, Sport, TankCheck, TankCheckArticle, Team, TeamMember, User};
+use App\Enum\CourseParticipantStatus;
 use App\Enum\MembershipStatus;
 use App\Enum\TeamMemberRole;
 use Doctrine\ORM\EntityManagerInterface;
@@ -259,6 +260,278 @@ final class PortalNavigationHttpTest extends WebTestCase
                 self::assertSelectorTextContains('main', $text);
             }
             self::assertStringNotContainsString($empty, $this->client->getCrawler()->filter('main')->text());
+        }
+    }
+
+    public function testMemberEquipmentTranslationsAndValidationAcrossStates(): void
+    {
+        $user = $this->account('equipment-translations');
+        $memberId = $user->getMember()->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Meine Ausrüstung', 'Erste Flasche hinzufügen', 'Überfällig', 'Flasche bearbeiten', 'Bitte Bezeichnung, Seriennummer und Flaschengröße gültig eingeben.'],
+            'en' => ['My equipment', 'Add your first cylinder', 'Overdue', 'Edit tank', 'Please enter a valid label, serial number and cylinder size.'],
+            'fr' => ['Mon équipement', 'Ajouter votre première bouteille', 'En retard', 'Modifier la bouteille', 'Veuillez saisir une désignation, un numéro de série et une taille valides.'],
+            'es' => ['Mi equipo', 'Añadir la primera botella', 'Vencida', 'Editar botella', 'Introduzca una denominación, número de serie y tamaño válidos.'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/my/equipment');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('#meine-flaschen', $empty);
+        }
+        $member = $this->em->find(Member::class, $memberId);
+        $tank = (new MemberTank())->setMember($member)->setLabel('Fixture cylinder')->setSerialNumber('FIXTURE-001')
+            ->setVolume('12')->setWaterCapacityLiters('12.00')->setNextInspectionAt(new \DateTimeImmutable('yesterday'));
+        $check = (new TankCheck())->setCheckDate(new \DateTime('tomorrow'))->setIsPublished(true);
+        $booking = (new MemberTankCheckBooking())->setMember($member)->setMemberTank($tank)->setTankCheck($check)->setStatus('received');
+        foreach ([$tank, $check, $booking] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $tankId = $tank->getId();
+        $bookingId = $booking->getId();
+        $details = [
+            'de' => ['Meine TÜV-Anmeldung', 'Beim Gerätewart', 'Für diese Anmeldung sind keine Einzelpositionen gespeichert.', 'Noch keine Rechnung ausgestellt.'],
+            'en' => ['My cylinder inspection registration', 'With the equipment manager', 'No individual items are recorded for this registration.', 'No invoice has been issued yet.'],
+            'fr' => ['Mon inscription au contrôle de bouteille', 'Chez le responsable du matériel', 'Aucune prestation individuelle n’est enregistrée pour cette inscription.', 'Aucune facture n’a encore été émise.'],
+            'es' => ['Mi inscripción a la inspección de la botella', 'Con el responsable del equipo', 'No hay partidas individuales registradas para esta inscripción.', 'Aún no se ha emitido ninguna factura.'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty, $due, $edit, $error]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $crawler = $this->client->request('GET', '/my/equipment');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('#meine-flaschen', $due);
+            self::assertSelectorTextContains('#meine-flaschen a[href$="/edit"]', $edit);
+            self::assertSelectorTextContains('#meine-anmeldungen', 'Fixture cylinder');
+            $token = $crawler->filter('form[action="/my/equipment/tanks"] input[name="_token"]')->attr('value');
+            $this->client->request('POST', '/my/equipment/tanks', ['_token' => $token, 'label' => 'x']);
+            self::assertResponseRedirects('/my/equipment', 303);
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="alert"]', $error);
+            $this->client->request('GET', '/my/equipment/tanks/'.$tankId.'/edit');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('title', $edit);
+            self::assertSelectorExists('select[name="volume"] option[value="12"]:checked');
+            $this->client->request('GET', '/my/equipment/bookings/'.$bookingId);
+            self::assertResponseIsSuccessful();
+            foreach ($details[$locale] as $expected) {
+                self::assertSelectorTextContains('section.section', $expected);
+            }
+        }
+    }
+
+    public function testTrainingOverviewIsTranslatedWithAndWithoutEnrollments(): void
+    {
+        $user = $this->account('training-translations');
+        $personId = $user->getPerson()->getId();
+        $clubId = $this->club->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Ausbildungsportal', 'Noch keine Kursanmeldung vorhanden.', 'Angemeldet'],
+            'en' => ['Training portal', 'No course registrations yet.', 'Registered'],
+            'fr' => ['Portail de formation', 'Aucune inscription à un cours pour le moment.', 'Inscrit'],
+            'es' => ['Portal de formación', 'Aún no hay inscripciones a cursos.', 'Inscrito'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/training');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('main', $empty);
+            self::assertSelectorExists('nav[aria-label="'.$heading.'"]');
+        }
+        $person = $this->em->find(Person::class, $personId);
+        $club = $this->em->find(Club::class, $clubId);
+        $course = (new Courses())->setTitle('Fixture training course')->setCategory('beginner')->setClub($club);
+        $participant = (new CourseParticipant())->setCourse($course)->setPerson($person);
+        $this->em->persist($course);
+        $this->em->persist($participant);
+        $this->em->flush();
+        foreach ($expectations as $locale => [$heading, $empty, $status]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/training');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('main', 'Fixture training course');
+            self::assertSelectorTextContains('main', $status);
+            self::assertStringNotContainsString($empty, $this->client->getCrawler()->filter('main')->text());
+        }
+    }
+
+    public function testMultipleInspectionRegistrationTranslationsForEmptyAndInvalidStates(): void
+    {
+        $user = $this->account('inspection-multiple-translations');
+        $check = (new TankCheck())->setCheckDate(new \DateTime('tomorrow'))->setIsPublished(true);
+        $this->em->persist($check);
+        $this->em->flush();
+        $checkId = $check->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['TÜV-Mehrfachanmeldung', 'Keine noch anmeldbaren eigenen Flaschen', 'Bitte 1 bis 30 eigene Flaschen auswählen.'],
+            'en' => ['Multiple cylinder inspection registration', 'No eligible cylinders', 'Please select between 1 and 30 of your cylinders.'],
+            'fr' => ['Inscription groupée au contrôle des bouteilles', 'Aucune de vos bouteilles inscrivables', 'Veuillez sélectionner entre 1 et 30 de vos bouteilles.'],
+            'es' => ['Inscripción conjunta a la inspección de botellas', 'No hay botellas propias inscribibles', 'Seleccione entre 1 y 30 botellas propias.'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty, $error]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $crawler = $this->client->request('GET', '/my/equipment/checks/'.$checkId.'/multiple');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('section.section', $empty);
+            $token = $crawler->filter('#tuv-multiple-form input[name="_token"]')->attr('value');
+            $this->client->request('POST', '/my/equipment/checks/'.$checkId.'/multiple', ['_token' => $token]);
+            self::assertResponseRedirects('/my/equipment/checks/'.$checkId.'/multiple', 303);
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="alert"]', $error);
+        }
+        $member = $this->em->find(Member::class, $user->getMember()->getId());
+        $tank = (new MemberTank())->setMember($member)->setLabel('Fixture cylinder')->setSerialNumber('FIXTURE-SINGLE')
+            ->setVolume('12')->setWaterCapacityLiters('12.00');
+        $this->em->persist($tank);
+        $this->em->flush();
+        $tankId = $tank->getId();
+        $single = [
+            'de' => ['TÜV-Leistungen auswählen', 'Keine passenden Leistungen verfügbar.'],
+            'en' => ['Select inspection services', 'No matching services available.'],
+            'fr' => ['Sélectionner les prestations de contrôle', 'Aucune prestation correspondante disponible.'],
+            'es' => ['Seleccionar servicios de inspección', 'No hay servicios correspondientes disponibles.'],
+        ];
+        foreach ($single as $locale => [$heading, $empty]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/my/equipment/checks/'.$checkId.'/tanks/'.$tankId.'/services');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('#tuv-booking-form', $empty);
+            self::assertSelectorExists('#tuv-booking-form button[type="submit"]:disabled');
+        }
+    }
+
+    public function testTrainingParticipantTranslationsAcrossRegistrationStates(): void
+    {
+        $user = $this->account('participant-translations');
+        $course = (new Courses())->setTitle('Fixture participant course')->setCategory('beginner')->setClub($this->club);
+        $participant = (new CourseParticipant())->setCourse($course)->setPerson($user->getPerson())
+            ->setStatus(CourseParticipantStatus::WAITLISTED);
+        $this->em->persist($course);
+        $this->em->persist($participant);
+        $this->em->flush();
+        $participantId = $participant->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Teilnahmebestätigung', 'Du stehst auf der Warteliste.', 'Noch keine Zahlungen gebucht.', 'Ausbildungsplan noch nicht hinterlegt.', 'Zur Erstattung offen'],
+            'en' => ['Participation confirmation', 'You are on the waiting list.', 'No payments recorded yet.', 'No training plan has been added yet.', 'Refund outstanding'],
+            'fr' => ['Confirmation de participation', 'Vous êtes sur la liste d’attente.', 'Aucun paiement enregistré pour le moment.', 'Aucun plan de formation n’a encore été défini.', 'Remboursement restant'],
+            'es' => ['Confirmación de participación', 'Está en la lista de espera.', 'Aún no se han registrado pagos.', 'Aún no se ha establecido un plan de formación.', 'Reembolso pendiente'],
+        ];
+        foreach ($expectations as $locale => [$heading, $waiting, $payments, $plan]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/training/participant/'.$participantId);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('main', $waiting);
+            self::assertSelectorTextContains('main', $payments);
+            self::assertSelectorTextContains('main', $plan);
+        }
+        $participant = $this->em->find(CourseParticipant::class, $participantId);
+        $participant->setStatus(CourseParticipantStatus::CANCELLED);
+        $this->em->flush();
+        foreach ($expectations as $locale => [$heading, $waiting, $payments, $plan, $refund]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $this->client->request('GET', '/training/participant/'.$participantId);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('main', $refund);
+            self::assertStringNotContainsString($waiting, $this->client->getCrawler()->filter('main')->text());
+        }
+    }
+
+    public function testInspectionRegistrationSuccessMessagesInFourLanguages(): void
+    {
+        $user = $this->account('inspection-success-translations');
+        $check = (new TankCheck())->setCheckDate(new \DateTime('tomorrow'))->setIsPublished(true);
+        $article = (new TankCheckArticle())->setTitle('Fixture service')->setPriceNetto('10.00')->setSelectionMode('required');
+        $check->addArticle($article);
+        $this->em->persist($check);
+        $this->em->persist($article);
+        $tanks = [];
+        for ($i = 0; $i < 8; ++$i) {
+            $tank = (new MemberTank())->setMember($user->getMember())->setLabel('Fixture '.$i)->setSerialNumber('FIXTURE-SUCCESS-'.$i)
+                ->setVolume('12')->setWaterCapacityLiters('12.00');
+            $this->em->persist($tank);
+            $tanks[] = $tank;
+        }
+        $this->em->flush();
+        $checkId = $check->getId();
+        $tankIds = array_map(static fn (MemberTank $tank) => $tank->getId(), $tanks);
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['TÜV-Anmeldung gespeichert:', '1 Flasche(n) gemeinsam zum TÜV angemeldet.'],
+            'en' => ['Inspection registration saved:', '1 cylinder(s) registered together for inspection.'],
+            'fr' => ['Inscription au contrôle enregistrée :', '1 bouteille(s) inscrite(s) ensemble au contrôle.'],
+            'es' => ['Inscripción a la inspección guardada:', '1 botella(s) inscrita(s) conjuntamente a la inspección.'],
+        ];
+        foreach (array_keys($expectations) as $index => $locale) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $singleId = $tankIds[$index * 2];
+            $crawler = $this->client->request('GET', '/my/equipment/checks/'.$checkId.'/tanks/'.$singleId.'/services');
+            self::assertResponseIsSuccessful();
+            $token = $crawler->filter('#tuv-booking-form input[name="_token"]')->attr('value');
+            $this->client->request('POST', '/my/equipment/checks/'.$checkId.'/book', ['_token' => $token, 'member_tank_id' => (string) $singleId]);
+            self::assertResponseRedirects('/my/equipment', 303);
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="alert"]', $expectations[$locale][0]);
+
+            $crawler = $this->client->request('GET', '/my/equipment/checks/'.$checkId.'/multiple');
+            self::assertResponseIsSuccessful();
+            $token = $crawler->filter('#tuv-multiple-form input[name="_token"]')->attr('value');
+            $this->client->request('POST', '/my/equipment/checks/'.$checkId.'/multiple', ['_token' => $token, 'tanks' => [(string) $tankIds[$index * 2 + 1]]]);
+            self::assertResponseRedirects('/my/equipment', 303);
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="alert"]', $expectations[$locale][1]);
+        }
+    }
+
+    public function testReservationTranslationsForEmptyValidationAndSavedStates(): void
+    {
+        $user = $this->account('reservation-translations');
+        $category = (new EquipmentCategory())->setClub($this->club)->setName('Fixture category')->setCode('fixture');
+        $asset = (new EquipmentItem())->setClub($this->club)->setCategory($category)->setName('Fixture equipment')->setInventoryNumber('FIXTURE-RESERVE');
+        $this->em->persist($category);
+        $this->em->persist($asset);
+        $this->em->flush();
+        $assetId = $asset->getId();
+        $this->client->loginUser($user);
+        $expectations = [
+            'de' => ['Reservierungssystem', 'Es wurden noch keine Reservierungen vorgenommen.', 'Bitte Artikel und einen gültigen Zeitraum auswählen', 'erfolgreich gespeichert', 'Reserviert – Ausgabe ausstehend'],
+            'en' => ['Reservation system', 'No reservations have been made yet.', 'Select items and a valid period', 'saved:', 'Reserved – awaiting issue'],
+            'fr' => ['Système de réservation', 'Aucune réservation n’a encore été effectuée.', 'Sélectionnez des articles et une période valide', 'enregistrée :', 'Réservé – remise en attente'],
+            'es' => ['Sistema de reservas', 'Aún no se han realizado reservas.', 'Seleccione artículos y un período válido', 'guardada:', 'Reservado – pendiente de entrega'],
+        ];
+        foreach ($expectations as $locale => [$heading, $empty, $error]) {
+            $this->client->request('GET', '/portal/'.$locale);
+            $crawler = $this->client->request('GET', '/my/reservations');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', $heading);
+            self::assertSelectorTextContains('#meine-reservierungen', $empty);
+            $token = $crawler->filter('#reservation-form input[name="_token"]')->attr('value');
+            $this->client->request('POST', '/my/reservations', ['_token' => $token]);
+            self::assertResponseRedirects('/my/reservations');
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="alert"]', $error);
+        }
+        foreach (array_values($expectations) as $index => [$heading, $empty, $error, $success, $status]) {
+            $locale = array_keys($expectations)[$index];
+            $this->client->request('GET', '/portal/'.$locale);
+            $crawler = $this->client->request('GET', '/my/reservations');
+            $token = $crawler->filter('#reservation-form input[name="_token"]')->attr('value');
+            $start = (new \DateTimeImmutable('today'))->modify('+'.($index * 2 + 1).' days');
+            $this->client->request('POST', '/my/reservations', [
+                '_token' => $token, 'items' => ['item:'.$assetId],
+                'start' => $start->format('Y-m-d'), 'end' => $start->modify('+1 day')->format('Y-m-d'),
+            ]);
+            self::assertResponseRedirects();
+            $this->client->followRedirect();
+            self::assertSelectorTextContains('[role="status"]', $success);
+            self::assertSelectorTextContains('#meine-reservierungen', $status);
+            self::assertSelectorTextContains('#meine-reservierungen', 'Fixture equipment');
         }
     }
 

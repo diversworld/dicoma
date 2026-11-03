@@ -1,20 +1,20 @@
 {% extends 'base.html.twig' %}
-{% block title %}Meine TÜV-Anmeldung | DICOMA{% endblock %}
+{% block title %}{{ 'Meine TÜV-Anmeldung'|trans }} | DICOMA{% endblock %}
 {% block hero %}{% endblock %}
 {% block body %}
 <section class="section"><div class="container">
-  <h1>Meine TÜV-Anmeldung #{{ booking.id }}</h1>
-  <p><a href="{{ path('member_equipment_index') }}">← Zurück zu meiner Ausrüstung</a></p>
+  <h1>{{ 'Meine TÜV-Anmeldung'|trans }} #{{ booking.id }}</h1>
+  <p><a href="{{ path('member_equipment_index') }}">← {{ 'Zurück zu meiner Ausrüstung'|trans }}</a></p>
   <dl class="row">
-    <dt class="col-sm-3">Flasche</dt><dd class="col-sm-9">{{ booking.memberTank.label }} ({{ booking.memberTank.serialNumber }})</dd>
-    <dt class="col-sm-3">Prüftermin</dt><dd class="col-sm-9">{{ booking.tankCheck.checkDate ? booking.tankCheck.checkDate|date('d.m.Y') : 'Noch nicht festgelegt' }}</dd>
-    <dt class="col-sm-3">Prüfstelle</dt><dd class="col-sm-9">{{ booking.tankCheck.vendorName ?: '–' }}</dd>
-    <dt class="col-sm-3">Anmeldedatum</dt><dd class="col-sm-9">{{ booking.createdAt|date('d.m.Y H:i') }}</dd>
-    <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ {'requested': 'Angemeldet', 'cancelled': 'Storniert'}[booking.status] ?? booking.status }}</dd>
+    <dt class="col-sm-3">{{ 'Flasche'|trans }}</dt><dd class="col-sm-9">{{ booking.memberTank.label }} ({{ booking.memberTank.serialNumber }})</dd>
+    <dt class="col-sm-3">{{ 'Prüftermin'|trans }}</dt><dd class="col-sm-9">{{ booking.tankCheck.checkDate ? booking.tankCheck.checkDate|date('d.m.Y') : 'Noch nicht festgelegt'|trans }}</dd>
+    <dt class="col-sm-3">{{ 'Prüfstelle'|trans }}</dt><dd class="col-sm-9">{{ booking.tankCheck.vendorName ?: '–' }}</dd>
+    <dt class="col-sm-3">{{ 'Anmeldedatum'|trans }}</dt><dd class="col-sm-9">{{ booking.createdAt|date('d.m.Y H:i') }}</dd>
+    <dt class="col-sm-3">{{ 'Status'|trans }}</dt><dd class="col-sm-9">{% include 'member_portal/_booking_status.html.twig' with {status: booking.status} only %}</dd>
   </dl>
-  <h2>Gebuchte Leistungen</h2>
+  <h2>{{ 'Gebuchte Leistungen'|trans }}</h2>
   <div class="table-responsive"><table class="table table-striped">
-    <thead><tr><th>Leistung</th><th>Menge</th><th class="text-right">Netto gesamt</th><th class="text-right">Brutto gesamt</th></tr></thead>
+    <thead><tr><th>{{ 'Leistung'|trans }}</th><th>{{ 'Menge'|trans }}</th><th class="text-right">{{ 'Netto gesamt'|trans }}</th><th class="text-right">{{ 'Brutto gesamt'|trans }}</th></tr></thead>
     <tbody>
       {% for item in items %}
       <tr>
@@ -24,15 +24,15 @@
         <td class="text-right">{{ (item.grossSnapshot * item.quantity)|number_format(2, ',', '.') }} €</td>
       </tr>
       {% else %}
-      <tr><td colspan="4">Für diese Anmeldung sind keine Einzelpositionen gespeichert.</td></tr>
+      <tr><td colspan="4">{{ 'Für diese Anmeldung sind keine Einzelpositionen gespeichert.'|trans }}</td></tr>
       {% endfor %}
     </tbody>
-    <tfoot><tr><th colspan="2">Gesamt</th><th class="text-right">{{ netTotal|number_format(2, ',', '.') }} €</th><th class="text-right">{{ grossTotal|number_format(2, ',', '.') }} €</th></tr></tfoot>
+    <tfoot><tr><th colspan="2">{{ 'Gesamt'|trans }}</th><th class="text-right">{{ netTotal|number_format(2, ',', '.') }} €</th><th class="text-right">{{ grossTotal|number_format(2, ',', '.') }} €</th></tr></tfoot>
   </table></div>
-  <p class="text-muted">Die Beträge stammen aus den bei der Anmeldung gespeicherten Preisen. Spätere Preisänderungen beeinflussen diese Übersicht nicht.</p>
-  <h2>TÜV-Dokumente</h2>
-  <ul>{% for doc in documents %}<li><a href="{{ path('member_tuv_document_download', {id:doc.id}) }}">{{ doc.originalName }}</a> ({{ doc.uploadedAt|date('d.m.Y') }})</li>{% else %}<li>Noch keine Dokumente hinterlegt.</li>{% endfor %}</ul>
-  <h2>Rechnung</h2>
-  {% if invoice %}<p><a href="{{ path('member_tuv_invoice', {id:invoice.id}) }}">Rechnung {{ invoice.number }} anzeigen / drucken</a></p>{% else %}<p class="text-muted">Noch keine Rechnung ausgestellt.</p>{% endif %}
+  <p class="text-muted">{{ 'Die Beträge stammen aus den bei der Anmeldung gespeicherten Preisen. Spätere Preisänderungen beeinflussen diese Übersicht nicht.'|trans }}</p>
+  <h2>{{ 'TÜV-Dokumente'|trans }}</h2>
+  <ul>{% for doc in documents %}<li><a href="{{ path('member_tuv_document_download', {id:doc.id}) }}">{{ doc.originalName }}</a> ({{ doc.uploadedAt|date('d.m.Y') }})</li>{% else %}<li>{{ 'Noch keine Dokumente hinterlegt.'|trans }}</li>{% endfor %}</ul>
+  <h2>{{ 'Rechnung'|trans }}</h2>
+  {% if invoice %}<p><a href="{{ path('member_tuv_invoice', {id:invoice.id}) }}">{{ 'Rechnung %number% anzeigen / drucken'|trans({'%number%': invoice.number}) }}</a></p>{% else %}<p class="text-muted">{{ 'Noch keine Rechnung ausgestellt.'|trans }}</p>{% endif %}
 </div></section>
 {% endblock %}
