@@ -162,10 +162,21 @@ final class BarDutyWorkflow
 
     public function cancelAssignment(int $id, string $reason): void
     {
+        $this->withdrawAssignment($id, $reason, true);
+    }
+
+    public function withdrawOwnAssignment(int $id, string $reason): void
+    {
+        $this->withdrawAssignment($id, $reason, false);
+    }
+
+    private function withdrawAssignment(int $id, string $reason, bool $management): void
+    {
         self::reason($reason);
-        $this->transaction(function () use ($id, $reason): void {
+        $this->transaction(function () use ($id, $reason, $management): void {
             $assignment = $this->assignment($id);
-            if (!$this->access->isManager() && $assignment->getMember()->getId() !== $this->access->member()->getId()) { throw new AccessDeniedException(); }
+            if ($assignment->getMember()->getId() !== $this->access->member()->getId()
+                && (!$management || !$this->access->isManager())) { throw new AccessDeniedException(); }
             $this->future($assignment->getShift());
             $assignment->cancel($this->access->actor(), $reason);
             $this->notify($assignment->getMember(), $assignment->getShift(), 'cancel-assignment-'.$id, 'Thekendienst zurückgezogen', $reason);

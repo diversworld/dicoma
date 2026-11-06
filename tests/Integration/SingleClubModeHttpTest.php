@@ -83,6 +83,15 @@ final class SingleClubModeHttpTest extends WebTestCase
         self::assertSelectorExists('input[name$="[active]"][disabled]');
     }
 
+    public function testConfiguredMembershipClubCanAccessBarDutyInSingleClubMode(): void
+    {
+        $this->client->loginUser($this->account('bar-super', $this->club, [User::ROLE_SUPER_ADMIN]));
+        foreach (['/admin/bar-duty', '/admin/bar-duty/settings', '/admin/settings/bar-services', '/bar-duty'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
+    }
+
     public function testPublicApplicationCannotSelectAnotherClub(): void
     {
         foreach ([$this->club, $this->other] as $club) {

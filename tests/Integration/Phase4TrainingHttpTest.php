@@ -28,6 +28,7 @@ use App\Service\ScheduleParticipantSyncService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Doctrine\ORM\Tools\SchemaValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -88,6 +89,188 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         self::assertSame(1, $this->em->getRepository(CourseParticipant::class)->count([]));
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
+    }
+
+    public function testCancellationUsesTheCorrectPortalAndAdminReturnRoutes(): void
+    {
+        $course = $this->course();
+        $portalGuest = $this->user('portal-cancellation');
+        $adminGuest = $this->user('admin-cancellation');
+        $manager = $this->staff('cancellation-manager', User::ROLE_COURSE_ADMIN);
+        $this->em->flush();
+        $portalParticipant = $this->service()->register($course->getId(), $portalGuest->getPerson());
+        $adminParticipant = $this->service()->register($course->getId(), $adminGuest->getPerson());
+        $portalId = $portalParticipant->getId();
+        $adminId = $adminParticipant->getId();
+
+        $this->client->loginUser($portalGuest);
+        $crawler = $this->client->request('GET', '/training/participant/'.$portalId);
+        self::assertResponseIsSuccessful();
+        $form = $crawler->selectButton('Teilnahme stornieren')->form();
+        self::assertSame('/training/participant/'.$portalId.'/cancel', parse_url($form->getUri(), PHP_URL_PATH));
+        $this->client->submit($form);
+        self::assertResponseRedirects('/training/participant/'.$portalId);
+        self::assertSame(CourseParticipantStatus::CANCELLED, $this->em->find(CourseParticipant::class, $portalId)->getStatus());
+
+        $this->client->loginUser($manager);
+        $crawler = $this->client->request('GET', '/admin/training/participant/'.$adminId);
+        self::assertResponseIsSuccessful();
+        $form = $crawler->selectButton('Teilnahme stornieren')->form();
+        self::assertSame('/admin/training/participant/'.$adminId.'/cancel', parse_url($form->getUri(), PHP_URL_PATH));
+        $this->client->submit($form);
+        self::assertResponseRedirects('/admin/training/participant/'.$adminId);
+        self::assertSame(CourseParticipantStatus::CANCELLED, $this->em->find(CourseParticipant::class, $adminId)->getStatus());
+    }
+
+    public function testCertificatesRespectPersonalAndSelectedBackendClubBoundaries(): void
+    {
+        $course = $this->course();
+        $guest = $this->user('certificate-guest');
+        $stranger = $this->user('certificate-stranger');
+        $super = $this->staff('certificate-super', User::ROLE_SUPER_ADMIN);
+        $instructor = $this->staff('certificate-instructor', User::ROLE_INSTRUCTOR);
+        $course->setLeadInstructor($instructor->getMember());
+        $other = (new Club())->setName('Other certificate club');
+        $this->em->persist($other);
+        $archive = [
+            'participant' => 'Synthetic student', 'course' => 'Synthetic course', 'club' => 'Synthetic club',
+            'qualification' => 'Synthetic qualification', 'completedAt' => '2026-01-01', 'requirements' => [],
+        ];
+        $foreignParticipant = (new CourseParticipant())->setCourse($course)->setPerson($guest->getPerson())
+            ->setStatus(CourseParticipantStatus::PASSED);
+        $foreignParticipant->archiveTraining($archive, 'SYNTHETIC-GUEST');
+        $ownParticipant = (new CourseParticipant())->setCourse($course)->setPerson($super->getPerson())
+            ->setStatus(CourseParticipantStatus::PASSED);
+        $ownParticipant->archiveTraining($archive, 'SYNTHETIC-OWN');
+        $this->em->persist($foreignParticipant); $this->em->persist($ownParticipant); $this->em->flush();
+        $foreignPath = '/training/participant/'.$foreignParticipant->getId().'/certificate';
+        $ownPath = '/training/participant/'.$ownParticipant->getId().'/certificate';
+        $ownClubId = $this->club->getId();
+        $otherClubId = $other->getId();
+
+        $this->client->loginUser($super);
+        $this->client->request('GET', $foreignPath);
+        self::assertResponseRedirects('/admin'.$foreignPath, 303);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'SYNTHETIC-GUEST');
+        self::assertStringContainsString('no-store', $this->client->getResponse()->headers->get('Cache-Control'));
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $otherClubId,
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', $foreignPath);
+        self::assertResponseRedirects('/admin'.$foreignPath, 303);
+        $this->client->followRedirect();
+        self::assertResponseStatusCodeSame(403);
+        self::assertSelectorNotExists('link[href="/css/pages/training-certificate.css"]');
+        $this->client->request('GET', $ownPath);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'SYNTHETIC-OWN');
+        $this->client->request('GET', '/admin'.$ownPath);
+        self::assertResponseStatusCodeSame(403);
+
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $ownClubId,
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/admin'.$foreignPath);
+        self::assertResponseIsSuccessful();
+        $this->client->loginUser($guest);
+        $this->client->request('GET', $foreignPath);
+        self::assertResponseIsSuccessful();
+        $this->client->loginUser($stranger);
+        $this->client->request('GET', $foreignPath);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($instructor);
+        $this->client->request('GET', $foreignPath);
+        self::assertResponseRedirects('/admin'.$foreignPath, 303);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+    }
+
+    #[DataProvider('legacyManagementWrites')]
+    public function testLegacyManagementWritesRecheckSelectedClubBeforeSaving(string $operation): void
+    {
+        $course = $this->course();
+        $guest = $this->user('legacy-management-guest');
+        $super = $this->staff('legacy-management-super', User::ROLE_SUPER_ADMIN);
+        $other = (new Club())->setName('Other selected club');
+        $this->em->persist($other);
+        $this->em->flush();
+        $participant = $this->service()->register($course->getId(), $guest->getPerson());
+        if ($operation === 'course-complete') {
+            $participant->setStatus(CourseParticipantStatus::CANCELLED);
+            $this->em->flush();
+        }
+        $courseId = $course->getId();
+        $participantId = $participant->getId();
+        $ownClubId = $this->club->getId();
+        $otherClubId = $other->getId();
+        $this->client->loginUser($super);
+
+        $frontendAction = match ($operation) {
+            'payment' => '/training/participant/'.$participantId.'/payment',
+            'participant-complete' => '/training/participant/'.$participantId.'/complete',
+            'participant-cancel' => '/training/participant/'.$participantId.'/cancel',
+            'course-complete' => '/training/course/'.$courseId.'/complete',
+        };
+        $adminAction = '/admin'.$frontendAction;
+        $page = $operation === 'course-complete'
+            ? '/admin/training/course/'.$courseId
+            : '/admin/training/participant/'.$participantId;
+        $crawler = $this->client->request('GET', $page);
+        self::assertResponseIsSuccessful();
+        $token = $crawler->filter('form[action="'.$adminAction.'"] input[name="_token"]')->attr('value');
+        self::assertNotEmpty($token);
+        $payload = match ($operation) {
+            'payment' => ['_token' => $token, 'amount' => '10.00', 'method' => 'cash', 'reference' => 'boundary-test'],
+            'participant-complete' => ['_token' => $token, 'decision' => 'failed'],
+            'participant-cancel' => ['_token' => $token],
+            'course-complete' => ['_token' => $token],
+        };
+        $snapshot = fn (): array => [
+            $this->em->getConnection()->fetchOne('SELECT status FROM courses WHERE id = ?', [$courseId]),
+            $this->em->getConnection()->fetchOne('SELECT status FROM course_participant WHERE id = ?', [$participantId]),
+            $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM course_payment WHERE participant_id = ?', [$participantId]),
+        ];
+        $before = $snapshot();
+
+        $crawler = $this->client->request('GET', '/admin');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), ['admin_club[club]' => (string) $otherClubId]);
+        self::assertResponseRedirects();
+        $this->client->request('POST', $frontendAction, $payload);
+        self::assertSame($before, $snapshot());
+        self::assertResponseRedirects($adminAction, 307);
+        $this->client->followRedirect();
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame($before, $snapshot());
+
+        $crawler = $this->client->request('GET', '/admin');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), ['admin_club[club]' => (string) $ownClubId]);
+        self::assertResponseRedirects();
+        $this->client->request('POST', $frontendAction, $payload);
+        self::assertResponseRedirects($adminAction, 307);
+        self::assertSame($before, $snapshot());
+        $this->client->followRedirect();
+        self::assertResponseRedirects();
+        $after = $snapshot();
+        match ($operation) {
+            'payment' => self::assertSame(1, (int) $after[2]),
+            'participant-complete' => self::assertSame(CourseParticipantStatus::FAILED->value, $after[1]),
+            'participant-cancel' => self::assertSame(CourseParticipantStatus::CANCELLED->value, $after[1]),
+            'course-complete' => self::assertSame(CourseStatus::COMPLETED->value, $after[0]),
+        };
+    }
+
+    public static function legacyManagementWrites(): iterable
+    {
+        yield 'payment' => ['payment'];
+        yield 'participant completion' => ['participant-complete'];
+        yield 'participant cancellation' => ['participant-cancel'];
+        yield 'course completion' => ['course-complete'];
     }
 
     public function testCourseDivisionAssignmentsAreReviewedScopedAndPreserveCourseData(): void

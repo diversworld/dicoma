@@ -17,16 +17,26 @@ final class BarDutyAccess
         $user = $this->security->getUser();
         if (!$user instanceof User || $user->getMember()?->getClub() === null) { throw new AccessDeniedException('Vereinszuordnung erforderlich.'); }
         if (!$this->isManager() && !$user->getMember()->isActiveMember()) { throw new AccessDeniedException('Aktive Mitgliedschaft erforderlich.'); }
+        if ($this->clubContext->isBackendRequest() && !$this->selectedClubIsMembershipClub()) {
+            throw new AccessDeniedException('Bitte den Mitgliedschaftsverein für den Thekendienst auswählen.');
+        }
         return $user;
     }
     public function club(): Club { return $this->user()->getMember()->getClub(); }
     public function member(): Member { return $this->user()->getMember(); }
     public function actor(): string { return $this->user()->getUserIdentifier(); }
     public function isManager(): bool { return $this->security->isGranted('ROLE_BAR_MANAGER'); }
+    public function selectedClubIsMembershipClub(): bool
+    {
+        $user = $this->security->getUser();
+        $memberClubId = $user instanceof User ? $user->getMember()?->getClub()?->getId() : null;
+        return $memberClubId !== null && $memberClubId === $this->clubContext->getClub()?->getId();
+    }
     public function configurationActor(Club $club): string
     {
         $user = $this->security->getUser();
-        if (!$user instanceof User || !$this->isManager() || $this->clubContext->getClub()?->getId() !== $club->getId()) {
+        if (!$user instanceof User || !$this->isManager() || !$this->selectedClubIsMembershipClub()
+            || $this->clubContext->getClub()?->getId() !== $club->getId()) {
             throw new AccessDeniedException('Thekendiensteinstellungen gehören nicht zum ausgewählten Verein.');
         }
         return $user->getUserIdentifier();

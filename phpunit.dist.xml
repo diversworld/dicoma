@@ -41,6 +41,7 @@
             <file>tests/Integration/SingleClubModeHttpTest.php</file>
             <file>tests/Integration/Phase0SecurityHttpTest.php</file>
             <file>tests/Integration/CourseImageControllerFieldsTest.php</file>
+            <file>tests/Integration/AreaRouteBoundaryTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

@@ -356,6 +356,153 @@ final class Phase8BarDutyHttpTest extends WebTestCase
     }
     public static function privateOperations(): iterable { yield ['read']; yield ['withdraw']; }
 
+    public function testManagerCanWithdrawAnotherMemberOnlyThroughAdministration(): void
+    {
+        $shift = $this->shift('+3 days', 2);
+        $this->login($this->alice);
+        $this->post('signup', $shift->getId());
+        $assignment = $this->em->getRepository(BarDutyAssignment::class)->findOneBy([]);
+        $id = $assignment->getId();
+        $this->login($this->manager);
+        $crawler = $this->client->request('GET', '/admin/bar-duty/'.$shift->getId());
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action="/admin/bar-duty/actions/withdraw/'.$id.'"]')->form();
+        $values = $form->getValues();
+        $values['reason'] = 'Approved change of duty assignment';
+        $beforeNotifications = $this->em->getRepository(BarDutyNotification::class)->count([]);
+
+        $this->client->request('POST', '/bar-duty/actions/withdraw/'.$id, $values);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('active', $this->em->getConnection()->fetchOne('SELECT status FROM bar_duty_assignment WHERE id = ?', [$id]));
+        self::assertSame($beforeNotifications, $this->em->getRepository(BarDutyNotification::class)->count([]));
+
+        $this->client->request('POST', '/admin/bar-duty/actions/withdraw/'.$id, $values);
+        self::assertResponseRedirects('/admin/bar-duty', 303);
+        self::assertSame('cancelled', $this->em->getConnection()->fetchOne('SELECT status FROM bar_duty_assignment WHERE id = ?', [$id]));
+        self::assertSame($beforeNotifications + 1, $this->em->getRepository(BarDutyNotification::class)->count([]));
+
+        $crawler = $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Für Dienst anmelden')->form());
+        self::assertResponseRedirects('/bar-duty/'.$shift->getId(), 303);
+        $own = $this->em->getRepository(BarDutyAssignment::class)->findOneBy(['member' => $this->manager->getMember(), 'status' => 'active']);
+        self::assertNotNull($own);
+        $crawler = $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        $form = $crawler->filter('form[action="/bar-duty/actions/withdraw/'.$own->getId().'"]')->form();
+        $this->client->submit($form, ['reason' => 'Own duty cannot be attended']);
+        self::assertResponseRedirects('/bar-duty', 303);
+        self::assertSame('cancelled', $this->em->getConnection()->fetchOne('SELECT status FROM bar_duty_assignment WHERE id = ?', [$own->getId()]));
+    }
+
+    public function testBackendRequiresSelectedMembershipClubButPortalRemainsAvailable(): void
+    {
+        $super = $this->account('bar-super', [User::ROLE_SUPER_ADMIN]);
+        $other = (new Club())->setName('Other synthetic club');
+        $definition = new BarShiftDefinition($other, 'Other club shift', 'Other clubhouse', '18:00', 180, 2);
+        $foreignShift = new BarShift($definition, new \DateTimeImmutable('+3 days 18:00'));
+        $shift = $this->shift('+3 days', 2);
+        $session = new BarCashSession($shift, 1000, 'fixture', 'Synthetic initial float');
+        $this->em->persist($other); $this->em->persist($definition); $this->em->persist($foreignShift); $this->em->persist($session);
+        $this->em->flush();
+        $this->login($super);
+
+        $crawler = $this->client->request('GET', '/admin/bar-duty/'.$shift->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[action="/admin/bar-duty/actions/assign/'.$shift->getId().'"]')->form(), [
+            'member' => (string) $this->alice->getMember()->getId(),
+        ]);
+        self::assertResponseStatusCodeSame(303);
+        self::assertSame(1, $this->em->getRepository(BarDutyAssignment::class)->count(['status' => 'active']));
+        $crawler = $this->client->request('GET', '/admin/bar-duty/'.$shift->getId());
+        $assignment = $this->em->getRepository(BarDutyAssignment::class)->findOneBy(['member' => $this->alice->getMember(), 'status' => 'active']);
+        $withdrawValues = $crawler->filter('form[action="/admin/bar-duty/actions/withdraw/'.$assignment->getId().'"]')->form()->getValues();
+        $withdrawValues['reason'] = 'Synthetic assignment change';
+        $cashForm = $crawler->filter('form[action="/admin/bar-duty/actions/cash-book/'.$session->getId().'"]')->form();
+        $cashValues = $cashForm->getValues();
+        $cashValues['direction'] = 'in';
+        $cashValues['amount'] = '5,00';
+        $cashValues['reason'] = 'Synthetic cash transaction';
+        $cashValues['reference'] = 'test';
+        $month = $shift->getStartsAt()->format('Y-m');
+        $this->client->request('GET', '/admin/calendar?month='.$month);
+        self::assertSelectorExists('[data-event-key="bar-duty-'.$shift->getId().'"] a[href="/admin/bar-duty/'.$shift->getId().'"]');
+
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $other->getId(),
+        ]);
+        self::assertResponseRedirects();
+        foreach (['/admin/bar-duty', '/admin/bar-duty/'.$shift->getId(), '/admin/bar-duty/cash',
+            '/admin/bar-duty/cash/'.$session->getId().'.csv', '/admin/bar-duty/plan',
+            '/admin/bar-duty/settings', '/admin/bar-duty/report', '/admin/bar-duty/report.csv',
+            '/admin/settings/bar-services'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $before = $this->em->getConnection()->fetchAllAssociative('SELECT * FROM bar_cash_entry ORDER BY id');
+        $this->client->request('POST', '/admin/bar-duty/actions/cash-book/'.$session->getId(), $cashValues);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame($before, $this->em->getConnection()->fetchAllAssociative('SELECT * FROM bar_cash_entry ORDER BY id'));
+        $notices = $this->em->getRepository(BarDutyNotification::class)->count([]);
+        $this->client->request('POST', '/admin/bar-duty/actions/withdraw/'.$assignment->getId(), $withdrawValues);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame($notices, $this->em->getRepository(BarDutyNotification::class)->count([]));
+        self::assertSame(1, $this->em->getRepository(BarDutyAssignment::class)->count(['status' => 'active']));
+
+        $this->client->request('GET', '/admin/calendar?month='.$foreignShift->getStartsAt()->format('Y-m'));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-event-key="bar-duty-'.$foreignShift->getId().'"]');
+        self::assertSelectorNotExists('[data-event-key="bar-duty-'.$foreignShift->getId().'"] a');
+        $crawler = $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Für Dienst anmelden')->form());
+        self::assertResponseRedirects('/bar-duty/'.$shift->getId(), 303);
+        $own = $this->em->getRepository(BarDutyAssignment::class)->findOneBy(['member' => $super->getMember(), 'status' => 'active']);
+        self::assertNotNull($own);
+        $crawler = $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        $this->client->submit($crawler->filter('form[action="/bar-duty/actions/cash-book/'.$session->getId().'"]')->form(), [
+            'direction' => 'in', 'amount' => '3,00', 'reason' => 'Personal duty cash transaction', 'reference' => 'portal',
+        ]);
+        self::assertResponseStatusCodeSame(303);
+        $this->client->request('GET', '/bar-duty/cash/'.$session->getId().'.csv');
+        self::assertResponseIsSuccessful();
+        $crawler = $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        $this->client->submit($crawler->filter('form[action="/bar-duty/actions/withdraw/'.$own->getId().'"]')->form(), [
+            'reason' => 'Own duty cannot be attended',
+        ]);
+        self::assertResponseRedirects('/bar-duty', 303);
+        self::assertSame('cancelled', $this->em->getConnection()->fetchOne('SELECT status FROM bar_duty_assignment WHERE id = ?', [$own->getId()]));
+
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $this->club->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('POST', '/admin/bar-duty/actions/cash-book/'.$session->getId(), $cashValues);
+        self::assertResponseStatusCodeSame(303);
+        self::assertSame([300, 500], array_map('intval', $this->em->getConnection()->fetchFirstColumn('SELECT amount_cents FROM bar_cash_entry ORDER BY id')));
+    }
+
+    public function testMissingSelectedBackendClubFailsClosed(): void
+    {
+        $super = $this->account('bar-super-missing', [User::ROLE_SUPER_ADMIN]);
+        $other = (new Club())->setName('Removed selected club');
+        $this->em->persist($other); $this->em->flush();
+        $this->login($super);
+        $crawler = $this->client->request('GET', '/admin/settings');
+        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $other->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->em->remove($this->em->find(Club::class, $other->getId())); $this->em->flush();
+        foreach (['/admin/bar-duty', '/admin/settings/bar-services'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('GET', '/bar-duty');
+        self::assertResponseIsSuccessful();
+    }
+
     #[DataProvider('attendanceRejections')]
     public function testAttendanceRejectsEarlyOrInconsistentCredit(string $case): void
     {

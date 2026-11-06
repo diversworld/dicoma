@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Schedule;
 use App\Entity\Booking;
 use App\Enum\BookingAttendanceStatus;
+use App\Http\EasyAdminRequest;
 use App\Service\TrainingAssessmentService;
 use App\Service\ScheduleParticipantSyncService;
 use App\Entity\TrainingUnitResult;
@@ -44,7 +45,7 @@ final class TrainingUnitBatchController extends AbstractController
         $course = $schedule->getCourses();
         // Authorization applies equally to GET, assessment POST and booking sync POST.
         $this->denyAccessUnlessGranted(TrainingAssessmentVoter::ASSESS, $schedule);
-        $isAdmin = (bool) $request->attributes->get('routeCreatedByEasyAdmin');
+        $isAdmin = EasyAdminRequest::matches($request);
         $returnRoute = (string) $request->attributes->get('_route');
 
         // Explizite, CSRF-geschuetzte Synchronisierung ohne Aenderung vorhandener Buchungen.

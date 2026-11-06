@@ -38,7 +38,7 @@ Anknüpfungspunkte, keine bereits vollständig durchgesetzten Paketgrenzen:
 | Ausrüstung und Prüfungen | [EquipmentBookingService](../../src/Service/EquipmentBookingService.php), [EquipmentLoanService](../../src/Service/EquipmentLoanService.php), [TankInspectionService](../../src/Service/TankInspectionService.php) | Mitglieder, Bestand, Verfügbarkeit, Kasse und Dokumente |
 | Thekendienst und Kasse | [BarDutyWorkflow](../../src/Service/BarDutyWorkflow.php), [BarCashWorkflow](../../src/Service/BarCashWorkflow.php) | Vereinskontext, Mitglieder, Dienstplanung und Rechte |
 | Website und Veranstaltungen | [PublicWebsite](../../src/Service/PublicWebsite.php), [ClubEventController](../../src/Controller/Frontend/ClubEventController.php), [ClubEventBooking](../../src/Service/ClubEventBooking.php) | konfigurierter Website-Verein, Personen und Medien |
-| Querschnitt und Infrastruktur | [AdminClubContext](../../src/Service/AdminClubContext.php), [SingleClubMode](../../src/Service/SingleClubMode.php), [MediaFileStorage](../../src/Service/MediaFileStorage.php), [LoginDestination](../../src/Security/LoginDestination.php) | Symfony Security, Doctrine, Routing und Dateisystem |
+| Querschnitt und Infrastruktur | [AdminClubContext](../../src/Service/AdminClubContext.php), [SingleClubMode](../../src/Service/SingleClubMode.php), [MediaFileStorage](../../src/Service/MediaFileStorage.php), [LoginDestination](../../src/Security/LoginDestination.php), [EasyAdminRequest](../../src/Http/EasyAdminRequest.php) | Symfony Security, Doctrine, Routing und Dateisystem |
 
 Die Identität ist nicht für jedes Fachobjekt eine Mitgliedschaft: Gäste und
 Mitglieder können dieselben Personen- und Benutzerbausteine verwenden. Eine
@@ -64,9 +64,11 @@ Diese Zuordnung ersetzt keine vollständige Prüfung aller Domänenregeln.
 - Die Trennung ist noch nicht überall physisch umgesetzt:
   [TrainingPortalController](../../src/Controller/TrainingPortalController.php)
   und [BarDutyController](../../src/Controller/BarDutyController.php) werden
-  jeweils für Portal und Administration eingebunden und unterscheiden den
-  Bereich anhand von `routeCreatedByEasyAdmin`. Auch Templates verwenden
-  dieses Attribut. Änderungen daran benötigen getrennte Routen-, Rollen-,
+  jeweils für Portal und Administration eingebunden. Der neue
+  [EasyAdminRequest](../../src/Http/EasyAdminRequest.php) kapselt dort sowie
+  im Kalender- und Ausbildungsbewertungscontroller das Lesen des bestehenden
+  Attributs `routeCreatedByEasyAdmin`. Templates verwenden das Attribut
+  weiterhin direkt. Änderungen daran benötigen getrennte Routen-, Rollen-,
   Objekt- und Layoutregressionen; ein bloßes Verschieben wäre keine sichere
   Bereichstrennung.
 
@@ -94,6 +96,42 @@ Zielentscheidung verwendet weiterhin `PublicWebsite` und
 durch ein ungetestetes allgemeines Berechtigungssystem ersetzt.
 Anmeldeziele sind Navigation, keine zusätzliche Berechtigung.
 
+Die Interpretation des EasyAdmin-Routenattributs in den genannten Controllern
+ist nun ein gemeinsamer HTTP-Adapter. Er behält die bisherige PHP-Umwandlung
+in Boolean und `false` bei fehlender Anfrage bei. Er prüft lediglich den
+Routenkontext und ist **keine** Rollen-, Vereins- oder Objektberechtigung;
+die bisherigen Prüfungen bleiben an ihren Aufrufstellen bestehen.
+
+Die schrittweise Prüfung der gemischten Controller hat zwei konkrete
+Bereichsprobleme ergeben und behoben:
+
+- Thekenleitungen dürfen fremde Einteilungen nur im Backend zurückziehen.
+  Das persönliche Portal prüft innerhalb der Transaktion zusätzlich, ob die
+  Einteilung dem angemeldeten Mitglied gehört. Eigene Rückzüge bleiben dort
+  möglich; Rollen-, Objekt- und CSRF-Prüfungen bleiben erforderlich.
+- Zahlungsbuchung, Teilnehmer- und Kursabschluss sowie die Stornierung einer
+  fremden Kursanmeldung werden von den bisherigen Portal-POST-Adressen nach
+  Prüfung von Berechtigung und CSRF mit HTTP 307 an die zugehörige Adminroute
+  weitergeleitet. Erst dort wird die Aktion nach erneuter Prüfung des
+  ausgewählten Vereins ausgeführt. Die Stornierung der eigenen Anmeldung bleibt
+  eine persönliche Portalaktion.
+- Auch eine fremde Ausbildungsbescheinigung wird über die Portaladresse an die
+  Adminroute weitergeleitet, die den ausgewählten Verein prüft. Eigene
+  Bescheinigungen bleiben im persönlichen Portal erreichbar. Berechtigte
+  Ausbilder können die Adminansicht ihres zugeordneten Kurses weiter öffnen;
+  die Bescheinigung selbst bleibt mit `private, no-store` geschützt.
+
+Für einen abweichenden Admin-Vereinskontext beim Thekendienst wurde ausdrücklich
+die Sperre gewählt: Backendzugriffe einschließlich Jahresregel und Thekenkasse
+erfordern, dass der ausgewählte Verein dem Mitgliedschaftsverein entspricht.
+Ein fehlender Vereinskontext sperrt ebenfalls; vereinsübergreifende
+Thekendienstverwaltung wird nicht eingeführt. Dies ändert insbesondere die
+bisher mögliche Jahresregelverwaltung eines fremd ausgewählten Vereins durch
+Superadmins. Das persönliche Portal bleibt vom ausgewählten Adminverein
+unabhängig. Im Admin-Gesamtkalender bleiben Termine des ausgewählten Vereins
+sichtbar, aber ein bei abweichendem Mitgliedschaftsverein nicht erreichbarer
+Thekendienstlink wird nicht ausgegeben.
+
 Geänderte bzw. neue Dateien dieses Schritts:
 
 - `src/Security/LoginDestination.php`: gemeinsame Zielentscheidung.
@@ -102,7 +140,28 @@ Geänderte bzw. neue Dateien dieses Schritts:
   erneutem Aufruf der Loginseite.
 - `src/Service/PortalNavigation.php`: bestehende Methode als Delegation.
 - `tests/Integration/PortalNavigationHttpTest.php`: zusätzliche Gast-,
-  Kompatibilitäts-, Spartenleitungs- und fremde Vereinsredaktionsfälle.
+  Kompatibilitäts-, Spartenleitungs-, fremde Vereinsredaktions- und
+  Mehrrollenfälle.
+- `src/Http/EasyAdminRequest.php`, `src/Controller/BarDutyController.php`,
+  `src/Controller/TrainingPortalController.php`,
+  `src/Controller/Frontend/ClubCalendarController.php` und
+  `src/Controller/Admin/TrainingUnitBatchController.php`: gemeinsamer
+  Adapter für den bestehenden Routenbereich.
+- `tests/Unit/EasyAdminRequestTest.php`: Wahrheitswerte des Routenattributs
+  und fehlende Anfrage.
+- `tests/Integration/AreaRouteBoundaryTest.php` und `phpunit.dist.xml`:
+  dauerhafter Vertragstest für 24 bestehende Portal-/Adminroutenpaare.
+- `tests/Integration/Phase4TrainingHttpTest.php`: erfolgreiche Stornierung
+  mit echtem Formular und bereichsspezifischem Rücksprung im Portal und Backend;
+  Vereinswechsel und vier administrative Schreibvorgänge.
+- `src/Service/BarDutyAccess.php`, `src/Service/BarDutyWorkflow.php` und
+  `src/Controller/BarDutyController.php`: Vereinsgrenze und Unterscheidung
+  eigener Rückzüge von Backend-Verwaltungsaktionen.
+- `src/Service/ClubCalendar.php`: keine gesperrten Backend-Thekendienstlinks.
+- `tests/Integration/Phase8BarDutyHttpTest.php`,
+  `tests/Integration/MediaFileHttpTest.php` und
+  `tests/Integration/SingleClubModeHttpTest.php`: Formular-, Vereinswechsel-,
+  Kassen-, Jahresregel-, Kalender- und Einzelvereinsregressionen.
 - `docs/implementation/phase-01.md`: dieses Protokoll.
 
 ## 5. Konventionen und weitere schrittweise Strukturierung
@@ -139,31 +198,152 @@ Datenbanktabellen oder Mehrmandantenmodell.
 
 ## 6. Datenbank, Migrationen und Sicherheit
 
-Keine Entities, Mappings, Migrationen oder bestehenden Daten wurden verändert.
-Das Mapping wurde ohne Datenbanksynchronitätsprüfung validiert. Der frühere
+Keine Entities, Mappings oder Migrationen wurden geändert. Die isolierten
+Code- und HTTP-Tests verwenden keine vorhandenen Anwendungsdaten. Das Mapping
+wurde zunächst ohne Datenbanksynchronitätsprüfung validiert. Der frühere
 isolierte Migrationslauf und die Grenzen der lokalen Backup-/Restore-Prüfung
 stehen in [Phase 0](phase-00.md); sie sind kein erneuter Nachweis für ein
-tatsächliches Zielsystem. Die bestehenden Sicherheitsregeln und
-Objektprüfungen wurden nicht erweitert oder abgeschwächt. Die offenen
-umfassenden Rollen- und Objektprüfungen bleiben bestehen.
+tatsächliches Zielsystem. Die oben beschriebenen zusätzlichen Bereichs- und
+Vereinsprüfungen ergänzen die bestehenden Sicherheits- und Objektprüfungen.
+Die offenen umfassenden Rollen- und Objektprüfungen bleiben bestehen.
+
+### Lokales Abnahmeziel und Betriebsgrenzen
+
+Auf ausdrücklichen Wunsch wurde das vorhandene DDEV-Projekt unter
+`https://dicoma.ddev.site` vorbereitet, **nicht** eine neue isolierte
+Installation. Es verwendet weiterhin seinen vorhandenen Datenbestand.
+Eine schreibende oder destruktive fachliche Prüfung auf diesem Bestand wurde
+nicht automatisiert; Teständerungen dort wären echte Datenänderungen.
+
+Vor der Anpassung wurde ein vom Auftraggeber bestätigtes Wartungsfenster mit
+Schreibpause genutzt. Bei gestopptem Webcontainer wurden Datenbank und
+Anwendungsdateien einschließlich privater Dateien und Konfiguration in einem
+geschützten lokalen Backup gesichert. Dessen Dateiarchiv wurde mit erhaltenen
+Rechten separat wiederhergestellt und verglichen. Eine netzwerkisolierte
+MariaDB-Wiederherstellung ergab 108 übereinstimmende Tabellenprüfsummen.
+Die SQL-Dumps stimmen nach Entfernung von CR-Zeichen überein; eine
+byteidentische Wiederherstellung der ursprünglichen SQL-Textzeilen wird daher
+nicht behauptet. Die Schreibpause anderer Prozesse beruht auf der Bestätigung
+der Auftraggeberseite. Das Backup enthält vertrauliche Daten und ist nicht
+Bestandteil des Repositorys.
+
+Für den DDEV-Webcontainer wurde per lokaler, nicht versionierter
+`.ddev/config.abnahme.yaml` der Mailtransport auf das lokale Mailpit umgestellt.
+Die lokale Datei enthält:
+
+```yaml
+web_environment:
+  - APP_DEBUG=0
+  - MAILER_DSN=smtp://127.0.0.1:1025
+```
+
+Eine synthetische Nachricht wurde über Symfony versendet und dort nachgewiesen;
+die bisherige externe Zustellung aus diesem Container ist damit für die
+Abnahme ersetzt. Mailpit ist unter `https://dicoma.ddev.site:8026` erreichbar.
+Ein kurzzeitig eingerichteter, nur Statuscodes ausgebender HTTP-Diagnosetest
+bestätigte die wirksamen Einstellungen auch im PHP-FPM-Request; er wurde
+anschließend entfernt und die Entfernung per HTTP 404 geprüft.
+Zudem wurde das zuvor trotz `APP_ENV=prod` aktivierte Debugging im
+Webcontainer abgeschaltet. Nach dem Neustart lieferte das Ziel zunächst
+HTTP 500 wegen eines veralteten Produktionscontainers im Symfony-Cache; nach
+`cache:clear` mit der tatsächlichen Web-PHP-Version 8.4 war es wieder
+erreichbar. Eine öffentliche nicht vorhandene Route antwortete anschließend
+mit 404 ohne Debug-Trace. Die Einstellungen gelten nach erneutem DDEV-Neustart.
+Die Einstellung gilt für den DDEV-Webcontainer, nicht nachgewiesenermaßen für
+unabhängige Hostprozesse oder andere externe Integrationen. Die Umgebung ist
+deshalb nicht als vollständig ausgehendisoliert anzusehen.
+Das Entfernen der lokalen Überschreibung kann den zuvor konfigurierten
+externen Mailtransport wieder aktivieren; ein solcher Wechsel erfordert eine
+gesonderte Betriebsentscheidung.
+
+Der Ziel-Container, das Doctrine-Mapping und das tatsächlich verbundene Schema
+bestanden die Prüfung; es waren keine Migrationen offen. Anonyme öffentliche
+Routen waren erreichbar, `/admin` und `/calendar` leiteten zur Anmeldung und
+`/install` antwortete mit 404. Mit einer von der Auftraggeberseite angemeldeten
+Sitzung wurden Ausbildung, Thekendienst und Kalender jeweils im Portal und
+Backend lesend geöffnet: die Modulansichten und bereichsspezifischen Layouts
+waren sichtbar. Dies prüft weder alle Rollen noch sämtliche Geschäftsvorgänge.
+
+Für die lokale Prüfung mit vorhandenen Konten:
+
+1. `https://dicoma.ddev.site` öffnen und mit einem berechtigten Konto anmelden.
+2. Portal und Backend über die entsprechenden Navigationsziele prüfen;
+   Testmails des Webcontainers gegebenenfalls in Mailpit einsehen.
+3. Schreibende Fachabläufe nur mit ausdrücklich dafür freigegebenen Datensätzen
+   durchführen: Sie ändern den vorhandenen Datenbestand tatsächlich. Andere
+   Nebenwirkungen als der abgefangene Web-Mailversand sind nicht isoliert.
+4. Nach Änderungen am Anwendungscode den Produktionscache im Webcontainer mit
+   `ddev exec php bin/console cache:clear --env=prod --no-debug` erneuern.
+
+Dies ist eine lokal erreichbare, vorbereitete Prüfoberfläche, keine vollständig
+abgenommene oder gegen alle Nebenwirkungen abgeschottete Stagingumgebung.
 
 ## 7. Tests und Qualitätsprüfungen
 
 Ausführung im DDEV-Webcontainer mit PHP 8.5, SQLite im Speicher und Null-Mailer:
 
+- Ausbildungsbescheinigung und angrenzende persönliche, Rollen- und
+  Vereinsgrenzen: **7 Tests, 149 Assertions**. Der neue Fall deckt
+  unter anderem den echten Vereinswechsel, eigenen und fremden Nachweis,
+  zugeordneten Ausbilder, unberechtigte Person und Cache-Header ab.
+- Ein erneutes vollständiges Basis-Gate wurde für die zeitnahe Abschaltung des
+  zuvor öffentlichen Debug-Modus bewusst unterbrochen; sein PHPUnit-Teil und
+  das Gate gelten **nicht als bestanden**. Der anschließende vollständige
+  Wiederholungslauf bestand mit **432 Tests und 10.274 Assertions**, ohne
+  übersprungene oder unvollständige Tests. Er umfasst Unit- und isolierte
+  SQLite-Tests, nicht die MariaDB-Staging-HTTP-Suite; die Schemasynchronität
+  des tatsächlichen DDEV-Ziels wurde separat lesend geprüft:
+
+  ```sh
+  docker exec -e DATABASE_URL=sqlite:///:memory: -e MAILER_DSN=null://null -e DICOMA_SINGLE_CLUB_MODE=0 -e APP_DEBUG=1 -e PHP_BIN=php8.5 ddev-dicoma-web bash scripts/phase2_acceptance_gate.sh
+  ```
+- Vollständige betroffene Integrationstestdateien für Thekendienst,
+  Ausbildung, Einstellungen und Einzelvereinsmodus: **117 Tests,
+  3.144 Assertions**, ohne übersprungene oder unvollständige Tests:
+
+  ```sh
+  docker exec -e DATABASE_URL=sqlite:///:memory: -e MAILER_DSN=null://null -e DICOMA_SINGLE_CLUB_MODE=0 ddev-dicoma-web php8.5 vendor/bin/phpunit --no-progress --fail-on-skipped --fail-on-incomplete tests/Integration/Phase8BarDutyHttpTest.php tests/Integration/Phase4TrainingHttpTest.php tests/Integration/MediaFileHttpTest.php tests/Integration/SingleClubModeHttpTest.php
+  ```
+
+- Aktueller bereichsbezogener Wiederholungslauf über ausgewählte Ausbildungs-,
+  Thekendienst-, Kassen-, Einstellungs-, Kalender-, Einzelvereins-, Routen-
+  und Adaptertests: **51 Tests, 1.160 Assertions**, ohne übersprungene oder
+  unvollständige Tests. Die neuen HTTP-Fälle verwenden echte Formulare und
+  CSRF-Tokens sowie die echte Vereinsauswahl; sie prüfen Schreibsperren mit
+  Datenbankzustand, erlaubte Aktionen nach Rückwechsel und im Portal sowie
+  fehlende Vereinsauswahl und Kalenderlinks.
+- Der erste Lauf der vier neuen bzw. angepassten Vereinskontextfälle fand
+  einen Test-Fixture-Fehler beim Entfernen einer nach einer HTTP-Anfrage
+  abgelösten Entity. Nach erneutem Laden der Entity bestanden die vier Fälle
+  mit **131 Assertions**; der obige Lauf enthält auch die anschließende
+  Erweiterung um persönliche Kassenaktionen.
 - Gezielt `PortalNavigationHttpTest` für Loginziel, gespeicherte Ziele,
-  Gäste, Spartenleitung und vereinsfremde Redaktion: **16 Tests,
-  565 Assertions** bestanden, ohne übersprungene oder unvollständige Tests.
+  Gäste, Spartenleitung, vereinsfremde Redaktion und zusätzliche
+  Mehrrollenfälle: **21 Tests, 827 Assertions** bestanden, ohne
+  übersprungene oder unvollständige Tests.
   Ein erster Lauf hatte einen Fixture-Fehler durch eine nach einer Anfrage
   nicht mehr verwaltete Club-Instanz; nach Korrektur des Testaufbaus bestand
   der vollständige gezielte Wiederholungslauf.
+- Vollständiger `PortalNavigationHttpTest` nach der Login-Entkopplung:
+  **58 Tests, 2.378 Assertions** bestanden. Dieser Lauf erfolgte vor
+  Aufnahme weiterer Mehrrollenfälle und vor dem EasyAdmin-Routenadapter.
+- `AreaRouteBoundaryTest` und `EasyAdminRequestTest`: zusammen **9 Tests,
+  201 Assertions** bestanden. Der Routentest prüft 24 Routenpaare einschließlich
+  Pfad, Methoden, Anforderungen und Bereichsmarkierung; er ersetzt keine
+  Prüfung der Zugriffsrechte.
+- Gezielt Ausbildungs-, Thekendienst- und Kalenderregressionen:
+  **25 Tests, 748 Assertions** bestanden. Sie umfassen unter anderem
+  Bereichslayouts, fremde Vereine, Managementoperationen und CSRF.
+- Ergänzend Ausbildungs-Stornierungen über die echten Portal- und
+  Backendformulare sowie Rollen- und Layoutregressionen: **3 Tests,
+  296 Assertions** bestanden.
 - `SingleClubModeHttpTest` und `Phase2FoundationHttpTest`, gezielt für
   fremde Sitzungen, echte Anmeldung und Gastregistrierung: **3 Tests,
   27 Assertions** bestanden.
 - `lint:container`, `lint:yaml config`, `debug:router` und
   `doctrine:schema:validate --skip-sync`: bestanden; eine
   Schemasynchronitätsprüfung war ausdrücklich nicht Teil dieses Befehls.
-- PHP-Syntax der fünf geänderten PHP-Dateien und statisches Routengate
+- PHP-Syntax der geänderten PHP-Dateien und statisches Routengate
   (30 Routen, 21 Controller): bestanden. Das Routengate ist keine umfassende
   Prüfung aller Routen.
 
@@ -177,8 +357,8 @@ durchgeführt.
 | Kriterium | Status / Nachweis |
 |---|---|
 | Fachliche Grenzen, aktuelle Struktur und Namenskonventionen | Für die genannten Bereiche dokumentiert; nicht jede Klasse und Abhängigkeit einzeln geprüft. |
-| Gemeinsame Services und Schnittstellen strukturieren | Anmeldeziel von der Menüdarstellung getrennt, bestehende Methode erhalten und gezielt getestet; weitere Kopplungen offen. |
-| Public, Portal und Admin trennen | Bestehende technische Grenzen und Mischcontroller dokumentiert und Navigation gezielt getestet; keine vollständige physische oder sicherheitsbezogene Trennung nachgewiesen. |
+| Gemeinsame Services und Schnittstellen strukturieren | Anmeldeziel von der Menüdarstellung getrennt, bestehende Methode erhalten; Interpretation des EasyAdmin-Routenkontexts gekapselt. Weitere Kopplungen offen. |
+| Public, Portal und Admin trennen | Bestehende technische Grenzen und Mischcontroller dokumentiert, Navigation und 24 Portal-/Adminroutenpaare geprüft; einzelne Schreib- und Vereinsgrenzen abgesichert, aber keine vollständige physische oder sicherheitsbezogene Trennung nachgewiesen. |
 | Bestehende Routen, Daten und Funktionen erhalten | Keine Routendefinitionen oder Datenbankstrukturen geändert; gezielte Tests bestanden, aber keine Vollabdeckung aller Workflows. |
 | Neue Fachmodule ohne Beeinträchtigung bestehender Funktionen | Architekturrichtung und ein inkrementeller Schritt vorhanden; für die gesamte Anwendung noch nicht ausreichend nachgewiesen. |
 

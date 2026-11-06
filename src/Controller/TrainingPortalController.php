@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\CourseParticipantStatus;
 use App\Enum\CourseStatus;
 use App\Form\TrainingCourseType;
+use App\Http\EasyAdminRequest;
 use App\Security\Voter\CourseManagementVoter;
 use App\Security\Voter\TrainingAssessmentVoter;
 use App\Service\CourseCompletionService;
@@ -59,7 +60,7 @@ final class TrainingPortalController extends AbstractController
         $staffCourses = [];
         $club = $this->clubContext->getClub();
         $candidates = [];
-        if ($request->attributes->get('routeCreatedByEasyAdmin')) {
+        if (EasyAdminRequest::matches($request)) {
             $candidates = $club === null ? [] : $this->em->getRepository(Courses::class)->findBy(['club' => $club], ['id' => 'DESC']);
         }
         foreach ($candidates as $course) {
@@ -73,7 +74,7 @@ final class TrainingPortalController extends AbstractController
     public function edit(Request $request, ?int $id = null): Response
     {
         if ($id === null) {
-            $club = $request->attributes->get('routeCreatedByEasyAdmin')
+            $club = EasyAdminRequest::matches($request)
                 ? $this->clubContext->getClub()
                 : $this->account()->getMember()?->getClub();
             if ($club === null) { throw $this->createAccessDeniedException('Für neue Kurse ist eine Vereinszuordnung erforderlich.'); }
@@ -228,16 +229,18 @@ final class TrainingPortalController extends AbstractController
     public function cancel(int $id, Request $request): Response
     {
         $participant = $this->participantForViewer($id);
-        if ($participant->getPerson() !== $this->account()->getPerson()) {
+        $ownRegistration = $participant->getPerson() === $this->account()->getPerson();
+        if (!$ownRegistration) {
             $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $participant->getCourse());
         }
         $this->token($request, 'training_cancel_' . $id);
+        if (!$ownRegistration && ($redirect = $this->legacyStaffRedirect($request))) { return $redirect; }
         try {
             $this->registration->cancel($participant);
             $this->addFlash('success', 'Anmeldung storniert. Bereits gezahlte Beträge werden durch die Kursverwaltung erstattet.');
         } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
         return $this->redirectToRoute(
-            $request->attributes->get('routeCreatedByEasyAdmin') ? 'admin_portal_training_participant' : 'training_participant',
+            EasyAdminRequest::matches($request) ? 'admin_portal_training_participant' : 'training_participant',
             ['id' => $id]
         );
     }
@@ -248,6 +251,7 @@ final class TrainingPortalController extends AbstractController
         $participant = $this->participantForViewer($id);
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $participant->getCourse());
         $this->token($request, 'training_payment_' . $id);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         try {
             $this->registration->recordPayment($participant,
                 FrontendCourseRegistrationService::moneyToCents($request->request->getString('amount')),
@@ -265,6 +269,7 @@ final class TrainingPortalController extends AbstractController
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $participant->getCourse());
         if (!$this->isGranted('ROLE_INSTRUCTOR') && !$this->isGranted('ROLE_ADMIN')) { throw $this->createAccessDeniedException(); }
         $this->token($request, 'training_complete_' . $id);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         try {
             $this->assertEditable($participant->getCourse());
             $decision = $request->request->getString('decision');
@@ -286,6 +291,7 @@ final class TrainingPortalController extends AbstractController
         $course = $this->course($id);
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $this->token($request, 'training_close_' . $id);
+        if ($redirect = $this->legacyStaffRedirect($request)) { return $redirect; }
         if (!$course->canBeCompleted()) {
             $this->addFlash('warning', 'Alle Teilnehmer benötigen zunächst einen abschließenden Status; auch die Warteliste muss bearbeitet sein.');
         } else {
@@ -298,9 +304,11 @@ final class TrainingPortalController extends AbstractController
     }
 
     #[Route('/training/participant/{id}/certificate', name: 'training_certificate', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function certificate(int $id): Response
+    public function certificate(int $id, Request $request): Response
     {
         $participant = $this->participantForViewer($id);
+        if ($participant->getPerson() !== $this->account()->getPerson()
+            && ($redirect = $this->legacyStaffRedirect($request))) { return $redirect; }
         if (!$participant->hasPassed() || $participant->getCertificateNumber() === null || $participant->getTrainingArchive() === null) {
             throw $this->createNotFoundException('Noch keine Bescheinigung vorhanden.');
         }
@@ -311,7 +319,7 @@ final class TrainingPortalController extends AbstractController
 
     private function legacyStaffRedirect(Request $request): ?Response
     {
-        if ($request->attributes->get('routeCreatedByEasyAdmin')) { return null; }
+        if (EasyAdminRequest::matches($request)) { return null; }
         return $this->redirectToRoute(
             'admin_portal_' . $request->attributes->getString('_route'),
             $request->attributes->has('id') ? ['id' => $request->attributes->get('id')] : [],
@@ -347,7 +355,7 @@ final class TrainingPortalController extends AbstractController
 
     private function assertBackendCourseContext(?Courses $course): void
     {
-        if (!$this->requests->getCurrentRequest()?->attributes->get('routeCreatedByEasyAdmin')) {
+        if (!EasyAdminRequest::matches($this->requests->getCurrentRequest())) {
             return;
         }
         $selectedId = $this->clubContext->getClub()?->getId();

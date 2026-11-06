@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\{BarCashSession, BarDutyAssignment, BarDutyExchange, BarDutyNotification, BarDutyPolicy, BarShift, BarShiftDefinition, Member};
+use App\Http\EasyAdminRequest;
 use App\Service\{BarCashWorkflow, BarDutyAccess, BarDutyAccounts, BarDutyWorkflow};
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +18,7 @@ final class BarDutyController extends AbstractController
     public function __construct(private readonly EntityManagerInterface $em, private readonly BarDutyAccess $access, private readonly \Symfony\Component\HttpFoundation\RequestStack $requests) {}
 
     private function backend(): bool {
-        return (bool) $this->requests->getCurrentRequest()?->attributes->get('routeCreatedByEasyAdmin');
+        return EasyAdminRequest::matches($this->requests->getCurrentRequest());
     }
 
     private function route(string $name): string { 
@@ -352,7 +353,11 @@ final class BarDutyController extends AbstractController
                     $target = $duty->assign($id)->getShift()->getId();  
                     break;
                 case 'withdraw': 
-                    $duty->cancelAssignment($id, $p->getString('reason')); 
+                    if ($this->backend()) {
+                        $duty->cancelAssignment($id, $p->getString('reason'));
+                    } else {
+                        $duty->withdrawOwnAssignment($id, $p->getString('reason'));
+                    }
                     break;
                 case 'propose': 
                     $duty->propose($id, self::integer($p->getString('member')), $p->getString('counterpart') === '' ? null : self::integer($p->getString('counterpart'))); 

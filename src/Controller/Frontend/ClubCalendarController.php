@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Frontend;
 
 use App\Controller\Admin\DashboardController;
+use App\Http\EasyAdminRequest;
 use App\Service\ClubCalendar;
 use App\Service\CompetitionAccess;
 use App\Service\BarDutyAccess;
@@ -29,6 +30,6 @@ final class ClubCalendarController extends AbstractController
         $from = \DateTimeImmutable::createFromFormat('!Y-m-d', $value . '-01');
         if (!$from || $from->format('Y-m') !== $value) { throw $this->createNotFoundException('Ungültiger Monat.'); }
         return $this->render('competition/calendar.html.twig', ['month' => $from, 'competitionStaff' => $access->isStaff(),
-            'events' => $calendar->events($from, $from->modify('first day of next month'), (bool) $request->attributes->get('routeCreatedByEasyAdmin'))]);
+            'events' => $calendar->events($from, $from->modify('first day of next month'), EasyAdminRequest::matches($request))]);
     }
 }

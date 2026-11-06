@@ -411,11 +411,15 @@ class DashboardController extends AbstractDashboardController
                 $settings->configure(
                     $data['taxMode'], $data['taxNumber'], $data['vatId'], $data['invoiceNote']
                 );
+                
                 $settings->setMemberAgencyEnabled($data['memberAgencyEnabled']);
                 $em->persist($settings);
                 $em->flush();
+                
                 $this->addFlash('success', 'Rechnungseinstellungen gespeichert.');
+                
                 return $this->redirectToRoute('admin_invoice_settings_edit', ['id' => $id]);
+
             } catch (\InvalidArgumentException $e) {
                 $form->addError(new FormError($e->getMessage()));
             }
@@ -430,10 +434,12 @@ class DashboardController extends AbstractDashboardController
     public function invoiceAgencyConfirmations(\Doctrine\ORM\EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
+        
         $groups = $em->getRepository(\App\Entity\TuvBookingGroup::class)->createQueryBuilder('g')
             ->where('g.agencyConfirmedAt IS NOT NULL')
             ->orderBy('g.agencyConfirmedAt', 'DESC')
             ->setMaxResults(200)->getQuery()->getResult();
+        
         return $this->render('admin/tuv_agency_confirmations_ea.html.twig', ['groups' => $groups]);
     }
 
