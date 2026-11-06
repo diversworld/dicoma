@@ -10,6 +10,8 @@ use App\Entity\Member;
 use App\Entity\User;
 use App\Security\Voter\CourseManagementVoter;
 use App\Service\AdminClubContext;
+use App\Service\PublicWebsite;
+use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -69,6 +71,11 @@ final class CourseManagementVoterTest extends TestCase
             $this->createStub(EntityManagerInterface::class),
             $this->createStub(FormFactoryInterface::class),
             $this->createStub(UrlGeneratorInterface::class),
+            new SingleClubMode(new PublicWebsite(
+                $this->createStub(EntityManagerInterface::class),
+                $this->createStub(Security::class),
+                0,
+            ), false),
         );
         return (new CourseManagementVoter($checker, $context))->vote($token, $course, [CourseManagementVoter::MANAGE]);
     }

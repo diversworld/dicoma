@@ -38,6 +38,9 @@
             <file>tests/Integration/PortalNavigationHttpTest.php</file>
             <file>tests/Integration/ClubEventBookingHttpTest.php</file>
             <file>tests/Integration/MediaFileHttpTest.php</file>
+            <file>tests/Integration/SingleClubModeHttpTest.php</file>
+            <file>tests/Integration/Phase0SecurityHttpTest.php</file>
+            <file>tests/Integration/CourseImageControllerFieldsTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

@@ -33,6 +33,7 @@ use App\Service\BarDutyAccess;
 use App\Service\BarDutyWorkflow;
 use App\Service\PublicWebsite;
 use App\Service\AdminClubContext;
+use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -62,15 +63,24 @@ final class MembershipController extends AbstractController
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
-    public function applicationClubs(): Response
+    public function applicationClubs(SingleClubMode $singleClub): Response
     {
-        return $this->render('membership/clubs.html.twig', ['policies' => $this->em->getRepository(MembershipPolicy::class)->findBy(['applicationsEnabled' => true])]);
+        $criteria = ['applicationsEnabled' => true];
+        if ($singleClub->isEnabled()) {
+            $club = $singleClub->club();
+            if ($this->memberships->policy($club)?->isApplicationsEnabled()) {
+                return $this->redirectToRoute('membership_apply', ['id' => $club->getId()]);
+            }
+            $criteria['club'] = $club;
+        }
+        return $this->render('membership/clubs.html.twig', ['policies' => $this->em->getRepository(MembershipPolicy::class)->findBy($criteria)]);
     }
 
     #[Route('/membership/apply/{id}', name: 'membership_apply', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
-    public function apply(Club $club, Request $request): Response
+    public function apply(Club $club, Request $request, SingleClubMode $singleClub): Response
     {
-        if (!$club->isActive() || !$this->memberships->policy($club)?->isApplicationsEnabled()) { 
+        if (($singleClub->isEnabled() && $club->getId() !== $singleClub->club()->getId())
+            || !$club->isActive() || !$this->memberships->policy($club)?->isApplicationsEnabled()) {
             throw $this->createNotFoundException(); 
         }
         

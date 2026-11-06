@@ -11,6 +11,7 @@ use App\Enum\CourseStatus;
 use App\Form\CourseParticipantType;
 use App\Form\CourseTrainingUnitType;
 use App\Form\CourseSchedulePlanningType;
+use App\Field\CourseImageField;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
@@ -33,7 +34,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
@@ -416,13 +416,7 @@ class CoursesCrudController extends AbstractCrudController
          */
         yield FormField::addFieldset('Bild')
             ->collapsible();
-        yield ImageField::new('image','Bild')
-            ->setBasePath('/images/kurse/')
-            ->setUploadDir('public/images/kurse/')
-            ->setUploadedFileNamePattern('[name].[extension]')
-            ->setRequired(false)
-            ->setColumns(5)
-            ->hideOnIndex();
+        yield CourseImageField::create();
         /*
          * Legacy-Kategorie.
          *

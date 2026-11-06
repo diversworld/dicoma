@@ -22,14 +22,11 @@ final class MediaFileStorage
         $altText = trim($altText);
         if (mb_strlen($altText) > 255) { throw new \InvalidArgumentException('Der Alternativtext darf höchstens 255 Zeichen lang sein.'); }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getPathname());
-        $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
+        $types = ImageUploadValidator::EXTENSIONS + ['application/pdf' => 'pdf'];
         if (isset($types[$mime])) {
             $extension = $types[$mime];
             if (str_starts_with($mime, 'image/')) {
-                $info = getimagesize($file->getPathname());
-                if ($info === false || ($info['mime'] ?? null) !== $mime || $info[0] < 1 || $info[1] < 1 || $info[0] * $info[1] > 40000000) {
-                    throw new \InvalidArgumentException('Das Bild ist ungültig oder überschreitet 40 Megapixel.');
-                }
+                ImageUploadValidator::validate($file->getPathname(), $mime);
             }
         } else {
             $extension = strtolower($file->getClientOriginalExtension());

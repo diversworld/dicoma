@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Security\LoginDestination;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -10,10 +11,10 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends AbstractController
 {
     #[Route(path: '/login', name: 'app_login')]
-    public function login(AuthenticationUtils $authenticationUtils, \App\Service\PortalNavigation $navigation): Response
+    public function login(AuthenticationUtils $authenticationUtils, LoginDestination $loginDestination): Response
     {
         if ($this->getUser()) {
-             return $this->redirectToRoute($navigation->getLoginRoute());
+             return $this->redirectToRoute($loginDestination->route());
         }
 
         // get the login error if there is one

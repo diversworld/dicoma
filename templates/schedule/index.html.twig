@@ -47,13 +47,19 @@
                             <td>{{ schedule.startTime ? schedule.startTime|date('H:i') : '' }}</td>
                             <td>{{ schedule.duration }} Tage</td>
                             <td>{{ schedule.location }}</td>
-                            <td><a href="{{ path('app_courses_show', {'id': schedule.courses.id}) }}">{{ schedule.courses.title }}</a></td>
+                            <td>
+                                {% if schedule.courses.status.value == 'open' %}
+                                    <a href="{{ path('app_courses_show', {'id': schedule.courses.id}) }}">{{ schedule.courses.title }}</a>
+                                {% else %}
+                                    {{ schedule.courses.title }}
+                                {% endif %}
+                            </td>
                             <td>
                                 <a href="{{ path('app_schedule_show', {'id': schedule.id}) }}"><i class="ion-ios-eye"></i>  |  </a>
                                 {% if is_granted('ROLE_ADMIN') %}
                                     <a href="{{ path('app_schedule_edit', {'id': schedule.id}) }}"><i class="ion-edit"></i> |  </a>
                                 {% endif %}
-                                {% if is_granted('ROLE_MEMBER') %}
+                                {% if is_granted('ROLE_MEMBER') and schedule.courses.status.value != 'completed' %}
                                     <form method="post" action="{{ path('app_booking_book', {'id': schedule.id}) }}" class="d-inline">
                                         <input type="hidden" name="_token" value="{{ csrf_token('book_schedule_' ~ schedule.id) }}">
                                         <button type="submit" class="btn btn-sm btn-outline-primary" title="Termin buchen">Termin buchen</button>

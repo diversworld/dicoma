@@ -4,9 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Schedule;
 use App\Entity\Booking;
+use App\Entity\Club;
+use App\Enum\CourseStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\Query\Expr\Join;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\Courses;
 use App\Entity\TrainingUnitType;
@@ -24,6 +27,36 @@ class ScheduleRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Schedule::class);
+    }
+
+    /** @return list<Schedule> */
+    public function findVisibleForClub(Club $club): array
+    {
+        return $this->visibleForClub($club)->getQuery()->getResult();
+    }
+
+    public function findVisibleForClubById(Club $club, int $id): ?Schedule
+    {
+        return $this->visibleForClub($club)
+            ->andWhere('s.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    private function visibleForClub(Club $club): QueryBuilder
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.courses', 'course')
+            ->addSelect('course')
+            ->where('course.club = :club')
+            ->andWhere('course.status IN (:statuses)')
+            ->setParameter('club', $club)
+            ->setParameter('statuses', [
+                CourseStatus::OPEN->value,
+                CourseStatus::RUNNING->value,
+                CourseStatus::COMPLETED->value,
+            ]);
     }
 
     /**

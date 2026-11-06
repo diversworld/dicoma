@@ -639,7 +639,7 @@ class DashboardController extends AbstractDashboardController
 			MenuItem::subMenu('System & Einstellungen','fa fa-gear')
                 ->setPermission('ROLE_SUPER_ADMIN')
                 ->setSubItems([
-                    MenuItem::linkTo(ClubCrudController::class, 'Vereine', 'fa fa-building'),
+                    MenuItem::linkTo(ClubCrudController::class, $this->clubContext->isSingleClubMode() ? 'Vereinsdaten' : 'Vereine', 'fa fa-building'),
                     MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link'),                                    
                     //MenuItem::linkToRoute('TÜV-Benachrichtigungstexte (systemweit)', 'fa fa-envelope', 'admin_settings_tuv_notifications'),
                     MenuItem::linkToRoute('Sportarten und Sparten', 'fa fa-person-swimming', 'admin_settings_sports_configuration'),                    

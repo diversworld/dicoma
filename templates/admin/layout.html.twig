@@ -4,7 +4,7 @@
 {# The vendor layout renders this block inside the user dropdown's ActionList. #}
 {% block user_menu %}
     {{ parent() }}
-    {% if is_granted('ROLE_SUPER_ADMIN') %}
+    {% if is_granted('ROLE_SUPER_ADMIN') and not admin_club_context.singleClubMode %}
         <twig:ea:ActionMenu:ActionList:Divider />
         {% set clubSelection = admin_club_context.selectionForm.createView %}
         {% form_theme clubSelection 'bootstrap_5_layout.html.twig' %}
@@ -30,7 +30,7 @@
 {% block header_custom_menu %}
     {% if is_granted('ROLE_ADMIN') %}
         <span class="me-3" data-sport-club-context>
-            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>
+            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }}{% if not admin_club_context.singleClubMode %} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>{% endif %}
         </span>
     {% endif %}
     {{ parent() }}
@@ -40,7 +40,7 @@
     {{ parent() }}
     {% if is_granted('ROLE_ADMIN') %}
         <span class="ms-2" data-sport-club-context>
-            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>
+            {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }}{% if not admin_club_context.singleClubMode %} <small>({{ 'Filterung noch nicht backendweit'|trans }})</small>{% endif %}
         </span>
     {% endif %}
 {% endblock responsive_header_logo %}

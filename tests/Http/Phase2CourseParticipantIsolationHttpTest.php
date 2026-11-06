@@ -15,6 +15,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 /** Read-only checks: foreign participant detail/edit and own participant access. */
 final class Phase2CourseParticipantIsolationHttpTest extends WebTestCase
 {
+    use SelectAdminClub;
+
     public function testParticipantDetailAndEditRespectClubBoundaries(): void
     {
         $config = $this->fixtures();
@@ -58,12 +60,15 @@ final class Phase2CourseParticipantIsolationHttpTest extends WebTestCase
                 $client->request('GET', $this->url($action, $participants[$actor]->getId()));
                 self::assertResponseIsSuccessful();
             }
-            foreach ($participants as $participant) {
+            foreach (['a' => 'b', 'b' => 'a'] as $selected => $foreign) {
                 $client->loginUser($users['super']);
-                $client->request('GET', $this->url($action, $participant->getId()));
+                $this->selectAdminClub($client, $users[$selected]->getMember()->getClub()->getId());
+                $client->request('GET', $this->url($action, $participants[$selected]->getId()));
                 self::assertResponseIsSuccessful();
+                $client->request('GET', $this->url($action, $participants[$foreign]->getId()));
+                self::assertResponseStatusCodeSame(403);
                 $client->loginUser($users['ordinary']);
-                $client->request('GET', $this->url($action, $participant->getId()));
+                $client->request('GET', $this->url($action, $participants[$selected]->getId()));
                 self::assertResponseStatusCodeSame(403);
             }
         }

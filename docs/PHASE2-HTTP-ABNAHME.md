@@ -1,5 +1,21 @@
 # DICOMA – Phase 2: HTTP-Mandantentrennung (Abnahmepatch)
 
+## Isolierte Wiederholung vom 06.11.2026
+
+Nach Anpassung der Tests an die stillgelegten Legacy-Schreibrouten und die
+CSRF-geschützte Superadmin-Vereinsauswahl bestand die gesamte Staging-Suite
+mit **32 Tests und 1.085 Assertions**. Bei den Buchungsprüfungen werden
+weiterhin kanonische Fremdschreibversuche mit echten CSRF-Tokens und
+Datenbank-Snapshots geprüft; die alte Verwaltungsroute nimmt Schreibanfragen
+nicht mehr an.
+
+Der Lauf verwendete eine neu angelegte MariaDB ohne Host-Port in einem
+dedizierten Docker-Netz, eine separate Anwendungskopie, Null-Mailer und
+ausschließlich synthetische Fixtures. Es handelt sich nicht um eine
+Abnahme eines bereitgestellten Staging- oder Produktivsystems. Einzelheiten,
+frühere Fehlschläge und verbleibende Grenzen stehen im
+[Phase-0-Bericht](implementation/phase-00.md).
+
 ## Erneute lokale Abnahme vom 24.10.2026
 
 Die vollständige vorhandene Staging-Suite wurde nach ausdrücklicher Schreibfreigabe auf dem getrennten DDEV-Dienst `db_test` ausgeführt: **30 Tests, 889 Assertions**, keine übersprungenen oder unvollständigen Tests. Vorher wurden Verbindung, gekennzeichnete Wegwerf-Fixtures und deren Vereinszuordnung geprüft. Der fehlende Person-/Verein-Unique-Index wurde mit `Version20261024100000` ergänzt; Schema und Mapping stimmen anschließend überein und keine Migration ist offen.

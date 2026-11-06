@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Schedule;
 use App\Entity\Courses;
 use App\Service\AdminClubContext;
+use App\Field\CourseImageField;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -27,7 +28,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\NumberField;
@@ -202,13 +202,7 @@ class ScheduleCrudController extends AbstractCrudController
         yield TextField::new('title','Terminbezeichnung')
             ->setColumns(6);
 
-        yield ImageField::new('image','Bild')
-            ->setBasePath('/images/kurse/')
-            ->setUploadDir('public/images/kurse/')
-            ->setUploadedFileNamePattern('[randomness].[extension]')
-            ->setRequired(false)
-            ->setColumns(5)
-            ->hideOnIndex();
+        yield CourseImageField::create();
 
         /*
          * Datum / Uhrzeit

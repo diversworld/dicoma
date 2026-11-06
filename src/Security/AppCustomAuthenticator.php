@@ -25,7 +25,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
 
     private $logger;
 
-    public function __construct(private UrlGeneratorInterface $urlGenerator, LoggerInterface $logger, private readonly \App\Service\PortalNavigation $navigation)
+    public function __construct(private UrlGeneratorInterface $urlGenerator, LoggerInterface $logger, private readonly LoginDestination $loginDestination)
     {
         $this->urlGenerator = $urlGenerator;
         $this->logger = $logger;
@@ -58,7 +58,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
             return new RedirectResponse($targetPath);
         }
 
-        return new RedirectResponse($this->urlGenerator->generate($this->navigation->getLoginRoute()));
+        return new RedirectResponse($this->urlGenerator->generate($this->loginDestination->route()));
     }
 
     protected function getLoginUrl(Request $request): string

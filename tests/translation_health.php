@@ -116,6 +116,10 @@ $entityExtension = new class($entityChoice) extends PreloadedExtension {
 };
 $factory = Forms::createFormFactoryBuilder()
     ->addExtension($entityExtension)
+    ->addType(new App\Form\SchedulePlanningRowType(new class extends App\Repository\MemberRepository {
+        public function __construct() {}
+        public function findInstructors(?App\Entity\Club $club = null): array { return []; }
+    }))
     ->addExtension(new Symfony\Component\Form\Extension\Validator\ValidatorExtension(
         Symfony\Component\Validator\Validation::createValidatorBuilder()
             ->setTranslator($translator)->setTranslationDomain('validators')->getValidator()
@@ -151,12 +155,28 @@ $inspect = function (FormView $view, string $file) use (&$inspect, &$checks, $in
     }
     foreach ($view as $child) { $inspect($child, $file); }
 };
-foreach (glob('src/Form/*.php') as $file) {
+$buildFormView = static function (string $file) use ($factory): FormView {
     $class = 'App\\Form\\'.basename($file, '.php');
     $options = ['data_class' => null];
-    if ($class === App\Form\TrainingCourseType::class) { $options['club'] = new App\Entity\Club(); }
-    $form = $factory->create($class, null, $options);
-    $inspect($form->createView(), $file);
+    $data = null;
+    if (in_array($class, [App\Form\TrainingCourseType::class, App\Form\WebsitePublicationType::class, App\Form\MediaImageType::class], true)) {
+        $options['club'] = new App\Entity\Club();
+    }
+    if ($class === App\Form\WebsitePublicationType::class) {
+        $data = new App\Entity\WebsitePublication($options['club']);
+        $options['data_class'] = App\Entity\WebsitePublication::class;
+    }
+    if ($class === App\Form\ConfigurationClubSelectionType::class) { $options['clubs'] = []; }
+    if ($class === App\Form\CourseDivisionSelectionType::class) { $options['divisions'] = []; }
+    if ($class === App\Form\DivisionRoleAssignmentType::class) { $options['members'] = []; }
+    if ($class === App\Form\ClubEventType::class) {
+        $data = new App\Entity\ClubEvent(new App\Entity\Club());
+        $options['data_class'] = App\Entity\ClubEvent::class;
+    }
+    return $factory->create($class, $data, $options)->createView();
+};
+foreach (glob('src/Form/*.php') as $file) {
+    $inspect($buildFormView($file), $file);
 }
 $parser = (new PhpParser\ParserFactory())->createForHostVersion();
 $finder = new PhpParser\NodeFinder();
@@ -212,7 +232,7 @@ foreach ($locales as $locale) {
     $translator->setLocale($locale);
     foreach (glob('src/Form/*.php') as $file) {
         $class = 'App\\Form\\'.basename($file, '.php');
-        $view = $factory->create($class, null, ['data_class' => null])->createView();
+        $view = $buildFormView($file);
         $assert($renderer->searchAndRenderBlock($view, 'widget') !== '', "$locale: could not render $class");
     }
     $editor = EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField::new('notes')->getAsDto();

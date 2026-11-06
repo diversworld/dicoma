@@ -18,12 +18,17 @@ final class MembershipAutomation
         private readonly EntityManagerInterface $em,
         private readonly MembershipService $memberships,
         private readonly LoggerInterface $logger,
+        private readonly SingleClubMode $singleClub,
     ) {}
 
     public function run(\DateTimeImmutable $today): int
     {
         $processed = 0;
-        foreach ($this->em->getRepository(Member::class)->findBy(['archivedAt' => null]) as $member) {
+        $criteria = ['archivedAt' => null];
+        if ($this->singleClub->isEnabled()) {
+            $criteria['club'] = $this->singleClub->club();
+        }
+        foreach ($this->em->getRepository(Member::class)->findBy($criteria) as $member) {
             $this->em->wrapInTransaction(function () use ($member, $today, &$processed): void {
                 $termination = $member->getTerminationDate();
                 if ($termination !== null && $termination < $today && $member->getLeftAt() === null) {

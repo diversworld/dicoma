@@ -5,6 +5,8 @@ namespace App\Controller;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 use App\Entity\Schedule;
+use App\Entity\Club;
+use App\Entity\User;
 use App\Form\ScheduleType;
 use App\Repository\ScheduleRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,7 +23,7 @@ class ScheduleController extends AbstractController
     public function index(ScheduleRepository $scheduleRepository): Response
     {
         return $this->render('schedule/index.html.twig', [
-            'schedules' => $scheduleRepository->findAll()
+            'schedules' => $scheduleRepository->findVisibleForClub($this->memberClub())
         ]);
     }
 
@@ -48,7 +50,7 @@ class ScheduleController extends AbstractController
         $calendar = $this->generateCalendar($month, $year);
 
         return $this->render('schedule/calendar.html.twig', [
-            'schedules' => $scheduleRepository->findAll(),
+            'schedules' => $scheduleRepository->findVisibleForClub($this->memberClub()),
             'calendar'  => $calendar,
             'currentDate' => $currentDate
         ]);
@@ -85,11 +87,28 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_schedule_show', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function show(Schedule $schedule): Response
+    public function show(int $id, ScheduleRepository $scheduleRepository): Response
     {
+        $schedule = $scheduleRepository->findVisibleForClubById($this->memberClub(), $id);
+        if ($schedule === null) {
+            throw $this->createNotFoundException('Kurstermin nicht verfügbar.');
+        }
+
         return $this->render('schedule/show.html.twig', [
             'schedule' => $schedule,
         ]);
+    }
+
+    private function memberClub(): Club
+    {
+        $user = $this->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        $club = $member?->getClub();
+        if ($member === null || !$member->isActiveMember() || $club?->getId() === null) {
+            throw $this->createAccessDeniedException('Aktive Mitgliedschaft und Vereinszuordnung erforderlich.');
+        }
+
+        return $club;
     }
 
     #[Route('/{id}/edit', name: 'app_schedule_edit', methods: ['GET', 'POST'])]

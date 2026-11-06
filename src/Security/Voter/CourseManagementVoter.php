@@ -40,6 +40,13 @@ final class CourseManagementVoter extends Voter
             return false;
         }
 
+        if ($this->clubContext->isSingleClubMode()) {
+            $clubId = $this->clubContext->getClub()?->getId();
+            if ($clubId === null || ($subject->getClub() !== null && $subject->getClub()->getId() !== $clubId)) {
+                return false;
+            }
+        }
+
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
             if ($this->clubContext->isBackendRequest()) {
                 $selectedId = $this->clubContext->getClub()?->getId();

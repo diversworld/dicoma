@@ -29,6 +29,10 @@ final class CompetitionAccess
 
     private function matchesBackendSelection(?Club $club): bool
     {
+        if ($this->clubContext->isSingleClubMode()) {
+            $configuredId = $this->clubContext->getClub()?->getId();
+            return $configuredId !== null && $club?->getId() === $configuredId;
+        }
         if (!$this->clubContext->isBackendRequest() || !$this->security->isGranted('ROLE_SUPER_ADMIN')) {
             return true;
         }

@@ -64,11 +64,15 @@ final class Phase2BookingIsolationHttpTest extends WebTestCase
         foreach (['a' => 'b', 'b' => 'a'] as $actor => $foreign) {
             $client->loginUser($users[$actor]);
 
-            foreach (['/booking/%d', '/booking/%d/edit'] as $pattern) {
-                $client->request('GET', sprintf($pattern, $ids[$foreign]));
-            
-                self::assertSame(403, $client->getResponse()->getStatusCode(), sprintf('%s admin must not read booking of club %s at %s', $actor, $foreign, $pattern));
-            }
+            $client->request('GET', '/booking/'.$ids[$foreign]);
+            self::assertResponseStatusCodeSame(403);
+            $client->request('GET', '/booking/'.$ids[$foreign].'/edit');
+            self::assertResponseStatusCodeSame(303);
+            self::assertStringNotContainsString('/booking/'.$ids[$foreign], (string) $client->getResponse()->headers->get('Location'));
+            $client->followRedirect();
+            self::assertResponseIsSuccessful();
+            $client->request('GET', '/admin/de/booking/'.$ids[$foreign].'/edit');
+            self::assertResponseStatusCodeSame(403);
         }
     }
 }

@@ -9,6 +9,8 @@ use App\Enum\CourseStatus;
 use App\Form\CoursesType;
 use App\Repository\CoursesRepository;
 use App\Repository\ScheduleRepository;
+use App\Service\AdminClubContext;
+use App\Service\CourseImageStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -78,45 +80,37 @@ class CoursesController extends AbstractController
 
     #[Route('/upload', name: 'upload', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function upload(Request $request): JsonResponse
+    public function upload(Request $request, EntityManagerInterface $entityManager, AdminClubContext $clubContext, CourseImageStorage $storage): JsonResponse
     {
-        $this->logger->info('Files in the request:', $request->files->all());
+        $courseId = $request->request->getString('course_id');
+        if (!ctype_digit($courseId) || (int) $courseId < 1
+            || !$this->isCsrfTokenValid('course_image_upload_'.$courseId, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Ungültiger Kurs oder CSRF-Token.');
+        }
+
+        $course = $entityManager->find(Courses::class, (int) $courseId);
+        if (!$course instanceof Courses) {
+            throw $this->createNotFoundException('Kurs nicht gefunden.');
+        }
+        $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
+        if ($course->getClub()?->getId() === null || $course->getClub()->getId() !== $clubContext->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Kurs gehört nicht zum ausgewählten Verein.');
+        }
 
         $uploadedFile = $request->files->get('file');
-
-        if ($uploadedFile) {
-            $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-            $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII; [^A-Za-z0-9_] remove; Lower()', $originalFilename);
-            $newFilename = $safeFilename.'-'.uniqid().'.'.$uploadedFile->guessExtension();
-
-            try {
-                $uploadedFile->move(
-                    $this->getParameter('bilder_ordner'),
-                    $newFilename
-                );
-            } catch (FileException $e) {
-                $this->logger->error('Failed to upload the file: ' . $e->getMessage());
-                return new JsonResponse([
-                    "status" => 500,
-                    "message" => "Unexpected error during file upload.",
-                ]);
-            }
-
-            return new JsonResponse([
-                "status" => 200,
-                "message" => "File uploaded successfully.",
-                "file" => $newFilename,
-                "allFiles" => $this->getFiles() // Return all files
-            ]);
-
-        } else {
-            $this->logger->error('No file found in the request');
-
-            return new JsonResponse([
-                "status" => 400,
-                "message" => "No file was submitted.",
-            ]);
+        if (!$uploadedFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            return new JsonResponse(['message' => 'Bitte ein Bild auswählen.'], Response::HTTP_BAD_REQUEST);
         }
+        try {
+            $name = $storage->store($uploadedFile);
+        } catch (\InvalidArgumentException $e) {
+            return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (FileException $e) {
+            $this->logger->error('Course image upload failed.', ['exception' => $e]);
+            return new JsonResponse(['message' => 'Das Bild konnte nicht gespeichert werden.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return new JsonResponse(['status' => 200, 'message' => 'Bild gespeichert.', 'file' => $name]);
     }
 
     #[Route('/{id}', name: 'app_courses_show', requirements: ['id' => '\d+'], methods: ['GET'])]

@@ -15,6 +15,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class Phase2ClubIsolationHttpTest extends WebTestCase
 {
+    use SelectAdminClub;
+
     private function fixtures(): array
     {
         if (($_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? getenv('APP_ENV')) !== 'test'
@@ -74,13 +76,16 @@ final class Phase2ClubIsolationHttpTest extends WebTestCase
     public function testSuperAdminCanReadBothAndOrdinaryUserCannot(): void
     {
         [$client, $users, $courses] = $this->stagingContext();
-        foreach ($courses as $course) {
+        foreach (['a' => 'b', 'b' => 'a'] as $selected => $foreign) {
             $client->loginUser($users['super']);
-            $client->request('GET', '/admin/course/'.$course->getId().'/history');
+            $this->selectAdminClub($client, $users[$selected]->getMember()->getClub()->getId());
+            $client->request('GET', '/admin/course/'.$courses[$selected]->getId().'/history');
             self::assertResponseIsSuccessful();
+            $client->request('GET', '/admin/course/'.$courses[$foreign]->getId().'/history');
+            self::assertResponseStatusCodeSame(403);
 
             $client->loginUser($users['user']);
-            $client->request('GET', '/admin/course/'.$course->getId().'/history');
+            $client->request('GET', '/admin/course/'.$courses[$selected]->getId().'/history');
             self::assertResponseStatusCodeSame(403);
         }
     }

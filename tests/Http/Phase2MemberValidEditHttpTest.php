@@ -18,6 +18,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class Phase2MemberValidEditHttpTest extends WebTestCase
 {
+    use SelectAdminClub;
+
     public function testForeignMemberRejectsValidFormSubmission(): void
     {
         $config = $this->configuration();
@@ -56,6 +58,7 @@ final class Phase2MemberValidEditHttpTest extends WebTestCase
             // Obtain an authentic, valid Symfony form (including CSRF token)
             // as a permitted super-admin in the same browser session.
             $client->loginUser($users['super']);
+            $this->selectAdminClub($client, $members[$target]->getClub()->getId());
             $crawler = $client->request('GET', $this->url(Crud::PAGE_EDIT, $id));
             self::assertResponseIsSuccessful();
             $forms = $crawler->filter('form[name="Member"]');

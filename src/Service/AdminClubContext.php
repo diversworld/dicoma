@@ -22,6 +22,7 @@ final class AdminClubContext
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $forms,
         private readonly UrlGeneratorInterface $urls,
+        private readonly SingleClubMode $singleClub,
     ) {}
 
     public function getClub(): ?Club
@@ -29,6 +30,17 @@ final class AdminClubContext
         $user = $this->security->getUser();
         if (!$user instanceof User) {
             return null;
+        }
+        if ($this->singleClub->isEnabled()) {
+            if (!$this->singleClub->permitsUser($user)) {
+                return null;
+            }
+            $club = $this->singleClub->club();
+            if (!$this->security->isGranted('ROLE_SUPER_ADMIN')
+                && $user->getMember()?->getClub()?->getId() !== $club->getId()) {
+                return null;
+            }
+            return $club;
         }
         $request = $this->requests->getCurrentRequest();
         if ($this->security->isGranted('ROLE_SUPER_ADMIN') && $request !== null && $request->hasSession()) {
@@ -49,6 +61,9 @@ final class AdminClubContext
 
     public function selectionForm(): FormInterface
     {
+        if ($this->singleClub->isEnabled()) {
+            throw new \LogicException('Im Einzelvereinsbetrieb ist keine Vereinsauswahl verfügbar.');
+        }
         return $this->forms->createNamed('admin_club', ConfigurationClubSelectionType::class, ['club' => $this->getClub()], [
             'clubs' => $this->em->getRepository(Club::class)->findBy([], ['name' => 'ASC']),
             'club_label' => 'Verein',
@@ -61,11 +76,19 @@ final class AdminClubContext
 
     public function select(Club $club): void
     {
+        if ($this->singleClub->isEnabled()) {
+            throw new \LogicException('Im Einzelvereinsbetrieb ist kein Vereinswechsel möglich.');
+        }
         $user = $this->security->getUser();
         if (!$user instanceof User || !$this->security->isGranted('ROLE_SUPER_ADMIN') || $club->getId() === null) {
             throw new \LogicException('Eine gültige Superadmin-Vereinsauswahl ist erforderlich.');
         }
         $this->requests->getSession()->set($this->sessionKey($user), $club->getId());
+    }
+
+    public function isSingleClubMode(): bool
+    {
+        return $this->singleClub->isEnabled();
     }
 
     private function sessionKey(User $user): string

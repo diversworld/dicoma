@@ -50,7 +50,7 @@
                                                                         <a href="{{ path('app_schedule_edit', {'id': schedule.id}) }}"><i class="ion-edit"></i></a>
                                                                     </li>
                                                                 {% endif %}
-                                                                {% if is_granted('ROLE_MEMBER') %}
+                                                                {% if is_granted('ROLE_MEMBER') and schedule.courses.status.value != 'completed' %}
                                                                     <li class="list-inline-item">
                                                                         <form method="post" action="{{ path('app_booking_book', {'id': schedule.id}) }}" class="d-inline">
                                                                             <input type="hidden" name="_token" value="{{ csrf_token('book_schedule_' ~ schedule.id) }}">

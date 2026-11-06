@@ -16,7 +16,10 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class FrontendCourseRegistrationService
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly SingleClubMode $singleClub,
+    ) {}
 
     /** @throws \DomainException */
     public function register(int $courseId, Member|Person $attendee): CourseParticipant
@@ -28,6 +31,9 @@ final class FrontendCourseRegistrationService
                 throw new \DomainException('Der Kurs wurde nicht gefunden.');
             }
             $this->em->refresh($course);
+            if ($this->singleClub->isEnabled() && $course->getClub()?->getId() !== $this->singleClub->club()->getId()) {
+                throw new \DomainException('Der Kurs wurde nicht gefunden.');
+            }
             if ($course->getStatus() !== CourseStatus::OPEN) {
                 throw new \DomainException('Für diesen Kurs ist die Anmeldung nicht geöffnet.');
             }

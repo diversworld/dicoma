@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\{BarDutyAssignment, BarDutyNotification, Club};
+use App\Service\SingleClubMode;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
@@ -15,14 +16,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:bar-duty:remind', description: 'Erzeugt einmalige interne Erinnerungen für kommende Thekendienste. Versendet keine E-Mails.')]
 final class BarDutyRemindersCommand extends Command
 {
-    public function __construct(private readonly EntityManagerInterface $em) { parent::__construct(); }
+    public function __construct(private readonly EntityManagerInterface $em, private readonly SingleClubMode $singleClub) { parent::__construct(); }
     protected function configure(): void { $this->addOption('hours', null, InputOption::VALUE_REQUIRED, 'Vorlauf in Stunden (1–168)', '48'); }
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $hours = filter_var($input->getOption('hours'), FILTER_VALIDATE_INT);
         if ($hours === false || $hours < 1 || $hours > 168) { $output->writeln('<error>hours muss zwischen 1 und 168 liegen.</error>'); return Command::INVALID; }
         $count = 0; $now = new \DateTimeImmutable(); $until = $now->modify('+'.$hours.' hours');
-        foreach ($this->em->getRepository(Club::class)->findAll() as $club) {
+        $clubs = $this->singleClub->isEnabled() ? [$this->singleClub->club()] : $this->em->getRepository(Club::class)->findAll();
+        foreach ($clubs as $club) {
             $this->em->wrapInTransaction(function () use ($club, $now, $until, &$count): void {
                 $this->em->refresh($club, LockMode::PESSIMISTIC_WRITE);
                 $assignments = $this->em->getRepository(BarDutyAssignment::class)->createQueryBuilder('a')->join('a.shift', 's')->addSelect('s')

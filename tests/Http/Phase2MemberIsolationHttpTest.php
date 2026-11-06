@@ -18,6 +18,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class Phase2MemberIsolationHttpTest extends WebTestCase
 {
+    use SelectAdminClub;
+
     public function testClubAdminsCannotReadOrOpenEditFormForForeignMembers(): void
     {
         [$client, $users, $members] = $this->context();
@@ -45,14 +47,17 @@ final class Phase2MemberIsolationHttpTest extends WebTestCase
     public function testSuperAdminCanReadBothAndOrdinaryUserCannot(): void
     {
         [$client, $users, $members] = $this->context();
-        foreach ($members as $member) {
+        foreach (['a' => 'b', 'b' => 'a'] as $selected => $foreign) {
             foreach ([Crud::PAGE_DETAIL, Crud::PAGE_EDIT] as $action) {
                 $client->loginUser($users['super']);
-                $client->request('GET', $this->url($action, $member->getId()));
+                $this->selectAdminClub($client, $members[$selected]->getClub()->getId());
+                $client->request('GET', $this->url($action, $members[$selected]->getId()));
                 self::assertResponseIsSuccessful();
+                $client->request('GET', $this->url($action, $members[$foreign]->getId()));
+                self::assertResponseStatusCodeSame(403);
 
                 $client->loginUser($users['user']);
-                $client->request('GET', $this->url($action, $member->getId()));
+                $client->request('GET', $this->url($action, $members[$selected]->getId()));
                 self::assertResponseStatusCodeSame(403);
             }
         }

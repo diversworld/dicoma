@@ -1,5 +1,5 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section]|trans }} – {{ ownClub.name }}{% endblock %}
+{% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section]|trans }} – {{ (section in ['membership', 'contributions'] ? club : ownClub).name }}{% endblock %}
 {% block main %}
     <p><a href="{{ path('admin_settings') }}">{{ 'Zurück zu den Einstellungen'|trans }}</a></p>
     {% if websiteForm %}

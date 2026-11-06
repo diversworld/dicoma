@@ -18,6 +18,9 @@ final class AdminClubController extends AbstractController
     #[Route('/admin/settings/club', name: 'admin_club_select', defaults: DashboardController::ROUTE_DEFAULTS, methods: ['POST'])]
     public function select(Request $request, AdminClubContext $context): Response
     {
+        if ($context->isSingleClubMode()) {
+            throw $this->createNotFoundException();
+        }
         $form = $context->selectionForm()->handleRequest($request);
         if (!$form->isSubmitted() || !$form->isValid()) {
             return $this->render('admin/division/select_club.html.twig', ['form' => $form->createView()], new Response(status: 422));

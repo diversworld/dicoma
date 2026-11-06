@@ -109,16 +109,13 @@ final class Phase2VendorAuthorizationHttpTest extends WebTestCase
         $client->loginUser($users['super']);
 
         foreach ([
-            '/vendor/',
-            '/vendor/new',
-            '/admin/de/vendor',
-            '/admin/de/vendor/new',
-        ] as $path) {
+            '/vendor/' => '/admin/de/vendor',
+            '/vendor/new' => '/admin/de/vendor/new',
+        ] as $path => $target) {
             $client->request('GET', $path);
-
-            self::assertResponseIsSuccessful(
-                sprintf('Super-Admin muss %s aufrufen können.', $path)
-            );
+            self::assertResponseRedirects($target, 303);
+            $client->followRedirect();
+            self::assertResponseIsSuccessful(sprintf('Super-Admin muss %s aufrufen können.', $target));
         }
     }
 

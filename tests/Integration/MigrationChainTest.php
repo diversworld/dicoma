@@ -371,7 +371,15 @@ final class MigrationChainTest extends TestCase
         $user = (new \App\Entity\User())->setUser('snapshot-reader')->setMember($member);
         $security = $this->createStub(\Symfony\Bundle\SecurityBundle\Security::class);
         $security->method('getUser')->willReturn($user); $security->method('isGranted')->willReturn(true);
-        $workflow = new \App\Service\BarDutyWorkflow($em, new \App\Service\BarDutyAccess($security));
+        $clubContext = new \App\Service\AdminClubContext(
+            $security,
+            new \Symfony\Component\HttpFoundation\RequestStack(),
+            $em,
+            $this->createStub(\Symfony\Component\Form\FormFactoryInterface::class),
+            $this->createStub(\Symfony\Component\Routing\Generator\UrlGeneratorInterface::class),
+            new \App\Service\SingleClubMode(new \App\Service\PublicWebsite($em, $security, $clubId), false),
+        );
+        $workflow = new \App\Service\BarDutyWorkflow($em, new \App\Service\BarDutyAccess($security, $clubContext));
         if ($mariaDb) { $reader->executeStatement('SET SESSION innodb_snapshot_isolation = '.($snapshotIsolation ? '1' : '0')); }
         $reader->setTransactionIsolation(\Doctrine\DBAL\TransactionIsolationLevel::REPEATABLE_READ);
         $reader->beginTransaction();
@@ -801,6 +809,17 @@ final class MigrationChainTest extends TestCase
             '20261024102048',
             '20261024130000',
             '20261024150454',
+            '20261025140000',
+            '20261025170000',
+            '20261025190000',
+            '20261028180000',
+            '20261028181000',
+            '20261029120000',
+            '20261029130000',
+            '20261029140000',
+            '20261029150000',
+            '20261030100000',
+            '20261030110000',
         ];
 
         $migrations = $this->factory()

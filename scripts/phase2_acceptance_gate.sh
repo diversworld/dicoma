@@ -4,6 +4,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 PHP_BIN="${PHP_BIN:-php}"
 fail=0
+interrupted=0
+trap 'interrupted=1' INT TERM
 if [[ ! "${DICOMA_RUN_STAGING_DB_CHECKS:-0}" =~ ^[01]$ || ! "${DICOMA_RUN_STAGING_HTTP_TESTS:-0}" =~ ^[01]$ ]]; then
   echo 'BLOCKIERT: Staging-Schalter müssen 0 oder 1 sein.' >&2
   exit 2
@@ -11,7 +13,27 @@ fi
 run() {
   local label="$1"; shift
   printf '\n=== %s ===\n' "$label"
-  if "$@"; then echo "PASS: $label"; else echo "FAIL: $label"; fail=1; fi
+  if "$@" && [[ "$interrupted" -eq 0 ]]; then echo "PASS: $label"; else echo "FAIL: $label"; fail=1; fi
+  if [[ "$interrupted" -ne 0 ]]; then
+    echo 'BLOCKIERT: Prüfung durch Signal unterbrochen.' >&2
+    exit 130
+  fi
+}
+run_phpunit() {
+  local suite="$1" output result
+  local -a statuses
+  output=$(mktemp) || return 1
+  "$PHP_BIN" vendor/bin/phpunit --testsuite "$suite" --no-progress --fail-on-skipped --fail-on-incomplete | tee "$output"
+  statuses=("${PIPESTATUS[@]}")
+  result=${statuses[0]}
+  if [[ "${statuses[1]}" -ne 0 ]]; then
+    result=1
+  fi
+  if grep -Fq 'Test execution was interrupted by a signal.' "$output"; then
+    result=130
+  fi
+  rm -f -- "$output"
+  return "$result"
 }
 if [[ ! -f vendor/autoload.php ]]; then
   echo 'BLOCKIERT: vendor/autoload.php fehlt; composer install muss auf Staging erfolgt sein.' >&2
@@ -30,7 +52,7 @@ run 'Doctrine-Mapping (ohne Datenbank)' "$PHP_BIN" bin/console doctrine:schema:v
 run 'Installationssperre' "$PHP_BIN" tests/installation_guard_standalone.php
 run 'Bootstrap-Sperre' "$PHP_BIN" tests/bootstrap_lock_standalone.php
 if [[ -x vendor/bin/phpunit ]]; then
-  run 'PHPUnit (Unit und isoliertes SQLite)' "$PHP_BIN" vendor/bin/phpunit --testsuite unit,isolated --no-progress --fail-on-skipped --fail-on-incomplete
+  run 'PHPUnit (Unit und isoliertes SQLite)' run_phpunit unit,isolated
 else
   echo 'BLOCKIERT: vendor/bin/phpunit fehlt.' >&2
   fail=1
@@ -59,7 +81,7 @@ if [[ "${DICOMA_RUN_STAGING_DB_CHECKS:-0}" == '1' || "${DICOMA_RUN_STAGING_HTTP_
         echo 'BLOCKIERT: HTTP-Suite enthält Schreibtests; ausdrückliche Bestätigung erforderlich.' >&2
         fail=1
       else
-        run 'HTTP-Abnahme (Staging, inklusive Schreibtests)' "$PHP_BIN" vendor/bin/phpunit --testsuite staging --no-progress --fail-on-skipped --fail-on-incomplete
+        run 'HTTP-Abnahme (Staging, inklusive Schreibtests)' run_phpunit staging
       fi
     fi
   fi

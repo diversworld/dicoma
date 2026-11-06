@@ -89,10 +89,9 @@ final class Phase2TankCheckArticleAuthorizationHttpTest extends WebTestCase
         $client->loginUser($users['super']);
 
         $client->request('GET', '/tank/check/article/');
-
-        self::assertResponseIsSuccessful(
-            'Super-Admin muss die TÜV-Preisartikel aufrufen können.'
-        );
+        self::assertResponseRedirects('/admin/de/tank-check-article', 303);
+        $client->followRedirect();
+        self::assertResponseIsSuccessful('Super-Admin muss die TÜV-Preisartikel aufrufen können.');
     }
 
     private function context(): array

@@ -49,8 +49,10 @@ final class MediaFileHttpTest extends WebTestCase
     protected function tearDown(): void
     {
         foreach ($this->paths as $path) { if (is_file($path)) { unlink($path); } }
-        foreach ([$this->root.'/var/private/website_media', $this->root.'/var/private', $this->root.'/var', $this->root] as $dir) {
-            if (is_dir($dir)) { rmdir($dir); }
+        if (isset($this->root)) {
+            foreach ([$this->root.'/var/private/website_media', $this->root.'/var/private', $this->root.'/var', $this->root] as $dir) {
+                if (is_dir($dir)) { rmdir($dir); }
+            }
         }
         parent::tearDown();
     }
@@ -513,10 +515,10 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
         $crawler = $this->client->request('GET', '/admin/settings/membership');
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'Mitgliedschaft – Other club');
+        self::assertSelectorTextContains('body', 'Mitgliedschaftsregeln – Other club');
         self::assertSelectorNotExists('form[name="bar_duty_policy"]');
         $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2029');
-        self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Other club');
+        self::assertSelectorTextContains('body', 'Thekendiensteinstellungen – Other club');
         $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
             'bar_duty_policy[minutes]' => '60', 'bar_duty_policy[reason]' => 'Beschluss des Vereins',
         ]);
@@ -527,7 +529,7 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->submitForm('Jahr auswählen', ['year' => '2030'], 'GET');
         self::assertResponseIsSuccessful();
         self::assertSame('/admin/settings/bar-services?year=2030', $this->client->getRequest()->getRequestUri());
-        self::assertSelectorTextContains('body', 'Thekendienst-Jahresregel – Other club');
+        self::assertSelectorTextContains('body', 'Thekendiensteinstellungen – Other club');
         $crawler = $this->client->request('GET', '/admin/settings/membership');
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
             'membership_policy[contactEmail]' => 'other@example.org',

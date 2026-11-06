@@ -47,7 +47,7 @@
                 </tr>
                 <tr>
                     <th>Notes</th>
-                    <td>{{ schedule.notes|raw }}</td>
+                    <td>{{ schedule.notes|default('')|sanitize_html('app.post_sanitizer') }}</td>
                 </tr>
             </tbody>
         </table>

@@ -1,5 +1,63 @@
 # Betrieb und Wiederherstellung – Phase 2 bis 6 und Phase 8
 
+## Vorbereiteter Einzelvereinsbetrieb
+
+Der Einzelvereinsbetrieb ist standardmäßig **nicht aktiviert**. Er verwendet
+den aktiven Verein aus `PUBLIC_SITE_CLUB_ID`; `DICOMA_SINGLE_CLUB_MODE=1`
+schaltet den Vereinswechsel und das Anlegen weiterer Vereine ab. Öffentliche
+Mitgliedsanträge führen unmittelbar zu diesem Verein. Konten mit einer
+abweichenden Mitgliederzuordnung werden abgewiesen; Gastkonten bleiben möglich.
+Die bestehenden Vereins-IDs und Fachbeziehungen bleiben technisch erhalten.
+Externe Turniermannschaften bleiben von der Umstellung unberührt.
+
+**Nicht einschalten, bevor Bestandsdaten, Nachrichten und Hintergründe geprüft
+und bereinigt sind.** Die Befehle ändern keine Konfiguration und führen keine
+automatische Zusammenführung aus. Der folgende Ablauf benötigt ein
+Wartungsfenster ohne gleichzeitige Web-Zugriffe und Jobs, eine vollständige
+Sicherung von Datenbank, privaten Dateien und Konfiguration sowie eine
+getestete Wiederherstellung. Zielumgebung, Verein, Turnier und fachliche
+Freigabe sind vorher ausdrücklich zu kontrollieren.
+
+1. Schreibgeschützt prüfen:
+
+   ```sh
+   php bin/console app:single-club:check --env=prod
+   ```
+
+   Der Befehl meldet abweichende `club_id`- und Fremdschlüsselbezüge sowie
+   vereinslose Mitglieder, Kurse und Flaschen. Er prüft keine beliebigen
+   Text-, JSON- oder externen Daten. Offene Postausgänge und historische
+   Dokumente sind zusätzlich fachlich zu kontrollieren. Insbesondere enthalten
+   Mitgliederbenachrichtigungen keinen verlässlichen Vereinsbezug: Ihr
+   ausstehender Versand wird durch den Check nicht geprüft oder gesperrt.
+   Versandjobs bis zur manuellen Prüfung deaktiviert lassen.
+2. Für ein einzeln freigegebenes Turnier zunächst nur die Übernahme prüfen:
+
+   ```sh
+   php bin/console app:single-club:reassign-tournament --source-club=2 --tournament=7 --env=prod
+   ```
+
+   `2` und `7` sind Beispiele, keine empfohlenen Bestandswerte. Weitere
+   abweichende Vereinszuordnungen blockieren die Übernahme und müssen separat
+   geklärt werden. Es werden weder Vereine noch Daten automatisch gelöscht.
+3. Erst nach erneuter ausdrücklicher Freigabe und während des bestätigten
+   Wartungsfensters denselben Befehl um `--apply --confirm-maintenance`
+   ergänzen. Das Turnier behält seine ID und Verknüpfungen; seine Version wird
+   erhöht. Die Zuordnung wird protokolliert. Der Quellverein bleibt erhalten.
+   Die Tabellenprüfung schützt nicht gegen parallele Schreibvorgänge; deshalb
+   ist das Wartungsfenster zwingend.
+4. `app:single-club:check` erneut ausführen und nur bei erfolgreicher Prüfung
+   und fachlicher Abnahme `DICOMA_SINGLE_CLUB_MODE=1` setzen. Cache gemäß
+   Deployment-Prozess erneuern und Anmeldung, Kursangebot, Turnier, Dienste und
+   Verwaltung gezielt prüfen. Bei Problemen Modus wieder deaktivieren; die
+   Datenzuordnung wird dadurch **nicht** zurückgerollt. Für eine
+   Datenwiederherstellung das geprüfte Backup verwenden.
+
+Für eine Neuinstallation zuerst einen Verein anlegen und
+`PUBLIC_SITE_CLUB_ID` setzen; anschließend den Einzelvereinsmodus nach
+erfolgreicher Prüfung einschalten. Solange er deaktiviert ist, gelten die
+nachfolgenden Beschreibungen der bisherigen Vereinsauswahl.
+
 ## Airspace-Theme und öffentliche Redaktion
 
 Die additive Migration `Version20261025190000` ergänzt
@@ -72,6 +130,13 @@ einer buchbaren Veranstaltung lässt sich auch nach Anmeldungen separat ändern,
 ohne Preis oder Termin zu verändern. Genutzte Dateien können erst nach dem
 Entfernen aller Zuordnungen gelöscht werden. Beim Hochladen sind Urheberrechte
 und gegebenenfalls personenbezogene Bildmetadaten zu prüfen.
+
+Die separaten Bildfelder der Kurs- und Terminverwaltung speichern weiterhin
+öffentlich unter `public/images/kurse`. Für neue Uploads sind nur JPEG, PNG
+und WebP bis 10 MiB und 40 Millionen Pixel erlaubt; SVG und andere Formate
+werden abgewiesen. Die Dateinamen werden zufällig erzeugt. Bestehende
+Bilddateien werden dadurch nicht verändert oder bereinigt; die Validierung
+entfernt keine Bildmetadaten und ist keine Malwareprüfung.
 
 Mit der additiven Migration `Version20261029150000` können Berechtigte
 vereinsbezogene Ordner und Unterordner anlegen. Neue Dateien werden im

@@ -154,6 +154,15 @@ See [portal consolidation](docs/phase11-portals.md) for scope and tests, and
 the [current specification matrix](docs/analysis/feature-matrix.md) for the
 remaining functional gaps. This is not a full Master Specification acceptance.
 
+#### Single-club operation
+
+Single-club operation is prepared but disabled by default. It uses the active
+club configured by `PUBLIC_SITE_CLUB_ID`; no club data is automatically
+merged or deleted. Enabling `DICOMA_SINGLE_CLUB_MODE=1` is a separate
+operational change and must follow the checks, backup and explicit data
+reassignment described in [operations](docs/deployment/operations.md).
+The existing multi-club behaviour remains available until that cutover.
+
 #### License
 - [GNU](https://www.gnu.org/licenses/gpl-3.0.html)
 

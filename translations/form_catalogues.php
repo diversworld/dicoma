@@ -6,6 +6,7 @@ declare(strict_types=1);
 return static function (string $domain, string $locale): array {
     $columns = ['de' => 0, 'en' => 1, 'fr' => 2, 'es' => 3];
     $messages = [
+        'Vereinsdaten' => ['Club details', 'Informations du club', 'Datos del club'],
         'TÜV-Leistungen auswählen' => ['Select inspection services', 'Sélectionner les prestations de contrôle', 'Seleccionar servicios de inspección'],
         'Die Flaschengröße ist nicht eindeutig. Größenabhängige Leistungen sind nicht verfügbar. Bitte die Größe im Profil in Litern hinterlegen.' => ['The cylinder size is ambiguous. Size-dependent services are unavailable. Please enter the size in litres in your profile.', 'La taille de la bouteille est ambiguë. Les prestations dépendant de la taille ne sont pas disponibles. Veuillez indiquer la taille en litres dans votre profil.', 'El tamaño de la botella no es inequívoco. Los servicios que dependen del tamaño no están disponibles. Indique el tamaño en litros en su perfil.'],
         'Standard, abwählbar' => ['Default, can be deselected', 'Par défaut, peut être désélectionné', 'Predeterminado, se puede desmarcar'],
@@ -2119,6 +2120,7 @@ return static function (string $domain, string $locale): array {
     ];
     $security = [
         'Your email address is not verified.' => ['Deine E-Mail-Adresse ist nicht bestätigt.', 'Your email address is not verified.', 'Votre adresse e-mail n’est pas vérifiée.', 'Su correo electrónico no está verificado.'],
+        'Das Konto ist nicht dem konfigurierten Verein zugeordnet.' => ['Das Konto ist nicht dem konfigurierten Verein zugeordnet.', 'The account is not associated with the configured club.', 'Le compte n’est pas associé au club configuré.', 'La cuenta no está asociada al club configurado.'],
     ];
 
     if ($domain !== 'messages') {

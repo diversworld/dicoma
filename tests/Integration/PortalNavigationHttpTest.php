@@ -5,8 +5,11 @@ namespace App\Tests\Integration;
 
 use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyPolicy, BarShift, BarShiftDefinition, Club, CourseParticipant, Courses, EquipmentCategory, EquipmentItem, Member, MemberDocument, MemberQualification, MemberTank, MemberTankCheckBooking, Person, Qualification, Sport, TankCheck, TankCheckArticle, Team, TeamMember, User};
 use App\Enum\CourseParticipantStatus;
+use App\Enum\DivisionRole;
 use App\Enum\MembershipStatus;
 use App\Enum\TeamMemberRole;
+use App\Security\LoginDestination;
+use App\Service\PortalNavigation;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use PHPUnit\Framework\Attributes\{DataProvider, PreserveGlobalState, RunTestsInSeparateProcesses};
@@ -63,11 +66,67 @@ final class PortalNavigationHttpTest extends WebTestCase
         yield 'equipment manager' => [[User::ROLE_EQUIPMENT_MANAGER], '/my'];
         yield 'board' => [[User::ROLE_BOARD], '/admin'];
         yield 'administrator' => [[User::ROLE_ADMIN], '/admin'];
+        yield 'superadministrator' => [[User::ROLE_SUPER_ADMIN], '/admin'];
         yield 'training manager' => [[User::ROLE_TRAINING_MANAGER], '/admin/de/training-overview'];
         yield 'course administrator' => [[User::ROLE_COURSE_ADMIN], '/admin/training'];
         yield 'clubhouse manager' => [[User::ROLE_BAR_MANAGER], '/admin/bar-duty'];
         yield 'press officer' => [[User::ROLE_PRESS_OFFICER], '/admin/de/editorial'];
         yield 'explicit frontend and backend role' => [[User::ROLE_ADMIN, User::ROLE_INSTRUCTOR], '/my'];
+        yield 'administrator and equipment manager' => [[User::ROLE_ADMIN, User::ROLE_EQUIPMENT_MANAGER], '/my'];
+        yield 'administrator and compressor operator' => [[User::ROLE_ADMIN, User::ROLE_COMPRESSOR_OPERATOR], '/my'];
+    }
+
+    public function testAnonymousAndGuestLoginDestinationsPreserveNavigationCompatibility(): void
+    {
+        $destination = static::getContainer()->get(LoginDestination::class);
+        $navigation = static::getContainer()->get(PortalNavigation::class);
+        self::assertSame('app_login', $destination->route());
+        self::assertSame('app_login', $navigation->getLoginRoute());
+
+        $person = (new Person())->setFirstname('Guest')->setLastname('Synthetic')->setEmail('guest-login@example.invalid');
+        $user = (new User())->setUser('guest-login')->setEmail('guest-login@example.invalid')
+            ->setIsVerified(true)->setPerson($person);
+        $user->setPassword(static::getContainer()->get(\Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface::class)->hashPassword($user, 'Synthetic-Test-Password-2026!'));
+        $this->em->persist($user);
+        $this->em->flush();
+
+        $crawler = $this->client->request('GET', '/login');
+        $this->client->submit($crawler->filter('form')->form(), [
+            '_username' => 'guest-login', '_password' => 'Synthetic-Test-Password-2026!',
+        ]);
+        self::assertResponseRedirects('/training');
+        self::assertSame('training_portal', $destination->route());
+        self::assertSame('training_portal', $navigation->getLoginRoute());
+        $this->client->request('GET', '/login');
+        self::assertResponseRedirects('/training');
+    }
+
+    public function testDivisionLeadershipAndForeignEditorialRoleKeepTheirLoginDestinations(): void
+    {
+        $leader = $this->account('division-leader');
+        $sport = (new Sport())->setClub($this->club)->setName('Synthetic sport');
+        $assignment = new \App\Entity\DivisionRoleAssignment($sport);
+        $assignment->setMember($leader->getMember());
+        $assignment->setRole(DivisionRole::LEADER);
+        $this->em->persist($sport);
+        $this->em->persist($assignment);
+        $foreignClub = (new Club())->setName('Other club');
+        $press = $this->account('foreign-press', [User::ROLE_PRESS_OFFICER]);
+        $press->getMember()->setClub($foreignClub);
+        $this->em->persist($foreignClub);
+        $this->em->flush();
+
+        $this->client->loginUser($leader);
+        $this->client->request('GET', '/login');
+        self::assertResponseRedirects('/admin/teams');
+        self::assertSame('competition_teams', static::getContainer()->get(PortalNavigation::class)->getLoginRoute());
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+
+        $this->client->loginUser($press);
+        $this->client->request('GET', '/login');
+        self::assertResponseRedirects('/my');
+        self::assertSame('member_portal_dashboard', static::getContainer()->get(PortalNavigation::class)->getLoginRoute());
     }
 
     #[DataProvider('membershipNavigationCases')]
@@ -135,6 +194,8 @@ final class PortalNavigationHttpTest extends WebTestCase
     {
         yield 'pure administrator' => [[User::ROLE_ADMIN], null, '/admin'];
         yield 'frontend instructor' => [[User::ROLE_INSTRUCTOR], null, '/my'];
+        yield 'press officer' => [[User::ROLE_PRESS_OFFICER], null, '/admin/de/editorial'];
+        yield 'administrator and equipment manager' => [[User::ROLE_ADMIN, User::ROLE_EQUIPMENT_MANAGER], null, '/my'];
         yield 'saved personal destination' => [[], '/my/bookings', '/my/bookings'];
         yield 'saved backend destination' => [[User::ROLE_BAR_MANAGER], '/admin/bar-duty/settings', '/admin/bar-duty/settings'];
     }
