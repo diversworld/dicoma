@@ -19,7 +19,7 @@
     margin: 0 auto;
     padding: 1.25rem;
 
-    background: var(--mc-bg);
+    /*background: var(--mc-bg);*/
     color: var(--mc-text);
 }
 

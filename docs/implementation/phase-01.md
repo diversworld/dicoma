@@ -340,6 +340,12 @@ Ausführung im DDEV-Webcontainer mit PHP 8.5, SQLite im Speicher und Null-Mailer
 - Ein erneutes isoliertes Basis-Gate bestand mit **443 Tests, 10.577
   Assertions**; da während dieses Laufs noch letzte Änderungen erfolgten,
   ist er kein einheitlicher Nachweis des endgültigen Arbeitsstands.
+- Ein weiterer Gesamtlauf wurde auf Wunsch nach über 45 Minuten kontrolliert
+  abgebrochen. Die vor PHPUnit ausgeführten Prüfungen waren erfolgreich; das
+  gesamte Gate ist wegen des Abbruchs **nicht bestanden**. Während dieses
+  zweiten Laufs wurden noch eine leere EasyAdmin-Menüsektion und die
+  Übersetzung „Postleitzahl“ korrigiert. Die Kontotests wurden anschließend
+  gezielt auf dem endgültigen Stand erneut erfolgreich ausgeführt.
 - Ausbildungsbescheinigung und angrenzende persönliche, Rollen- und
   Vereinsgrenzen: **7 Tests, 149 Assertions**. Der neue Fall deckt
   unter anderem den echten Vereinswechsel, eigenen und fremden Nachweis,
