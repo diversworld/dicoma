@@ -7,6 +7,9 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
+                    {% for message in app.flashes('account_password_changed') %}
+                        <div class="alert alert-success" role="status">{{ message|trans }}</div>
+                    {% endfor %}
                     {% if app.user %}
                         <div class="mb-3">
                             {{ 'Du bist angemeldet als %user%.'|trans({'%user%': app.user.userIdentifier}) }}

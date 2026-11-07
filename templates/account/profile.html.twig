@@ -1,0 +1,17 @@
+{% extends backend ? 'account/backend_layout.html.twig' : 'account/frontend_layout.html.twig' %}
+{% block account_title %}{{ 'Mein Konto'|trans }}{% endblock %}
+{% block account_body %}
+    <p><strong>{{ 'Benutzername'|trans }}:</strong> {{ account.userIdentifier }}</p>
+    <p><strong>{{ 'Konto-E-Mail'|trans }}:</strong> {{ account.email }}</p>
+    {% if account.person %}
+        <p><strong>{{ 'Name'|trans }}:</strong> {{ account.person.fullName }}</p>
+        <p>{{ 'Name und Konto-E-Mail werden durch die Verwaltung geändert. Änderungen der Kontaktdaten betreffen Ihre zentrale Person auch bei weiteren Mitgliedschaften.'|trans }}</p>
+        {% if not account.member %}<p>{{ 'Notfalldaten werden nur für eine zugeordnete Mitgliedschaft geführt.'|trans }}</p>{% endif %}
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button class="btn btn-primary" type="submit">{{ 'Speichern'|trans }}</button>
+        {{ form_end(form) }}
+    {% else %}
+        <p class="alert alert-warning">{{ 'Diesem Konto ist keine Person zugeordnet. Bitte wenden Sie sich zur Zuordnung und Korrektur Ihrer Kontaktdaten an die Verwaltung.'|trans }}</p>
+    {% endif %}
+{% endblock %}

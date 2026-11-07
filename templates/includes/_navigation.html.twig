@@ -15,6 +15,8 @@
                 </li>
             {% endfor %}
             {% if app.user %}
+                <li class="nav-item"><a class="nav-link" href="{{ path('account_profile') }}">{{ 'Mein Konto'|trans }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ path('account_password') }}">{{ 'Kennwort ändern'|trans }}</a></li>
                 {% if navigation.personal %}
                     <li class="nav-item dropdown">
                         <button class="nav-link dropdown-toggle btn" type="button" id="frontendPersonalMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ 'Mein Bereich'|trans }}</button>

@@ -42,6 +42,7 @@
             <file>tests/Integration/Phase0SecurityHttpTest.php</file>
             <file>tests/Integration/CourseImageControllerFieldsTest.php</file>
             <file>tests/Integration/AreaRouteBoundaryTest.php</file>
+            <file>tests/Integration/AccountSelfServiceHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

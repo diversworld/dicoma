@@ -6,6 +6,21 @@ declare(strict_types=1);
 return static function (string $domain, string $locale): array {
     $columns = ['de' => 0, 'en' => 1, 'fr' => 2, 'es' => 3];
     $messages = [
+        'Mein Konto' => ['My account', 'Mon compte', 'Mi cuenta'],
+        'Kennwort ändern' => ['Change password', 'Modifier le mot de passe', 'Cambiar contraseña'],
+        'Kennwort geändert. Bitte melden Sie sich erneut an.' => ['Password changed. Please sign in again.', 'Mot de passe modifié. Veuillez vous reconnecter.', 'Contraseña cambiada. Inicie sesión de nuevo.'],
+        'Aktuelles Kennwort' => ['Current password', 'Mot de passe actuel', 'Contraseña actual'],
+        'Konto-E-Mail' => ['Account email', 'E-mail du compte', 'Correo electrónico de la cuenta'],
+        'Kontakt-E-Mail' => ['Contact email', 'E-mail de contact', 'Correo electrónico de contacto'],
+        'Postleitzahl' => ['Postal code', 'Code postal', 'Código postal'],
+        'Notfallkontakt: Name' => ['Emergency contact: name', 'Contact d’urgence : nom', 'Contacto de emergencia: nombre'],
+        'Notfallkontakt: Telefon' => ['Emergency contact: phone', 'Contact d’urgence : téléphone', 'Contacto de emergencia: teléfono'],
+        'Notfallkontakt: Beziehung' => ['Emergency contact: relationship', 'Contact d’urgence : lien', 'Contacto de emergencia: relación'],
+        'Kontaktdaten gespeichert.' => ['Contact details saved.', 'Coordonnées enregistrées.', 'Datos de contacto guardados.'],
+        'Name und Konto-E-Mail werden durch die Verwaltung geändert. Änderungen der Kontaktdaten betreffen Ihre zentrale Person auch bei weiteren Mitgliedschaften.' => ['Name and account email are changed by the administration. Changes to contact details affect your central person record across other memberships.', 'Le nom et l’e-mail du compte sont modifiés par l’administration. Les modifications des coordonnées concernent votre fiche personnelle centrale pour toutes vos adhésions.', 'La administración modifica el nombre y el correo de la cuenta. Los cambios de contacto afectan a su registro personal central también en otras afiliaciones.'],
+        'Notfalldaten werden nur für eine zugeordnete Mitgliedschaft geführt.' => ['Emergency details are kept only for a linked membership.', 'Les données d’urgence sont conservées uniquement pour une adhésion associée.', 'Los datos de emergencia solo se mantienen para una afiliación vinculada.'],
+        'Diesem Konto ist keine Person zugeordnet. Bitte wenden Sie sich zur Zuordnung und Korrektur Ihrer Kontaktdaten an die Verwaltung.' => ['No person is linked to this account. Please contact the administration to link a person and correct your contact details.', 'Aucune personne n’est associée à ce compte. Veuillez contacter l’administration pour effectuer l’association et corriger vos coordonnées.', 'No hay ninguna persona vinculada a esta cuenta. Póngase en contacto con la administración para vincular una persona y corregir sus datos de contacto.'],
+        'Nach der Änderung melden Sie sich mit dem neuen Kennwort erneut an.' => ['After changing your password, sign in again with the new password.', 'Après la modification, reconnectez-vous avec le nouveau mot de passe.', 'Tras el cambio, inicie sesión de nuevo con la nueva contraseña.'],
         'Vereinsdaten' => ['Club details', 'Informations du club', 'Datos del club'],
         'TÜV-Leistungen auswählen' => ['Select inspection services', 'Sélectionner les prestations de contrôle', 'Seleccionar servicios de inspección'],
         'Die Flaschengröße ist nicht eindeutig. Größenabhängige Leistungen sind nicht verfügbar. Bitte die Größe im Profil in Litern hinterlegen.' => ['The cylinder size is ambiguous. Size-dependent services are unavailable. Please enter the size in litres in your profile.', 'La taille de la bouteille est ambiguë. Les prestations dépendant de la taille ne sont pas disponibles. Veuillez indiquer la taille en litres dans votre profil.', 'El tamaño de la botella no es inequívoco. Los servicios que dependen del tamaño no están disponibles. Indique el tamaño en litros en su perfil.'],

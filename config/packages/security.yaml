@@ -78,6 +78,7 @@ security:
         - { path: ^/verify/email$, roles: PUBLIC_ACCESS }
         - { path: ^/membership/apply(?:/|$), roles: PUBLIC_ACCESS }
         - { path: ^/portal(?:/|$), roles: ROLE_USER }
+        - { path: ^/account(?:/|$), roles: ROLE_USER }
         - { path: ^/calendar$, roles: ROLE_USER }
         - { path: ^/bar-duty(?:/|$), roles: ROLE_USER }
         - { path: ^/my-training/courses$, roles: PUBLIC_ACCESS }
@@ -100,7 +101,7 @@ security:
         # Administration
         # ---------------------------------------------------------
 
-        - { path: ^/admin/(?:teams|tournaments|calendar)(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/(?:account|teams|tournaments|calendar)(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/training(?:/|$), roles: [ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_COURSE_ADMIN] }
         - { path: ^/admin/training-overview(?:/|$), roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/(?:de|en|fr|es)/training-overview$, roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }

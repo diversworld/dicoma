@@ -1,0 +1,6 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% block content_title %}{{ block('account_title') }}{% endblock %}
+{% block main %}
+    {% if form %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endif %}
+    {% block account_body %}{% endblock %}
+{% endblock %}

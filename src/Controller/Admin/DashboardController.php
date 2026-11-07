@@ -43,6 +43,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Locale;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\MenuItemDto;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -655,9 +656,6 @@ class DashboardController extends AbstractDashboardController
         ];
     }
 
-    // Benutzerverwaltung ist ausschliesslich fuer Administratoren zugaenglich.
-    // Keine Profil-Links auf administrative CRUD-Masken anbieten:
-    // diese erlauben unter anderem die Verwaltung von Rollen.
     public function configureUserMenu(UserInterface $user): UserMenu
     {
         $name = $user->getUserIdentifier();
@@ -665,10 +663,19 @@ class DashboardController extends AbstractDashboardController
             $name = $user->getPerson()->getFullName();
         }
 
-        return parent::configureUserMenu($user)
+        $menu = parent::configureUserMenu($user)
             ->setName($name)
             ->setAvatarUrl('/images/images/Diversworld_Viking.png')
-            ->addMenuItems([MenuItem::section('Profil- und Passwortseiten im Backend noch nicht verfügbar')]);
+            ->addMenuItems([
+                MenuItem::linkToUrl('Mein Konto', 'fa fa-user', $this->generateUrl('admin_account_profile')),
+                MenuItem::linkToUrl('Kennwort ändern', 'fa fa-key', $this->generateUrl('admin_account_password')),
+            ]);
+        $dto = $menu->getAsDto();
+        $dto->setItems(array_values(array_filter($dto->getItems(), static fn (MenuItemDto $item): bool =>
+            $item->getType() !== MenuItemDto::TYPE_LOGOUT
+            && !($item->getType() === MenuItemDto::TYPE_SECTION && in_array($item->getLabel(), [null, ''], true))
+        )));
+        return $menu;
     }
 
 	public function configureCrud(): Crud

@@ -1,0 +1,7 @@
+{% extends 'membership/layout.html.twig' %}
+{% block title %}{{ block('account_title') }}{% endblock %}
+{% block membership_body %}
+    <h1>{{ block('account_title') }}</h1>
+    {% if form %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endif %}
+    {% block account_body %}{% endblock %}
+{% endblock %}

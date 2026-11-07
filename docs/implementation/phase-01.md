@@ -12,9 +12,9 @@ Der bestehende Symfony-/Doctrine-/EasyAdmin-Monolith bleibt erhalten. Das
 frühere [Phase-0-Protokoll](phase-00.md) ist eine teilweise Bestandsaufnahme,
 keine vollständige Prüfung aller Anforderungen, Controller oder Rechte. Die
 dort dokumentierten offenen Übersetzungs-, Sicherheits-, Betriebs- und
-Abnahmepunkte bleiben offen. Die Auftraggeberseite hat zunächst nur isolierte
-Entwicklungsarbeit gewählt; Zielsystemprüfung und Produktivdeployment sind
-nicht Gegenstand dieses Schritts.
+Abnahmepunkte bleiben offen. Ergänzend wurde das lokale DDEV-Testsystem
+vorbereitet und begrenzt geprüft; ein Produktivdeployment ist nicht Gegenstand
+dieses Schritts.
 
 `App\` wird laut [composer.json](../../composer.json) aus `src/` geladen;
 die [Servicekonfiguration](../../config/services.yaml) registriert die
@@ -78,6 +78,12 @@ die Routenregeln; ein URL-Präfix, ein Menüeintrag oder ein Layout ist keine
 Autorisierung. Der ausgewählte Adminverein und der Einzelvereinsmodus ersetzen
 ebenfalls keine Objektprüfung.
 
+Die Konto-Selbstverwaltung ist als eigener Controller mit Portal- und
+EasyAdmin-Routen umgesetzt. Sie verwendet für beide Bereiche dieselben
+Formulare und dieselbe angemeldete Benutzeridentität; der EasyAdmin-Kontext
+steuert nur das Layout. Die konkreten Routen sind für `ROLE_USER` freigegeben,
+ohne Zugriff auf die übrige Administration zu erteilen.
+
 ## 4. Architekturentscheidung und Implementierung
 
 Die Entscheidung über das Standardziel nach der Anmeldung gehörte bisher zum
@@ -132,6 +138,29 @@ unabhängig. Im Admin-Gesamtkalender bleiben Termine des ausgewählten Vereins
 sichtbar, aber ein bei abweichendem Mitgliedschaftsverein nicht erreichbarer
 Thekendienstlink wird nicht ausgegeben.
 
+Das EasyAdmin-Benutzermenü hatte zwei Abmeldeeinträge: den Standardlink des
+Bundles und das bestehende CSRF-geschützte POST-Formular. Der Standard-Logout
+wird nun gezielt entfernt; andere Standardaktionen einschließlich einer
+gegebenenfalls angebotenen Impersonierungsrückkehr bleiben erhalten. Im
+responsiven und im Desktop-Dropdown steht jeweils ein POST-Abmeldeformular.
+
+Das Menü und die Portalnavigation verweisen auf die eigene Kontoseite und die
+Kennwortänderung. Benutzername und Konto-E-Mail werden angezeigt, aber nicht
+über die Selbstverwaltung geändert. Die Kontaktangaben beziehen sich auf die
+zugeordnete zentrale Person; Notfalldaten werden nur bei einer zugeordneten
+Mitgliedschaft angeboten und für Mitglieder weiterhin protokolliert. Eine
+Personenzuordnung wird nicht automatisch angelegt; fehlt sie, verweist die Seite
+an die Verwaltung. Für eine reine Kontaktkorrektur werden keine zusätzlichen
+Pflichtangaben zur Mitgliedschaft verlangt.
+
+Die Kennwortänderung erfordert das aktuelle Kennwort, eine wiederholte Eingabe
+und ein CSRF-Token. Sie verwendet die bereits bestehende Kennwortregel
+(mindestens sechs Zeichen, höchstens 4096), nicht eine neue strengere
+Passwortrichtlinie. Das neue Kennwort wird gehasht, eigene ausstehende
+Rücksetzanforderungen werden in derselben Transaktion entfernt und die aktuelle
+Sitzung wird beendet. Andere Sitzungen werden beim nächsten Benutzer-Refresh
+wegen des geänderten Kennworthashs abgemeldet.
+
 Geänderte bzw. neue Dateien dieses Schritts:
 
 - `src/Security/LoginDestination.php`: gemeinsame Zielentscheidung.
@@ -162,6 +191,17 @@ Geänderte bzw. neue Dateien dieses Schritts:
   `tests/Integration/MediaFileHttpTest.php` und
   `tests/Integration/SingleClubModeHttpTest.php`: Formular-, Vereinswechsel-,
   Kassen-, Jahresregel-, Kalender- und Einzelvereinsregressionen.
+- `src/Controller/AccountController.php`, `src/Form/PersonContactType.php`,
+  `src/Form/PersonContactFields.php`, `src/Form/AccountPasswordType.php`,
+  `src/Form/MemberContactType.php` und `config/packages/security.yaml`:
+  eigene Konto- und Kennwortformulare mit getrennten Bereichsrouten und
+  gemeinsamen Kontaktfeldern.
+- `src/Controller/Admin/DashboardController.php`, `templates/account/`,
+  `templates/includes/_navigation.html.twig`, `templates/security/login.html.twig`
+  und `translations/form_catalogues.php`: Benutzermenü, bereichsspezifische
+  Darstellung und Texte.
+- `tests/Integration/AccountSelfServiceHttpTest.php` und `phpunit.dist.xml`:
+  isolierte HTTP-Regressionen für die Selbstverwaltung.
 - `docs/implementation/phase-01.md`: dieses Protokoll.
 
 ## 5. Konventionen und weitere schrittweise Strukturierung
@@ -256,7 +296,9 @@ Das Entfernen der lokalen Überschreibung kann den zuvor konfigurierten
 externen Mailtransport wieder aktivieren; ein solcher Wechsel erfordert eine
 gesonderte Betriebsentscheidung.
 
-Der Ziel-Container, das Doctrine-Mapping und das tatsächlich verbundene Schema
+Die Auftraggeberseite hat den vorhandenen Datenbestand inzwischen als Test-
+und Entwicklungsdaten ohne produktive Daten eingeordnet. Der Ziel-Container,
+das Doctrine-Mapping und das tatsächlich verbundene Schema
 bestanden die Prüfung; es waren keine Migrationen offen. Anonyme öffentliche
 Routen waren erreichbar, `/admin` und `/calendar` leiteten zur Anmeldung und
 `/install` antwortete mit 404. Mit einer von der Auftraggeberseite angemeldeten
@@ -282,6 +324,22 @@ abgenommene oder gegen alle Nebenwirkungen abgeschottete Stagingumgebung.
 
 Ausführung im DDEV-Webcontainer mit PHP 8.5, SQLite im Speicher und Null-Mailer:
 
+- Kontoselbstverwaltung auf dem endgültigen Stand: **11 Tests, 161
+  Assertions**. Geprüft wurden sechs Backend-Rollenkonstellationen, beide
+  Menüs und echte Links, ein Login ohne Mitgliedschaft und ein Konto ohne
+  Person, persönliche Kontakt- und Notfalländerungen, getrennte Konto-E-Mail,
+  CSRF, ungültige und zusätzliche Felder, Passwortregel, falsches aktuelles
+  Kennwort, Bestätigung, erneute Anmeldung, Abmeldung einer weiteren Sitzung
+  und die Entfernung nur der eigenen Rücksetzanforderungen.
+- Auf dem lokalen DDEV-Ziel wurden nach dem Cache-Neuaufbau das geöffnete
+  Benutzermenü sowie die Konto- und Kennwortseite in einer bestehenden Sitzung
+  **lesend** geprüft. Die Formulare wurden dort nicht abgesendet. Anonyme
+  Zugriffe auf die Kontoseiten leiten zur Anmeldung.
+- Die verwendeten Kontoformular-Bezeichnungen sind in den Katalogen für
+  Deutsch, Englisch, Französisch und Spanisch vorhanden.
+- Ein erneutes isoliertes Basis-Gate bestand mit **443 Tests, 10.577
+  Assertions**; da während dieses Laufs noch letzte Änderungen erfolgten,
+  ist er kein einheitlicher Nachweis des endgültigen Arbeitsstands.
 - Ausbildungsbescheinigung und angrenzende persönliche, Rollen- und
   Vereinsgrenzen: **7 Tests, 149 Assertions**. Der neue Fall deckt
   unter anderem den echten Vereinswechsel, eigenen und fremden Nachweis,
@@ -359,7 +417,7 @@ durchgeführt.
 | Fachliche Grenzen, aktuelle Struktur und Namenskonventionen | Für die genannten Bereiche dokumentiert; nicht jede Klasse und Abhängigkeit einzeln geprüft. |
 | Gemeinsame Services und Schnittstellen strukturieren | Anmeldeziel von der Menüdarstellung getrennt, bestehende Methode erhalten; Interpretation des EasyAdmin-Routenkontexts gekapselt. Weitere Kopplungen offen. |
 | Public, Portal und Admin trennen | Bestehende technische Grenzen und Mischcontroller dokumentiert, Navigation und 24 Portal-/Adminroutenpaare geprüft; einzelne Schreib- und Vereinsgrenzen abgesichert, aber keine vollständige physische oder sicherheitsbezogene Trennung nachgewiesen. |
-| Bestehende Routen, Daten und Funktionen erhalten | Keine Routendefinitionen oder Datenbankstrukturen geändert; gezielte Tests bestanden, aber keine Vollabdeckung aller Workflows. |
+| Bestehende Routen, Daten und Funktionen erhalten | Bestehende Routen und Datenbankstrukturen bleiben erhalten; für die Selbstverwaltung wurden neue Routen ergänzt. Gezielte Tests bestanden, aber keine Vollabdeckung aller Workflows. |
 | Neue Fachmodule ohne Beeinträchtigung bestehender Funktionen | Architekturrichtung und ein inkrementeller Schritt vorhanden; für die gesamte Anwendung noch nicht ausreichend nachgewiesen. |
 
 ## 9. Empfehlung und nächster Schritt
