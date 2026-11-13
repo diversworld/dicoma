@@ -6,11 +6,27 @@
 <p>{{ 'Geschützte Rollen können hier nicht vergeben werden.'|trans }}</p>
 {{ form_start(form) }}
 {{ form_errors(form) }}
-{{ form_row(form.roles) }}
+<p>{{ 'Wählen Sie die Funktion aus. Ihr Gültigkeitszeitraum gehört nur zu dieser Funktion.'|trans }}</p>
+{{ form_errors(form.roles) }}
+{{ form_errors(form.validity) }}
+{% for role in form.roles %}
+    {% set period = attribute(form.validity, role.vars.value) %}
+    <div class="card mb-3" data-function-row>
+        <div class="card-body">
+            {{ form_row(role) }}
+            <div class="ms-4" data-function-validity>
+                {{ form_errors(period) }}
+                {{ form_row(period.startsAt) }}
+                {{ form_row(period.endsAt) }}
+            </div>
+        </div>
+    </div>
+{% endfor %}
 <p>{{ 'Leere Datumsfelder bedeuten unbefristet. Das Enddatum gilt einschließlich dieses Tages.'|trans }}</p>
-{{ form_row(form.validity) }}
+<p>{{ 'Beim Abwählen einer Funktion werden ihre Gültigkeitsdaten gelöscht.'|trans }}</p>
 {{ form_rest(form) }}
 <button class="btn btn-primary" type="submit">{{ 'Funktionen speichern'|trans }}</button>
 {{ form_end(form) }}
 <a href="{{ path('admin_delegated_roles') }}">{{ 'Zurück'|trans }}</a>
+<script src="{{ asset('js/delegated-role-validity.js') }}"></script>
 {% endblock %}

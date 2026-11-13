@@ -1,0 +1,103 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    <i class="fa fa-folder-open"></i>
+    {{ 'Datei-Explorer'|trans }}
+{% endblock %}
+
+{% block main %}
+
+    <p>{{ 'Der Explorer zeigt das Kursbildverzeichnis schreibgeschützt. Die separate Dateiverwaltung verwaltet Medien und Uploads.'|trans }}</p>
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                {% for crumb in breadcrumbs %}
+                    <li class="breadcrumb-item">
+                        <a href="{{ path('admin_files_index', {
+                            path: crumb.path
+                        }) }}">
+                            {{ loop.first ? crumb.name|trans : crumb.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ol>
+        </nav>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <strong>
+                <i class="fa fa-folder"></i>
+                {{ 'Dateien und Ordner'|trans }}
+            </strong>
+        </div>
+
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>{{ 'Name'|trans }}</th>
+                        <th>{{ 'Größe'|trans }}</th>
+                        <th>{{ 'Geändert'|trans }}</th>
+                        <th>{{ 'Aktionen'|trans }}</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for file in files %}
+                        <tr>
+                            <td>
+                                {% if file.isDirectory %}
+                                    <a href="{{ path('admin_files_index', {
+                                        path: file.path
+                                    }) }}">
+                                        <i class="fa fa-folder text-warning me-2"></i>
+                                        {{ file.name }}
+                                    </a>
+                                {% else %}
+                                    <i class="fa fa-file text-secondary me-2"></i>
+                                    {{ file.name }}
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if not file.isDirectory %}
+                                    {{ (file.size / 1024)|number_format(1, ',', '.') }} KB
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ file.modified|date('d.m.Y H:i') }}
+                            </td>
+
+                            <td>
+                                {% if file.isDirectory %}
+                                    <a class="btn btn-sm btn-secondary"
+                                       href="{{ path('admin_files_index', {
+                                           path: file.path
+                                       }) }}">
+                                        {{ 'Öffnen'|trans }}
+                                    </a>
+                                {% else %}
+                                    <a class="btn btn-sm btn-secondary"
+                                       href="{{ path('admin_files_download', {path: file.path}) }}">
+                                        {{ 'Herunterladen'|trans }}
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center p-4">
+                                {{ 'Dieser Ordner ist leer.'|trans }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ 'Funktionszuordnung bearbeiten'|trans }}{% endblock %}
+{% block main %}
+<h2>{{ label|trans }}</h2>
+<p>{{ 'Mitglied'|trans }}: {{ account.member.fullName }} ({{ account.user }})</p>
+<p>{{ 'Hier wird nur die ausgewählte Funktion dieses Mitglieds geändert.'|trans }}</p>
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{{ form_row(form.assigned) }}
+{{ form_row(form.validity) }}
+<p>{{ 'Leere Datumsfelder bedeuten unbefristet. Das Enddatum gilt einschließlich dieses Tages.'|trans }}</p>
+<p>{{ 'Beim Abwählen einer Funktion werden ihre Gültigkeitsdaten gelöscht.'|trans }}</p>
+{{ form_rest(form) }}
+<button class="btn btn-primary" type="submit">{{ 'Zuordnung speichern'|trans }}</button>
+{{ form_end(form) }}
+<a href="{{ path('admin_function_members', {role: role}) }}">{{ 'Zurück'|trans }}</a>
+{% endblock %}

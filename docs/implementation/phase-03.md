@@ -194,12 +194,23 @@ Viele betreffen Tests des entfernten Vereinswechsels; weitere Tests und die
 verbleibenden Oberflächen und Datenpfade müssen angepasst oder untersucht
 werden. Die Fach- und Staging-Abnahme steht aus.
 
-Die Liste der delegierbaren Konten verwendet jetzt die EasyAdmin-Standardliste.
-Sie zeigt weiterhin nur durch den vorhandenen Voter freigegebene Konten; die
-eigentliche Rollenzuweisung behält ihre gesonderte Prüfung, CSRF-Schutz und
-Konflikterkennung. Direkte CRUD-Schreib- und Detailaktionen der Liste sind
-gesperrt. Die erste Vereinsanlage wurde zusätzlich mit zwei privaten
-MariaDB-Verbindungen auf konkurrierende Zugriffe geprüft.
+Der Einstieg in die Vereinsfunktionen zeigt die vorhandenen Funktionen statt
+einer Kontenliste. Nach Auswahl einer Funktion zeigt eine EasyAdmin-Standardliste
+alle Konten und deren ausdrückliche Zuordnung einschließlich Zeitraum; geerbte
+Berechtigungen sind keine eigene Zuordnung. Der Bearbeitungsdialog ändert nur
+die ausgewählte Funktion dieses Mitglieds. Andere Rollen und deren Zeiträume
+bleiben erhalten. Die Bearbeitung ist weiterhin nur bei delegierbaren Rollen
+und durch den Voter freigegebenen Konten möglich. Geschützte Rollen verwalten
+Superadministratoren weiterhin in der Benutzerverwaltung.
+
+Die Zuordnung behält CSRF-Schutz, Konflikterkennung und die Sperre gegen
+gleichzeitige Statusänderungen. Beim Abwählen werden die Gültigkeitsdaten
+dieser Funktion gelöscht; die Datumsfelder sind ohne JavaScript bedienbar.
+Die bisherige kontenbezogene Bearbeitungsroute bleibt für bestehende Links
+erhalten, ist jedoch nicht mehr der Einstieg. Direkte CRUD-Schreib- und
+Detailaktionen der Kontenliste sind gesperrt. Die erste Vereinsanlage wurde
+zusätzlich mit zwei privaten MariaDB-Verbindungen auf konkurrierende Zugriffe
+geprüft.
 
 Vereinsfunktionen sollen frei angelegt und vorhandenen Berechtigungen
 ausdrücklich zugeordnet werden können. Administratoren sollen nur bisher

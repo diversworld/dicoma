@@ -57,23 +57,37 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->em->persist($foreignClub);
         $this->em->flush();
         $foreign = $this->account('role-foreign', [User::ROLE_USER], $foreignClub);
+        $unlinked = (new User())->setUser('role-unlinked')->setEmail('role-unlinked@example.invalid')
+            ->setPassword('unused')->setIsVerified(true);
+        $this->em->persist($unlinked);
+        $this->em->flush();
         $this->client->loginUser($admin);
 
         $this->client->request('GET', '/admin/settings');
         self::assertSelectorExists('a[href="/admin/roles"]');
         $this->client->request('GET', '/admin/roles');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('a[href="/admin/roles/functions/ROLE_EQUIPMENT_CASH/members"]');
+        self::assertSelectorTextNotContains('table', 'role-target');
+        $this->client->request('GET', '/admin/roles/functions/ROLE_EQUIPMENT_CASH/members');
         self::assertResponseRedirects();
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorTextContains('body', 'role-target');
-        foreach (['role-admin', 'role-protected', 'role-unknown', 'role-inactive', 'role-foreign'] as $name) {
-            self::assertSelectorTextNotContains('table', $name);
+        foreach (['role-admin', 'role-protected', 'role-unknown', 'role-inactive', 'role-foreign', 'role-unlinked'] as $name) {
+            self::assertSelectorTextContains('table', $name);
         }
-        $this->client->request('GET', '/admin/de/delegated-user', ['query' => 'role-protected']);
+        foreach (['role-admin', 'role-protected', 'role-unknown', 'role-inactive', 'role-foreign', 'role-unlinked'] as $name) {
+            self::assertCount(0, $this->client->getCrawler()->filterXPath('//tr[td[contains(., "'.$name.'")]]//a[contains(., "Zuordnung bearbeiten")]'));
+        }
+        self::assertCount(1, $this->client->getCrawler()->filterXPath('//tr[td[contains(., "role-target")]]//a[contains(., "Zuordnung bearbeiten")]'));
+        $this->client->request('GET', '/admin/de/delegated-user', ['function' => User::ROLE_EQUIPMENT_CASH, 'query' => 'role-protected']);
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextNotContains('table', 'role-protected');
-        $this->client->request('GET', '/admin/de/delegated-user', ['query' => 'role-target']);
+        self::assertSelectorTextContains('table', 'role-protected');
+        self::assertCount(0, $this->client->getCrawler()->filterXPath('//tr[td[contains(., "role-protected")]]//a[contains(., "Zuordnung bearbeiten")]'));
+        $this->client->request('GET', '/admin/de/delegated-user', ['function' => User::ROLE_EQUIPMENT_CASH, 'query' => 'role-target']);
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('table', 'role-target');
         foreach ([
@@ -94,6 +108,8 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $url = '/admin/roles/'.$target->getId().'/edit';
         $crawler = $this->client->request('GET', $url);
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-function-row] input[name="form[roles][]"][value="ROLE_EQUIPMENT_CASH"]');
+        self::assertSelectorExists('[data-function-row] [data-function-validity] input[name="form[validity][ROLE_EQUIPMENT_CASH][endsAt]"]');
         $token = $crawler->filter('input[name="form[_token]"]')->attr('value');
         $snapshot = $crawler->filter('input[name="form[snapshot]"]')->attr('value');
         $validity = $this->emptyValidity(DelegatedRoles::ALLOWED);
@@ -136,6 +152,112 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/de/user');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionCentredAssignmentsPreserveOtherRolesAndEnforceBoundaries(): void
+    {
+        $admin = $this->account('function-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('function-target', [User::ROLE_EQUIPMENT_MANAGER], $this->club);
+        $protected = $this->account('function-board', [User::ROLE_BOARD], $this->club);
+        $inactive = $this->account('function-inactive', [], $this->club, false);
+        $otherValidity = ['startsAt' => '2020-01-01', 'endsAt' => '2099-12-31'];
+        $target->setRoleValidity([User::ROLE_EQUIPMENT_MANAGER => $otherValidity]);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+
+        $url = '/admin/roles/functions/ROLE_INSTRUCTOR/members/'.$target->getId().'/edit';
+        $memberId = $target->getMember()->getId();
+        foreach ([$admin, $protected, $inactive] as $account) {
+            $this->client->request('GET', '/admin/roles/functions/ROLE_INSTRUCTOR/members/'.$account->getId().'/edit');
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('GET', '/admin/roles/functions/ROLE_SUPER_ADMIN/members/'.$target->getId().'/edit');
+        self::assertResponseStatusCodeSame(403);
+        foreach (['ROLE_MEMBER', 'ROLE_UNKNOWN'] as $invalidRole) {
+            $this->client->request('GET', '/admin/roles/functions/'.$invalidRole.'/members/'.$target->getId().'/edit');
+            self::assertResponseStatusCodeSame(404);
+        }
+        $crawler = $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="form[validity][ROLE_INSTRUCTOR][startsAt]"]');
+        self::assertSelectorNotExists('input[name="form[validity][ROLE_EQUIPMENT_MANAGER][startsAt]"]');
+        $snapshot = $crawler->filter('input[name="form[snapshot]"]')->attr('value');
+        $token = $crawler->filter('input[name="form[_token]"]')->attr('value');
+        $validity = [User::ROLE_INSTRUCTOR => ['startsAt' => '2026-01-01', 'endsAt' => '2028-12-31']];
+        $submitted = ['assigned' => '1', 'validity' => $validity, 'snapshot' => $snapshot, '_token' => $token];
+
+        $this->client->request('POST', $url, ['form' => array_replace($submitted, ['_token' => 'invalid'])]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['form' => array_replace($submitted, ['validity' => [User::ROLE_INSTRUCTOR => ['startsAt' => '2026-01-01']]])]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['form' => array_replace($submitted, ['validity' => [User::ROLE_INSTRUCTOR => ['startsAt' => '2028-01-01', 'endsAt' => '2026-01-01']]])]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['form' => array_replace($submitted, [
+            'assigned' => '0', 'validity' => [User::ROLE_INSTRUCTOR => ['startsAt' => 'invalid', 'endsAt' => 'invalid']],
+        ])]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', '/admin/roles/functions/ROLE_EQUIPMENT_CASH/members/'.$target->getId().'/edit', ['form' => $submitted]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['form' => $submitted]);
+        self::assertResponseRedirects('/admin/roles/functions/ROLE_INSTRUCTOR/members', 303);
+        $this->em->clear();
+        $updated = $this->em->find(User::class, $target->getId());
+        self::assertContains(User::ROLE_INSTRUCTOR, $updated->getStoredRoles());
+        self::assertSame($otherValidity, $updated->getRoleValidity()[User::ROLE_EQUIPMENT_MANAGER]);
+        self::assertSame($validity[User::ROLE_INSTRUCTOR], $updated->getRoleValidity()[User::ROLE_INSTRUCTOR]);
+
+        $this->client->request('POST', $url, ['form' => $submitted]);
+        self::assertResponseStatusCodeSame(409);
+        $this->client->request('GET', '/admin/roles/functions/ROLE_INSTRUCTOR/members');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        $row = $this->client->getCrawler()->filterXPath('//tr[td[contains(., "function-target")]]');
+        self::assertStringContainsString('Zugeordnet', $row->text());
+        self::assertStringContainsString('2026-01-01', $row->text());
+        self::assertStringContainsString('2028-12-31', $row->text());
+        $this->client->click($this->client->getCrawler()->filter('th[data-column="user"] a')->first()->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Zuordnungen: Ausbilder / Trainer');
+        $search = $this->client->getCrawler()->filter('form.form-action-search')->form(['query' => 'function-target']);
+        $this->client->submit($search);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Zuordnungen: Ausbilder / Trainer');
+        $action = $this->client->getCrawler()->filterXPath('//tr[td[contains(., "function-target")]]//a[contains(., "Zuordnung bearbeiten")]');
+        self::assertCount(1, $action);
+        $this->client->click($action->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="form[validity][ROLE_INSTRUCTOR][startsAt]"]');
+
+        $crawler = $this->client->request('GET', $url);
+        $this->client->request('POST', $url, ['form' => [
+            'validity' => [User::ROLE_INSTRUCTOR => ['startsAt' => 'invalid', 'endsAt' => 'invalid']],
+            'snapshot' => $crawler->filter('input[name="form[snapshot]"]')->attr('value'),
+            '_token' => $crawler->filter('input[name="form[_token]"]')->attr('value'),
+        ]]);
+        self::assertResponseRedirects('/admin/roles/functions/ROLE_INSTRUCTOR/members', 303);
+        $this->em->clear();
+        $updated = $this->em->find(User::class, $target->getId());
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $updated->getStoredRoles());
+        self::assertSame([User::ROLE_EQUIPMENT_MANAGER => $otherValidity], $updated->getRoleValidity());
+        self::assertContains(User::ROLE_EQUIPMENT_MANAGER, $updated->getStoredRoles());
+
+        $crawler = $this->client->request('GET', $url);
+        $snapshot = $crawler->filter('input[name="form[snapshot]"]')->attr('value');
+        $token = $crawler->filter('input[name="form[_token]"]')->attr('value');
+        $member = $this->em->find(Member::class, $memberId);
+        $member->setMembershipStatus(MembershipStatus::SUSPENDED);
+        $this->em->flush();
+        $this->client->request('POST', $url, ['form' => [
+            'assigned' => '1', 'validity' => $validity, 'snapshot' => $snapshot, '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(403);
+        $this->em->clear();
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $this->em->find(User::class, $target->getId())->getStoredRoles());
+
+        $this->client->request('GET', '/admin/roles/functions/ROLE_BOARD/members');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('table', 'function-board');
+        self::assertCount(0, $this->client->getCrawler()->filter('a.action-editFunctionAssignment'));
     }
 
     public function testEquipmentCashRequiresBothExplicitRoles(): void
@@ -253,6 +375,48 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->client->loginUser($updated);
         $this->client->request('GET', '/equipment-manager/cashbook');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testDeselectedRoleDatesAreIgnoredWithoutJavaScriptAndSelectedDatesRemainIndependent(): void
+    {
+        $admin = $this->account('dates-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('dates-target', [User::ROLE_EQUIPMENT_CASH], $this->club);
+        $target->setRoleValidity([User::ROLE_EQUIPMENT_CASH => ['startsAt' => '2025-01-01', 'endsAt' => '2027-01-01']]);
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $url = '/admin/roles/'.$target->getId().'/edit';
+        $crawler = $this->client->request('GET', $url);
+        $token = $crawler->filter('input[name="form[_token]"]')->attr('value');
+        $snapshot = $crawler->filter('input[name="form[snapshot]"]')->attr('value');
+        $roles = [User::ROLE_EQUIPMENT_MANAGER, User::ROLE_INSTRUCTOR];
+        $validity = $this->emptyValidity(DelegatedRoles::ALLOWED);
+        $validity[User::ROLE_EQUIPMENT_CASH] = ['startsAt' => 'not-a-date', 'endsAt' => '2027-01-01'];
+        $validity[User::ROLE_EQUIPMENT_MANAGER] = ['startsAt' => '2025-01-01', 'endsAt' => '2027-01-01'];
+        $validity[User::ROLE_INSTRUCTOR] = ['startsAt' => '2026-01-01', 'endsAt' => '2028-01-01'];
+        $incomplete = $validity;
+        unset($incomplete[User::ROLE_EQUIPMENT_CASH]['endsAt']);
+        $this->client->request('POST', $url, ['form' => [
+            'roles' => $roles, 'validity' => $incomplete, 'snapshot' => $snapshot, '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', $url, ['form' => compact('roles', 'validity', 'snapshot') + ['_token' => $token]]);
+        self::assertResponseRedirects('/admin/roles', 303);
+        $updated = $this->em->find(User::class, $target->getId());
+        self::assertNotContains(User::ROLE_EQUIPMENT_CASH, $updated->getStoredRoles());
+        self::assertSame([
+            User::ROLE_INSTRUCTOR => ['startsAt' => '2026-01-01', 'endsAt' => '2028-01-01'],
+            User::ROLE_EQUIPMENT_MANAGER => ['startsAt' => '2025-01-01', 'endsAt' => '2027-01-01'],
+        ], $updated->getRoleValidity());
+
+        $crawler = $this->client->request('GET', $url);
+        $this->client->request('POST', $url, ['form' => [
+            'validity' => $validity,
+            'snapshot' => $crawler->filter('input[name="form[snapshot]"]')->attr('value'),
+            '_token' => $crawler->filter('input[name="form[_token]"]')->attr('value'),
+        ]]);
+        self::assertResponseRedirects('/admin/roles', 303);
+        self::assertSame([], $this->em->find(User::class, $target->getId())->getRoleValidity());
+        self::assertSame([], $this->em->find(User::class, $target->getId())->getStoredRoles());
     }
 
     public function testSuperAdminCanSetProtectedRoleDatesButClubAdminCannot(): void

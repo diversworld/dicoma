@@ -419,11 +419,10 @@ Mitglieder dürfen eigene Ausrüstung erfassen:
 Frei konfigurierbar.
 
 Beispiele:
-
-Gerät	        Intervall
-Tauchflasche	2,5 Jahre
-Atemregler	    1 Jahr
-Kompressor	    1 Jahr
+- Gerät	        Intervall
+- Tauchflasche	2,5 Jahre
+- Atemregler	    1 Jahr
+- Kompressor	    1 Jahr
 
 ## 16.2 Erinnerungen
 

@@ -18,9 +18,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -38,9 +41,121 @@ final class DelegatedRoleController extends AbstractController
     ) {}
 
     #[Route('', name: 'admin_delegated_roles', methods: ['GET'])]
-    public function index(AdminUrlGenerator $urls): Response
+    public function index(): Response
     {
-        return $this->redirect($urls->unsetAll()->setController(DelegatedUserCrudController::class)->setAction(Crud::PAGE_INDEX)->generateUrl());
+        $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+
+        return $this->render('admin/roles/functions.html.twig', [
+            'functions' => self::functionChoices(),
+        ]);
+    }
+
+    /** @return array<string, string> */
+    public static function functionChoices(): array
+    {
+        return array_filter(User::getAvailableRoles(), static fn (string $role): bool =>
+            !in_array($role, [User::ROLE_USER, User::ROLE_MEMBER], true));
+    }
+
+    #[Route('/functions/{role}/members', name: 'admin_function_members', requirements: ['role' => 'ROLE_[A-Z_]+'], methods: ['GET'])]
+    public function members(string $role, AdminUrlGenerator $urls): Response
+    {
+        $this->functionLabel($role);
+        $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+
+        return $this->redirect($urls->unsetAll()->setController(DelegatedUserCrudController::class)
+            ->setAction(Crud::PAGE_INDEX)->set('function', $role)->generateUrl());
+    }
+
+    #[Route('/functions/{role}/members/{id}/edit', name: 'admin_function_assignment_edit', requirements: ['role' => 'ROLE_[A-Z_]+', 'id' => '\d+'], methods: ['GET', 'POST'])]
+    public function editAssignment(string $role, User $user, Request $request): Response
+    {
+        $label = $this->functionLabel($role);
+        if (!in_array($role, DelegatedRoles::ALLOWED, true)) {
+            throw $this->createAccessDeniedException('Geschützte Rollen können hier nicht vergeben werden.');
+        }
+        $this->denyAccessUnlessGranted(DelegatedRoleVoter::MANAGE, $user);
+        $audit = null;
+        $response = $this->em->getConnection()->transactional(function () use ($role, $label, $user, $request, &$audit): Response {
+            if ($request->isMethod('POST')) {
+                $this->continuity->lockClub($user->getMember()?->getClub());
+                if ($this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+                    $this->em->lock($user, LockMode::PESSIMISTIC_WRITE);
+                }
+                $this->continuity->refresh($user);
+                if ($user->getMember() !== null) {
+                    $this->continuity->refresh($user->getMember());
+                }
+                $this->denyAccessUnlessGranted(DelegatedRoleVoter::MANAGE, $user);
+            }
+            $before = $user->getStoredRoles();
+            $validityBefore = $user->getRoleValidity();
+            $fingerprint = DelegatedRoles::fingerprint($user);
+            $builder = $this->createFormBuilder([
+                'assigned' => in_array($role, $before, true),
+                'validity' => RoleValidity::formData($user, [$role]),
+            ], [
+                'csrf_token_id' => 'function_assignment_'.$role.'_'.$user->getId(),
+                'action' => $this->generateUrl('admin_function_assignment_edit', ['role' => $role, 'id' => $user->getId()]),
+            ])
+                ->add('assigned', CheckboxType::class, ['label' => 'Funktion zugeordnet', 'required' => false])
+                ->add('validity', RoleValidityType::class, ['label' => 'Gültigkeitszeitraum', 'roles' => [$label => $role]])
+                ->add('snapshot', HiddenType::class, ['mapped' => false, 'data' => $fingerprint]);
+            $builder->addEventListener(FormEvents::PRE_SUBMIT, static function (FormEvent $event) use ($role): void {
+                $data = $event->getData();
+                if (!is_array($data) || (array_key_exists('assigned', $data) && $data['assigned'] !== null) || !isset($data['validity'][$role])
+                    || !is_array($data['validity'][$role])) {
+                    return;
+                }
+                foreach (['startsAt', 'endsAt'] as $date) {
+                    if (array_key_exists($date, $data['validity'][$role])) {
+                        $data['validity'][$role][$date] = '';
+                    }
+                }
+                $event->setData($data);
+            });
+            $form = $builder->getForm()->handleRequest($request);
+            $conflict = false;
+            if ($form->isSubmitted() && $form->isValid()) {
+                if (!hash_equals($fingerprint, (string) $form->get('snapshot')->getData())) {
+                    $form->addError(new FormError('Die Rollen wurden zwischenzeitlich geändert. Bitte neu laden.'));
+                    $conflict = true;
+                } else {
+                    $assigned = $form->getData()['assigned'];
+                    if ($assigned) {
+                        $user->addRole($role);
+                    } else {
+                        $user->removeRole($role);
+                    }
+                    RoleValidity::replace($user, [$role], $assigned ? [$role] : [], $form->getData()['validity']);
+                    $this->em->flush();
+                    $audit = [
+                        'actor_id' => $this->getUser()->getId(), 'target_id' => $user->getId(),
+                        'club_id' => $this->clubContext->getClub()?->getId(), 'function' => $role,
+                        'before' => $before, 'after' => $user->getStoredRoles(),
+                        'validity_before' => $validityBefore, 'validity_after' => $user->getRoleValidity(),
+                    ];
+                    return $this->redirectToRoute('admin_function_members', ['role' => $role], Response::HTTP_SEE_OTHER);
+                }
+            }
+            return $this->render('admin/roles/assignment.html.twig', [
+                'account' => $user, 'role' => $role, 'label' => $label, 'form' => $form,
+            ], new Response(status: $conflict ? 409 : ($form->isSubmitted() ? 422 : 200)));
+        });
+        if ($audit !== null) {
+            $this->logger->notice('Delegated club role assignment changed', $audit);
+            $this->addFlash('success', 'Funktionszuordnung gespeichert.');
+        }
+        return $response;
+    }
+
+    private function functionLabel(string $role): string
+    {
+        $label = array_search($role, self::functionChoices(), true);
+        if ($label === false) {
+            throw $this->createNotFoundException('Unbekannte Vereinsfunktion.');
+        }
+        return $label;
     }
 
     #[Route('/{id}/edit', name: 'admin_delegated_roles_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -61,7 +176,7 @@ final class DelegatedRoleController extends AbstractController
             $before = $user->getStoredRoles();
             $validityBefore = $user->getRoleValidity();
             $fingerprint = DelegatedRoles::fingerprint($user);
-            $form = $this->createFormBuilder([
+            $builder = $this->createFormBuilder([
                 'roles' => array_values(array_intersect($before, DelegatedRoles::ALLOWED)),
                 'validity' => RoleValidity::formData($user, DelegatedRoles::ALLOWED),
             ], [
@@ -73,8 +188,29 @@ final class DelegatedRoleController extends AbstractController
                     'multiple' => true, 'expanded' => true, 'required' => false,
                 ])
                 ->add('validity', RoleValidityType::class, ['label' => 'Gültigkeitszeiträume', 'roles' => DelegatedRoles::choices()])
-                ->add('snapshot', HiddenType::class, ['mapped' => false, 'data' => $fingerprint])
-                ->getForm()->handleRequest($request);
+                ->add('snapshot', HiddenType::class, ['mapped' => false, 'data' => $fingerprint]);
+            $builder->addEventListener(FormEvents::PRE_SUBMIT, static function (FormEvent $event): void {
+                $data = $event->getData();
+                if (!is_array($data) || !is_array($data['validity'] ?? null)) {
+                    return;
+                }
+                $selected = $data['roles'] ?? [];
+                if (!is_array($selected)) {
+                    return;
+                }
+                foreach (DelegatedRoles::ALLOWED as $role) {
+                    if (!in_array($role, $selected, true) && isset($data['validity'][$role])
+                        && is_array($data['validity'][$role])) {
+                        foreach (['startsAt', 'endsAt'] as $date) {
+                            if (array_key_exists($date, $data['validity'][$role])) {
+                                $data['validity'][$role][$date] = '';
+                            }
+                        }
+                    }
+                }
+                $event->setData($data);
+            });
+            $form = $builder->getForm()->handleRequest($request);
             $conflict = false;
             if ($form->isSubmitted() && $form->isValid()) {
                 if (!hash_equals($fingerprint, (string) $form->get('snapshot')->getData())) {

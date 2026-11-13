@@ -1,0 +1,8 @@
+{% extends '@EasyAdmin/crud/index.html.twig' %}
+
+{% block search_form %}
+    {{ parent() }}
+    {% if app.request.query.get('function') %}
+        <input type="hidden" name="function" value="{{ app.request.query.get('function') }}">
+    {% endif %}
+{% endblock %}
