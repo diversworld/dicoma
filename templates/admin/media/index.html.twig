@@ -29,6 +29,13 @@
     {% endif %}
     <div class="row g-4">
     <aside class="col-lg-4 col-xl-3">
+        <form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
+            <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create_' ~ club.id) }}">
+            <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
+            <label for="media-folder-name" class="form-label">{{ 'Neuer Ordner in %folder%'|trans({'%folder%': folder ? folder.path : 'Hauptordner'|trans}) }}</label>
+            <input id="media-folder-name" class="form-control" name="name" type="text" maxlength="120" required>
+            <button type="submit" class="btn btn-secondary mt-2">{{ 'Ordner anlegen'|trans }}</button>
+        </form>
         <nav id="media-folder-tree" aria-label="{{ 'Ordnerstruktur'|trans }}">
             <h2>{{ 'Ordnerstruktur'|trans }}</h2>
             <a href="{{ path('admin_media_index') }}" {% if not folder %}aria-current="page"{% endif %}>{{ 'Hauptordner'|trans }}</a>
@@ -69,21 +76,7 @@
             </div>
         </section>
     {% endif %}
-    <h2>{{ 'Ordner'|trans }}</h2>
-    <ul>
-        {% for child in children %}
-            <li><a href="{{ path('admin_media_index', {folder: child.id}) }}">{{ child.name }}</a></li>
-        {% else %}
-            <li>{{ 'Keine Unterordner vorhanden.'|trans }}</li>
-        {% endfor %}
-    </ul>
-    <form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
-        <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create_' ~ club.id) }}">
-        <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
-        <label for="media-folder-name" class="form-label">{{ 'Neuer Ordner in %folder%'|trans({'%folder%': folder ? folder.path : 'Hauptordner'|trans}) }}</label>
-        <input id="media-folder-name" class="form-control" name="name" type="text" maxlength="120" required>
-        <button type="submit" class="btn btn-secondary mt-2">{{ 'Ordner anlegen'|trans }}</button>
-    </form>
+
     <h2>{{ 'Dateien hochladen'|trans }}</h2>
     <p>{{ 'Die Dateien werden in %folder% hochgeladen. Ungültige Dateien werden einzeln gemeldet; gültige Dateien werden gespeichert.'|trans({'%folder%': folder ? folder.path : 'den Hauptordner'|trans}) }}</p>
     {% if maxFileUploads > 0 %}<p>{{ 'Der Server erlaubt höchstens %count% Dateien pro Upload; zusätzlich gilt ein Limit für die Gesamtgröße.'|trans({'%count%': maxFileUploads}) }}</p>{% endif %}

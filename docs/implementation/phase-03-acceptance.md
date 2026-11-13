@@ -135,6 +135,14 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   bestand isoliert in DDEV mit 11 Tests und 371 Assertions. Sie prüft die
   bestehende Mediathek, nicht den noch fehlenden gemeinsamen Speicher oder
   Ordnerrechte.
+- Die bestehende Dateiverwaltung und der schreibgeschützte Kursbild-Explorer
+  sind über eine gemeinsame Seite erreichbar. Beide Bestände werden dort
+  hierarchisch mit ihren Dateien dargestellt; Kursbilder sind weiterhin als
+  getrennter Altbestand gekennzeichnet und nur für Administratoren sichtbar.
+  Medienordner können umbenannt, verschoben und leer gelöscht werden.
+  Die beiden physischen Speicher und die bisherige rollenbasierte
+  Zugriffskontrolle sind dadurch **nicht** zusammengeführt oder durch die
+  vereinbarten Ordnerrechte ersetzt.
 - Eine erneute schreibgeschützte Doctrine-Schemaprüfung meldet eine Abweichung
   bei `tank`; die Ursache und eine geeignete Migration müssen gesondert
   untersucht werden. Das ausgegebene Schema-Update darf nicht ungeprüft
