@@ -58,7 +58,10 @@ final class FileExplorerController extends AbstractController
     {
         $file = $this->fileManager->getFile($request->query->getString('path'));
         $response = new BinaryFileResponse($file);
-        $filename = preg_replace('/[\x00-\x1f\x7f]/u', '_', str_replace('\\', '_', basename($file))) ?: 'download';
+        $filename = preg_replace('/[\x00-\x1f\x7f]/u', '_', str_replace('\\', '_', basename($file)));
+        if ($filename === null || $filename === '') {
+            throw new \RuntimeException('Der Dateiname kann nicht für den Download dargestellt werden.');
+        }
         $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $filename);
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->setPrivate()->headers->addCacheControlDirective('no-store');

@@ -81,6 +81,14 @@ The PHP runtime must satisfy the installed PHPUnit version.
 APP_ENV=test php vendor/bin/phpunit --no-progress --filter 'MigrationChain' --display-errors --display-skipped --display-deprecations
 ```
 
+#### Course image explorer
+
+The administrative file explorer at `/admin/files` is a read-only view of the
+configured course image directory (`bilder_ordner`, normally
+`public/images/kurse`). Administrators can navigate its subdirectories and
+download files. Symbolic links and paths outside this directory are rejected.
+This is separate from `/admin/media`, which manages media uploads and folders.
+
 #### Diving training (Phase 4)
 
 The public course catalog supports members and verified guest accounts.

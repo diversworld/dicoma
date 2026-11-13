@@ -42,6 +42,24 @@ Prüfungen.
 Die folgenden manuellen Prüffälle sind vor einer Freigabe mit freigegebenen
 Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 
+- [ ] Eine neue Funktion mit mehreren ausdrücklich ausgewählten delegierbaren
+      Berechtigungen anlegen, ändern und mehreren Mitgliedern zuordnen. Eine
+      Funktion mit privilegierten Rechten darf nur ein Superadministrator
+      verwalten; direkte Aufrufe und manipulierte Formulare ebenfalls prüfen.
+- [ ] Zwei Funktionen mit derselben Berechtigung und unterschiedlichen
+      Zeiträumen zuweisen. Das Entfernen oder der Ablauf einer Funktion darf
+      eine weiterhin gültige Berechtigung der anderen nicht entziehen.
+- [ ] Die Nachfolgepflicht für eine Funktion ein- und ausschalten und den
+      Statuswechsel jeweils mit und ohne eine andere aktuell gültige
+      Zuordnung derselben Funktion prüfen. Eine andere Funktion mit derselben
+      Berechtigung genügt nicht als Nachfolge.
+- [ ] Änderungen einer bereits zugewiesenen Funktionsdefinition auf eigene und
+      fremde Konten, privilegierte Berechtigungen, offene Formulare und bereits
+      angemeldete Sitzungen prüfen.
+- [ ] Bestehende direkte Rollen einschließlich Zeiträume, unbekannter Rollen,
+      privilegierter Notfallkonten und Konten ohne aktive Mitgliedschaft vor und
+      nach der Migration einzeln vergleichen. Backup und Restore vor einem
+      Einsatz auf der Ziel-Datenbank nachweisen.
 - [ ] Vereinsadministrator vergibt und entzieht mehrere zulässige Funktionen;
       eigene, fremde, inaktive und privilegierte Konten bleiben ausgeschlossen.
 - [ ] Eine Funktion wird vor ihrem Beginn, am Beginn, am Enddatum und nach dem
