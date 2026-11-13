@@ -959,7 +959,7 @@ class CoursesCrudController extends AbstractCrudController
         // Nur Vorlagen des Kursvereins zur Auswahl anbieten.
         $templatePlans = [];
         if ($course->getClub() !== null) {
-            $templates = $templateRepository->findBy(
+            $templates = $templateRepository->findByClub(
                 ['club' => $course->getClub()],
                 ['name' => 'ASC']
             );

@@ -1,0 +1,19 @@
+{% set childFolders = treeFolders[parentId] ?? [] %}
+{% set childFiles = treeFiles[parentId] ?? [] %}
+{% if childFolders or childFiles %}
+    <ul class="list-unstyled ps-3">
+        {% for child in childFolders %}
+            <li>
+                <details data-folder-id="{{ child.id }}" {% if child.id in activeFolderIds %}open{% endif %}>
+                    <summary>
+                        <a href="{{ path('admin_media_index', {folder: child.id}) }}" {% if selectedFolder and child.id == selectedFolder.id %}aria-current="page"{% endif %}>{{ child.name }}</a>
+                    </summary>
+                    {% include 'admin/media/_folder_tree.html.twig' with {parentId: child.id, treeFolders: treeFolders, treeFiles: treeFiles, activeFolderIds: activeFolderIds, selectedFolder: selectedFolder} only %}
+                </details>
+            </li>
+        {% endfor %}
+        {% for file in childFiles %}
+            <li><a href="{{ path('admin_media_file', {id: file.id}) }}">{{ file.originalName }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}

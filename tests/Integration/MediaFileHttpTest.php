@@ -133,7 +133,7 @@ final class MediaFileHttpTest extends WebTestCase
         $foreign = $this->account('foreign', [User::ROLE_ADMIN], $other);
         $this->client->loginUser($foreign);
         $this->client->request('GET', '/admin/media/'.$png->getId());
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testNestedFoldersMultipleUploadsAndMovesStayClubScoped(): void
@@ -224,15 +224,123 @@ final class MediaFileHttpTest extends WebTestCase
         $foreignAdmin = $this->account('other-media-admin', [User::ROLE_ADMIN], $this->em->find(Club::class, $other->getId()));
         $this->client->loginUser($foreignAdmin);
         $this->client->request('GET', '/admin/media?folder='.$child->getId());
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/media/'.$files[0]->getId());
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
         $foreignMoveToken = $this->token('media_move_'.$files[0]->getId());
         $this->client->request('POST', '/admin/media/'.$files[0]->getId().'/move', ['_token' => $foreignMoveToken, 'folder' => (string) $foreign->getId()]);
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
     }
 
-    public function testSuperAdminMediaUsesSelectedClubAndRejectsStaleFolderForms(): void
+    public function testFolderTreeShowsNestedFilesAndSelectedPath(): void
+    {
+        $parent = new MediaFolder($this->club, 'Parent');
+        $child = new MediaFolder($this->club, 'Child <folder>', $parent);
+        $sibling = new MediaFolder($this->club, 'Sibling');
+        $rootFile = new MediaFile($this->club, str_repeat('a', 40).'.pdf', 'Root.pdf', 'application/pdf', 10, '');
+        $nestedFile = new MediaFile($this->club, str_repeat('b', 40).'.pdf', 'Nested <file>.pdf', 'application/pdf', 10, '');
+        $nestedFile->setFolder($child);
+        $other = (new Club())->setName('Other tree club');
+        $foreign = new MediaFolder($other, 'Foreign folder');
+        $foreignFile = new MediaFile($other, str_repeat('c', 40).'.pdf', 'Foreign file.pdf', 'application/pdf', 10, '');
+        $foreignFile->setFolder($foreign);
+        foreach ([$parent, $child, $sibling, $rootFile, $nestedFile, $other, $foreign, $foreignFile] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $parentId = $parent->getId(); $childId = $child->getId(); $siblingId = $sibling->getId();
+        $this->client->loginUser($this->press);
+        $this->client->request('GET', '/admin/media');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#media-folder-tree > a[aria-current="page"]');
+        self::assertSelectorExists('#media-folder-tree a[href="/admin/media/'.$rootFile->getId().'"]');
+        self::assertSelectorExists('#media-folder-tree details[data-folder-id="'.$parentId.'"] details[data-folder-id="'.$childId.'"] a[href="/admin/media/'.$nestedFile->getId().'"]');
+        self::assertSelectorTextContains('#media-folder-tree', 'Nested <file>.pdf');
+        self::assertSelectorNotExists('#media-folder-tree file');
+        self::assertSelectorTextNotContains('#media-folder-tree', 'Foreign folder');
+        self::assertSelectorTextNotContains('#media-folder-tree', 'Foreign file.pdf');
+
+        $this->client->request('GET', '/admin/media?folder='.$childId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#media-folder-tree details[data-folder-id="'.$parentId.'"][open] details[data-folder-id="'.$childId.'"][open] > summary a[aria-current="page"]');
+        self::assertSelectorNotExists('#media-folder-tree details[data-folder-id="'.$siblingId.'"][open]');
+        self::assertSelectorExists('table a[href="/admin/media/'.$nestedFile->getId().'"]');
+    }
+
+    public function testFolderEditingMovingAndDeletionProtectContents(): void
+    {
+        $parent = new MediaFolder($this->club, 'Parent');
+        $child = new MediaFolder($this->club, 'Child', $parent);
+        $target = new MediaFolder($this->club, 'Target');
+        $duplicate = new MediaFolder($this->club, 'Duplicate', $target);
+        $other = (new Club())->setName('Foreign folder club');
+        $foreign = new MediaFolder($other, 'Foreign');
+        foreach ([$parent, $child, $target, $duplicate, $other, $foreign] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $parentId = $parent->getId(); $childId = $child->getId(); $targetId = $target->getId(); $foreignId = $foreign->getId();
+        $this->client->loginUser($this->press);
+        $file = $this->upload('folder.pdf', "%PDF-1.4\n%%EOF\n");
+        $fileId = $file->getId();
+        $file->setFolder($this->em->find(MediaFolder::class, $childId));
+        $this->em->flush();
+
+        $crawler = $this->client->request('GET', '/admin/media?folder='.$parentId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('form[action="/admin/media/folders/'.$parentId.'/edit"]');
+        self::assertSelectorNotExists('#media-parent-folder option[value="'.$parentId.'"]');
+        self::assertSelectorNotExists('#media-parent-folder option[value="'.$childId.'"]');
+        self::assertSelectorExists('button[disabled]');
+        $snapshot = $crawler->filter('form[action="/admin/media/folders/'.$parentId.'/edit"] input[name="snapshot"]')->attr('value');
+        $token = $this->token('media_folder_edit_'.$parentId);
+        $edit = '/admin/media/folders/'.$parentId.'/edit';
+        $this->client->request('POST', $edit, ['_token' => 'invalid', 'snapshot' => $snapshot, 'name' => 'Changed', 'parent' => '']);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', $edit, ['_token' => $token, 'snapshot' => $snapshot, 'name' => 'Changed', 'parent' => (string) $foreignId]);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', $edit, ['_token' => $token, 'snapshot' => $snapshot, 'name' => 'Changed', 'parent' => (string) $childId]);
+        self::assertResponseRedirects('/admin/media?folder='.$parentId, 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'nicht in sich selbst');
+        self::assertSame('Parent', $this->em->find(MediaFolder::class, $parentId)->getName());
+
+        $this->client->request('POST', $edit, ['_token' => $token, 'snapshot' => $snapshot, 'name' => 'Duplicate', 'parent' => (string) $targetId]);
+        self::assertResponseRedirects('/admin/media?folder='.$parentId, 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'existiert hier bereits');
+        $this->client->request('POST', $edit, ['_token' => $token, 'snapshot' => $snapshot, 'name' => 'Renamed', 'parent' => (string) $targetId]);
+        self::assertResponseRedirects('/admin/media?folder='.$parentId, 303);
+        $this->em->clear();
+        self::assertSame('Target / Renamed / Child', $this->em->find(MediaFolder::class, $childId)->getPath());
+        self::assertSame($childId, $this->em->find(MediaFile::class, $fileId)->getFolder()->getId());
+        $this->client->request('POST', $edit, ['_token' => $token, 'snapshot' => $snapshot, 'name' => 'Stale', 'parent' => '']);
+        self::assertResponseStatusCodeSame(409);
+
+        $crawler = $this->client->request('GET', '/admin/media?folder='.$parentId);
+        $newSnapshot = $crawler->filter('form[action="/admin/media/folders/'.$parentId.'/delete"] input[name="snapshot"]')->attr('value');
+        $deleteToken = $this->token('media_folder_delete_'.$parentId);
+        $delete = '/admin/media/folders/'.$parentId.'/delete';
+        $this->client->request('POST', $delete, ['_token' => 'invalid', 'snapshot' => $newSnapshot]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', $delete, ['_token' => $deleteToken, 'snapshot' => $newSnapshot]);
+        self::assertResponseRedirects('/admin/media?folder='.$parentId, 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Nur leere Ordner');
+        self::assertNotNull($this->em->find(MediaFolder::class, $parentId));
+
+        $moveToken = $this->token('media_move_'.$fileId);
+        $this->client->request('POST', '/admin/media/'.$fileId.'/move', ['_token' => $moveToken, 'folder' => '']);
+        self::assertResponseRedirects('/admin/media?folder='.$childId, 303);
+        $crawler = $this->client->request('GET', '/admin/media?folder='.$childId);
+        $childSnapshot = $crawler->filter('form[action="/admin/media/folders/'.$childId.'/delete"] input[name="snapshot"]')->attr('value');
+        $this->client->request('POST', '/admin/media/folders/'.$childId.'/delete', [
+            '_token' => $this->token('media_folder_delete_'.$childId), 'snapshot' => $childSnapshot,
+        ]);
+        self::assertResponseRedirects('/admin/media?folder='.$parentId, 303);
+        $this->client->request('POST', $delete, ['_token' => $deleteToken, 'snapshot' => $newSnapshot]);
+        self::assertResponseRedirects('/admin/media?folder='.$targetId, 303);
+        self::assertNull($this->em->find(MediaFolder::class, $parentId));
+        self::assertNotNull($this->em->find(MediaFile::class, $fileId));
+    }
+
+    public function testSuperAdminMediaRemainsInConfiguredClub(): void
     {
         $super = $this->account('media-super', [User::ROLE_SUPER_ADMIN]);
         $other = (new Club())->setName('Other media club');
@@ -243,20 +351,23 @@ final class MediaFileHttpTest extends WebTestCase
         $oldFolder = $crawler->filter('form[action="/admin/media/folders"]')->form();
         $this->client->submit($oldFolder, ['name' => 'Own media folder']);
         self::assertResponseRedirects();
-        $crawler = $this->client->request('GET', '/admin/settings');
-        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
-            'admin_club[club]' => (string) $other->getId(),
-        ]);
-        self::assertResponseRedirects();
-        $this->client->submit($oldFolder, ['name' => 'Stale media folder']);
-        self::assertResponseStatusCodeSame(403);
-        $crawler = $this->client->request('GET', '/admin/media');
+        $foreign = new MediaFolder($this->em->find(Club::class, $other->getId()), 'Foreign folder');
+        $this->em->persist($foreign);
+        $this->em->flush();
+        $this->client->request('GET', '/admin/settings');
+        self::assertSelectorNotExists('form[name="admin_club"]');
+        $this->client->request('POST', '/admin/settings/club', ['admin_club' => ['club' => (string) $other->getId()]]);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/admin/media?club='.$other->getId());
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextNotContains('body', 'Own media folder');
-        $this->client->submit($crawler->filter('form[action="/admin/media/folders"]')->form(), ['name' => 'Other media folder']);
-        self::assertResponseRedirects();
-        self::assertNotNull($this->em->getRepository(MediaFolder::class)->findOneBy(['club' => $other, 'name' => 'Other media folder']));
-        self::assertNull($this->em->getRepository(MediaFolder::class)->findOneBy(['name' => 'Stale media folder']));
+        self::assertSelectorTextContains('body', 'Own media folder');
+        self::assertSelectorTextNotContains('body', 'Foreign folder');
+        $this->client->request('GET', '/admin/media?folder='.$foreign->getId());
+        self::assertResponseStatusCodeSame(404);
+        $token = $this->token('media_folder_create_'.$this->club->getId());
+        $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => 'Blocked', 'parent' => (string) $foreign->getId()]);
+        self::assertResponseStatusCodeSame(404);
+        self::assertNull($this->em->getRepository(MediaFolder::class)->findOneBy(['name' => 'Blocked']));
     }
 
     public function testOfficeFilesAreValidatedAndRemainPrivateDownloads(): void
@@ -487,22 +598,11 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/settings/membership?club='.$other->getId());
         self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($super);
-        $crawler = $this->client->request('GET', '/admin/settings/membership');
-        $stalePolicy = $crawler->filter('form[name="membership_policy"]')->form();
-        $crawler = $this->client->request('GET', '/admin/settings/website');
-        $staleWebsite = $crawler->filter('form[name="website_display_settings"]')->form();
-        $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2031');
-        $staleBar = $crawler->filter('form[name="bar_duty_policy"]')->form();
-        $crawler = $this->client->request('GET', '/admin/settings');
-        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
-            'admin_club[club]' => (string) $other->getId(),
-        ]);
-        self::assertResponseRedirects();
-        $this->client->submit($stalePolicy, ['membership_policy[contactEmail]' => 'stale@example.org']);
-        self::assertResponseStatusCodeSame(422);
-        $this->client->submit($staleWebsite, ['website_display_settings[articlesPerPage]' => '3']);
-        self::assertResponseStatusCodeSame(422);
-        $this->client->submit($staleBar, ['bar_duty_policy[minutes]' => '60', 'bar_duty_policy[reason]' => 'Beschluss des Vereins']);
+        $this->client->request('GET', '/admin/settings');
+        self::assertSelectorNotExists('form[name="admin_club"]');
+        $this->client->request('POST', '/admin/settings/club', ['admin_club' => ['club' => (string) $other->getId()]]);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/admin/settings/membership?club='.$other->getId());
         self::assertResponseStatusCodeSame(403);
         self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2031]));
         $crawler = $this->client->request('GET', '/admin/settings/website');
@@ -511,26 +611,19 @@ final class MediaFileHttpTest extends WebTestCase
             'website_display_settings[eventsPerPage]' => '9',
         ]);
         self::assertResponseRedirects('/admin/settings/website', 303);
-        self::assertSame(8, $this->em->find(WebsiteDisplaySettings::class, $other->getId())->getArticlesPerPage());
-        self::assertSame(4, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
+        self::assertNull($this->em->find(WebsiteDisplaySettings::class, $other->getId()));
+        self::assertSame(8, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
         $crawler = $this->client->request('GET', '/admin/settings/membership');
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'Mitgliedschaftsregeln – Other club');
+        self::assertSelectorTextContains('body', 'Mitgliedschaftsregeln – Media club');
         self::assertSelectorNotExists('form[name="bar_duty_policy"]');
-        $this->client->request('GET', '/admin/settings/bar-services?year=2029');
-        self::assertResponseStatusCodeSame(403);
         self::assertNull($this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $other, 'year' => 2029]));
-        $crawler = $this->client->request('GET', '/admin/settings/membership');
         $this->client->submit($crawler->filter('form[name="membership_policy"]')->form(), [
-            'membership_policy[contactEmail]' => 'other@example.org',
+            'membership_policy[contactEmail]' => 'updated@example.org',
         ]);
         self::assertResponseRedirects();
-        self::assertSame('other@example.org', $this->em->getRepository(MembershipPolicy::class)->findOneBy(['club' => $other])->getContactEmail());
-        $crawler = $this->client->request('GET', '/admin/settings');
-        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
-            'admin_club[club]' => (string) $this->club->getId(),
-        ]);
-        self::assertResponseRedirects();
+        self::assertNull($this->em->getRepository(MembershipPolicy::class)->findOneBy(['club' => $other]));
+        self::assertSame('updated@example.org', $this->em->getRepository(MembershipPolicy::class)->findOneBy(['club' => $this->club])->getContactEmail());
         $crawler = $this->client->request('GET', '/admin/settings/bar-services?year=2029');
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->filter('form[name="bar_duty_policy"]')->form(), [
@@ -591,7 +684,7 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($foreignAdmin);
         $this->client->request('GET', '/admin/club-events/'.$id.'/documents/'.$personal);
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($this->press);
         $this->client->request('GET', '/admin/club-events/'.$id.'/documents/'.$personal);
         self::assertResponseStatusCodeSame(403);

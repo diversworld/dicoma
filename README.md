@@ -88,6 +88,8 @@ configured course image directory (`bilder_ordner`, normally
 `public/images/kurse`). Administrators can navigate its subdirectories and
 download files. Symbolic links and paths outside this directory are rejected.
 This is separate from `/admin/media`, which manages media uploads and folders.
+The planned consolidation into one managed storage has not yet been carried
+out; neither existing course images nor media have been migrated.
 
 #### Diving training (Phase 4)
 

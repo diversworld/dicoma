@@ -73,21 +73,32 @@ final class FileExplorerHttpTest extends WebTestCase
     public function testBrowsingDownloadingAndPathBoundaries(): void
     {
         $admin = $this->account('explorer-admin', [User::ROLE_ADMIN]);
+        $press = $this->account('explorer-press', [User::ROLE_PRESS_OFFICER]);
         $member = $this->account('explorer-member', []);
         $this->client->loginUser($admin);
         $this->client->request('GET', '/admin/files');
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorTextContains('h1', 'Dateiverwaltung');
+        self::assertSelectorTextContains('body', 'getrennt');
+        self::assertSelectorExists('form[action="/admin/media/upload"]');
         self::assertSelectorTextContains('table', 'root.txt');
         self::assertSelectorTextNotContains('table', 'outside');
         self::assertSelectorTextNotContains('table', 'inside');
-        self::assertSelectorExists('a[href="/admin/files?path=0"]');
-        $this->client->request('GET', '/admin/files', ['path' => '0']);
+        self::assertSelectorExists('a[href*="legacy_path=0"]');
+        self::assertSelectorTextContains('#legacy-folder-tree', 'root.txt');
+        self::assertSelectorTextNotContains('#legacy-folder-tree', 'outside');
+        $this->client->request('GET', '/admin/media', ['legacy_path' => '0']);
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#legacy-folder-tree details[data-legacy-path="0"][open] > summary a[aria-current="page"]');
+        self::assertSelectorTextContains('#legacy-folder-tree details[data-legacy-path="0"]', 'ä <test>.txt');
+        self::assertSelectorTextContains('#legacy-folder-tree details[data-legacy-path="0"]', 'empty');
         self::assertSelectorTextContains('table', 'ä <test>.txt');
         self::assertSelectorNotExists('table test');
         self::assertSelectorTextContains('.breadcrumb', '0');
-        $this->client->request('GET', '/admin/files', ['path' => '0/empty']);
+        $this->client->request('GET', '/admin/media', ['legacy_path' => '0/empty']);
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('table', 'Dieser Ordner ist leer.');
         $this->client->request('GET', '/admin/files/download', ['path' => '0/back\\slash.txt']);
@@ -105,10 +116,20 @@ final class FileExplorerHttpTest extends WebTestCase
             $this->client->request('GET', '/admin/files/download', ['path' => $path]);
             self::assertResponseStatusCodeSame(400);
         }
-        $this->client->request('GET', '/admin/files', ['path' => 'does-not-exist']);
+        $this->client->request('GET', '/admin/media', ['legacy_path' => 'does-not-exist']);
         self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/admin/media', ['legacy_path' => '../']);
+        self::assertResponseStatusCodeSame(400);
         $this->client->request('POST', '/admin/files');
         self::assertResponseStatusCodeSame(405);
+        $this->client->loginUser($press);
+        $this->client->request('GET', '/admin/media');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Kursbilder (Altbestand)');
+        $this->client->request('GET', '/admin/media', ['legacy_path' => '']);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/files/download', ['path' => 'root.txt']);
+        self::assertResponseStatusCodeSame(403);
         $this->client->loginUser($member);
         $this->client->request('GET', '/admin/files');
         self::assertResponseStatusCodeSame(403);

@@ -13,15 +13,15 @@ class CoursesRepository extends ServiceEntityRepository
         parent::__construct($registry, Courses::class);
     }
 
-//    /**
+//   /**
 //     * @return Courses[] Returns an array of Courses objects
 //     */
-//    public function findByExampleField($value): array
+//    public function findByClub($value): array
 //    {
 //        return $this->createQueryBuilder('c')
-//            ->andWhere('c.exampleField = :val')
+//            ->andWhere('c.club = :val')
 //            ->setParameter('val', $value)
-//            ->orderBy('c.id', 'ASC')
+//            ->orderBy('c.club', 'ASC')
 //            ->setMaxResults(10)
 //            ->getQuery()
 //            ->getResult()

@@ -6,12 +6,69 @@
     {% if canManageEditorial %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">{{ 'Zur Website-Redaktion'|trans }}</a></p>{% endif %}
     <p>{{ 'Vereinsdateien werden geschützt gespeichert. Bilder können in Artikeln und Veranstaltungen ausgewählt werden. Verwendete Dateien können nicht gelöscht werden.'|trans }}</p>
     <p>{{ 'Erlaubt: JPG, PNG, WebP, PDF, DOCX, XLSX und PPTX, jeweils bis 10 MB. Bilder werden bei sichtbaren Inhalten öffentlich angezeigt; bitte Rechte und Bildmetadaten prüfen.'|trans }}</p>
+    {% if is_granted('ROLE_ADMIN') %}
+        <section id="legacy-course-files" class="card mb-4">
+            <div class="card-body">
+                <h2>{{ 'Kursbilder (Altbestand)'|trans }}</h2>
+                <p>{{ 'Kursbilder liegen noch getrennt und können hier nur angesehen und heruntergeladen werden.'|trans }}</p>
+                {% if legacy is null %}
+                    <a href="{{ path('admin_media_index', {folder: folder ? folder.id : '', legacy_path: '', _fragment: 'legacy-course-files'}) }}">{{ 'Kursbilder anzeigen'|trans }}</a>
+                {% else %}
+                    <div class="row g-4">
+                        <nav id="legacy-folder-tree" class="col-lg-4" aria-label="{{ 'Ordnerstruktur'|trans }}">
+                            <a href="{{ path('admin_media_index', {folder: folder ? folder.id : '', legacy_path: '', _fragment: 'legacy-course-files'}) }}" {% if legacy.path == '' %}aria-current="page"{% endif %}>{{ 'Kursbilder'|trans }}</a>
+                            {% include 'admin/files/_legacy_tree.html.twig' with {legacy: legacy, currentPath: '', mediaFolder: folder} only %}
+                        </nav>
+                        <div class="col-lg-8">
+                            {% include 'admin/files/_legacy_explorer.html.twig' with {legacy: legacy, mediaFolder: folder} only %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+    <div class="row g-4">
+    <aside class="col-lg-4 col-xl-3">
+        <nav id="media-folder-tree" aria-label="{{ 'Ordnerstruktur'|trans }}">
+            <h2>{{ 'Ordnerstruktur'|trans }}</h2>
+            <a href="{{ path('admin_media_index') }}" {% if not folder %}aria-current="page"{% endif %}>{{ 'Hauptordner'|trans }}</a>
+            {% include 'admin/media/_folder_tree.html.twig' with {parentId: 0, treeFolders: treeFolders, treeFiles: treeFiles, activeFolderIds: activeFolderIds, selectedFolder: folder} only %}
+        </nav>
+    </aside>
+    <div class="col-lg-8 col-xl-9">
     <nav aria-label="{{ 'Ordnerpfad'|trans }}" class="my-3">
         <a href="{{ path('admin_media_index') }}">{{ 'Hauptordner'|trans }}</a>
         {% for ancestor in breadcrumbs %}
             / <a href="{{ path('admin_media_index', {folder: ancestor.id}) }}">{{ ancestor.name }}</a>
         {% endfor %}
     </nav>
+    {% if folder %}
+        <section class="card mb-4">
+            <div class="card-body">
+                <h2>{{ 'Ordner bearbeiten'|trans }}</h2>
+                <form method="post" action="{{ path('admin_media_folder_edit', {id: folder.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('media_folder_edit_' ~ folder.id) }}">
+                    <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
+                    <label class="form-label" for="media-current-folder-name">{{ 'Ordnername'|trans }}</label>
+                    <input class="form-control" id="media-current-folder-name" name="name" value="{{ folder.name }}" maxlength="120" required>
+                    <label class="form-label mt-2" for="media-parent-folder">{{ 'Übergeordneter Ordner'|trans }}</label>
+                    <select class="form-select" id="media-parent-folder" name="parent">
+                        <option value="" {{ not folder.parent ? 'selected' : '' }}>{{ 'Hauptordner'|trans }}</option>
+                        {% for target in parentChoices %}
+                            <option value="{{ target.id }}" {{ folder.parent and target.id == folder.parent.id ? 'selected' : '' }}>{{ target.path }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-secondary mt-2" type="submit">{{ 'Ordner speichern'|trans }}</button>
+                </form>
+                <form method="post" action="{{ path('admin_media_folder_delete', {id: folder.id}) }}" class="mt-3">
+                    <input type="hidden" name="_token" value="{{ csrf_token('media_folder_delete_' ~ folder.id) }}">
+                    <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
+                    <button class="btn btn-outline-danger" type="submit" {{ children or rows ? 'disabled' : '' }}>{{ 'Leeren Ordner löschen'|trans }}</button>
+                    <div class="form-text">{{ 'Nur leere Ordner können gelöscht werden.'|trans }}</div>
+                </form>
+            </div>
+        </section>
+    {% endif %}
     <h2>{{ 'Ordner'|trans }}</h2>
     <ul>
         {% for child in children %}
@@ -74,6 +131,8 @@
         {% else %}<tr><td colspan="5">{{ 'Noch keine Dateien.'|trans }}</td></tr>{% endfor %}
         </tbody>
     </table></div>
+    </div>
+    </div>
 {% endblock %}
 
 {% block body_javascript %}

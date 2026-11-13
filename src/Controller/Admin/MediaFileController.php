@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\{Club, ClubEvent, MediaFile, MediaFolder, WebsitePublication};
-use App\Service\{AdminClubContext, MediaFileStorage, PublicWebsite};
+use App\Service\{AdminClubContext, FileManager, MediaFileStorage, MembershipRoleContinuity, PublicWebsite};
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\HttpFoundation\{BinaryFileResponse, Request, Response, ResponseHeaderBag};
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -24,7 +26,12 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 #[IsGranted('ROLE_PRESS_OFFICER')]
 final class MediaFileController extends AbstractController
 {
-    public function __construct(private readonly AdminClubContext $clubContext, private readonly TranslatorInterface $translator) {}
+    public function __construct(
+        private readonly AdminClubContext $clubContext,
+        private readonly TranslatorInterface $translator,
+        private readonly MembershipRoleContinuity $continuity,
+        #[AutowireLocator([FileManager::class])] private readonly ContainerInterface $fileManagers,
+    ) {}
 
     #[Route('', name: 'admin_media_index', methods: ['GET'])]
     public function index(Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
@@ -32,6 +39,14 @@ final class MediaFileController extends AbstractController
         $club = $this->club($website);
         $folder = $this->folder($request->query->getString('folder'), $club, $em);
         $folders = $em->getRepository(MediaFolder::class)->findBy(['club' => $club], ['name' => 'ASC', 'id' => 'ASC']);
+        $treeFolders = [];
+        foreach ($folders as $item) {
+            $treeFolders[$item->getParent()?->getId() ?? 0][] = $item;
+        }
+        $treeFiles = [];
+        foreach ($em->getRepository(MediaFile::class)->findBy(['club' => $club], ['originalName' => 'ASC', 'id' => 'ASC']) as $item) {
+            $treeFiles[$item->getFolder()?->getId() ?? 0][] = $item;
+        }
         $children = array_filter($folders, static fn (MediaFolder $item): bool => $item->getParent()?->getId() === $folder?->getId());
         $files = $em->getRepository(MediaFile::class)->findBy(['club' => $club, 'folder' => $folder], ['id' => 'DESC']);
         $rows = [];
@@ -43,10 +58,32 @@ final class MediaFileController extends AbstractController
         for ($ancestor = $folder; $ancestor !== null; $ancestor = $ancestor->getParent()) {
             array_unshift($breadcrumbs, $ancestor);
         }
+        $legacy = null;
+        if ($request->query->has('legacy_path')) {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $manager = $this->fileManagers->get(FileManager::class);
+            if (!$manager instanceof FileManager) {
+                throw new \LogicException('Der Kursbild-Explorer ist nicht verfügbar.');
+            }
+            $path = $manager->normalizePath($request->query->getString('legacy_path'));
+            $legacyBreadcrumbs = [['name' => 'Kursbilder', 'path' => '']];
+            $legacyTree = ['' => $manager->listDirectory('')];
+            $current = '';
+            foreach ($path === '' ? [] : explode('/', $path) as $part) {
+                $current = ltrim($current.'/'.$part, '/');
+                $legacyBreadcrumbs[] = ['name' => $part, 'path' => $current];
+                $legacyTree[$current] = $manager->listDirectory($current);
+            }
+            $legacy = ['files' => $legacyTree[$path], 'breadcrumbs' => $legacyBreadcrumbs, 'tree' => $legacyTree, 'path' => $path];
+        }
         return $this->render('admin/media/index.html.twig', [
             'rows' => $rows, 'folder' => $folder, 'folders' => $folders, 'children' => $children, 'club' => $club,
             'breadcrumbs' => $breadcrumbs, 'canManageEditorial' => $website->canManageEditorial(),
-            'maxFileUploads' => (int) ini_get('max_file_uploads'),
+            'maxFileUploads' => (int) ini_get('max_file_uploads'), 'legacy' => $legacy,
+            'folderFingerprint' => $folder === null ? null : $this->folderFingerprint($folder),
+            'parentChoices' => $folder === null ? [] : array_filter($folders, static fn (MediaFolder $candidate): bool => !$candidate->isWithin($folder)),
+            'treeFolders' => $treeFolders, 'treeFiles' => $treeFiles,
+            'activeFolderIds' => array_map(static fn (MediaFolder $ancestor): ?int => $ancestor->getId(), $breadcrumbs),
         ]);
     }
 
@@ -55,17 +92,77 @@ final class MediaFileController extends AbstractController
     {
         $club = $this->club($website);
         if (!$this->isCsrfTokenValid('media_folder_create_'.$club->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
-        $parent = $this->folder($request->request->getString('parent'), $club, $em);
-        try {
-            $folder = new MediaFolder($club, $request->request->getString('name'), $parent);
-            if ($em->getRepository(MediaFolder::class)->findOneBy(['club' => $club, 'parent' => $parent, 'name' => $folder->getName()])) {
-                throw new \InvalidArgumentException('Ein Ordner mit diesem Namen existiert hier bereits.');
+        $parent = $em->getConnection()->transactional(function () use ($request, $em, $club): ?MediaFolder {
+            $this->continuity->lockClub($club);
+            $parent = $this->folder($request->request->getString('parent'), $club, $em);
+            try {
+                $folder = new MediaFolder($club, $request->request->getString('name'), $parent);
+                $this->assertUniqueFolder($em, $folder, $parent);
+                $em->persist($folder);
+                $em->flush();
+                $this->addFlash('success', 'Ordner angelegt.');
+            } catch (\InvalidArgumentException $e) {
+                $this->addFlash('danger', $e->getMessage());
             }
-            $em->persist($folder);
-            $em->flush();
-            $this->addFlash('success', 'Ordner angelegt.');
-        } catch (\InvalidArgumentException $e) {
-            $this->addFlash('danger', $e->getMessage());
+            return $parent;
+        });
+        return $this->redirectToRoute('admin_media_index', $this->folderParameters($parent), Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/folders/{id}/edit', name: 'admin_media_folder_edit', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function editFolder(int $id, Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
+    {
+        $club = $this->club($website);
+        if (!$this->isCsrfTokenValid('media_folder_edit_'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+        }
+        $em->getConnection()->transactional(function () use ($id, $request, $em, $club): void {
+            $this->continuity->lockClub($club);
+            $folder = $this->folder((string) $id, $club, $em) ?? throw $this->createNotFoundException();
+            $this->assertFolderFingerprint($request, $folder);
+            $parent = $this->folder($request->request->getString('parent'), $club, $em);
+            try {
+                $name = $request->request->getString('name');
+                $candidate = new MediaFolder($club, $name, $parent);
+                $this->assertUniqueFolder($em, $candidate, $parent, $folder);
+                $folder->moveTo($parent);
+                $folder->rename($name);
+                $em->flush();
+                $this->addFlash('success', 'Ordner gespeichert.');
+            } catch (\InvalidArgumentException $e) {
+                $this->addFlash('danger', $e->getMessage());
+            }
+        });
+        return $this->redirectToRoute('admin_media_index', ['folder' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/folders/{id}/delete', name: 'admin_media_folder_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function deleteFolder(int $id, Request $request, EntityManagerInterface $em, PublicWebsite $website): Response
+    {
+        $club = $this->club($website);
+        if (!$this->isCsrfTokenValid('media_folder_delete_'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+        }
+        $parent = null;
+        try {
+            $em->getConnection()->transactional(function () use ($id, $request, $em, $club, &$parent): void {
+                $this->continuity->lockClub($club);
+                $folder = $this->folder((string) $id, $club, $em) ?? throw $this->createNotFoundException();
+                $this->assertFolderFingerprint($request, $folder);
+                $parent = $folder->getParent();
+                if ($em->getRepository(MediaFolder::class)->count(['parent' => $folder]) > 0
+                    || $em->getRepository(MediaFile::class)->count(['folder' => $folder]) > 0) {
+                    $this->addFlash('warning', 'Nur leere Ordner können gelöscht werden.');
+                    $parent = $folder;
+                    return;
+                }
+                $em->remove($folder);
+                $em->flush();
+                $this->addFlash('success', 'Ordner gelöscht.');
+            });
+        } catch (ForeignKeyConstraintViolationException) {
+            $this->addFlash('warning', 'Der Ordner ist nicht mehr leer und kann nicht gelöscht werden.');
+            return $this->redirectToRoute('admin_media_index', ['folder' => $id], Response::HTTP_SEE_OTHER);
         }
         return $this->redirectToRoute('admin_media_index', $this->folderParameters($parent), Response::HTTP_SEE_OTHER);
     }
@@ -188,6 +285,28 @@ final class MediaFileController extends AbstractController
     private function folderParameters(?MediaFolder $folder): array
     {
         return $folder ? ['folder' => $folder->getId()] : [];
+    }
+
+    private function assertUniqueFolder(EntityManagerInterface $em, MediaFolder $candidate, ?MediaFolder $parent, ?MediaFolder $existing = null): void
+    {
+        $duplicate = $em->getRepository(MediaFolder::class)->findOneBy([
+            'club' => $candidate->getClub(), 'parent' => $parent, 'name' => $candidate->getName(),
+        ]);
+        if ($duplicate !== null && $duplicate->getId() !== $existing?->getId()) {
+            throw new \InvalidArgumentException('Ein Ordner mit diesem Namen existiert hier bereits.');
+        }
+    }
+
+    private function folderFingerprint(MediaFolder $folder): string
+    {
+        return hash('sha256', json_encode([$folder->getId(), $folder->getName(), $folder->getParent()?->getId()], JSON_THROW_ON_ERROR));
+    }
+
+    private function assertFolderFingerprint(Request $request, MediaFolder $folder): void
+    {
+        if (!hash_equals($this->folderFingerprint($folder), $request->request->getString('snapshot'))) {
+            throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Der Ordner wurde zwischenzeitlich geändert. Bitte neu laden.');
+        }
     }
 
     private function club(PublicWebsite $website): Club

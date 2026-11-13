@@ -7,8 +7,8 @@ namespace App\Controller\Admin;
 use App\Service\FileManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -22,35 +22,10 @@ final class FileExplorerController extends AbstractController
     }
 
     #[Route('/admin/files', name: 'admin_files_index', methods: ['GET'])]
-    public function index(Request $request): Response
+    public function index(Request $request): RedirectResponse
     {
         $path = $this->fileManager->normalizePath($request->query->getString('path'));
-        $files = $this->fileManager->listDirectory($path);
-
-        $parts = $path === ''
-            ? []
-            : explode('/', $path);
-
-        $breadcrumbs = [
-            ['name' => 'Kursbilder', 'path' => '']
-        ];
-
-        $currentPath = '';
-
-        foreach ($parts as $part) {
-            $currentPath = ltrim($currentPath . '/' . $part, '/');
-
-            $breadcrumbs[] = [
-                'name' => $part,
-                'path' => $currentPath
-            ];
-        }
-
-        return $this->render('admin/files/explorer.html.twig', [
-            'files' => $files,
-            'currentPath' => $path,
-            'breadcrumbs' => $breadcrumbs,
-        ]);
+        return $this->redirectToRoute('admin_media_index', ['legacy_path' => $path, '_fragment' => 'legacy-course-files']);
     }
 
     #[Route('/admin/files/download', name: 'admin_files_download', methods: ['GET'])]

@@ -9,11 +9,17 @@ Prüfungen.
 
 ## Vereinbarte Rollenregeln
 
-- Neu beschlossen, aber noch nicht umgesetzt: Es wird nur ein Verein
-  verwaltet. Funktionen sollen frei angelegt und mit vorhandenen Berechtigungen
-  verknüpft werden können. Administratoren dürfen nur delegierbare Rechte
-  zuordnen, privilegierte Rechte bleiben Superadministratoren vorbehalten.
-  Die Nachfolgepflicht soll je Funktion einstellbar sein.
+- Der zentrale Kontext ist auf einen Verein umgestellt. Noch nicht umgesetzt
+  sind frei anlegbare Funktionen mit ausdrücklicher Berechtigungszuordnung
+  und einstellbarer Nachfolgepflicht. Administratoren dürfen nur delegierbare
+  Rechte zuordnen, privilegierte Rechte bleiben Superadministratoren
+  vorbehalten.
+- Die Verwaltung soll eine EasyAdmin-Standardliste der Funktionen und je
+  Funktion eine Bearbeitungsseite für Name, Berechtigungen, Nachfolge,
+  gemeinsamen Gültigkeitszeitraum sowie Inhaber mit individuellen Zeiträumen
+  bieten. Eine Zuordnung ist nur während beider Zeiträume wirksam. Die
+  bisherigen individuellen Rollenzeiträume sind bei der Übernahme zu
+  erhalten; ein neuer gemeinsamer Zeitraum ist zunächst unbefristet.
 - Funktionsrollen sind unabhängig voneinander und optional pro Rolle befristbar.
   Beginn und Ende sind Kalendertage; das Enddatum ist eingeschlossen.
 - Bestehende Zuweisungen bleiben ohne ausdrückliche Änderung unbefristet.
@@ -49,6 +55,10 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 - [ ] Zwei Funktionen mit derselben Berechtigung und unterschiedlichen
       Zeiträumen zuweisen. Das Entfernen oder der Ablauf einer Funktion darf
       eine weiterhin gültige Berechtigung der anderen nicht entziehen.
+- [ ] Gemeinsame und individuelle Gültigkeit unabhängig voneinander und an
+      beiden eingeschlossenen Grenztagen prüfen; nur ihre Überschneidung
+      gewährt die zugeordneten Rechte. Eine Änderung des gemeinsamen Zeitraums
+      darf die gespeicherten individuellen Zeiträume nicht überschreiben.
 - [ ] Die Nachfolgepflicht für eine Funktion ein- und ausschalten und den
       Statuswechsel jeweils mit und ohne eine andere aktuell gültige
       Zuordnung derselben Funktion prüfen. Eine andere Funktion mit derselben
@@ -60,6 +70,24 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
       privilegierter Notfallkonten und Konten ohne aktive Mitgliedschaft vor und
       nach der Migration einzeln vergleichen. Backup und Restore vor einem
       Einsatz auf der Ziel-Datenbank nachweisen.
+- [ ] Die gewünschte Zusammenführung von Kursbildern und Mediathek in einen
+      gemeinsamen Speicher ist noch umzusetzen. Vor der Übernahme sind
+      Dateibestand, Dateitypen, fehlende Referenzen, Mehrfachverwendungen und
+      nicht referenzierte Dateien zu erfassen; anschließend sind Inhalte,
+      Referenzen und Wiederherstellung zu vergleichen.
+- [ ] Nach der Zusammenführung sind Kurse und Termine samt Bildanzeige,
+      Upload, Ordnern, Umbenennen, Verschieben, Löschen und Verwendungsschutz
+      über den Datei-Explorer zu prüfen. Öffentliche Bildauslieferung darf
+      geschützte Dateien nicht allgemein verfügbar machen; bestehende Rechte
+      der Redaktion dürfen nicht unbeabsichtigt entfallen.
+- [ ] Der gemeinsame private Speicher soll unter `files/` außerhalb des
+      Webverzeichnisses liegen. Lesen, Hochladen, Bearbeiten und Löschen
+      werden getrennt ausschließlich Vereinsfunktionen zugewiesen; auch
+      Administratoren dürfen diese vier Rechte zuordnen. Unterordner erben
+      die Regeln, können sie aber je Funktion überschreiben. Bei mehreren
+      Funktionen genügt eine erlaubende Funktion; eine Sperre einer Funktion
+      hebt die Erlaubnis einer anderen nicht auf. Direkte HTTP- und
+      Backend-Zugriffe müssen dieselben Regeln durchsetzen.
 - [ ] Vereinsadministrator vergibt und entzieht mehrere zulässige Funktionen;
       eigene, fremde, inaktive und privilegierte Konten bleiben ausgeschlossen.
 - [ ] Eine Funktion wird vor ihrem Beginn, am Beginn, am Enddatum und nach dem
@@ -94,6 +122,23 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   vollständige Prüfung und Anpassung der früheren Mehrvereinstests und aller
   betroffenen Oberflächen steht aus. Die Umstellung des Funktionsmodells ist
   noch offen; die bisherigen Nachfolgeregeln gelten bis dahin unverändert.
+- `app:functions:check-migration` prüft gespeicherte Rollenlisten und
+  Gültigkeitszeiträume schreibgeschützt auf bekannte Rollen, doppelte
+  Listeneinträge, ungültige Zuordnungen und Zeiträume. Die lokale
+  DDEV-Prüfung ergab 17 Konten, davon eines ohne Mitgliedschaft und zwei mit
+  Superadmin-Notfallrolle, 23 Funktionsrollenzuordnungen und keine
+  gespeicherten Gültigkeitszeiträume; sie meldete keine der geprüften Fehler.
+  Sie ist keine Migration oder Freigabe: doppelte JSON-Objektschlüssel und
+  parallele Datenänderungen werden nicht geprüft; unbekannte Bestandsszenarien,
+  Migrationssperre, Backup/Restore und Einzelvergleich bleiben nachzuweisen.
+- Die Mediathek-HTTP-Suite wurde an den Einzelvereinsbetrieb angepasst und
+  bestand isoliert in DDEV mit 11 Tests und 371 Assertions. Sie prüft die
+  bestehende Mediathek, nicht den noch fehlenden gemeinsamen Speicher oder
+  Ordnerrechte.
+- Eine erneute schreibgeschützte Doctrine-Schemaprüfung meldet eine Abweichung
+  bei `tank`; die Ursache und eine geeignete Migration müssen gesondert
+  untersucht werden. Das ausgegebene Schema-Update darf nicht ungeprüft
+  angewendet werden.
 - Eine inventarisierende Routenprüfung erfasste 665 Routen und 132 direkt
   angebundene Anwendungskontroller; 143 Controllerdateien existieren insgesamt.
   Dieses Inventar ist keine vollständige Einzelprüfung oder Freigabe.
