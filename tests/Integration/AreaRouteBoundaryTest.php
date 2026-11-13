@@ -34,7 +34,11 @@ final class AreaRouteBoundaryTest extends KernelTestCase
             'bar_duty_report', 'bar_duty_report_csv', 'bar_duty_shift', 'bar_duty_cash_csv',
             'bar_duty_action',
         ];
-        $pairs = ['member_calendar' => 'club_calendar'];
+        $pairs = [
+            'member_calendar' => 'club_calendar',
+            'account_profile' => 'admin_account_profile',
+            'account_password' => 'admin_account_password',
+        ];
         foreach ($portalRoutes as $route) {
             $pairs[$route] = 'admin_portal_'.$route;
         }

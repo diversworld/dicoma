@@ -55,7 +55,7 @@
 					<label class="form-label">{{ 'Bemerkungen'|trans }}</label>
 					<textarea class="form-control" name="notes" maxlength="2000" rows="2" placeholder="{{ 'Besonderheiten, Abweichungen, Messprotokoll-Referenz'|trans }}"></textarea>
 				</div>
-                <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}<a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a>{% endif %}</div>
+                <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> {% if is_granted('ROLE_EQUIPMENT_MANAGER') and is_granted('ROLE_EQUIPMENT_CASH') %}<a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a>{% endif %}</div>
 				<div class="col-12">
 					<div class="alert alert-warning">
 						<strong>{{ 'Sicherheitskontrollen vor Freigabe'|trans }}</strong><div class="form-check">

@@ -32,6 +32,7 @@ class MembershipEvent
         $this->occurredAt = new \DateTimeImmutable();
     }
     public function getId(): ?int { return $this->id; }
+    public function getMember(): Member { return $this->member; }
     public function getKind(): string { return $this->kind; }
     public function getActor(): string { return $this->actor; }
     public function getDescription(): string { return $this->description; }

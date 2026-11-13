@@ -18,7 +18,7 @@ class UserChecker implements UserCheckerInterface
         if (!$user->getIsVerified()) {
             throw new CustomUserMessageAccountStatusException('Your email address is not verified.');
         }
-        if ($this->singleClub->isEnabled() && $user instanceof User && !$this->singleClub->permitsUser($user)) {
+        if ($user instanceof User && !$this->singleClub->permitsUser($user)) {
             throw new CustomUserMessageAccountStatusException('Das Konto ist nicht dem konfigurierten Verein zugeordnet.');
         }
     }

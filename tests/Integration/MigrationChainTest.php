@@ -70,6 +70,149 @@ final class MigrationChainTest extends TestCase
         $this->migrate('20261016194500');
     }
 
+    public function testDivisionModuleUpgradePreservesExistingAssignmentsAndLeavesTournamentUnassigned(): void
+    {
+        $this->migrate('20261030110000');
+        $club = $this->createClub();
+        $this->connection->insert('sport', ['club_id' => $club, 'name' => 'Diving', 'short_name' => 'dive', 'active' => 1, 'sort_order' => 0]);
+        $sport = (int) $this->connection->lastInsertId();
+        $this->connection->insert('person', ['firstname' => 'Existing', 'lastname' => 'Member']);
+        $person = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['club_id' => $club, 'person_id' => $person, 'membership_status' => 'active']);
+        $member = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member_sport', ['member_id' => $member, 'sport_id' => $sport, 'status' => 'active']);
+        $this->connection->insert('team', ['sport_id' => $sport, 'name' => 'Existing team', 'type' => 'team', 'active' => 1, 'sort_order' => 0]);
+        $this->connection->insert('tournament', [
+            'club_id' => $club, 'version' => 1, 'name' => 'Existing tournament', 'sport_code' => 'dive',
+            'organizer' => 'Club', 'location' => 'Pool', 'starts_at' => '2027-01-01 09:00:00',
+            'ends_at' => '2027-01-01 18:00:00', 'status' => 'open', 'fee_cents' => 0,
+            'max_teams' => 8, 'min_players' => 0, 'max_players' => 12, 'win_points' => 3, 'draw_points' => 1, 'loss_points' => 0,
+        ]);
+        $tables = ['sport', 'member', 'member_sport', 'team', 'tournament'];
+        $before = [];
+        foreach ($tables as $table) { $before[$table] = $this->connection->fetchAllAssociative('SELECT * FROM '.$table); }
+
+        $this->migrate('latest');
+
+        foreach ($tables as $table) {
+            $after = $this->connection->fetchAllAssociative('SELECT * FROM '.$table);
+            if ($table === 'sport') {
+                self::assertSame(1, (int) $after[0]['training_enabled']);
+                self::assertSame(1, (int) $after[0]['competition_enabled']);
+                unset($after[0]['training_enabled'], $after[0]['competition_enabled']);
+            }
+            if ($table === 'tournament') {
+                self::assertNull($after[0]['division_id']);
+                unset($after[0]['division_id']);
+            }
+            self::assertSame($before[$table], $after);
+        }
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testRoleValidityUpgradePreservesExistingUnrestrictedRoles(): void
+    {
+        $this->migrate('20261108140000');
+        $this->connection->insert('user', [
+            'user' => 'role-migration', 'email' => 'role-migration@example.invalid',
+            'roles' => '["ROLE_ADMIN","ROLE_INSTRUCTOR"]', 'password' => 'test', 'is_verified' => 1,
+        ]);
+        $before = $this->connection->fetchAssociative('SELECT * FROM `user` WHERE user = ?', ['role-migration']);
+        $this->migrate('latest');
+        $after = $this->connection->fetchAssociative('SELECT * FROM `user` WHERE user = ?', ['role-migration']);
+        self::assertNull($after['role_validity']);
+        unset($after['role_validity']);
+        self::assertSame($before, $after);
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testFirstClubCreationIsSerializedAndRejectsAnotherClub(): void
+    {
+        $this->migrate('latest');
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $firstConnection = DriverManager::getConnection($this->connection->getParams());
+        $secondConnection = DriverManager::getConnection($this->connection->getParams());
+        $firstEm = EntityManager::create($firstConnection, $config);
+        $secondEm = EntityManager::create($secondConnection, $config);
+        $security = $this->createStub(\Symfony\Bundle\SecurityBundle\Security::class);
+        $firstMode = new \App\Service\SingleClubMode(new \App\Service\PublicWebsite($firstEm, $security, 0), $firstEm);
+        $secondMode = new \App\Service\SingleClubMode(new \App\Service\PublicWebsite($secondEm, $security, 0), $secondEm);
+        $firstController = new \App\Controller\Admin\ClubCrudController($firstMode, $firstEm);
+        $secondController = new \App\Controller\Admin\ClubCrudController($secondMode, $secondEm);
+        $lockName = 'dicoma_club_'.substr(hash('sha256', (string) $firstConnection->getDatabase()), 0, 40);
+        self::assertSame(1, (int) $firstConnection->fetchOne('SELECT GET_LOCK(?, 0)', [$lockName]));
+        try {
+            $secondController->persistEntity($secondEm, (new \App\Entity\Club())->setName('Concurrent'));
+            self::fail('Concurrent first club creation must wait for the lock.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('Vereinsanlage ist gesperrt', $exception->getMessage());
+        } finally {
+            self::assertSame(1, (int) $firstConnection->fetchOne('SELECT RELEASE_LOCK(?)', [$lockName]));
+        }
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club'));
+        $firstController->persistEntity($firstEm, (new \App\Entity\Club())->setName('First club'));
+        try {
+            $secondController->persistEntity($secondEm, (new \App\Entity\Club())->setName('Second club'));
+            self::fail('A second club must not be created.');
+        } catch (\Symfony\Component\Security\Core\Exception\AccessDeniedException $exception) {
+            self::assertStringContainsString('keine weiteren Vereine', $exception->getMessage());
+        }
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club'));
+        $firstConnection->close();
+        $secondConnection->close();
+    }
+
+    public function testMembershipRoleSuccessionSerializesConcurrentStatusChanges(): void
+    {
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $memberIds = [];
+        foreach (['first', 'second'] as $name) {
+            $this->connection->insert('person', ['firstname' => $name, 'lastname' => 'Synthetic', 'email' => $name.'@example.invalid']);
+            $personId = (int) $this->connection->lastInsertId();
+            $this->connection->insert('user', ['user' => $name, 'email' => $name.'@example.invalid', 'roles' => '["ROLE_INSTRUCTOR"]', 'password' => 'unused', 'is_verified' => 1, 'person_id' => $personId]);
+            $userId = (int) $this->connection->lastInsertId();
+            $this->connection->insert('member', ['club_id' => $clubId, 'person_id' => $personId, 'user_id' => $userId, 'membership_status' => 'active']);
+            $memberIds[] = (int) $this->connection->lastInsertId();
+        }
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $firstConnection = DriverManager::getConnection($this->connection->getParams());
+        $secondConnection = DriverManager::getConnection($this->connection->getParams());
+        $secondConnection->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        $firstEm = EntityManager::create($firstConnection, $config);
+        $secondEm = EntityManager::create($secondConnection, $config);
+        $logger = new \Psr\Log\NullLogger();
+        $firstService = new \App\Service\MembershipService($firstEm, $logger, new \App\Service\MembershipRoleContinuity($firstEm, $logger));
+        $secondService = new \App\Service\MembershipService($secondEm, $logger, new \App\Service\MembershipRoleContinuity($secondEm, $logger));
+        $first = $firstEm->find(\App\Entity\Member::class, $memberIds[0]);
+        $second = $secondEm->find(\App\Entity\Member::class, $memberIds[1]);
+        $firstConnection->beginTransaction();
+        try {
+            $firstConnection->fetchOne('SELECT id FROM club WHERE id = ? FOR UPDATE', [$clubId]);
+            try {
+                $secondService->changeStatus($second, \App\Enum\MembershipStatus::SUSPENDED, 'second');
+                self::fail('A concurrent status change must wait for the club lock.');
+            } catch (\Doctrine\DBAL\Exception\LockWaitTimeoutException) {
+                self::assertSame('active', $this->connection->fetchOne('SELECT membership_status FROM member WHERE id = ?', [$memberIds[1]]));
+            }
+            $firstService->changeStatus($first, \App\Enum\MembershipStatus::SUSPENDED, 'first');
+            $firstConnection->commit();
+            try {
+                $secondService->changeStatus($second, \App\Enum\MembershipStatus::SUSPENDED, 'second');
+                self::fail('The second status change must recheck the committed successor.');
+            } catch (\DomainException $e) {
+                self::assertStringContainsString('ROLE_INSTRUCTOR', $e->getMessage());
+            }
+            self::assertSame(['suspended', 'active'], $this->connection->fetchFirstColumn('SELECT membership_status FROM member WHERE id IN (?, ?) ORDER BY id', $memberIds));
+        } finally {
+            if ($firstConnection->isTransactionActive()) { $firstConnection->rollBack(); }
+            $firstConnection->close();
+            $secondConnection->close();
+        }
+    }
+
     public function testEventBookingUpgradePreservesExistingPublicationsAndMembers(): void
     {
         $this->migrate('20261025190000');
@@ -187,7 +330,15 @@ final class MigrationChainTest extends TestCase
         $before = [];
         foreach ($tables as $table) { $before[$table] = $this->connection->fetchAllAssociative('SELECT * FROM '.$table); }
         $this->migrate('latest');
-        foreach ($tables as $table) { self::assertSame($before[$table], $this->connection->fetchAllAssociative('SELECT * FROM '.$table)); }
+        foreach ($tables as $table) {
+            $after = $this->connection->fetchAllAssociative('SELECT * FROM '.$table);
+            if ($table === 'sport') {
+                self::assertSame(1, (int) $after[0]['training_enabled']);
+                self::assertSame(1, (int) $after[0]['competition_enabled']);
+                unset($after[0]['training_enabled'], $after[0]['competition_enabled']);
+            }
+            self::assertSame($before[$table], $after);
+        }
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM division_role_assignment'));
         $this->assertSchemaMatchesMapping();
     }
@@ -820,6 +971,8 @@ final class MigrationChainTest extends TestCase
             '20261029150000',
             '20261030100000',
             '20261030110000',
+            '20261108140000',
+            '20261109130000',
         ];
 
         $migrations = $this->factory()

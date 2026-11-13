@@ -12,6 +12,7 @@ use App\Entity\MemberQualification;
 use App\Entity\MembershipApplication;
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipMessage;
+use App\Entity\MembershipEvent;
 use App\Entity\MembershipPolicy;
 use App\Entity\Person;
 use App\Entity\Qualification;
@@ -222,6 +223,141 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $service->archive($member, 'admin');
         self::assertNotNull($member->getArchivedAt());
         self::assertSame(1, $this->em->getRepository(Person::class)->count([]));
+    }
+
+    public function testStatusChangeRequiresExplicitActiveSuccessorsAndPermanentlyRevokesFunctions(): void
+    {
+        $user = $this->memberUser('function-holder', [User::ROLE_INSTRUCTOR, User::ROLE_TREASURER, User::ROLE_SUPER_ADMIN]);
+        $user->setRoleValidity([User::ROLE_INSTRUCTOR => ['startsAt' => null, 'endsAt' => '2999-12-31']]);
+        $this->em->flush();
+        $successor = $this->memberUser('successor', [User::ROLE_TRAINING_MANAGER, User::ROLE_TREASURER]);
+        $service = static::getContainer()->get(MembershipService::class);
+        try {
+            $service->changeStatus($user->getMember(), MembershipStatus::SUSPENDED, 'admin');
+            self::fail('An inherited role must not count as an explicit successor.');
+        } catch (\DomainException $e) {
+            self::assertStringContainsString(User::ROLE_INSTRUCTOR, $e->getMessage());
+        }
+        self::assertSame(MembershipStatus::ACTIVE, $user->getMember()->getMembershipStatus());
+        $successor->addRole(User::ROLE_INSTRUCTOR);
+        $successor->setRoleValidity([User::ROLE_INSTRUCTOR => ['startsAt' => '2999-01-01', 'endsAt' => null]]);
+        $this->em->flush();
+        try {
+            $service->changeStatus($user->getMember(), MembershipStatus::SUSPENDED, 'admin');
+            self::fail('A future role must not count as a successor.');
+        } catch (\DomainException $e) {
+            self::assertStringContainsString(User::ROLE_INSTRUCTOR, $e->getMessage());
+        }
+        $successor->setRoleValidity([User::ROLE_INSTRUCTOR => ['startsAt' => null, 'endsAt' => '2000-01-01']]);
+        $this->em->flush();
+        try {
+            $service->changeStatus($user->getMember(), MembershipStatus::SUSPENDED, 'admin');
+            self::fail('An expired role must not count as a successor.');
+        } catch (\DomainException $e) {
+            self::assertStringContainsString(User::ROLE_INSTRUCTOR, $e->getMessage());
+        }
+        $successor->setRoleValidity([]);
+        $this->em->flush();
+        $service->changeStatus($user->getMember(), MembershipStatus::SUSPENDED, 'admin');
+        self::assertSame([User::ROLE_SUPER_ADMIN], $user->getStoredRoles());
+        self::assertSame([], $user->getRoleValidity());
+        $service->changeStatus($user->getMember(), MembershipStatus::ACTIVE, 'admin');
+        self::assertSame([User::ROLE_SUPER_ADMIN], $user->getStoredRoles());
+    }
+
+    public function testForeignAndInactiveMembersDoNotSatisfySuccession(): void
+    {
+        $user = $this->memberUser('holder', [User::ROLE_EQUIPMENT_MANAGER]);
+        $foreignClub = (new Club())->setName('Other club');
+        $this->em->persist($foreignClub);
+        $this->memberUser('foreign-successor', [User::ROLE_EQUIPMENT_MANAGER], $foreignClub);
+        $inactive = $this->memberUser('inactive-successor', [User::ROLE_EQUIPMENT_MANAGER]);
+        $inactive->getMember()->setMembershipStatus(MembershipStatus::SUSPENDED);
+        $this->em->flush();
+        $service = static::getContainer()->get(MembershipService::class);
+        try {
+            $service->changeStatus($user->getMember(), MembershipStatus::PASSIVE, 'admin');
+            self::fail('Foreign and inactive accounts must not satisfy succession.');
+        } catch (\DomainException $e) {
+            self::assertStringContainsString(User::ROLE_EQUIPMENT_MANAGER, $e->getMessage());
+        }
+        self::assertSame(MembershipStatus::ACTIVE, $user->getMember()->getMembershipStatus());
+        self::assertContains(User::ROLE_EQUIPMENT_MANAGER, $user->getStoredRoles());
+    }
+
+    public function testSuperAdminEmergencyAccountNeedsNoSuccessor(): void
+    {
+        $user = $this->memberUser('emergency', [User::ROLE_SUPER_ADMIN]);
+        $service = static::getContainer()->get(MembershipService::class);
+        $service->changeStatus($user->getMember(), MembershipStatus::PASSIVE, 'admin');
+        self::assertSame([User::ROLE_SUPER_ADMIN], $user->getStoredRoles());
+        self::assertSame(MembershipStatus::PASSIVE, $user->getMember()->getMembershipStatus());
+    }
+
+    public function testTerminationNotifiesBoardAndRecordsVacancyWithoutDelayingDeparture(): void
+    {
+        $policy = $this->policy();
+        $policy->setCancellationCutoff('09-30');
+        $policy->setMembershipYearEnd('12-31');
+        $this->em->flush();
+        $board = $this->memberUser('board', [User::ROLE_BOARD]);
+        $user = $this->memberUser('departing', [User::ROLE_COURSE_ADMIN]);
+        $service = static::getContainer()->get(MembershipService::class);
+        $service->requestTermination($user->getMember(), 'departing', new \DateTimeImmutable('2026-09-30'));
+        $messages = $this->em->getRepository(MembershipMessage::class)->findBy(['recipient' => 'board@example.invalid', 'subject' => 'Vereinsfunktionen: Nachfolge prüfen']);
+        self::assertCount(1, $messages);
+        self::assertStringContainsString('Nachfolge offen: ROLE_COURSE_ADMIN', $messages[0]->getBody());
+        $automation = static::getContainer()->get(MembershipAutomation::class);
+        self::assertSame(0, $automation->run(new \DateTimeImmutable('2026-12-30')));
+        self::assertSame(0, $automation->run(new \DateTimeImmutable('2026-12-30')));
+        self::assertCount(2, $this->em->getRepository(MembershipMessage::class)->findBy(['recipient' => 'board@example.invalid', 'subject' => 'Vereinsfunktionen: Nachfolge prüfen']));
+        self::assertSame(1, $automation->run(new \DateTimeImmutable('2027-01-01')));
+        self::assertSame(MembershipStatus::FORMER, $user->getMember()->getMembershipStatus());
+        self::assertNotContains(User::ROLE_COURSE_ADMIN, $user->getStoredRoles());
+        self::assertSame(1, $this->em->getRepository(MembershipEvent::class)->count(['kind' => 'role_vacancy']));
+        $this->client->loginUser($board);
+        $crawler = $this->client->request('GET', '/admin/membership/club/'.$this->club->getId());
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Nachfolge beim Austritt', $crawler->filter('[aria-label="Nachfolgehinweise"]')->text());
+        self::assertStringContainsString(User::ROLE_COURSE_ADMIN, $crawler->filter('[aria-label="Nachfolgehinweise"]')->text());
+    }
+
+    public function testMissingBoardContactIsPersistentlyReportedWithoutBlockingTermination(): void
+    {
+        $policy = $this->policy();
+        $policy->setCancellationCutoff('09-30');
+        $policy->setMembershipYearEnd('12-31');
+        $this->em->flush();
+        $user = $this->memberUser('no-board-contact', [User::ROLE_INSTRUCTOR]);
+        $service = static::getContainer()->get(MembershipService::class);
+        $service->requestTermination($user->getMember(), 'member', new \DateTimeImmutable('2026-09-30'));
+        $event = $this->em->getRepository(MembershipEvent::class)->findOneBy(['kind' => 'role_continuity']);
+        self::assertStringContainsString('Kein zustellbarer aktiver Vorstand', $event->getDescription());
+        static::getContainer()->get(MembershipAutomation::class)->run(new \DateTimeImmutable('2027-01-01'));
+        self::assertSame(MembershipStatus::FORMER, $user->getMember()->getMembershipStatus());
+        $event = $this->em->getRepository(MembershipEvent::class)->findOneBy(['kind' => 'role_vacancy']);
+        self::assertStringContainsString('Kein zustellbarer aktiver Vorstand', $event->getDescription());
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $user->getStoredRoles());
+    }
+
+    public function testInvalidSuccessorValidityDoesNotDelayAutomaticTermination(): void
+    {
+        $policy = $this->policy();
+        $policy->setCancellationCutoff('09-30');
+        $policy->setMembershipYearEnd('12-31');
+        $this->em->flush();
+        $this->memberUser('valid-board', [User::ROLE_BOARD]);
+        $user = $this->memberUser('invalid-validity-departing', [User::ROLE_INSTRUCTOR]);
+        $candidate = $this->memberUser('invalid-successor', [User::ROLE_INSTRUCTOR]);
+        $this->em->getConnection()->executeStatement('UPDATE `user` SET role_validity = ? WHERE id = ?', [
+            '{"ROLE_INSTRUCTOR":{"startsAt":"invalid","endsAt":null}}', $candidate->getId(),
+        ]);
+        static::getContainer()->get(MembershipService::class)->requestTermination($user->getMember(), 'member', new \DateTimeImmutable('2026-09-30'));
+        self::assertSame(1, static::getContainer()->get(MembershipAutomation::class)->run(new \DateTimeImmutable('2027-01-01')));
+        self::assertSame(MembershipStatus::FORMER, $user->getMember()->getMembershipStatus());
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $user->getStoredRoles());
+        $event = $this->em->getRepository(MembershipEvent::class)->findOneBy(['kind' => 'role_vacancy']);
+        self::assertStringContainsString(User::ROLE_INSTRUCTOR, $event->getDescription());
     }
 
     public function testMedicalAndMissingDocumentRemindersAreDeduplicated(): void

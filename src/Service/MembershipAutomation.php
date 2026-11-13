@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\Member;
 use App\Entity\MemberDocument;
 use App\Entity\MemberQualification;
+use App\Entity\MembershipEvent;
 use App\Enum\MembershipStatus;
 use App\Enum\QualificationType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,21 +20,39 @@ final class MembershipAutomation
         private readonly MembershipService $memberships,
         private readonly LoggerInterface $logger,
         private readonly SingleClubMode $singleClub,
+        private readonly MembershipRoleContinuity $continuity,
     ) {}
 
     public function run(\DateTimeImmutable $today): int
     {
         $processed = 0;
-        $criteria = ['archivedAt' => null];
-        if ($this->singleClub->isEnabled()) {
-            $criteria['club'] = $this->singleClub->club();
-        }
+        $criteria = ['archivedAt' => null, 'club' => $this->singleClub->club()];
         foreach ($this->em->getRepository(Member::class)->findBy($criteria) as $member) {
             $this->em->wrapInTransaction(function () use ($member, $today, &$processed): void {
+                $this->continuity->lockClub($member->getClub());
+                $this->continuity->refresh($member);
                 $termination = $member->getTerminationDate();
+                if ($termination !== null && $member->getLeftAt() === null && $member->isActiveMember()) {
+                    $user = $member->getUser();
+                    if ($user !== null) { $this->continuity->refresh($user); }
+                    $roles = $this->continuity->functions($user);
+                    $missing = $this->continuity->missingSuccessors($member, $roles);
+                    if ($termination >= $today && $missing !== []) {
+                        $this->continuity->notifyBoard($member, $roles, $missing, 'Bevorstehender Austritt zum '.$termination->format('d.m.Y').'.', 'pending:'.$member->getId().':'.$termination->format('Y-m-d').':'.$today->format('Y-m-d'), $this->memberships);
+                    }
+                }
                 if ($termination !== null && $termination < $today && $member->getLeftAt() === null) {
+                    $user = $member->getUser();
+                    if ($user !== null) { $this->continuity->refresh($user); }
+                    $roles = $this->continuity->functions($user);
+                    $missing = $this->continuity->missingSuccessors($member, $roles);
+                    $this->continuity->revoke($member, $roles, 'system');
                     $member->setMembershipStatus(MembershipStatus::FORMER);
                     $member->setLeftAt(\DateTime::createFromImmutable($termination));
+                    if ($missing !== []) {
+                        $boardNotified = $this->continuity->notifyBoard($member, $roles, $missing, 'Austritt zum '.$termination->format('d.m.Y').' durchgeführt.', 'departed:'.$member->getId().':'.$termination->format('Y-m-d'), $this->memberships, true);
+                        $this->em->persist(new MembershipEvent($member, 'role_vacancy', 'system', 'Nachfolge beim Austritt zum '.$termination->format('d.m.Y').' offen: '.implode(', ', $missing).'.'.($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+                    }
                     $this->memberships->record($member, 'terminated', 'system', 'Mitgliedschaft zum ' . $termination->format('d.m.Y') . ' beendet.');
                     ++$processed;
                 }

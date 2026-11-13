@@ -29,6 +29,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use \EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -330,7 +331,7 @@ class CoursesCrudController extends AbstractCrudController
             ->setFormTypeOption('disabled', !$this->isGranted('ROLE_SUPER_ADMIN') || ($pageName !== Crud::PAGE_NEW && $this->getContext()?->getEntity()?->getInstance()?->getClub() !== null))
             ->setRequired(true)
             ->setColumns(4);
-        yield \EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField::new('courseFee', 'Kurspreis')
+        yield MoneyField::new('courseFee', 'Kurspreis')
             ->setCurrency('EUR')
             ->setStoredAsCents(false)
             ->setNumDecimals(2)

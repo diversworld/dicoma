@@ -1,0 +1,19 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ 'Rollengültigkeiten verwalten'|trans }}{% endblock %}
+{% block main %}
+<h2>{{ account.user }}</h2>
+<p>{{ 'Leere Datumsfelder bedeuten unbefristet. Das Enddatum gilt einschließlich dieses Tages.'|trans }}</p>
+<p>{{ 'Die Befristung einer eigenen Administratorrolle kann den eigenen Zugang beenden.'|trans }}</p>
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{% if form.validity|length > 0 %}
+{{ form_row(form.validity) }}
+{{ form_rest(form) }}
+<button class="btn btn-primary" type="submit">{{ 'Rollengültigkeiten speichern'|trans }}</button>
+{% else %}
+<p>{{ 'Diesem Konto sind keine befristbaren Funktionen zugewiesen.'|trans }}</p>
+{{ form_rest(form) }}
+{% endif %}
+{{ form_end(form) }}
+{% endblock %}

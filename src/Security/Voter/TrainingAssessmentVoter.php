@@ -35,16 +35,22 @@ final class TrainingAssessmentVoter extends Voter
         if ($course === null || in_array($course->getStatus(), [CourseStatus::COMPLETED, CourseStatus::CANCELLED], true)) {
             return false;
         }
-        // Administrators may assess all non-completed courses.
         $user = $token->getUser();
         if (!$user instanceof User) { return false; }
-        if ($this->clubContext->isBackendRequest() && $subject->getInstructor() !== null
+        if ($subject->getInstructor() !== null
             && ($course->getClub()?->getId() === null
                 || $subject->getInstructor()->getClub()?->getId() !== $course->getClub()->getId())) {
             return false;
         }
+        if (!$this->clubContext->isBackendRequest()) {
+            $member = $user->getMember();
+            $memberId = $member?->getId();
+            $clubId = $member?->getClub()?->getId();
+            return $this->authorizationChecker->isGranted('ROLE_INSTRUCTOR')
+                && $memberId !== null && $clubId !== null && $course->getClub()?->getId() === $clubId
+                && ($subject->getInstructor()?->getId() === $memberId || $course->getLeadInstructor()?->getId() === $memberId);
+        }
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
-            if (!$this->clubContext->isBackendRequest()) { return true; }
             $clubId = $this->clubContext->getClub()?->getId();
             return $clubId !== null && $course->getClub()?->getId() === $clubId;
         }

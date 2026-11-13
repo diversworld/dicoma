@@ -26,8 +26,7 @@ final class SingleClubSessionSubscriber implements EventSubscriberInterface
 
     public function checkMembership(RequestEvent $event): void
     {
-        if (!$event->isMainRequest() || !$this->singleClub->isEnabled()
-            || $event->getRequest()->getPathInfo() === '/logout') {
+        if (!$event->isMainRequest() || $event->getRequest()->getPathInfo() === '/logout') {
             return;
         }
         $user = $this->security->getUser();

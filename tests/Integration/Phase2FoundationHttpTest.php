@@ -2168,6 +2168,8 @@ final class Phase2FoundationHttpTest extends WebTestCase
             if ($user->getId() === $admin->getId()) {
                 self::assertSelectorTextNotContains('aside.sidebar', 'Stammdaten & Einstellungen');
                 self::assertSelectorTextNotContains('aside.sidebar', 'Prüfungsübersicht');
+                self::assertSelectorNotExists('aside.sidebar a[href*="/settings/tuv-notifications"]');
+                self::assertSelectorNotExists('aside.sidebar a[href*="/invoice-settings"]');
                 self::assertSelectorNotExists('[data-dashboard-all-qualifications]');
                 self::assertSelectorNotExists('[data-dashboard-metric="expired"] a');
                 self::assertSelectorNotExists('[data-dashboard-metric="expiring"] a');
@@ -2175,6 +2177,8 @@ final class Phase2FoundationHttpTest extends WebTestCase
                 self::assertSelectorTextContains('aside.sidebar', 'Ausbildungsgrundlagen');
                 self::assertSelectorTextContains('aside.sidebar', 'Ausrüstungsstammdaten');
                 self::assertSelectorTextContains('aside.sidebar', 'System & Einstellungen');
+                self::assertSelectorExists('aside.sidebar a[href*="/settings/tuv-notifications"]');
+                self::assertSelectorExists('aside.sidebar a[href*="/invoice-settings"]');
                 self::assertSelectorExists('[data-dashboard-all-qualifications]');
             }
             $menuUrls = $crawler->filter('aside.sidebar .menu a[href]:not(.submenu-toggle)')->extract(['href']);
@@ -2189,6 +2193,13 @@ final class Phase2FoundationHttpTest extends WebTestCase
                 }
                 self::assertResponseIsSuccessful('Visible navigation target: ' . $url);
                 self::assertSelectorExists('aside.sidebar', 'Administration layout expected for '.$url);
+            }
+            $this->client->request('GET', '/admin/settings');
+            self::assertResponseIsSuccessful();
+            if ($user->getId() === $admin->getId()) {
+                self::assertSelectorNotExists('a[href="/admin/de/settings/tuv-notifications"]');
+            } else {
+                self::assertSelectorExists('a[href="/admin/de/settings/tuv-notifications"]');
             }
         }
     }

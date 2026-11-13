@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Tournament;
+use App\Entity\Sport;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type as F;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -16,6 +18,14 @@ final class TournamentType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder->add('name', F\TextType::class, ['label' => 'Turniername', 'empty_data' => ''])
+            ->add('division', EntityType::class, [
+                'class' => Sport::class,
+                'choices' => $options['divisions'],
+                'label' => 'Sparte',
+                'placeholder' => 'Sparte auswählen',
+                'required' => $options['require_division'],
+                'constraints' => $options['require_division'] ? [new Assert\NotNull()] : [],
+            ])
             ->add('sportCode', F\TextType::class, ['label' => 'Sportkennung', 'empty_data' => '', 'help' => 'Entspricht dem Kürzel der Sportart, zum Beispiel uwr oder uwh. Ohne Kürzel wird der Sportname verwendet.'])
             ->add('organizer', F\TextType::class, ['label' => 'Veranstalter', 'empty_data' => ''])
             ->add('location', F\TextType::class, ['label' => 'Veranstaltungsort', 'empty_data' => ''])
@@ -39,5 +49,11 @@ final class TournamentType extends AbstractType
             $builder->add($field, $builder->get($field)->getType()->getInnerType()::class, $options);
         }
     }
-    public function configureOptions(OptionsResolver $resolver): void { $resolver->setDefaults(['data_class' => Tournament::class]); }
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults(['data_class' => Tournament::class, 'require_division' => true]);
+        $resolver->setRequired('divisions');
+        $resolver->setAllowedTypes('divisions', 'array');
+        $resolver->setAllowedTypes('require_division', 'bool');
+    }
 }

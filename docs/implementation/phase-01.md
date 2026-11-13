@@ -1,6 +1,6 @@
 # DICOMA – Phase 1: Architektur und Modulstruktur
 
-Stand: 06.11.2026. **Status: teilweise abgeschlossen.** Grundlage ist die
+Stand: 08.11.2026. **Status: teilweise abgeschlossen.** Grundlage ist die
 freigegebene Phase 1 des aktuellen Auftrags, nicht die anders nummerierte
 ältere [Master Specification](../MASTER_SPECIFICATION.md). Die Ergebnisse
 beziehen sich auf den lokalen Arbeitsbaum einschließlich bereits vorhandener
@@ -126,6 +126,21 @@ Bereichsprobleme ergeben und behoben:
   Bescheinigungen bleiben im persönlichen Portal erreichbar. Berechtigte
   Ausbilder können die Adminansicht ihres zugeordneten Kurses weiter öffnen;
   die Bescheinigung selbst bleibt mit `private, no-store` geschützt.
+- Die persönliche Ausbildungsbewertung unter `/training/assess/{id}` und
+  `/my-training/assess/{id}` ist auf zugeordnete Terminausbilder oder
+  Kursleitungen desselben Vereins begrenzt, auch bei Verwaltungsrollen.
+  Diese vom Auftraggeber gewählte Verhaltensänderung betrifft GET, Bewertung
+  und Buchungssynchronisierung gleichermaßen. Administrative Bewertungen
+  bleiben für berechtigte Verwaltungsrollen im Backend und für Superadmins
+  im ausgewählten Verein möglich; der ausgewählte Backendverein beschränkt
+  persönliche, zugeordnete Ausbilderaufgaben nicht.
+- Persönliche Aufgabenübersichten schließen fehlerhafte Zuordnungen zu einem
+  fremden Kursverein einschließlich der Filteroptionen aus. In Portal- und
+  Backend-Aufgabenlisten wird der Bewertungslink nur ausgegeben, wenn der
+  bestehende Voter den jeweiligen Termin freigibt. Termine abgeschlossener
+  Kurse können sichtbar bleiben, verweisen aber nicht auf eine gesperrte
+  Bewertung. Die persönliche Aufgabenübersicht listet weiterhin direkt
+  zugewiesene Termine; Kursleitungen erreichen ihre Kurse über die Kursansicht.
 
 Für einen abweichenden Admin-Vereinskontext beim Thekendienst wurde ausdrücklich
 die Sperre gewählt: Backendzugriffe einschließlich Jahresregel und Thekenkasse
@@ -143,6 +158,13 @@ Bundles und das bestehende CSRF-geschützte POST-Formular. Der Standard-Logout
 wird nun gezielt entfernt; andere Standardaktionen einschließlich einer
 gegebenenfalls angebotenen Impersonierungsrückkehr bleiben erhalten. Im
 responsiven und im Desktop-Dropdown steht jeweils ein POST-Abmeldeformular.
+
+Das parallel ergänzte Einstellungen-Untermenü bleibt nach Entscheidung des
+Auftraggebers erhalten. Doppelte Seitenleistenziele für Mitgliedschaften und
+Sportkonfiguration wurden an einer Stelle zusammengeführt. TÜV-Vorlagen und
+Rechnungseinstellungen erscheinen nur für Superadmins; Website- und
+Thekendiensteinstellungen werden nur angezeigt, wenn Rolle und Vereinskontext
+den jeweiligen Zugriff erlauben. Dasselbe gilt für die Einstellungsübersicht.
 
 Das Menü und die Portalnavigation verweisen auf die eigene Kontoseite und die
 Kennwortänderung. Benutzername und Konto-E-Mail werden angezeigt, aber nicht
@@ -182,7 +204,21 @@ Geänderte bzw. neue Dateien dieses Schritts:
   dauerhafter Vertragstest für 24 bestehende Portal-/Adminroutenpaare.
 - `tests/Integration/Phase4TrainingHttpTest.php`: erfolgreiche Stornierung
   mit echtem Formular und bereichsspezifischem Rücksprung im Portal und Backend;
-  Vereinswechsel und vier administrative Schreibvorgänge.
+  Vereinswechsel und vier administrative Schreibvorgänge sowie Bewertung
+  persönlicher Ausbilderaufgaben mit Rollen- und Vereinswechselprüfung.
+- `src/Security/Voter/TrainingAssessmentVoter.php`: Unterscheidung der
+  persönlichen Ausbilderzuordnung von administrativen Bewertungsrechten.
+- `src/Service/InstructorTaskService.php`,
+  `templates/instructor_portal/dashboard.html.twig`,
+  `templates/instructor_portal/tasks.html.twig` und
+  `templates/admin/instructor/tasks.html.twig`: persönliche Vereinsfilter und
+  berechtigungskonforme Bewertungslinks in den Aufgabenansichten.
+- `tests/Integration/PortalNavigationHttpTest.php`: Regressionen für
+  persönliche und administrative Aufgaben, Filter und Bewertungslinks.
+- `templates/admin/course/schedule_planning.html.twig` und
+  `tests/js/schedule-planning-preview.test.cjs`: Invalidierung der Serien-
+  und Wochenendvorschau auch bei Änderungen an Ausnahmetagen und
+  JavaScript-Regression für beide Ereignistypen.
 - `src/Service/BarDutyAccess.php`, `src/Service/BarDutyWorkflow.php` und
   `src/Controller/BarDutyController.php`: Vereinsgrenze und Unterscheidung
   eigener Rückzüge von Backend-Verwaltungsaktionen.
@@ -200,6 +236,10 @@ Geänderte bzw. neue Dateien dieses Schritts:
   `templates/includes/_navigation.html.twig`, `templates/security/login.html.twig`
   und `translations/form_catalogues.php`: Benutzermenü, bereichsspezifische
   Darstellung und Texte.
+- `src/Controller/MembershipController.php`, `templates/admin/settings.html.twig`,
+  `tests/Integration/Phase2FoundationHttpTest.php` und
+  `tests/Integration/Phase8BarDutyHttpTest.php`: erreichbare und eindeutige
+  Einstellungsnavigation einschließlich Rollen- und Vereinskontext.
 - `tests/Integration/AccountSelfServiceHttpTest.php` und `phpunit.dist.xml`:
   isolierte HTTP-Regressionen für die Selbstverwaltung.
 - `docs/implementation/phase-01.md`: dieses Protokoll.
@@ -324,6 +364,73 @@ abgenommene oder gegen alle Nebenwirkungen abgeschottete Stagingumgebung.
 
 Ausführung im DDEV-Webcontainer mit PHP 8.5, SQLite im Speicher und Null-Mailer:
 
+- Ausbilderkurse und Aufgabenlisten: **2 Tests, 135 Assertions**. Eigene und
+  vereinsfremde Zuordnung, Filteroptionen sowie Bewertungslinks in Portal und
+  Backend wurden mit synthetischen Daten geprüft; auch abgeschlossene Kurse
+  und beide Aufgabenlisten sind abgedeckt.
+- Der nach der neuen Bewertungsregel gestartete Gesamtlauf wurde vor der
+  Korrektur der Aufgabenlisten abgebrochen. Der im Container verbliebene
+  PHPUnit-Prozess ist kein gültiger Nachweis für den abschließenden Stand;
+  er ist inzwischen beendet.
+- Der anschließende Basislauf auf dem damaligen Quellstand wurde mit
+  `nice -n 10` und isolierter SQLite-Datenbank wiederholt. Die statische
+  Routenprüfung, Composer-, Plattform-, YAML-, Container-, Routing-,
+  Mapping- und Sperrenprüfungen bestanden. PHPUnit lief **26:59 Minuten**:
+  **449 Tests, 10.542 Assertions, ein Fehler**. Das Gate ist damit
+  **nicht bestanden**. Der Test
+  `testAdministrationMenuAndShortcutsOnlyOfferAccessibleDistinctDestinations`
+  fand das Ziel `membership_admin` doppelt in der Seitenleiste. Ursache ist
+  eine parallel vorhandene Änderung am Dashboard-Menü, die anschließend mit
+  Zustimmung des Auftraggebers konsolidiert wurde. Das Gate umfasst Unit- und
+  isolierte SQLite-Tests, nicht die Staging-HTTP- oder Migrationskettensuite. Das tatsächliche
+  DDEV-Schema und der Migrationsstand wurden separat lesend geprüft.
+- Gezielter Wiederholungslauf nach der Menükonsolidierung: **6 Tests,
+  384 Assertions**, einschließlich der vollständigen sichtbaren Adminmenüziele,
+  Vereinswechsel bei Thekendiensteinstellungen, redaktioneller Vereinsgrenze
+  und Ausbilderaufgaben. Die vier geänderten Twig-Vorlagen bestehen
+  `lint:twig`.
+- Der abschließende Basislauf auf dem nach der Menükonsolidierung unveränderten
+  Quellstand bestand mit **450 Tests und 10.716 Assertions** in **15:19 Minuten**,
+  ohne übersprungene oder unvollständige Tests. Er lief mit `nice -n 10`,
+  SQLite im Speicher und Null-Mailer; auch Routen-, Composer-, Plattform-,
+  YAML-, Container-, Mapping- und Sperrenprüfungen bestanden. Dieses Gate
+  umfasst nicht die getrennten Staging-HTTP- und Migrationskettensuiten.
+- Die getrennte Migrationskette bestand auf dem aktuellen Quellstand mit
+  **36 Tests und 302 Assertions** in **18:19 Minuten**. Sie lief gegen eine
+  neu angelegte MariaDB ohne veröffentlichten Host-Port in einem privaten
+  Docker-Netz; ihre temporären Datenbanken, der Container, das Netzwerk und
+  die Zugangsdaten wurden anschließend entfernt. Auf der tatsächlich
+  verbundenen lokalen DDEV-Datenbank wurden Mapping und Schemasynchronität
+  sowie der Migrationsstand separat lesend geprüft: synchron, keine offenen
+  Migrationen.
+- Die vollständige synthetische MariaDB-Staging-HTTP-Suite wurde am 08.11.2026
+  nach den Menü-, Aufgaben- und Terminplanungsänderungen erneut ausgeführt:
+  **32 Tests, 1.085 Assertions**, keine übersprungenen oder unvollständigen
+  Tests. Verwendet wurden eine separate Anwendungskopie auf dem
+  DDEV-Webserver-Image und eine neu angelegte MariaDB ohne Host-Port in einem
+  privaten Netzwerk. Vor dem Lauf stimmten Anwendungscode, Konfiguration,
+  Vorlagen, Migrationen und HTTP-Tests mit dem Arbeitsbaum überein. Das ist
+  keine Abnahme eines separat bereitgestellten Staging- oder Produktivsystems.
+- Terminplanung: Zwei isolierte HTTP-Tests mit **43 Assertions** prüfen
+  Formulare, Vereinsgrenzen, ausbilderbezogene kursübergreifende Konflikte,
+  unveränderten Datenbankzustand bei Konflikten und unmittelbar anschließende
+  Termine. Der neue Konflikttest bestand anschließend erneut einzeln mit
+  **12 Assertions**.
+- In einer gesonderten Browserseite wurden Serien- und Wochenendvorschau ohne
+  Speichern geprüft. Nach Änderungen an Ausnahmetagen wird die veraltete
+  Vorschau ausgeblendet und die Übernahme bis zur Neuberechnung gesperrt.
+  Ergänzend bestehen **vier JavaScript-Regressionen** für `input` und `change`,
+  alte Vorschau, Neuberechnung und Übernahme. Sie führen den Template-Code
+  mit einer simulierten DOM-Umgebung aus, nicht in einem echten Browser. Mit
+  den früheren Selektoren schlagen alle vier erwartungsgemäß fehl. Zusammen
+  mit den vier bestehenden JavaScript-Tests:
+  `node --test tests/js/schedule-planning-preview.test.cjs tests/js/team-member-sport-check.test.cjs`
+  (**8 Tests bestanden**).
+- Ausbildungsbewertung und angrenzende Abläufe: **9 Tests, 417 Assertions**.
+  Der zuvor reproduzierte Portalzugriff auf einen nicht zugeordneten Termin
+  lieferte HTTP 200; nach der Korrektur ergeben GET sowie Schreibversuche mit
+  gültigen CSRF-Tokens HTTP 403. Geprüft sind auch zugeordnete Termin- und
+  Kursleitungen, vier Rollen, Backendaktionen und ein echter Vereinswechsel.
 - Kontoselbstverwaltung auf dem endgültigen Stand: **11 Tests, 161
   Assertions**. Geprüft wurden sechs Backend-Rollenkonstellationen, beide
   Menüs und echte Links, ein Login ohne Mitgliedschaft und ein Konto ohne
@@ -411,10 +518,11 @@ Ausführung im DDEV-Webcontainer mit PHP 8.5, SQLite im Speicher und Null-Mailer
   (30 Routen, 21 Controller): bestanden. Das Routengate ist keine umfassende
   Prüfung aller Routen.
 
-Das vollständige Basis-Gate aus Phase 0 wurde **vor** der hier beschriebenen
-Codeänderung ausgeführt und ist kein vollständiger Nachweis für diesen neuen
-Arbeitsstand. Eine fachliche oder reale Staging-/Produktivabnahme wurde nicht
-durchgeführt.
+Das bestandene Basis-Gate vor der späteren Terminplanungsergänzung ersetzt
+weder die getrennten Staging- und Migrationsprüfungen noch eine vollständige
+fachliche oder reale Staging-/Produktivabnahme. Die spätere Änderung wurde
+durch die oben genannten gezielten HTTP-, JavaScript- und Browserprüfungen
+validiert; das vollständige Basis-Gate wurde danach nicht erneut ausgeführt.
 
 ## 8. Abnahmekriterien und offene Punkte
 
@@ -434,3 +542,21 @@ Regressionsverträge weiter zu untersuchen und nach Bedarf schrittweise zu
 trennen; Phase-0-Risiken und fachliche Abnahme bleiben gesondert sichtbar.
 Eine Freigabe von Phase 2 kann erst nach Bewertung dieser offenen Punkte und
 ausdrücklichem Auftrag erfolgen. Phase 2 wird nicht automatisch begonnen.
+
+## 10. Fachliche Entscheidung und Abgrenzung
+
+Der Auftraggeber hat am 08.11.2026 ausschließlich den oben dokumentierten und
+durch die genannten Prüfungen belegten Teilumfang fachlich akzeptiert. Eine
+fachliche Gesamtfreigabe liegt nicht vor und kann nur durch den Auftraggeber
+erfolgen. Weiterhin fehlen insbesondere der vollständige
+Einzelabgleich aller Anforderungen einschließlich Fließtext sowie eine
+substantielle Prüfung aller Controller, Berechtigungen und Geschäftsabläufe.
+Die bestehende [Anforderungsmatrix](../analysis/requirements-traceability.md)
+ist dafür lediglich eine statische Vorprüfung. Der akzeptierte Teilumfang
+ist ausdrücklich keine vollständige Phase-1- oder Produktivfreigabe.
+
+Während der Prüfung wurden zahlreiche ältere Dokumente parallel aus dem
+Arbeitsbaum entfernt. Nach Entscheidung des Auftraggebers wurden nur die
+für diese Prüfung benötigte Master-Spezifikation, die Anforderungsmatrix
+(Markdown und CSV) und der Staging-Bericht wiederhergestellt. Weitere
+Löschungen blieben unangetastet; ältere Verweise können deshalb fehlen.

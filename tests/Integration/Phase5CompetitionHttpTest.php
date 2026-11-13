@@ -93,7 +93,7 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertSelectorTextContains('body', 'League practice');
         $crawler = $this->client->request('GET', '/admin/tournaments/new');
         $this->client->submit($crawler->selectButton('Speichern')->form(), [
-            'tournament[name]' => 'Phase 5 Cup', 'tournament[sportCode]' => 'uwr',
+            'tournament[name]' => 'Phase 5 Cup', 'tournament[sportCode]' => 'uwr', 'tournament[division]' => (string) $this->sport->getId(),
             'tournament[organizer]' => 'Own Club', 'tournament[location]' => 'Competition pool',
             'tournament[startsAt]' => '2027-02-10T09:00', 'tournament[endsAt]' => '2027-02-10T18:00',
             'tournament[feeCents]' => '25,50', 'tournament[maxTeams]' => '8',
@@ -107,6 +107,70 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorTextContains('body', 'Phase 5 Cup');
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
+    }
+
+    public function testLegacyTournamentAssignmentAndDisabledModulePreserveExistingWorkflows(): void
+    {
+        $tournament = $this->tournament();
+        $tournament->setDivision(null);
+        $tournament->setStatus(TournamentStatus::OPEN);
+        $entry = new TournamentEntry($tournament);
+        $entry->setName('Existing external entry');
+        $entry->setFeeCents(2550);
+        $this->em->persist($entry);
+        $this->em->flush();
+        $path = '/admin/tournaments/'.$tournament->getId();
+        $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('a[href="'.$path.'/division"]');
+        self::assertSelectorNotExists('a[href="'.$path.'/entry"]');
+        $this->client->request('GET', $path.'/entry');
+        self::assertResponseStatusCodeSame(403);
+
+        $crawler = $this->client->request('GET', $path.'/division');
+        $form = $crawler->selectButton('Speichern')->form();
+        $this->client->submit($form, ['form[division]' => (string) $this->sport->getId(), 'form[_token]' => 'invalid']);
+        self::assertNull($tournament->getDivision());
+        $crawler = $this->client->request('GET', $path.'/division');
+        $this->client->submit($crawler->selectButton('Speichern')->form(), ['form[division]' => (string) $this->sport->getId()]);
+        self::assertResponseRedirects($path);
+        self::assertSame($this->sport->getId(), $this->em->find(Tournament::class, $tournament->getId())->getDivision()?->getId());
+
+        $staleForm = $this->client->request('GET', '/admin/teams/new')->selectButton('Speichern')->form();
+        $this->sport = $this->em->find(Sport::class, $this->sport->getId());
+        $this->sport->setCompetitionEnabled(false);
+        $this->em->flush();
+        $this->client->submit($staleForm, [
+            'form[name]' => 'Blocked new team', 'form[sport]' => (string) $this->sport->getId(), 'form[type]' => 'team',
+        ]);
+        self::assertNull($this->em->getRepository(Team::class)->findOneBy(['name' => 'Blocked new team']));
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId().'/roster/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId().'/training/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', $path.'/entry');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/tournaments/entry/'.$entry->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Mannschaftsmeldung zurückziehen');
+        self::assertSelectorTextNotContains('body', 'Spieler registrieren');
+        $crawler = $this->client->request('GET', '/admin/tournaments/entry/'.$entry->getId().'/payment');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Speichern')->form(), [
+            'form[amount]' => '10,00', 'form[reference]' => 'MODULE-TEST-1',
+        ]);
+        self::assertResponseRedirects();
+        self::assertSame(1, $this->em->getRepository(TournamentPayment::class)->count([]));
+        $crawler = $this->client->request('GET', '/admin/tournaments/entry/'.$entry->getId());
+        $this->client->submit($crawler->selectButton('Mannschaftsmeldung zurückziehen')->form());
+        self::assertResponseRedirects($path);
+        self::assertTrue($this->em->find(TournamentEntry::class, $entry->getId())->isWithdrawn());
+
+        $this->sport = $this->em->find(Sport::class, $this->sport->getId());
+        $this->sport->setCompetitionEnabled(true);
+        $this->em->flush();
+        $this->client->request('GET', $path.'/entry');
+        self::assertResponseIsSuccessful();
     }
 
     public function testSuperAdminCompetitionUsesSelectedClub(): void
@@ -595,6 +659,48 @@ final class Phase5CompetitionHttpTest extends WebTestCase
         self::assertCount(0, $this->em->getRepository(Booking::class)->findAll());
     }
 
+    public function testDivisionTrainerRequiresExplicitTeamAssignment(): void
+    {
+        $trainer = $this->account('division-trainer', User::ROLE_MEMBER);
+        $divisionRole = new DivisionRoleAssignment($this->sport);
+        $divisionRole->setMember($trainer->getMember());
+        $divisionRole->setRole(DivisionRole::TRAINER);
+        $otherTeam = (new Team())->setSport($this->sport)->setName('Other team in same division');
+        $otherSport = (new Sport())->setClub($this->club)->setName('Other division')->setShortName('other');
+        $otherDivisionTeam = (new Team())->setSport($otherSport)->setName('Other division team');
+        $foreignClub = (new Club())->setName('Foreign trainer club');
+        $foreignSport = (new Sport())->setClub($foreignClub)->setName('Foreign division')->setShortName('foreign');
+        $foreignTeam = (new Team())->setSport($foreignSport)->setName('Foreign team');
+        foreach ([$divisionRole, $otherTeam, $otherSport, $otherDivisionTeam, $foreignClub, $foreignSport, $foreignTeam] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $this->client->loginUser($trainer);
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseStatusCodeSame(403);
+
+        $assignment = (new TeamMember())->setTeam($this->em->find(Team::class, $this->team->getId()))
+            ->setMember($this->em->find(Member::class, $trainer->getMember()->getId()))->setRole(TeamMemberRole::TRAINER);
+        $this->em->persist($assignment); $this->em->flush();
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseIsSuccessful();
+        $crawler = $this->client->request('GET', '/admin/teams/'.$this->team->getId().'/training/new');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->selectButton('Speichern')->form(), [
+            'form[title]' => 'Assigned team training', 'form[startsAt]' => '2027-02-01T18:00',
+            'form[endsAt]' => '2027-02-01T19:00', 'form[location]' => 'Pool',
+        ]);
+        self::assertResponseRedirects();
+        foreach ([$otherTeam, $otherDivisionTeam, $foreignTeam] as $team) {
+            foreach (['', '/training/new'] as $suffix) {
+                $this->client->request('GET', '/admin/teams/'.$team->getId().$suffix);
+                self::assertResponseStatusCodeSame(403);
+            }
+        }
+        $this->em->find(TeamMember::class, $assignment->getId())->setLeftAt(new \DateTime('yesterday'));
+        $this->em->flush();
+        $this->client->request('GET', '/admin/teams/'.$this->team->getId());
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testClubTrainerAndMemberBoundariesAndCsrfProtectAllWrites(): void
     {
         $tournament = $this->tournament();
@@ -906,6 +1012,7 @@ final class Phase5CompetitionHttpTest extends WebTestCase
     private function tournament(): Tournament
     {
         $tournament = new Tournament($this->em->find(Club::class, $this->club->getId()));
+        $tournament->setDivision($this->em->find(Sport::class, $this->sport->getId()));
         $tournament->setName('Competition Cup'); $tournament->setSportCode('uwr'); $tournament->setOrganizer('Own Club');
         $tournament->setLocation('Competition pool'); $tournament->setFeeCents(2550);
         $tournament->setStartsAt((new \DateTimeImmutable('first day of next month'))->modify('+9 days')->setTime(9, 0));

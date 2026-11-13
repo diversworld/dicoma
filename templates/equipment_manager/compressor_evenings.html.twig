@@ -51,7 +51,7 @@
 						<label class="form-label">{{ 'Bemerkung'|trans }}</label>
 						<textarea class="form-control" name="notes" maxlength="2000"></textarea>
 					</div>
-                    <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr für diese Gruppe gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> {% if is_granted('ROLE_EQUIPMENT_MANAGER') %}<a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a>{% endif %}</div>
+                    <div class="col-12"><label>{{ 'Vereinbarte Füllgebühr für diese Gruppe gesamt (EUR; 0 = kostenlos)'|trans }} <input name="fee" inputmode="decimal" required></label> {% if is_granted('ROLE_EQUIPMENT_MANAGER') and is_granted('ROLE_EQUIPMENT_CASH') %}<a href="{{ path('equipment_manager_fill_billing') }}">{{ 'Füllgebühren und Zahlungen'|trans }}</a>{% endif %}</div>
 					<div class="col-12 form-check ms-2">
 						<input class="form-check-input" type="checkbox" name="cylinder_check" value="1" id="cylinder_check" required>
 						<label class="form-check-label" for="cylinder_check">{{ 'Kennzeichnung, Prüffrist, Zustand und zulässigen Fülldruck aller angeschlossenen Flaschen kontrolliert'|trans }}</label>

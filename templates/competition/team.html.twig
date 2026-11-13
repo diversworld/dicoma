@@ -5,8 +5,10 @@
 <p>{{ team.description }}</p>
 <div class="d-flex flex-wrap gap-2 mb-4">
 <a class="btn btn-secondary" href="{{ path('competition_team_edit', {id: team.id}) }}">{{ 'Mannschaft bearbeiten'|trans }}</a>
+{% if team.sport.competitionEnabled %}
 <a class="btn btn-primary" href="{{ path('competition_roster_new', {id: team.id}) }}">{{ 'Kaderzuordnung hinzufügen'|trans }}</a>
 <a class="btn btn-primary" href="{{ path('competition_training_new', {id: team.id}) }}">{{ 'Training planen'|trans }}</a>
+{% endif %}
 </div>
 <h2 class="h4">{{ 'Kader und Betreuung'|trans }}</h2>
 <p class="text-muted">{{ 'Spielberechtigungen werden vor der Turniermeldung und beim Turnierstart für den gesamten Zeitraum geprüft.'|trans }}</p>

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Command;
 
-use App\Entity\{BarDutyAssignment, BarDutyNotification, Club};
+use App\Entity\{BarDutyAssignment, BarDutyNotification};
 use App\Service\SingleClubMode;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,7 +23,7 @@ final class BarDutyRemindersCommand extends Command
         $hours = filter_var($input->getOption('hours'), FILTER_VALIDATE_INT);
         if ($hours === false || $hours < 1 || $hours > 168) { $output->writeln('<error>hours muss zwischen 1 und 168 liegen.</error>'); return Command::INVALID; }
         $count = 0; $now = new \DateTimeImmutable(); $until = $now->modify('+'.$hours.' hours');
-        $clubs = $this->singleClub->isEnabled() ? [$this->singleClub->club()] : $this->em->getRepository(Club::class)->findAll();
+        $clubs = [$this->singleClub->club()];
         foreach ($clubs as $club) {
             $this->em->wrapInTransaction(function () use ($club, $now, $until, &$count): void {
                 $this->em->refresh($club, LockMode::PESSIMISTIC_WRITE);

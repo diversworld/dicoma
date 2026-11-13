@@ -3,8 +3,13 @@
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Entity\Club;
+use App\Service\MembershipRoleContinuity;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
@@ -17,6 +22,7 @@ use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 // Benutzer- und Rollenverwaltung ist bis zur fachlichen Freigabe
 // einer delegierten Rollenvergabe ausschließlich Super-Admins erlaubt.
@@ -26,6 +32,7 @@ class UserCrudController extends AbstractCrudController
     public function __construct(
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly TranslatorInterface $translator,
+        private readonly MembershipRoleContinuity $continuity,
     ) {
     }
 
@@ -107,6 +114,7 @@ class UserCrudController extends AbstractCrudController
 
         yield ChoiceField::new('roles', 'Rollen')
             ->setChoices(User::getAvailableRoles())
+            ->setFormTypeOption('getter', static fn (User $user): array => $user->getStoredRoles())
             ->allowMultipleChoices(true)
             ->renderExpanded(false)
             ->setColumns(6)
@@ -129,6 +137,13 @@ class UserCrudController extends AbstractCrudController
             );
     }
 
+    public function configureActions(Actions $actions): Actions
+    {
+        $validity = Action::new('roleValidity', 'Rollengültigkeiten')
+            ->linkToRoute('admin_role_validity', static fn (User $user): array => ['id' => $user->getId()]);
+        return $actions->add(Crud::PAGE_INDEX, $validity)->add(Crud::PAGE_DETAIL, $validity);
+    }
+
     public function persistEntity(
         EntityManagerInterface $entityManager,
         $entityInstance
@@ -139,9 +154,12 @@ class UserCrudController extends AbstractCrudController
             return;
         }
 
-        $this->hashPassword($entityInstance, true);
-
-        parent::persistEntity($entityManager, $entityInstance);
+        $entityManager->getConnection()->transactional(function () use ($entityManager, $entityInstance): void {
+            $this->continuity->lockClub($entityInstance->getMember()?->getClub());
+            $this->assertActiveRoleMember($entityManager, $entityInstance);
+            $this->hashPassword($entityInstance, true);
+            parent::persistEntity($entityManager, $entityInstance);
+        });
     }
 
     public function updateEntity(
@@ -154,9 +172,55 @@ class UserCrudController extends AbstractCrudController
             return;
         }
 
-        $this->hashPassword($entityInstance, false);
+        $entityManager->getConnection()->transactional(function () use ($entityManager, $entityInstance): void {
+            $connection = $entityManager->getConnection();
+            $oldMember = $connection->fetchAssociative('SELECT id, club_id FROM member WHERE user_id = ?', [$entityInstance->getId()]);
+            $newMember = $entityInstance->getMember();
+            $clubIds = array_filter([$oldMember['club_id'] ?? null, $newMember?->getClub()?->getId()]);
+            $clubIds = array_unique(array_map('intval', $clubIds));
+            sort($clubIds);
+            foreach ($clubIds as $clubId) {
+                $this->continuity->lockClub($entityManager->getReference(Club::class, $clubId));
+            }
+            $lock = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? ' FOR UPDATE' : '';
+            $currentMember = $connection->fetchAssociative('SELECT id, club_id FROM member WHERE user_id = ?'.$lock, [$entityInstance->getId()]);
+            if ($currentMember !== $oldMember) {
+                throw new ConflictHttpException('Die Mitgliedszuordnung wurde zwischenzeitlich geändert. Bitte neu laden.');
+            }
+            $row = $connection->fetchAssociative('SELECT roles, role_validity FROM `user` WHERE id = ?'.$lock, [$entityInstance->getId()]);
+            $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+            if ($row === false || json_decode((string) $row['roles'], true, 512, JSON_THROW_ON_ERROR) !== ($original['roles'] ?? [])
+                || ($row['role_validity'] === null ? null : json_decode((string) $row['role_validity'], true, 512, JSON_THROW_ON_ERROR)) !== ($original['roleValidity'] ?? null)) {
+                throw new ConflictHttpException('Die Rollen wurden zwischenzeitlich geändert. Bitte neu laden.');
+            }
+            $oldId = $oldMember === false ? null : (int) $oldMember['id'];
+            if ($oldId !== $newMember?->getId()
+                && (array_diff($original['roles'] ?? [], [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]) !== []
+                    || $this->continuity->functions($entityInstance) !== [])) {
+                throw new ConflictHttpException('Die Mitgliedszuordnung von Konten mit Funktionsrollen kann nicht geändert werden. Rollen zuerst gesondert klären.');
+            }
+            $this->assertActiveRoleMember($entityManager, $entityInstance);
+            $this->hashPassword($entityInstance, false);
+            parent::updateEntity($entityManager, $entityInstance);
+        });
+    }
 
-        parent::updateEntity($entityManager, $entityInstance);
+    private function assertActiveRoleMember(EntityManagerInterface $em, User $user): void
+    {
+        $member = $user->getMember();
+        if ($member === null) {
+            return;
+        }
+        $connection = $em->getConnection();
+        $lock = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? ' FOR UPDATE' : '';
+        $row = $connection->fetchAssociative('SELECT user_id, membership_status, left_at, archived_at FROM member WHERE id = ?'.$lock, [$member->getId()]);
+        if ($row === false || ($row['user_id'] !== null && (int) $row['user_id'] !== $user->getId())) {
+            throw new ConflictHttpException('Die Mitgliedschaft ist nicht verfügbar oder bereits mit einem anderen Konto verbunden.');
+        }
+        if ($this->continuity->functions($user) !== []
+            && ($row['membership_status'] !== 'active' || $row['left_at'] !== null || $row['archived_at'] !== null)) {
+            throw new ConflictHttpException('Funktionsrollen dürfen nur aktiven Mitgliedern zugewiesen bleiben.');
+        }
     }
 
     private function hashPassword(User $user, bool $passwordRequired): void

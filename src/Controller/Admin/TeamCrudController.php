@@ -78,6 +78,9 @@ class TeamCrudController extends AbstractCrudController
     {
         if ($entityInstance instanceof Team) {
             $this->assertTeam($entityInstance);
+            if (!$entityInstance->getSport()?->isCompetitionEnabled()) {
+                throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Mannschaften möglich.');
+            }
         }
         parent::persistEntity($entityManager, $entityInstance);
     }
@@ -91,6 +94,19 @@ class TeamCrudController extends AbstractCrudController
                 throw $this->createAccessDeniedException('Mannschaft gehört nicht zum ausgewählten Verein.');
             }
             $this->assertTeam($entityInstance);
+            if (!$entityInstance->getSport()?->isCompetitionEnabled()) {
+                if ($entityInstance->getSport()?->getId() !== $sport->getId()) {
+                    throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Mannschaften oder Kaderzuordnungen möglich.');
+                }
+                foreach ($entityInstance->getMembers() as $member) {
+                    $originalMember = $entityManager->getUnitOfWork()->getOriginalEntityData($member);
+                    if ($member->getId() === null
+                        || ($originalMember['member'] ?? null) !== $member->getMember()
+                        || ($originalMember['team'] ?? null) !== $member->getTeam()) {
+                        throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Mannschaften oder Kaderzuordnungen möglich.');
+                    }
+                }
+            }
         }
         parent::updateEntity($entityManager, $entityInstance);
     }
@@ -220,10 +236,15 @@ class TeamCrudController extends AbstractCrudController
         yield FormField::addFieldset('Zuordnung');
 
         $clubId = $this->scope->clubId();
+        $record = $this->getContext()?->getEntity()?->getInstance();
+        $currentSportId = $record instanceof Team ? $record->getSport()?->getId() : null;
         yield AssociationField::new('sport', 'Sportart')
-            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId, $currentSportId): QueryBuilder {
                 $query = $repository->createQueryBuilder('sportChoice');
-                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('sportChoice.club = :club')->setParameter('club', $clubId);
+                return $clubId === null ? $query->andWhere('1 = 0') : $query
+                    ->andWhere('sportChoice.club = :club')
+                    ->andWhere('(sportChoice.competitionEnabled = :enabled OR sportChoice.id = :currentSport)')
+                    ->setParameter('club', $clubId)->setParameter('enabled', true)->setParameter('currentSport', $currentSportId);
             })
             ->setRequired(true)
             ->setColumns(5);

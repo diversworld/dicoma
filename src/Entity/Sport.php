@@ -46,6 +46,12 @@ class Sport
     #[ORM\Column]
     private bool $active = true;
 
+    #[ORM\Column(options: ['default' => true])]
+    private bool $trainingEnabled = true;
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $competitionEnabled = true;
+
     #[ORM\Column]
     private int $sortOrder = 0;
 
@@ -163,6 +169,30 @@ class Sport
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function isTrainingEnabled(): bool
+    {
+        return $this->trainingEnabled;
+    }
+
+    public function setTrainingEnabled(bool $enabled): static
+    {
+        $this->trainingEnabled = $enabled;
+
+        return $this;
+    }
+
+    public function isCompetitionEnabled(): bool
+    {
+        return $this->competitionEnabled;
+    }
+
+    public function setCompetitionEnabled(bool $enabled): static
+    {
+        $this->competitionEnabled = $enabled;
 
         return $this;
     }

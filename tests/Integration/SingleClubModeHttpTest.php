@@ -39,7 +39,7 @@ final class SingleClubModeHttpTest extends WebTestCase
             'DATABASE_URL' => 'sqlite:///:memory:',
             'MAILER_DSN' => 'null://null',
             'PUBLIC_SITE_CLUB_ID' => '1',
-            'DICOMA_SINGLE_CLUB_MODE' => '1',
+            'DICOMA_SINGLE_CLUB_MODE' => '0',
         ] as $key => $value) {
             $_ENV[$key] = $_SERVER[$key] = $value;
             putenv($key.'='.$value);

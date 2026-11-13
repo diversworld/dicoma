@@ -8,7 +8,7 @@
         <h1>Tank index</h1>
         <div class="col-md-3">
             <div class="block">
-                <a href="{{ path('app_tank_new') }}" class="btn btn-transparent btn-solid-border">{% trans %}Create new{% endtrans %}</a>
+                {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_tank_new') }}" class="btn btn-transparent btn-solid-border">{% trans %}Create new{% endtrans %}</a>{% endif %}
             </div>
         </div>
         <table class="table">
@@ -38,7 +38,7 @@
                     <td>{{ tank.oxigenClean ? 'Yes' : 'No' }}</td>
                     <td>
                         <a href="{{ path('app_tank_show', {'id': tank.id}) }}">show</a>
-                        <a href="{{ path('app_tank_edit', {'id': tank.id}) }}">edit</a>
+                        {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_tank_edit', {'id': tank.id}) }}">edit</a>{% endif %}
                         {% if nextCheck %}
                             <a href="{{ path('app_book_inspection', {'tankId': tank.id, 'checkId': nextCheck.id}) }}">
                                 <img src="/public/images/icons/tuev-logo.jpg" alt="Book Inspection" />

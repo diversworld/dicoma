@@ -20,3 +20,6 @@ ex.sh
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+public/images/kurse/6d9293071a9faa10851d36fd19e57ee6ddac371d.jpg
+.gitignore
+public/images/kurse/964ccbe04e5d8d89ab6994ab89eb4c35790c47db.jpg

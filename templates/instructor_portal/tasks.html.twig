@@ -39,7 +39,7 @@
       <td>{{ item.title }}</td><td>{{ item.course }}</td>
       <td>{{ item.date }}{% if item.time %} · {{ item.time }}{% endif %}</td>
       <td>{{ item.attendance }}</td><td>{{ item.assessments }}</td><td>{{ item.makeup }}</td>
-      <td><a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Sammelbewertung</a></td>
+      <td>{% if is_granted('TRAINING_ASSESS', item.schedule) %}<a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Sammelbewertung</a>{% else %}–{% endif %}</td>
     </tr>
   {% else %}<tr><td colspan="8">Keine offenen Aufgaben für diese Filter.</td></tr>{% endfor %}
   </tbody></table></div>
@@ -48,7 +48,7 @@
   <h2>Nächste Ausbildungstermine</h2>
   <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Termin</th><th>Kurs</th><th>Instruktor</th><th>Aktion</th></tr></thead><tbody>
   {% for item in upcoming %}
-    <tr><td>{{ item.date }}{% if item.time %} · {{ item.time }}{% endif %}</td><td>{{ item.title }}</td><td>{{ item.course }}</td><td>{{ item.instructor ?: 'Nicht zugewiesen' }}</td><td><a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Erfassung öffnen</a></td></tr>
+    <tr><td>{{ item.date }}{% if item.time %} · {{ item.time }}{% endif %}</td><td>{{ item.title }}</td><td>{{ item.course }}</td><td>{{ item.instructor ?: 'Nicht zugewiesen' }}</td><td>{% if is_granted('TRAINING_ASSESS', item.schedule) %}<a class="btn" href="{{ path(personalView|default(false) ? 'instructor_training_assess' : 'admin_training_results_batch', {id: item.id}) }}">Erfassung öffnen</a>{% else %}–{% endif %}</td></tr>
   {% else %}<tr><td colspan="5">Keine Termine in den nächsten 30 Tagen.</td></tr>{% endfor %}
   </tbody></table></div>
 </section>

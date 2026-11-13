@@ -13,17 +13,22 @@ class ContributionClass
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private Club $club;
+    
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank, Assert\Length(max: 100)]
     private string $name = '';
+    
     #[ORM\Column]
     #[Assert\Range(min: 0, max: 100000000)]
     private int $annualCents = 0;
+    
     #[ORM\Column]
     private bool $family = false;
+    
     #[ORM\Column]
     private bool $active = true;
 

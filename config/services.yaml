@@ -7,7 +7,6 @@ parameters:
     bilder_ordner: '%kernel.project_dir%/public/images/kurse'
     env(SITE_THEME): 'airspace'
     env(PUBLIC_SITE_CLUB_ID): '0'
-    env(DICOMA_SINGLE_CLUB_MODE): '0'
     site.themes:
         airspace:
             layout: 'themes/airspace/layout.html.twig'
@@ -44,8 +43,5 @@ services:
     App\Service\PublicWebsite:
         arguments:
             $clubId: '%env(int:PUBLIC_SITE_CLUB_ID)%'
-    App\Service\SingleClubMode:
-        arguments:
-            $enabled: '%env(bool:DICOMA_SINGLE_CLUB_MODE)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

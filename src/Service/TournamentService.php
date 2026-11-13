@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\TeamMember;
+use App\Entity\Team;
 use App\Entity\Tournament;
 use App\Entity\TournamentEntry;
 use App\Entity\TournamentMatch;
@@ -52,6 +53,20 @@ final class TournamentService
             && ($tournament->getRegistrationDeadline() === null || $tournament->getRegistrationDeadline() >= new \DateTimeImmutable());
     }
 
+    public function allowsNewParticipants(Tournament $tournament, ?Team $team = null): bool
+    {
+        $division = $tournament->getDivision();
+        return $division !== null && $tournament->matchesDivision($division) && $division->isCompetitionEnabled()
+            && ($team === null || ($team->getSport() !== null && $team->getSport()->isCompetitionEnabled()));
+    }
+
+    private function assertNewParticipantsAllowed(Tournament $tournament, ?Team $team = null): void
+    {
+        if (!$this->allowsNewParticipants($tournament, $team)) {
+            throw new \DomainException('Neue Meldungen und Kaderzuordnungen erfordern eine passende Sparte mit aktiviertem Wettkampfmodul.');
+        }
+    }
+
     private function transaction(Tournament $tournament, callable $operation): mixed
     {
         return $this->em->getConnection()->transactional(function () use ($tournament, $operation): mixed {
@@ -71,6 +86,7 @@ final class TournamentService
         $this->access->require($this->access->managesEntry($entry));
         $this->transaction($tournament, function () use ($tournament, $entry): void {
             $this->assertRosterOpen($tournament);
+            $this->assertNewParticipantsAllowed($tournament, $entry->getTeam());
             if (!$this->access->managesClub($tournament->getClub()) && $tournament->getStatus() !== TournamentStatus::OPEN) {
                 throw new \DomainException('Dieses Turnier ist noch nicht zur Meldung geöffnet.');
             }
@@ -122,6 +138,7 @@ final class TournamentService
         $this->access->require($this->access->managesEntry($entry));
         $this->transaction($entry->getTournament(), function () use ($player, $entry): void {
             $this->assertRosterOpen($entry->getTournament());
+            $this->assertNewParticipantsAllowed($entry->getTournament(), $entry->getTeam());
             if ($entry->isWithdrawn()) { throw new \DomainException('Die Mannschaftsmeldung wurde zurückgezogen.'); }
             if ($this->em->getRepository(TournamentPlayer::class)->count(['entry' => $entry]) >= $entry->getTournament()->getMaxPlayers()) {
                 throw new \DomainException('Der Turnierkader ist vollständig.');

@@ -26,7 +26,9 @@ final class CourseDivisionSelectionType extends AbstractType
                 'class' => Sport::class,
                 'label' => 'Sparten',
                 'choices' => $options['divisions'],
-                'choice_label' => static fn (Sport $sport): string => $sport->getName().($sport->isActive() ? '' : ' (inaktiv)'),
+                'choice_label' => static fn (Sport $sport): string => $sport->getName()
+                    .($sport->isActive() ? '' : ' (inaktiv)')
+                    .($sport->isTrainingEnabled() ? '' : ' (Ausbildung deaktiviert)'),
                 'multiple' => true,
                 'required' => false,
                 'help' => 'Nur für „Ausgewählte Sparten“; mehrere Sparten sind möglich.',

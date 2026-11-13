@@ -277,12 +277,17 @@ class TeamMemberCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         $clubId = $this->scope->clubId();
+        $record = $this->getContext()?->getEntity()?->getInstance();
+        $currentTeamId = $record instanceof TeamMember ? $record->getTeam()?->getId() : null;
         yield FormField::addFieldset('Zuordnung');
 
         yield AssociationField::new('team', 'Gruppe / Mannschaft')
-            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId): QueryBuilder {
+            ->setFormTypeOption('query_builder', static function (EntityRepository $repository) use ($clubId, $currentTeamId): QueryBuilder {
                 $query = $repository->createQueryBuilder('teamChoice')->join('teamChoice.sport', 'teamChoiceSport');
-                return $clubId === null ? $query->andWhere('1 = 0') : $query->andWhere('teamChoiceSport.club = :club')->setParameter('club', $clubId);
+                return $clubId === null ? $query->andWhere('1 = 0') : $query
+                    ->andWhere('teamChoiceSport.club = :club')
+                    ->andWhere('(teamChoiceSport.competitionEnabled = :enabled OR teamChoice.id = :currentTeam)')
+                    ->setParameter('club', $clubId)->setParameter('enabled', true)->setParameter('currentTeam', $currentTeamId);
             })
             ->setRequired(true)
             ->setColumns(4);
@@ -338,6 +343,11 @@ class TeamMemberCrudController extends AbstractCrudController
             $team = $original['team'] ?? null;
             $this->scope->assertMember($member instanceof Member ? $member : null);
             $this->scope->assertTeam($team instanceof Team ? $team : null);
+            if (!$entityInstance->getTeam()?->getSport()?->isCompetitionEnabled()
+                && ($entityInstance->getTeam()?->getId() !== $team?->getId()
+                    || $entityInstance->getMember()?->getId() !== $member?->getId())) {
+                throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Kaderzuordnungen möglich.');
+            }
         }
         $this->saveWithOptionalSport($entityManager, $entityInstance);
     }
@@ -348,6 +358,9 @@ class TeamMemberCrudController extends AbstractCrudController
             throw new \InvalidArgumentException('Expected TeamMember.');
         }
         $this->assertAssignment($entity);
+        if ($entity->getId() === null && !$entity->getTeam()?->getSport()?->isCompetitionEnabled()) {
+            throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Kaderzuordnungen möglich.');
+        }
 
         $em->wrapInTransaction(function (EntityManagerInterface $manager) use ($entity): void {
             $team = $entity->getTeam();

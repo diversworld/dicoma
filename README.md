@@ -156,12 +156,19 @@ remaining functional gaps. This is not a full Master Specification acceptance.
 
 #### Single-club operation
 
-Single-club operation is prepared but disabled by default. It uses the active
-club configured by `PUBLIC_SITE_CLUB_ID`; no club data is automatically
-merged or deleted. Enabling `DICOMA_SINGLE_CLUB_MODE=1` is a separate
-operational change and must follow the checks, backup and explicit data
-reassignment described in [operations](docs/deployment/operations.md).
-The existing multi-club behaviour remains available until that cutover.
+The application uses a single active club. `PUBLIC_SITE_CLUB_ID` selects it
+explicitly and also enables its public website. If the ID is unset, the
+administration can use the only active club; multiple active clubs require an
+explicit ID. A superadministrator can create the first club in EasyAdmin, but
+cannot create additional clubs. Club switching is no longer available.
+
+Existing data is not automatically merged or deleted. Before upgrading an
+installation with data belonging to other clubs, make and verify a backup,
+set `PUBLIC_SITE_CLUB_ID` to the intended club, and run
+`app:single-club:check`. Reassign data only after reviewing and approving the
+specific records. Foreign or unassigned data reported by the check must be
+resolved before the cutover. The former `DICOMA_SINGLE_CLUB_MODE` setting no
+longer changes this behaviour.
 
 #### License
 - [GNU](https://www.gnu.org/licenses/gpl-3.0.html)

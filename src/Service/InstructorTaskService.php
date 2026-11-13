@@ -33,6 +33,9 @@ final class InstructorTaskService
             ->leftJoin('s.courses', 'c')->addSelect('c')
             ->leftJoin('c.club', 'club')->addSelect('club')
             ->leftJoin('s.instructor', 'i')->addSelect('i');
+        if ($restrictedToInstructor) {
+            $base->andWhere('IDENTITY(c.club) = IDENTITY(i.club)');
+        }
 
         // Populate filters from all existing scheduled courses, not only the visible time window.
         $options = ['clubs' => [], 'courses' => [], 'instructors' => []];
@@ -96,7 +99,7 @@ final class InstructorTaskService
             $overdue = $dateKey < $today->format('Y-m-d');
             $priority = $overdue && ($attendance + $assessments > 0) ? 3 : ($makeup > 0 ? 2 : 1);
             $item = [
-                'id' => $schedule->getId(), 'title' => (string) $schedule,
+                'id' => $schedule->getId(), 'schedule' => $schedule, 'title' => (string) $schedule,
                 'course' => (string) $schedule->getCourses(), 'date' => $date->format('d.m.Y'),
                 'dateSort' => $dateKey, 'time' => $schedule->getStartTime()?->format('H:i'),
                 'instructor' => (string) ($schedule->getInstructor() ?? ''),

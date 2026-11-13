@@ -176,6 +176,12 @@ class SportCrudController extends AbstractCrudController
         }
         yield $active;
 
+        yield BooleanField::new('trainingEnabled', 'Ausbildung für neue Vorgänge')
+            ->renderAsSwitch(false);
+
+        yield BooleanField::new('competitionEnabled', 'Mannschaften und Wettkampf für neue Vorgänge')
+            ->renderAsSwitch(false);
+
         yield TextareaField::new('description', 'Beschreibung')
             ->hideOnIndex();
     }

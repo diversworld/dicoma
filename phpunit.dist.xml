@@ -30,6 +30,7 @@
             <file>tests/Integration/TeamMemberPersistenceTest.php</file>
             <file>tests/Integration/Phase2FoundationHttpTest.php</file>
             <file>tests/Integration/Phase3MembershipHttpTest.php</file>
+            <file>tests/Integration/Phase3RoleAuthorizationHttpTest.php</file>
             <file>tests/Integration/Phase4TrainingHttpTest.php</file>
             <file>tests/Integration/Phase5CompetitionHttpTest.php</file>
             <file>tests/Integration/Phase6EquipmentHttpTest.php</file>
@@ -39,6 +40,7 @@
             <file>tests/Integration/ClubEventBookingHttpTest.php</file>
             <file>tests/Integration/MediaFileHttpTest.php</file>
             <file>tests/Integration/SingleClubModeHttpTest.php</file>
+            <file>tests/Integration/SingleClubBootstrapHttpTest.php</file>
             <file>tests/Integration/Phase0SecurityHttpTest.php</file>
             <file>tests/Integration/CourseImageControllerFieldsTest.php</file>
             <file>tests/Integration/AreaRouteBoundaryTest.php</file>

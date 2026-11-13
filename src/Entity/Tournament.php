@@ -7,8 +7,10 @@ namespace App\Entity;
 use App\Enum\TournamentStatus;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity]
+#[Assert\Callback('validateDivision')]
 class Tournament
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
@@ -18,6 +20,9 @@ class Tournament
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private Club $club;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?Sport $division = null;
     #[ORM\Column(length: 150)]
     #[Assert\NotBlank, Assert\Length(max: 150)]
     private string $name = '';
@@ -75,6 +80,29 @@ class Tournament
     public function getId(): ?int { return $this->id; }
     public function getVersion(): int { return $this->version; }
     public function getClub(): Club { return $this->club; }
+    public function getDivision(): ?Sport { return $this->division; }
+    public function setDivision(?Sport $division): void { $this->division = $division; }
+    public function matchesDivision(Sport $division): bool
+    {
+        $club = $division->getClub();
+        return ($club === $this->club || ($club?->getId() !== null && $club->getId() === $this->club->getId()))
+            && mb_strtolower(trim($division->getShortName() ?: $division->getName() ?? '')) === $this->sportCode;
+    }
+    public function validateDivision(ExecutionContextInterface $context): void
+    {
+        if ($this->division === null) {
+            return;
+        }
+        $divisionClub = $this->division->getClub();
+        if ($divisionClub !== $this->club
+            && ($divisionClub?->getId() === null || $divisionClub->getId() !== $this->club->getId())) {
+            $context->buildViolation('Die Sparte muss zum Verein des Turniers gehören.')->atPath('division')->addViolation();
+        }
+        $code = mb_strtolower(trim($this->division->getShortName() ?: $this->division->getName() ?? ''));
+        if ($code !== $this->sportCode) {
+            $context->buildViolation('Sportkennung und ausgewählte Sparte müssen übereinstimmen.')->atPath('sportCode')->addViolation();
+        }
+    }
     public function getName(): string { return $this->name; }
     public function setName(string $value): void { $this->name = trim($value); }
     public function getSportCode(): string { return $this->sportCode; }

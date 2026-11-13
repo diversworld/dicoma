@@ -76,6 +76,9 @@ final class CompetitionController extends AbstractController
         $sports = $this->access->manageableDivisions();
         $this->access->require($id === null ? ($this->isGranted('ROLE_ADMIN') || $sports !== []) : $this->access->managesTeam($team));
         if ($id !== null && !$this->isGranted('ROLE_ADMIN')) { $sports = [$team->getSport()]; }
+        if ($id === null) {
+            $sports = array_values(array_filter($sports, static fn (Sport $sport): bool => $sport->isCompetitionEnabled()));
+        }
         $form = $this->createFormBuilder($team, [
             'action' => $this->generateUrl($id === null ? 'competition_team_new' : 'competition_team_edit', $id === null ? [] : ['id' => $id]),
             'csrf_token_id' => 'competition_team_'.($this->access->currentBackendClubId() ?? 'none'),
@@ -117,6 +120,10 @@ final class CompetitionController extends AbstractController
         if (!$assignment instanceof TeamMember || $assignment->getTeam() === null) { throw $this->createNotFoundException(); }
         $team = $assignment->getTeam();
         $this->access->require($this->access->managesTeam($team));
+        if ($assignmentId === null && !$team->getSport()?->isCompetitionEnabled()) {
+            throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Kaderzuordnungen möglich.');
+        }
+        $originalMember = $assignment->getMember();
         if ($assignmentId !== null && $assignment->getMember()?->getClub()?->getId() !== $team->getSport()?->getClub()?->getId()) {
             throw $this->createAccessDeniedException('Mannschaftsmitglied gehört nicht zum Verein der Mannschaft.');
         }
@@ -125,6 +132,9 @@ final class CompetitionController extends AbstractController
             'members' => $this->em->getRepository(Member::class)->findBy(['club' => $team->getSport()->getClub()]),
         ])->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            if (!$team->getSport()?->isCompetitionEnabled() && $assignment->getMember() !== $originalMember) {
+                throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Kaderzuordnungen möglich.');
+            }
             $this->em->persist($assignment); $this->em->flush();
             return $this->redirectToRoute('competition_team', ['id' => $team->getId()]);
         }
@@ -138,6 +148,9 @@ final class CompetitionController extends AbstractController
         $session = $sessionId === null ? new TeamTraining($this->team($id)) : $this->em->find(TeamTraining::class, $sessionId);
         if (!$session instanceof TeamTraining) { throw $this->createNotFoundException(); }
         $this->access->require($this->access->managesTeam($session->getTeam()));
+        if ($sessionId === null && !$session->getTeam()->getSport()?->isCompetitionEnabled()) {
+            throw $this->createAccessDeniedException('Für diese Sparte sind keine neuen Trainingstermine möglich.');
+        }
         $form = $this->createFormBuilder($session, ['action' => $this->generateUrl($sessionId === null ? 'competition_training_new' : 'competition_training_edit', $sessionId === null ? ['id' => $id] : ['sessionId' => $sessionId])])
             ->add('title', F\TextType::class, ['label' => 'Training', 'empty_data' => ''])
             ->add('startsAt', F\DateTimeType::class, ['label' => 'Beginn', 'widget' => 'single_text', 'input' => 'datetime_immutable'])
@@ -185,14 +198,23 @@ final class CompetitionController extends AbstractController
                 || ($id !== null && ($this->tournaments->entries($tournament) !== [] || $this->tournaments->matches($tournament) !== []))) {
                 throw $this->createAccessDeniedException('Stammdaten und Wertungsregeln sind nach der ersten Meldung oder dem Turnierstart gesperrt.');
             }
+            $originalDivision = $tournament->getDivision();
+            $divisions = array_values(array_filter(
+                $this->em->getRepository(Sport::class)->findBy(['club' => $tournament->getClub()], ['name' => 'ASC']),
+                static fn (Sport $sport): bool => $sport->isCompetitionEnabled() || $sport === $originalDivision,
+            ));
             $form = $this->createForm(TournamentType::class, $tournament, [
                 'action' => $this->generateUrl($id === null ? 'competition_tournament_new' : 'competition_tournament_edit', $id === null ? ['club' => $tournament->getClub()->getId()] : ['id' => $id]),
                 'csrf_token_id' => 'competition_tournament_'.$tournament->getClub()->getId(),
+                'divisions' => $divisions,
+                'require_division' => $id === null,
             ]);
             $form->add('version', F\HiddenType::class, ['mapped' => false, 'data' => (string) $tournament->getVersion()]);
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
-                if ($form->get('version')->getData() !== (string) $tournament->getVersion()) {
+                if ($tournament->getDivision() !== $originalDivision && !$tournament->getDivision()?->isCompetitionEnabled()) {
+                    $form->get('division')->addError(new FormError('Für diese Sparte ist das Wettkampfmodul deaktiviert.'));
+                } elseif ($form->get('version')->getData() !== (string) $tournament->getVersion()) {
                     $form->addError(new FormError('Das Turnier wurde zwischenzeitlich geändert. Bitte neu laden.'));
                 } else {
                     $this->em->persist($tournament); $this->em->flush();
@@ -201,6 +223,45 @@ final class CompetitionController extends AbstractController
             }
             return $this->render('competition/form.html.twig', ['title' => 'Turnier bearbeiten', 'form' => $form,
                 'backUrl' => $this->generateUrl('competition_tournaments'), 'clubs' => $clubs, 'selectedClub' => $tournament->getClub()]);
+        });
+    }
+
+    #[Route('/admin/tournaments/{id}/division', name: 'competition_tournament_division', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function tournamentDivision(int $id, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $tournament = $this->tournament($id);
+        $this->access->require($this->access->managesClub($tournament->getClub()));
+        return $this->em->getConnection()->transactional(function () use ($id, $request, $tournament): Response {
+            if ($request->isMethod('POST') && $this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+                $this->em->lock($tournament, LockMode::PESSIMISTIC_WRITE);
+                $this->em->refresh($tournament);
+            }
+            if ($tournament->getDivision() !== null || !in_array($tournament->getStatus(), [TournamentStatus::DRAFT, TournamentStatus::OPEN], true)) {
+                throw $this->createAccessDeniedException('Eine Zuordnung ist nur für offene Altturniere ohne Sparte möglich.');
+            }
+            $choices = array_values(array_filter(
+                $this->em->getRepository(Sport::class)->findBy(['club' => $tournament->getClub()], ['name' => 'ASC']),
+                static fn (Sport $sport): bool => $sport->isCompetitionEnabled() && $tournament->matchesDivision($sport),
+            ));
+            $form = $this->createFormBuilder(['division' => null], [
+                'action' => $this->generateUrl('competition_tournament_division', ['id' => $id]),
+                'csrf_token_id' => 'competition_tournament_division_'.$id,
+            ])->add('division', EntityType::class, [
+                'class' => Sport::class, 'choices' => $choices, 'label' => 'Sparte',
+                'placeholder' => 'Sparte auswählen', 'constraints' => [new Assert\NotNull()],
+            ])->getForm()->handleRequest($request);
+            if ($form->isSubmitted() && $form->isValid()) {
+                $division = $form->getData()['division'];
+                if (!$division->isCompetitionEnabled() || !$tournament->matchesDivision($division)) {
+                    $form->addError(new FormError('Die gewählte Sparte ist nicht für dieses Turnier verfügbar.'));
+                } else {
+                    $tournament->setDivision($division);
+                    $this->em->flush();
+                    return $this->redirectToRoute('competition_tournament', ['id' => $id]);
+                }
+            }
+            return $this->formPage('Sparte zuordnen', $form, 'competition_tournament', ['id' => $id]);
         });
     }
 
@@ -216,7 +277,7 @@ final class CompetitionController extends AbstractController
             'standings' => $tournament->getArchive()['standings'] ?? $this->tournaments->standings($tournament),
             'documents' => $this->em->getRepository(TournamentDocument::class)->findBy(['tournament' => $tournament]),
             'access' => $this->access,
-            'rosterOpen' => $this->tournaments->rosterIsOpen($tournament),
+            'rosterOpen' => $this->tournaments->rosterIsOpen($tournament) && $this->tournaments->allowsNewParticipants($tournament),
         ]);
     }
 
@@ -226,10 +287,11 @@ final class CompetitionController extends AbstractController
         $tournament = $this->tournament($id);
         $this->access->require($this->access->viewsTournament($tournament));
         $this->access->require($this->tournaments->rosterIsOpen($tournament));
+        $this->access->require($this->tournaments->allowsNewParticipants($tournament));
         $entry = new TournamentEntry($tournament);
         $manager = $this->access->managesClub($tournament->getClub());
         $builder = $this->createFormBuilder($entry, ['action' => $this->generateUrl('competition_entry_new', ['id' => $id])])
-            ->add('team', EntityType::class, ['class' => Team::class, 'choices' => $this->teamsForUser(), 'required' => !$manager,
+            ->add('team', EntityType::class, ['class' => Team::class, 'choices' => array_values(array_filter($this->teamsForUser(), fn (Team $team): bool => $this->tournaments->allowsNewParticipants($tournament, $team))), 'required' => !$manager,
                 'placeholder' => $manager ? 'Externe Mannschaft (ohne Vereinsanlage)' : 'Mannschaft auswählen', 'label' => 'Eigene Mannschaft'])
             ->add('name', F\TextType::class, ['label' => 'Meldename', 'empty_data' => ''])
             ->add('contactEmail', F\EmailType::class, ['label' => 'Kontaktadresse', 'required' => false]);
@@ -246,7 +308,8 @@ final class CompetitionController extends AbstractController
     {
         $this->access->require($this->access->managesEntry($entry));
         $rosterOpen = $this->tournaments->rosterIsOpen($entry->getTournament()) && !$entry->isWithdrawn();
-        if ($request->isMethod('POST')) { $this->access->require($rosterOpen); }
+        $canAddPlayers = $rosterOpen && $this->tournaments->allowsNewParticipants($entry->getTournament(), $entry->getTeam());
+        if ($request->isMethod('POST')) { $this->access->require($canAddPlayers); }
         $player = new TournamentPlayer($entry);
         $builder = $this->createFormBuilder($player, ['action' => $this->generateUrl('competition_entry', ['id' => $entry->getId()])]);
         if ($entry->getTeam() !== null) {
@@ -268,7 +331,7 @@ final class CompetitionController extends AbstractController
             'paid' => $this->tournaments->paidCents($entry),
             'payments' => $this->em->getRepository(TournamentPayment::class)->findBy(['entry' => $entry], ['id' => 'ASC']),
             'manager' => $this->access->managesClub($entry->getTournament()->getClub()), 'form' => $form,
-            'rosterOpen' => $rosterOpen,
+            'rosterOpen' => $rosterOpen, 'canAddPlayers' => $canAddPlayers,
         ]);
     }
 

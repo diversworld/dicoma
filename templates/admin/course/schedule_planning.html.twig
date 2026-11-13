@@ -485,7 +485,7 @@
                     previewBody.replaceChildren();
                     feedback.textContent = '';
                 }
-                seriesRoot.querySelectorAll('input, select').forEach(el => {
+                seriesRoot.querySelectorAll('input, select, textarea').forEach(el => {
                     el.addEventListener('input', invalidate);
                     el.addEventListener('change', invalidate);
                 });
@@ -582,7 +582,7 @@
                     previewBody.replaceChildren();
                     feedback.textContent = '';
                 };
-                weekendRoot.querySelectorAll('input, select').forEach(input => {
+                weekendRoot.querySelectorAll('input, select, textarea').forEach(input => {
                     input.addEventListener('input', clearWeekend);
                     input.addEventListener('change', clearWeekend);
                 });

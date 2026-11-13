@@ -17,6 +17,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[IsGranted('ROLE_EQUIPMENT_MANAGER')]
+#[IsGranted('ROLE_EQUIPMENT_CASH')]
 final class EquipmentManagerDailyCashReportController extends AbstractController
 {
     use EquipmentManagerClubTrait;

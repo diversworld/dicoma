@@ -18,7 +18,11 @@ use Psr\Log\LoggerInterface;
 
 final class MembershipService
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly LoggerInterface $logger) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger,
+        private readonly MembershipRoleContinuity $continuity,
+    ) {}
 
     public function policy(Club $club): ?MembershipPolicy
     {
@@ -88,30 +92,54 @@ final class MembershipService
 
     public function requestTermination(Member $member, string $actor, \DateTimeImmutable $received): void
     {
-        if ($member->getClub() === null || $member->getArchivedAt() !== null || $member->getLeftAt() !== null
-            || $member->getMembershipStatus() === MembershipStatus::FORMER || $member->getTerminationDate() !== null) {
-            throw new \DomainException('Für diese Mitgliedschaft kann keine weitere Kündigung erfasst werden.');
-        }
-        $policy = $this->policy($member->getClub());
-        if ($policy === null) {
-            throw new \DomainException('Der Verein hat noch keine Kündigungsregel hinterlegt.');
-        }
-        $date = $policy->cancellationDate($received);
-        $this->em->wrapInTransaction(function () use ($member, $date, $actor): void {
+        $this->em->getConnection()->transactional(function () use ($member, $received, $actor): void {
+            $this->continuity->lockClub($member->getClub());
+            $this->continuity->refresh($member);
+            if ($member->getClub() === null || $member->getArchivedAt() !== null || $member->getLeftAt() !== null
+                || $member->getMembershipStatus() === MembershipStatus::FORMER || $member->getTerminationDate() !== null) {
+                throw new \DomainException('Für diese Mitgliedschaft kann keine weitere Kündigung erfasst werden.');
+            }
+            $policy = $this->policy($member->getClub());
+            if ($policy === null) {
+                throw new \DomainException('Der Verein hat noch keine Kündigungsregel hinterlegt.');
+            }
+            $date = $policy->cancellationDate($received);
+            $user = $member->getUser();
+            if ($user !== null) { $this->continuity->refresh($user); }
+            $roles = $this->continuity->functions($user);
+            $missing = $this->continuity->missingSuccessors($member, $roles);
+            $boardNotified = $this->continuity->notifyBoard($member, $roles, $missing, 'Kündigung zum '.$date->format('d.m.Y').'.', 'requested:'.$member->getId().':'.$date->format('Y-m-d'), $this);
+            if ($roles !== []) {
+                $this->em->persist(new MembershipEvent($member, 'role_continuity', $actor, 'Kündigung zum '.$date->format('d.m.Y').'; Funktionsrollen: '.implode(', ', $roles).'. '.($missing === [] ? 'Nachfolge bei Erfassung vorhanden.' : 'Nachfolge bei Erfassung offen: '.implode(', ', $missing).'.').($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+            }
             $member->setTerminationDate($date);
             $this->record($member, 'termination_requested', $actor, 'Kündigung zum ' . $date->format('d.m.Y') . '; Mitgliedsrechte bleiben bis zum wirksamen Austritt erhalten.');
+            $this->em->flush();
         });
     }
 
     public function changeStatus(Member $member, MembershipStatus $status, string $actor): void
     {
-        if ($member->getArchivedAt() !== null || $member->getMembershipStatus() === MembershipStatus::FORMER || $status === MembershipStatus::FORMER) {
-            throw new \DomainException('Archivierte/beendete Mitgliedschaften nicht umstellen. Austritte über den Kündigungsprozess erfassen.');
-        }
-        $this->em->wrapInTransaction(function () use ($member, $status, $actor): void {
+        $this->em->getConnection()->transactional(function () use ($member, $status, $actor): void {
+            $this->continuity->lockClub($member->getClub());
+            $this->continuity->refresh($member);
+            if ($member->getArchivedAt() !== null || $member->getMembershipStatus() === MembershipStatus::FORMER || $status === MembershipStatus::FORMER) {
+                throw new \DomainException('Archivierte/beendete Mitgliedschaften nicht umstellen. Austritte über den Kündigungsprozess erfassen.');
+            }
+            if ($member->isActiveMember() && $status !== MembershipStatus::ACTIVE) {
+                $user = $member->getUser();
+                if ($user !== null) { $this->continuity->refresh($user); }
+                $roles = $this->continuity->functions($user);
+                $missing = $this->continuity->missingSuccessors($member, $roles);
+                if ($missing !== []) {
+                    throw new \DomainException('Statuswechsel nicht möglich. Zuerst eine aktive Nachfolge im selben Verein zuweisen: '.implode(', ', $missing).'.');
+                }
+                $this->continuity->revoke($member, $roles, $actor);
+            }
             $old = $member->getMembershipStatus()->label();
             $member->setMembershipStatus($status);
             $this->record($member, 'status_changed', $actor, $old . ' → ' . $status->label());
+            $this->em->flush();
         });
     }
 

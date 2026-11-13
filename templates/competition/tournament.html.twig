@@ -8,6 +8,9 @@
 <p>{{ 'Teilnahmegebühr'|trans }}: {{ (tournament.feeCents / 100)|number_format(2, ',', '.') }} EUR · {{ 'Kadergröße'|trans }}: {{ tournament.minPlayers }}–{{ tournament.maxPlayers }} · {{ 'Maximale Mannschaftszahl'|trans }}: {{ tournament.maxTeams }}</p>
 <div class="d-flex flex-wrap gap-2 mb-4">
 {% if rosterOpen %}<a class="btn btn-primary" href="{{ path('competition_entry_new', {id: tournament.id}) }}">{{ 'Mannschaft melden'|trans }}</a>{% endif %}
+{% if manager and preparing and tournament.division is null %}
+<a class="btn btn-secondary" href="{{ path('competition_tournament_division', {id: tournament.id}) }}">{{ 'Sparte zuordnen'|trans }}</a>
+{% endif %}
 {% if manager and preparing %}
 {% if entries is empty and matches is empty %}<a class="btn btn-secondary" href="{{ path('competition_tournament_edit', {id: tournament.id}) }}">{{ 'Turnier bearbeiten'|trans }}</a>{% endif %}
 {% if matches is empty %}<a class="btn btn-secondary" href="{{ path('competition_generate', {id: tournament.id}) }}">{{ 'Spielplan erzeugen'|trans }}</a>{% endif %}

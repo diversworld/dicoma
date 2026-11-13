@@ -10,8 +10,10 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: TeamRepository::class)]
+#[Assert\Callback('validateCompetitionModule')]
 #[ORM\UniqueConstraint(name: 'uniq_team_sport_name', columns: ['sport_id', 'name'])]
 #[UniqueEntity(fields: ['sport', 'name'], message: 'Diese Mannschaft existiert bereits in dieser Sportart.')]
 #[ORM\Table(
@@ -96,6 +98,15 @@ class Team
         $this->sport = $sport;
 
         return $this;
+    }
+
+    public function validateCompetitionModule(ExecutionContextInterface $context): void
+    {
+        if ($this->sport !== null && !$this->sport->isCompetitionEnabled()
+            && ($this->id === null || $this->members->exists(static fn ($key, TeamMember $member): bool => $member->getId() === null))) {
+            $context->buildViolation('Für diese Sparte sind keine neuen Mannschaften oder Kaderzuordnungen möglich.')
+                ->atPath('sport')->addViolation();
+        }
     }
 
     public function getName(): ?string

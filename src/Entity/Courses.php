@@ -335,7 +335,7 @@ class Courses
 
 	public function isRegistrationOpen(): bool
 	{
-		if ($this->status !== CourseStatus::OPEN) {
+		if ($this->status !== CourseStatus::OPEN || !$this->allowsNewTrainingRegistrations()) {
 			return false;
 		}
 
@@ -365,6 +365,21 @@ class Courses
 
     /** @return Collection<int, Sport> */
     public function getDivisions(): Collection { return $this->divisions; }
+
+    public function allowsNewTrainingRegistrations(): bool
+    {
+        if ($this->divisions->isEmpty()) {
+            return true;
+        }
+
+        foreach ($this->divisions as $division) {
+            if ($division->isTrainingEnabled()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /** @param list<Sport> $divisions */
     public function updateDivisionAssignment(bool $reviewed, array $divisions): void

@@ -4,15 +4,11 @@ namespace App\Controller;
 
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-use App\Entity\Tank;
 use App\Entity\TankCheck;
-use App\Form\TankCheckType;
-use App\Form\TankType;
 use App\Repository\TankCheckArticleRepository;
 use App\Repository\TankCheckRepository;
 use App\Repository\TankRepository;
-use App\Repository\VendorRepository;
-use App\Service\TankCheckService;
+use App\Service\AdminEquipmentScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,22 +19,20 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/tankcheck')]
 class TankCheckController extends AbstractController
 {
-    private $tankCheckService;
-
-    public function __construct(TankCheckService $tankCheckService)
-    {
-        $this->tankCheckService = $tankCheckService;
-    }
+    public function __construct(private readonly AdminEquipmentScope $equipmentScope) {}
 
     #[Route('/', name: 'app_tank_check_index', methods: ['GET'])]
     public function index(TankCheckRepository $tankCheckRepository): Response
     {
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $this->redirectToRoute('equipment_manager_tuv', [], Response::HTTP_SEE_OTHER);
+        }
         return $this->render('tank_check/index.html.twig', [
             'tank_checks' => $tankCheckRepository->findAll(),
         ]);
     }
 
-    #[Route('/book-inspection/{tankId}', name: 'app_book_inspection', methods: ['GET'])]
+    #[Route('/book-inspection/{tankId}', name: 'app_legacy_tank_check_booking', methods: ['GET'])]
     public function bookInspection(int $tankId, TankRepository $tankRepository): Response
     {
         $tank = $tankRepository->find($tankId);
@@ -47,40 +41,23 @@ class TankCheckController extends AbstractController
             throw new NotFoundHttpException("Tank not found.");
         }
 
-        $totalPrice = $this->tankCheckService->bookTankInspection($tank);
-
-        return new Response(
-            "The total price for the tank inspection is €" . number_format($totalPrice, 2)
-        );
+        $this->equipmentScope->assertAsset($tank);
+        return $this->redirectToRoute('equipment_manager_tuv', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/new', name: 'app_tank_check_new', methods: ['GET', 'POST'])]
+    #[Route('/new', name: 'app_tank_check_new', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function new(Request $request, EntityManagerInterface $entityManager, TankCheckRepository $tankCheckRepository): Response
+    public function new(): Response
     {
-        $tank = new Tank();
-        $availableChecks = $tankCheckRepository->findAll(); // Fetch available checks
-        $form = $this->createForm(TankType::class, $tank, [
-            'available_checks' => $availableChecks,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($tank);
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_tank_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('tank/new.html.twig', [
-            'tank' => $tank,
-            'form' => $form->createView(),
-        ]);
+        return $this->redirectToRoute('equipment_manager_tuv', [], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{id}', name: 'app_tank_check_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(TankCheck $tankCheck, TankCheckArticleRepository $checkArticleRepository): Response
     {
+        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $this->redirectToRoute('equipment_manager_tuv', [], Response::HTTP_SEE_OTHER);
+        }
         $checkArticles = $checkArticleRepository->findByCheck($tankCheck->getId());
 
         return $this->render('tank_check/show.html.twig', [
@@ -89,31 +66,15 @@ class TankCheckController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_tank_check_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'app_tank_check_edit', requirements: ['id' => '\d+'], methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function edit(Request $request, Tank $tank, EntityManagerInterface $entityManager, TankCheckRepository $tankCheckRepository): Response
+    public function edit(): Response
     {
-        $availableChecks = $tankCheckRepository->findAll(); // Fetch available checks
-
-        $form = $this->createForm(TankType::class, $tank, [
-            'available_checks' => $availableChecks,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_tank_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('tank/edit.html.twig', [
-            'tank' => $tank,
-            'form' => $form->createView(),
-        ]);
+        return $this->redirectToRoute('equipment_manager_tuv', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/{id}', name: 'app_tank_check_delete', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}', name: 'app_tank_check_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function delete(Request $request, TankCheck $tankCheck, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$tankCheck->getId(), $request->request->get('_token'))) {

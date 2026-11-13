@@ -7,6 +7,8 @@ use App\Entity\Person;
 use App\Entity\User;
 use App\Security\Voter\MemberManagementVoter;
 use App\Service\AdminClubContext;
+use App\Service\MembershipRoleContinuity;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
@@ -39,12 +41,13 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use App\Form\MemberQualificationType;
 
 #[IsGranted('ROLE_ADMIN')]
 class MemberCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships, private readonly AdminClubContext $clubContext) {}
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships, private readonly AdminClubContext $clubContext, private readonly MembershipRoleContinuity $continuity) {}
 
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
@@ -132,9 +135,15 @@ class MemberCrudController extends AbstractCrudController
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if ($entityInstance instanceof Member) {
-            $this->enforceMemberClub($entityInstance);
-            $entityManager->persist($entityInstance);
-            $this->memberships->record($entityInstance, 'created', $this->getUser()->getUserIdentifier(), 'Mitgliedschaft durch die Verwaltung angelegt.');
+            $entityManager->getConnection()->transactional(function () use ($entityManager, $entityInstance): void {
+                $this->enforceMemberClub($entityInstance);
+                $this->continuity->lockClub($entityInstance->getClub());
+                $this->assertAccountAssignment($entityManager, $entityInstance, null);
+                $entityManager->persist($entityInstance);
+                $this->memberships->record($entityInstance, 'created', $this->getUser()->getUserIdentifier(), 'Mitgliedschaft durch die Verwaltung angelegt.');
+                parent::persistEntity($entityManager, $entityInstance);
+            });
+            return;
         }
         parent::persistEntity($entityManager, $entityInstance);
     }
@@ -142,11 +151,46 @@ class MemberCrudController extends AbstractCrudController
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if ($entityInstance instanceof Member) {
-            $this->enforceMemberClub($entityInstance, $entityManager);
-            $this->assertMemberAccess($entityInstance);
-            $this->memberships->record($entityInstance, 'administrative_update', $this->getUser()->getUserIdentifier(), 'Verwaltungspflichtige Mitglieds- oder Stammdaten geändert.');
+            $entityManager->getConnection()->transactional(function () use ($entityManager, $entityInstance): void {
+                $this->enforceMemberClub($entityInstance, $entityManager);
+                $this->continuity->lockClub($entityInstance->getClub());
+                $connection = $entityManager->getConnection();
+                $lock = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? ' FOR UPDATE' : '';
+                $stored = $connection->fetchAssociative('SELECT user_id FROM member WHERE id = ?'.$lock, [$entityInstance->getId()]);
+                if ($stored === false) { throw new ConflictHttpException('Mitgliedschaft nicht mehr vorhanden.'); }
+                $this->assertMemberAccess($entityInstance);
+                $this->assertAccountAssignment($entityManager, $entityInstance, $stored['user_id'] === null ? null : (int) $stored['user_id']);
+                $this->memberships->record($entityInstance, 'administrative_update', $this->getUser()->getUserIdentifier(), 'Verwaltungspflichtige Mitglieds- oder Stammdaten geändert.');
+                parent::updateEntity($entityManager, $entityInstance);
+            });
+            return;
         }
         parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    private function assertAccountAssignment(EntityManagerInterface $em, Member $member, ?int $oldUserId): void
+    {
+        $connection = $em->getConnection();
+        $lock = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? ' FOR UPDATE' : '';
+        $newUserId = $member->getUser()?->getId();
+        $ids = array_values(array_unique(array_filter([$oldUserId, $newUserId])));
+        sort($ids);
+        foreach ($ids as $id) {
+            $storedRoles = $connection->fetchOne('SELECT roles FROM `user` WHERE id = ?'.$lock, [$id]);
+            if ($storedRoles === false) {
+                throw new ConflictHttpException('Benutzerkonto nicht mehr vorhanden.');
+            }
+            $functions = array_diff(json_decode((string) $storedRoles, true, 512, JSON_THROW_ON_ERROR), [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]);
+            if (($oldUserId !== $newUserId || ($id === $newUserId && !$member->isActiveMember())) && $functions !== []) {
+                throw new ConflictHttpException('Kontozuordnungen und inaktive Mitgliedschaften mit Funktionsrollen müssen zuerst gesondert geklärt werden.');
+            }
+        }
+        if ($newUserId !== null) {
+            $other = $connection->fetchOne('SELECT id FROM member WHERE user_id = ? AND id <> ?'.$lock, [$newUserId, $member->getId() ?? 0]);
+            if ($other !== false) {
+                throw new ConflictHttpException('Das Benutzerkonto ist bereits einer anderen Mitgliedschaft zugeordnet.');
+            }
+        }
     }
 
     public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
@@ -365,11 +409,22 @@ class MemberCrudController extends AbstractCrudController
             ->setColumns(3)
             ->onlyOnDetail();
 
-        yield TextField::new('membershipType', 'Mitgliedschaftsart')->hideOnIndex();
-        yield TextField::new('clubFunctions', 'Vereinsfunktionen (keine Berechtigungsvergabe)')->hideOnIndex();
-        yield TextField::new('emergencyContactName', 'Notfallkontakt: Name')->hideOnIndex();
-        yield TelephoneField::new('emergencyContactPhone', 'Notfallkontakt: Telefon')->hideOnIndex();
-        yield TextField::new('emergencyContactRelation', 'Notfallkontakt: Beziehung')->hideOnIndex();
+        /*
+        yield AssociationField::new('membershipType','Mitgliedschaftsart')
+            ->setRequired(false)
+            ->setColumns(4)
+            ->setHelp(
+                'Art des Mitgliedsbeitrags, der für dieses Mitglied gilt.'
+            );
+        */
+
+        yield TextField::new('membershipType', 'Mitgliedschaftsart')
+            ->setColumns(3)
+            ->hideOnIndex();
+            
+        yield TextField::new('clubFunctions', 'Vereinsfunktionen (keine Berechtigungsvergabe)')
+            ->setColumns(3)
+            ->hideOnIndex();
 
         /*
          * Person
@@ -436,6 +491,20 @@ class MemberCrudController extends AbstractCrudController
         yield TelephoneField::new('phone', 'Telefon')
             ->setColumns(3)
             ->hideOnIndex();
+        /*
+         * Notfallkontakt
+         */
+        yield FormField::addFieldset('Notfallkontakt')
+            ->collapsible();
+        yield TextField::new('emergencyContactName', 'Notfallkontakt: Name')
+            ->setColumns(3)
+            ->hideOnIndex();
+        yield TelephoneField::new('emergencyContactPhone', 'Notfallkontakt: Telefon')
+            ->setColumns(3)
+            ->hideOnIndex();
+        yield TextField::new('emergencyContactRelation', 'Notfallkontakt: Beziehung')
+            ->setColumns(3)
+            ->hideOnIndex();
 
         /*
          * Sportarten
@@ -497,8 +566,8 @@ class MemberCrudController extends AbstractCrudController
             ->setRequired(false)
             ->setColumns(4)
             ->setHelp(
-                'Optionales Benutzerkonto für den Zugang '
-                . 'zum Mitgliederportal.'
+                'Optionales Benutzerkonto für den Zugang zum Mitgliederportal. '
+                . 'Konten mit Funktionsrollen müssen vor einer Zuordnungsänderung gesondert geklärt werden.'
             );
 
         /*

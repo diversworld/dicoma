@@ -91,6 +91,43 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
     }
 
+    public function testTrainingModuleRequiresOneEnabledDivisionAndKeepsExistingRegistrations(): void
+    {
+        $course = $this->course();
+        $first = (new Sport())->setClub($this->club)->setName('First division')->setTrainingEnabled(false);
+        $second = (new Sport())->setClub($this->club)->setName('Second division');
+        $existing = $this->user('training-module-existing');
+        $new = $this->user('training-module-new');
+        $this->em->persist($first);
+        $this->em->persist($second);
+        $course->updateDivisionAssignment(true, [$first, $second]);
+        $this->em->flush();
+        self::assertTrue($course->isRegistrationOpen());
+        $participant = $this->service()->register($course->getId(), $existing->getPerson());
+        $second->setTrainingEnabled(false);
+        $this->em->flush();
+
+        self::assertFalse($course->isRegistrationOpen());
+        $candidate = (new CourseParticipant())->setCourse($course)->setPerson($new->getPerson());
+        self::assertGreaterThan(0, static::getContainer()->get(ValidatorInterface::class)->validate($candidate)->count());
+        try {
+            $this->service()->register($course->getId(), $new->getPerson());
+            self::fail('A new registration must be rejected when all assigned divisions are disabled.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('keine neuen Anmeldungen', $exception->getMessage());
+        }
+        self::assertSame(1, $this->em->getRepository(CourseParticipant::class)->count([]));
+        $this->service()->cancel($participant);
+        self::assertSame(CourseParticipantStatus::CANCELLED, $participant->getStatus());
+
+        $first->setTrainingEnabled(true);
+        $this->em->flush();
+        self::assertTrue($course->isRegistrationOpen());
+        self::assertNotNull($this->service()->register($course->getId(), $new->getPerson())->getId());
+        $course->updateDivisionAssignment(false, []);
+        self::assertTrue($course->allowsNewTrainingRegistrations());
+    }
+
     public function testCancellationUsesTheCorrectPortalAndAdminReturnRoutes(): void
     {
         $course = $this->course();
@@ -282,9 +319,10 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $diving = (new Sport())->setClub($club)->setName('Tauchen');
         $triathlon = (new Sport())->setClub($club)->setName('Triathlon');
         $inactive = (new Sport())->setClub($club)->setName('Alte Sparte')->setActive(false);
+        $disabled = (new Sport())->setClub($club)->setName('Ohne Ausbildung')->setTrainingEnabled(false);
         $foreignClub = (new Club())->setName('Foreign club');
         $foreignSport = (new Sport())->setClub($foreignClub)->setName('Foreign sport');
-        foreach ([$diving, $triathlon, $inactive, $foreignClub, $foreignSport] as $entity) { $this->em->persist($entity); }
+        foreach ([$diving, $triathlon, $inactive, $disabled, $foreignClub, $foreignSport] as $entity) { $this->em->persist($entity); }
         $this->em->flush();
         $courseId = $course->getId();
         $url = '/admin/training/course/'.$courseId.'/divisions';
@@ -310,6 +348,11 @@ final class Phase4TrainingHttpTest extends WebTestCase
         ]]);
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', 'Inaktive Sparten können nicht neu zugeordnet werden.');
+        $this->client->request('POST', $url, ['course_division_selection' => [
+            'scope' => 'divisions', 'divisions' => [(string) $disabled->getId()], '_token' => $token,
+        ]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Sparten ohne aktivierte Ausbildung können nicht neu zugeordnet werden.');
         $this->client->request('POST', $url, ['course_division_selection' => [
             'scope' => 'divisions', 'divisions' => [], '_token' => $token,
         ]]);
@@ -348,9 +391,10 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/training/divisions/review');
         self::assertSelectorNotExists('a[href="'.$url.'"]');
         $this->em->find(Sport::class, $diving->getId())->setActive(false);
+        $this->em->find(Sport::class, $diving->getId())->setTrainingEnabled(false);
         $this->em->flush();
         $crawler = $this->client->request('GET', $url);
-        self::assertSelectorTextContains('body', 'Tauchen (inaktiv)');
+        self::assertSelectorTextContains('body', 'Tauchen (inaktiv) (Ausbildung deaktiviert)');
         $this->client->submit($crawler->selectButton('Zuordnung speichern')->form());
         self::assertResponseRedirects();
         $this->em->clear();
@@ -664,6 +708,113 @@ final class Phase4TrainingHttpTest extends WebTestCase
             self::assertResponseStatusCodeSame(403);
         }
         self::assertSame(0, $this->em->getRepository(CoursePayment::class)->count([]));
+    }
+
+    public function testPersonalAssessmentsRequireAssignmentEvenForSuperadmins(): void
+    {
+        $super = $this->staff('assessment-boundary-super', User::ROLE_SUPER_ADMIN);
+        $foreignClub = (new Club())->setName('Assessment foreign club');
+        $this->em->persist($foreignClub);
+        $foreignInstructor = $this->staff('assessment-foreign-instructor', User::ROLE_INSTRUCTOR, $foreignClub);
+        $student = $this->user('assessment-boundary-student');
+        $course = $this->course();
+        [$assigned] = $this->plan($course, $super->getMember());
+        $unassigned = (new Schedule())->setCourses($course)->setTitle('Unassigned')->setStartDate(new \DateTimeImmutable('2026-12-02'));
+        $foreignCourse = (new Courses())->setTitle('Foreign assessment')->setCategory('beginner')->setClub($foreignClub)->setStatus(CourseStatus::OPEN);
+        $foreignSchedule = (new Schedule())->setCourses($foreignCourse)->setInstructor($foreignInstructor->getMember())
+            ->setTitle('Foreign appointment')->setStartDate(new \DateTimeImmutable('2026-12-03'));
+        $this->em->persist($unassigned);
+        $this->em->persist($foreignCourse);
+        $this->em->persist($foreignSchedule);
+        $this->em->flush();
+        $participant = $this->service()->register($course->getId(), $student->getPerson());
+        $ids = [$assigned->getId(), $unassigned->getId(), $foreignSchedule->getId()];
+        $this->client->loginUser($super);
+
+        $crawler = $this->client->request('GET', '/admin/training/assess/'.$ids[1]);
+        self::assertResponseIsSuccessful();
+        $syncToken = $crawler->selectButton('Fehlende Terminbuchungen uebernehmen')->form()->get('_token')->getValue();
+        $assessmentToken = $crawler->selectButton('Bewertungen speichern')->form()->get('_token')->getValue();
+        foreach (['/training/assess/', '/my-training/assess/'] as $prefix) {
+            $this->client->request('GET', $prefix.$ids[1]);
+            self::assertResponseStatusCodeSame(403);
+            $this->client->request('POST', $prefix.$ids[1], ['operation' => 'sync_bookings', '_token' => $syncToken]);
+            self::assertResponseStatusCodeSame(403);
+            $this->client->request('POST', $prefix.$ids[1], ['_token' => $assessmentToken, 'status' => [$participant->getId() => 'passed']]);
+            self::assertResponseStatusCodeSame(403);
+            $this->client->request('GET', $prefix.$ids[2]);
+            self::assertResponseStatusCodeSame(403);
+        }
+        self::assertSame(0, $this->em->getRepository(Booking::class)->count(['schedule' => $unassigned]));
+        self::assertSame(0, $this->em->getRepository(TrainingUnitResult::class)->count([]));
+
+        $crawler = $this->client->request('GET', '/my-training/assess/'.$ids[0]);
+        self::assertResponseIsSuccessful();
+        $this->client->request('POST', '/my-training/assess/'.$ids[0], ['operation' => 'sync_bookings', '_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/my-training/assess/'.$ids[0]);
+        $this->client->submit($crawler->selectButton('Fehlende Terminbuchungen uebernehmen')->form());
+        self::assertResponseRedirects('/my-training/assess/'.$ids[0]);
+        self::assertSame(1, $this->em->getRepository(Booking::class)->count(['schedule' => $assigned]));
+
+        $admin = $this->client->request('GET', '/admin/training/assess/'.$ids[1]);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($admin->selectButton('Fehlende Terminbuchungen uebernehmen')->form());
+        self::assertResponseRedirects('/admin/training/assess/'.$ids[1]);
+        self::assertSame(1, $this->em->getRepository(Booking::class)->count(['schedule' => $unassigned]));
+
+        $admin = $this->client->request('GET', '/admin/training/assess/'.$ids[1]);
+        $this->client->submit($admin->filter('form[name="admin_club"]')->first()->form(), [
+            'admin_club[club]' => (string) $foreignClub->getId(),
+        ]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/training/assess/'.$ids[1]);
+        self::assertResponseStatusCodeSame(403);
+        $foreignAdmin = $this->client->request('GET', '/admin/training/assess/'.$ids[2]);
+        self::assertResponseIsSuccessful();
+        $foreignToken = $foreignAdmin->selectButton('Bewertungen speichern')->form()->get('_token')->getValue();
+        $this->client->request('GET', '/my-training/assess/'.$ids[0]);
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/my-training/assess/'.$ids[2]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/training/assess/'.$ids[2], ['_token' => $foreignToken]);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    #[DataProvider('assessmentRoles')]
+    public function testPersonalAssessmentsUseAssignmentsForEveryInstructorRole(string $role, bool $managesClub): void
+    {
+        $actor = $this->staff('assessment-actor', $role);
+        $other = $this->staff('assessment-colleague', User::ROLE_INSTRUCTOR);
+        $course = $this->course();
+        [$assigned] = $this->plan($course, $actor->getMember());
+        $unassigned = (new Schedule())->setCourses($course)->setInstructor($other->getMember())
+            ->setTitle('Colleague appointment')->setStartDate(new \DateTimeImmutable('2026-12-02'));
+        $this->em->persist($unassigned);
+        $this->em->flush();
+        $this->client->loginUser($actor);
+
+        $this->client->request('GET', '/my-training/assess/'.$assigned->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/my-training/assess/'.$unassigned->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/training/assess/'.$unassigned->getId());
+        self::assertSame($managesClub ? 200 : 403, $this->client->getResponse()->getStatusCode());
+
+        $course = $this->em->find(Courses::class, $course->getId());
+        $actor = $this->em->find(User::class, $actor->getId());
+        $course->setLeadInstructor($actor->getMember());
+        $this->em->flush();
+        $this->client->request('GET', '/my-training/assess/'.$unassigned->getId());
+        self::assertResponseIsSuccessful();
+    }
+
+    public static function assessmentRoles(): iterable
+    {
+        yield 'instructor' => [User::ROLE_INSTRUCTOR, false];
+        yield 'training manager' => [User::ROLE_TRAINING_MANAGER, true];
+        yield 'administrator' => [User::ROLE_ADMIN, true];
+        yield 'superadministrator' => [User::ROLE_SUPER_ADMIN, true];
     }
 
     public function testCourseAdministrationFormsAndMakeupSession(): void
@@ -1176,6 +1327,49 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/de/training-overview');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextNotContains('body', 'Foreign private training');
+    }
+
+    public function testCoursePlanningRejectsInstructorConflictsWithoutSavingAndAcceptsAdjacentTimes(): void
+    {
+        $admin = $this->staff('conflict-planner', User::ROLE_ADMIN);
+        $course = $this->course();
+        [$schedule] = $this->plan($course, $admin->getMember());
+        $schedule->setStartTime(new \DateTime('10:00'))->setDuration(60);
+        $otherCourse = $this->course()->setTitle('Other course');
+        $other = (new Schedule())->setTitle('Other course session')->setCourses($otherCourse)
+            ->setInstructor($admin->getMember())->setStartDate(new \DateTime('2026-12-01'))
+            ->setStartTime(new \DateTime('11:00'))->setDuration(60);
+        $this->em->persist($other);
+        $this->em->flush();
+        $scheduleId = $schedule->getId();
+        $connection = $this->em->getConnection();
+        $before = $connection->fetchAssociative('SELECT start_date, start_time, duration, location, instructor_id FROM schedule WHERE id = ?', [$scheduleId]);
+        $this->client->loginUser($admin);
+
+        $path = '/admin/course/'.$course->getId().'/plan';
+        $crawler = $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[name="course_schedule_planning"]')->form(), [
+            'course_schedule_planning[schedules][0][startTime]' => '10:30',
+            'course_schedule_planning[schedules][0][location]' => 'Must not be saved',
+        ]);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Terminüberschneidung');
+        self::assertSame($before, $connection->fetchAssociative('SELECT start_date, start_time, duration, location, instructor_id FROM schedule WHERE id = ?', [$scheduleId]));
+
+        $this->em->clear();
+        $crawler = $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[name="course_schedule_planning"]')->form(), [
+            'course_schedule_planning[schedules][0][startTime]' => '12:00',
+            'course_schedule_planning[schedules][0][location]' => 'Adjacent session',
+        ]);
+        self::assertResponseRedirects();
+        $after = $connection->fetchAssociative('SELECT start_date, start_time, duration, location, instructor_id FROM schedule WHERE id = ?', [$scheduleId]);
+        self::assertSame('12:00:00', $after['start_time']);
+        self::assertSame('Adjacent session', $after['location']);
+        self::assertSame($before['duration'], $after['duration']);
+        self::assertSame($before['instructor_id'], $after['instructor_id']);
     }
 
     private function assertFormRoutes(\Symfony\Component\DomCrawler\Crawler $crawler, bool $backend = true): void

@@ -1,0 +1,16 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ 'Vereinsfunktionen verwalten'|trans }}{% endblock %}
+{% block main %}
+<h2>{{ account.member.fullName }}</h2>
+<p>{{ 'Geschützte Rollen können hier nicht vergeben werden.'|trans }}</p>
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{{ form_row(form.roles) }}
+<p>{{ 'Leere Datumsfelder bedeuten unbefristet. Das Enddatum gilt einschließlich dieses Tages.'|trans }}</p>
+{{ form_row(form.validity) }}
+{{ form_rest(form) }}
+<button class="btn btn-primary" type="submit">{{ 'Funktionen speichern'|trans }}</button>
+{{ form_end(form) }}
+<a href="{{ path('admin_delegated_roles') }}">{{ 'Zurück'|trans }}</a>
+{% endblock %}

@@ -4,6 +4,8 @@ namespace App\Controller\Admin;
 
 use App\Entity\Club;
 use App\Service\SingleClubMode;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -30,7 +32,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_SUPER_ADMIN')]
 class ClubCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly SingleClubMode $singleClub) {}
+    public function __construct(
+        private readonly SingleClubMode $singleClub,
+        private readonly EntityManagerInterface $em,
+    ) {}
 
     public static function getEntityFqcn(): string
     {
@@ -39,17 +44,17 @@ class ClubCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        return $this->singleClub->isEnabled()
-            ? $actions->disable(Action::NEW, Action::DELETE, Action::BATCH_DELETE)
-            : $actions;
+        $actions = $actions->disable(Action::DELETE, Action::BATCH_DELETE);
+        return $this->em->getRepository(Club::class)->count([]) === 0
+            ? $actions
+            : $actions->disable(Action::NEW);
     }
 
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
         $query = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
-        if ($this->singleClub->isEnabled()) {
-            $query->andWhere('entity.id = :singleClubId')->setParameter('singleClubId', $this->singleClub->club()->getId());
-        }
+        $club = $this->singleClub->optionalClub();
+        $query->andWhere('entity.id = :singleClubId')->setParameter('singleClubId', $club?->getId() ?? 0);
         return $query;
     }
 
@@ -67,16 +72,36 @@ class ClubCrudController extends AbstractCrudController
 
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
-        if ($this->singleClub->isEnabled()) {
-            throw $this->createAccessDeniedException('Im Einzelvereinsbetrieb können keine weiteren Vereine angelegt werden.');
+        if (!$entityInstance instanceof Club || !$entityInstance->isActive()) {
+            throw $this->createAccessDeniedException('Ein aktiver Verein ist erforderlich.');
         }
-        parent::persistEntity($entityManager, $entityInstance);
+        $connection = $entityManager->getConnection();
+        $platform = $connection->getDatabasePlatform();
+        if (!$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform) {
+            throw new \LogicException('Die Vereinsanlage wird auf dieser Datenbankplattform nicht unterstützt.');
+        }
+        $lockName = 'dicoma_club_'.substr(hash('sha256', (string) $connection->getDatabase()), 0, 40);
+        if ($platform instanceof AbstractMySQLPlatform && (int) $connection->fetchOne('SELECT GET_LOCK(?, 5)', [$lockName]) !== 1) {
+            throw new \RuntimeException('Vereinsanlage ist gesperrt. Bitte erneut versuchen.');
+        }
+        try {
+            $connection->transactional(function () use ($entityManager, $entityInstance): void {
+                if ((int) $entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM club') !== 0) {
+                    throw $this->createAccessDeniedException('Es können keine weiteren Vereine angelegt werden.');
+                }
+                parent::persistEntity($entityManager, $entityInstance);
+            });
+        } finally {
+            if ($platform instanceof AbstractMySQLPlatform && (int) $connection->fetchOne('SELECT RELEASE_LOCK(?)', [$lockName]) !== 1) {
+                throw new \RuntimeException('Sperre der Vereinsanlage konnte nicht freigegeben werden.');
+            }
+        }
     }
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         $this->assertClub($entityInstance);
-        if ($this->singleClub->isEnabled() && $entityInstance instanceof Club && !$entityInstance->isActive()) {
+        if ($entityInstance instanceof Club && !$entityInstance->isActive()) {
             throw $this->createAccessDeniedException('Der konfigurierte Verein muss aktiv bleiben.');
         }
         parent::updateEntity($entityManager, $entityInstance);
@@ -84,8 +109,7 @@ class ClubCrudController extends AbstractCrudController
 
     private function assertClub(mixed $club): void
     {
-        if ($this->singleClub->isEnabled()
-            && (!$club instanceof Club || $club->getId() !== $this->singleClub->club()->getId())) {
+        if (!$club instanceof Club || $club->getId() !== $this->singleClub->club()->getId()) {
             throw $this->createAccessDeniedException('Dieser Verein ist im Einzelvereinsbetrieb nicht verfügbar.');
         }
     }
@@ -94,9 +118,8 @@ class ClubCrudController extends AbstractCrudController
     {
         return $crud
             ->setEntityLabelInSingular('Verein')
-            ->setEntityLabelInPlural('Vereine')
-            ->setPageTitle(Crud::PAGE_INDEX, 'Vereine')
-            ->setPageTitle(Crud::PAGE_NEW, 'Verein anlegen')
+            ->setEntityLabelInPlural('Vereinsdaten')
+            ->setPageTitle(Crud::PAGE_INDEX, 'Vereinsdaten')
             ->setPageTitle(Crud::PAGE_EDIT, 'Verein bearbeiten')
             ->setPageTitle(Crud::PAGE_DETAIL, 'Vereinsdetails')
             ->setDefaultSort([
@@ -121,15 +144,14 @@ class ClubCrudController extends AbstractCrudController
 
         yield TextField::new('name', 'Vereinsname')
             ->setRequired(true)
+            ->setHelp('Für die öffentliche Website muss PUBLIC_SITE_CLUB_ID auf diesen Verein gesetzt werden.')
             ->setColumns(6);
 
         yield TextField::new('shortName', 'Kurzname')
             ->setColumns(3);
 
         $active = BooleanField::new('active', 'Aktiv')->setColumns(3);
-        if ($this->singleClub->isEnabled()) {
-            $active->setFormTypeOption('disabled', true)->renderAsSwitch(false);
-        }
+        $active->setFormTypeOption('disabled', true)->renderAsSwitch(false);
         yield $active;
 
         yield TextField::new('association', 'Verband')

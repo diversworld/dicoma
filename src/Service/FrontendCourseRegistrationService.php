@@ -31,11 +31,14 @@ final class FrontendCourseRegistrationService
                 throw new \DomainException('Der Kurs wurde nicht gefunden.');
             }
             $this->em->refresh($course);
-            if ($this->singleClub->isEnabled() && $course->getClub()?->getId() !== $this->singleClub->club()->getId()) {
+            if ($course->getClub()?->getId() !== $this->singleClub->club()->getId()) {
                 throw new \DomainException('Der Kurs wurde nicht gefunden.');
             }
             if ($course->getStatus() !== CourseStatus::OPEN) {
                 throw new \DomainException('Für diesen Kurs ist die Anmeldung nicht geöffnet.');
+            }
+            if (!$course->allowsNewTrainingRegistrations()) {
+                throw new \DomainException('Für diesen Kurs sind derzeit keine neuen Anmeldungen möglich.');
             }
             $deadline = $course->getRegistrationDeadline();
             if ($deadline !== null && $deadline->format('Y-m-d') < (new \DateTimeImmutable('today'))->format('Y-m-d')) {

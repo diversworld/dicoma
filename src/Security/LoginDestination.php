@@ -23,8 +23,8 @@ final class LoginDestination
         if (!$user instanceof User) {
             return 'app_login';
         }
-        $stored = $user->getStoredRoles();
-        if (array_intersect($stored, [User::ROLE_INSTRUCTOR, User::ROLE_EQUIPMENT_MANAGER, User::ROLE_COMPRESSOR_OPERATOR]) === []) {
+        $activeRoles = $user->getRoles();
+        if (array_intersect($activeRoles, [User::ROLE_INSTRUCTOR, User::ROLE_EQUIPMENT_MANAGER, User::ROLE_COMPRESSOR_OPERATOR]) === []) {
             if ($this->security->isGranted(User::ROLE_ADMIN)) {
                 return 'admin';
             }

@@ -18,9 +18,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class CourseManagementVoterTest extends TestCase
 {
@@ -65,18 +63,14 @@ final class CourseManagementVoterTest extends TestCase
         );
         $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
-        $context = new AdminClubContext(
-            $this->createStub(Security::class),
-            new RequestStack(),
-            $this->createStub(EntityManagerInterface::class),
-            $this->createStub(FormFactoryInterface::class),
-            $this->createStub(UrlGeneratorInterface::class),
-            new SingleClubMode(new PublicWebsite(
-                $this->createStub(EntityManagerInterface::class),
-                $this->createStub(Security::class),
-                0,
-            ), false),
-        );
+        $club = new Club();
+        (new \ReflectionProperty(Club::class, 'id'))->setValue($club, 1);
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('find')->willReturn($club);
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn($user);
+        $security->method('isGranted')->willReturnCallback(static fn (string $role): bool => $role === 'ROLE_SUPER_ADMIN' && $super);
+        $context = new AdminClubContext($security, new RequestStack(), new SingleClubMode(new PublicWebsite($em, $security, 1), $em));
         return (new CourseManagementVoter($checker, $context))->vote($token, $course, [CourseManagementVoter::MANAGE]);
     }
 }

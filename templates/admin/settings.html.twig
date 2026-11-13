@@ -7,12 +7,13 @@
             <li><a href="{{ path('admin_settings_membership') }}">{{ 'Mitgliedschaftsregeln'|trans }}</a></li>
             <li><a href="{{ path('admin_settings_contributions') }}">{{ 'Beitragsklassen'|trans }}</a></li>
             <li><a href="{{ path('admin_settings_sports_configuration') }}">{{ 'Sportarten und Sparten'|trans }}</a></li>
+            <li><a href="{{ path('admin_delegated_roles') }}">{{ 'Vereinsfunktionen verwalten'|trans }}</a></li>
             <li><a href="{{ path('admin_course_division_review') }}">{{ 'Kurs-Spartenzuordnungen prüfen'|trans }}</a></li>
-            <li><a href="{{ path('admin_settings_tuv_notifications') }}">{{ 'TÜV-Benachrichtigungen'|trans }}</a></li>
         {% endif %}
         {% if canWebsite %}<li><a href="{{ path('admin_settings_website') }}">{{ 'Website-Anzeige'|trans }}</a></li>{% endif %}
         {% if canBar %}<li><a href="{{ path('admin_settings_bar_services') }}">{{ 'Thekendienst-Jahresregel'|trans }}</a></li>{% endif %}
         {% if is_granted('ROLE_SUPER_ADMIN') %}
+            <li><a href="{{ path('admin_settings_tuv_notifications') }}">{{ 'TÜV-Benachrichtigungen'|trans }}</a></li>
             <li><a href="{{ path('admin_invoice_settings_overview') }}">{{ 'TÜV-Rechnungseinstellungen'|trans }}</a></li>
             <li><a href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\MemberCrudController').setAction('index').set('unassigned', '1') }}">{{ 'Mitglieder ohne Vereinszuordnung prüfen'|trans }}</a></li>
             <li><a href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\CoursesCrudController').setAction('index').set('unassigned', '1') }}">{{ 'Kurse ohne Vereinszuordnung prüfen'|trans }}</a></li>

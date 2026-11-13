@@ -203,7 +203,7 @@ final class PortalNavigationHttpTest extends WebTestCase
     #[DataProvider('frontendPages')]
     public function testAllFrontendRolesKeepTheSameThemeAndNeverLinkToBackend(string $path): void
     {
-        $user = $this->account('frontend-staff', [User::ROLE_INSTRUCTOR, User::ROLE_EQUIPMENT_MANAGER, User::ROLE_COMPRESSOR_OPERATOR]);
+        $user = $this->account('frontend-staff', [User::ROLE_INSTRUCTOR, User::ROLE_EQUIPMENT_MANAGER, User::ROLE_EQUIPMENT_CASH, User::ROLE_COMPRESSOR_OPERATOR]);
         $this->client->loginUser($user);
         $crawler = $this->client->request('GET', $path);
         self::assertResponseIsSuccessful();
@@ -782,6 +782,79 @@ final class PortalNavigationHttpTest extends WebTestCase
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorNotExists('#frontendNavbar');
         $this->assertNoAreaCrossing(true);
+    }
+
+    public function testInstructorTaskListsExcludeForeignClubAssignments(): void
+    {
+        $instructor = $this->account('task-instructor', [User::ROLE_INSTRUCTOR]);
+        $admin = $this->account('task-admin', [User::ROLE_SUPER_ADMIN]);
+        $foreignClub = (new Club())->setName('Foreign task club');
+        $this->em->persist($foreignClub);
+        $schedules = [];
+        foreach (['Own task' => $this->club, 'Foreign task' => $foreignClub, 'Completed task' => $this->club] as $title => $club) {
+            $course = (new Courses())->setTitle($title.' course')->setCategory('beginner')->setClub($club);
+            if ($title === 'Completed task') { $course->setStatus(\App\Enum\CourseStatus::COMPLETED); }
+            $schedule = (new \App\Entity\Schedule())->setTitle($title)->setCourses($course)
+                ->setInstructor($instructor->getMember())->setStartDate(new \DateTime('today'));
+            $this->em->persist($course);
+            $this->em->persist($schedule);
+            $this->em->persist((new CourseParticipant())->setCourse($course)->setMember($instructor->getMember()));
+            $schedules[$title] = $schedule;
+        }
+        $this->em->flush();
+        $this->client->loginUser($instructor);
+
+        foreach (['/instructor-portal', '/instructor-portal/tasks'] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('main', 'Own task');
+            self::assertSelectorTextNotContains('main', 'Foreign task');
+            self::assertSelectorCount($path === '/instructor-portal' ? 1 : 2, 'main a[href="/my-training/assess/'.$schedules['Own task']->getId().'"]');
+            self::assertSelectorNotExists('main a[href="/my-training/assess/'.$schedules['Foreign task']->getId().'"]');
+            self::assertSelectorTextContains('main', 'Completed task');
+            self::assertSelectorNotExists('main a[href="/my-training/assess/'.$schedules['Completed task']->getId().'"]');
+        }
+
+        $this->client->request('GET', '/instructor-portal/tasks?course='.$schedules['Foreign task']->getCourses()->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('main', 'Foreign task');
+
+        $overview = static::getContainer()->get(\App\Service\InstructorTaskService::class)
+            ->overview(30, null, null, $instructor->getMember()->getId());
+        self::assertCount(3, $overview['upcoming']);
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/admin/instructor/tasks');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Foreign task');
+        self::assertSelectorCount(2, 'a[href="/admin/training-results/batch/'.$schedules['Own task']->getId().'"]');
+        self::assertSelectorNotExists('a[href="/admin/training-results/batch/'.$schedules['Foreign task']->getId().'"]');
+        self::assertSelectorNotExists('a[href="/admin/training-results/batch/'.$schedules['Completed task']->getId().'"]');
+    }
+
+    public function testWebsiteSettingsLinksFollowEditorialClubAccess(): void
+    {
+        $own = $this->account('website-settings-own', [User::ROLE_ADMIN]);
+        $foreign = $this->account('website-settings-foreign', [User::ROLE_ADMIN]);
+        $otherClub = (new Club())->setName('Foreign website club');
+        $this->em->persist($otherClub);
+        $foreign->getMember()->setClub($otherClub);
+        $this->em->flush();
+
+        foreach ([[$own, true], [$foreign, false]] as [$user, $allowed]) {
+            $this->client->loginUser($user);
+            $this->client->request('GET', '/admin/settings');
+            self::assertResponseIsSuccessful();
+            if ($allowed) {
+                self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_settings_website"]');
+                self::assertSelectorExists('a[href="/admin/settings/website"]');
+            } else {
+                self::assertSelectorNotExists('aside.sidebar a[href*="routeName=admin_settings_website"]');
+                self::assertSelectorNotExists('a[href="/admin/settings/website"]');
+            }
+            $this->client->request('GET', '/admin/settings/website');
+            self::assertResponseStatusCodeSame($allowed ? 200 : 403);
+        }
     }
 
     public function testBookingsOverviewContainsOnlyOwnBookings(): void

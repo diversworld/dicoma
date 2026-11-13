@@ -94,9 +94,9 @@ final class PortalNavigation
                 ['label' => 'TÜV Prüfung', 'route' => 'equipment_manager_tuv'],
                 ['label' => 'Equipmentverleih (Ausleihe)', 'route' => 'equipment_manager_loans'],
                 ['label' => 'Inventar und Wartung', 'route' => 'equipment_manager_inventory'],
-                ['label' => 'Kasse', 'route' => 'equipment_manager_cashbook'],
+                ...($this->security->isGranted(User::ROLE_EQUIPMENT_CASH) ? [['label' => 'Kasse', 'route' => 'equipment_manager_cashbook']] : []),
                 ['label' => 'Kompressorlogbuch', 'route' => 'equipment_manager_compressor_evenings'],
-                ['label' => 'Füllgebühren', 'route' => 'equipment_manager_fill_billing'],
+                ...($this->security->isGranted(User::ROLE_EQUIPMENT_CASH) ? [['label' => 'Füllgebühren', 'route' => 'equipment_manager_fill_billing']] : []),
             ];
         } elseif ($hasClub && $this->security->isGranted(User::ROLE_COMPRESSOR_OPERATOR)) {
             $roles['Kompressor'] = [

@@ -67,6 +67,9 @@ final class CourseDivisionController extends AbstractController
                 if (!$division->isActive() && !$course->getDivisions()->contains($division)) {
                     $form->get('divisions')->addError(new FormError('Inaktive Sparten können nicht neu zugeordnet werden.'));
                 }
+                if (!$division->isTrainingEnabled() && !$course->getDivisions()->contains($division)) {
+                    $form->get('divisions')->addError(new FormError('Sparten ohne aktivierte Ausbildung können nicht neu zugeordnet werden.'));
+                }
             }
             if ($form->isValid()) {
                 $course->updateDivisionAssignment($selection->scope !== 'unreviewed', $selection->divisions->toArray());

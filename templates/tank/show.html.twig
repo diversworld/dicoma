@@ -13,10 +13,7 @@
                         <a href="{{ path('app_tank_index') }}" class="btn btn-transparent btn-solid-border">zurück</a>
                     </li>
                     <li class="list-inline-item">
-                        <a href="{{ path('app_tank_edit', {'id': tank.id}) }}" class="btn btn-transparent btn-solid-border">Bearbeiten</a>
-                    </li>
-                    <li class="list-inline-item">
-                        {{ include('tank/_delete_form.html.twig') }}
+                        {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_tank_edit', {'id': tank.id}) }}" class="btn btn-transparent btn-solid-border">Bearbeiten</a>{% endif %}
                     </li>
                 </ul>
             </div>

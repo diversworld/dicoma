@@ -24,6 +24,8 @@ use App\Entity\Person;
 use App\Entity\Regulator;
 use App\Entity\RegulatorModel;
 use App\Entity\Tank;
+use App\Entity\TankCheck;
+use App\Entity\TankCheckDetail;
 use App\Entity\TankMaintenanceOrder;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
@@ -74,7 +76,7 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         $this->em->getConnection()->executeStatement('CREATE TABLE equipment_cash_correction (id INTEGER PRIMARY KEY AUTOINCREMENT, club_id INT NOT NULL, source_type VARCHAR(20), source_id INT, direction VARCHAR(10), amount_cents INT, reason VARCHAR(500), created_by VARCHAR(180), created_at DATETIME)');
         $this->club = (new Club())->setName('Phase 6 Club');
         $this->em->persist($this->club);
-        $this->manager = $this->account('equipment-manager', [User::ROLE_EQUIPMENT_MANAGER, User::ROLE_COMPRESSOR_OPERATOR], $this->club);
+        $this->manager = $this->account('equipment-manager', [User::ROLE_EQUIPMENT_MANAGER, User::ROLE_EQUIPMENT_CASH, User::ROLE_COMPRESSOR_OPERATOR], $this->club);
         $this->category = (new EquipmentCategory())->setClub($this->club)->setCode('mask')->setName('Masks');
         $this->em->persist($this->category);
         $this->em->flush();
@@ -145,6 +147,71 @@ final class Phase6EquipmentHttpTest extends WebTestCase
         $booking = $this->booking($item);
         $this->expectExceptionMessage('muss zuerst vom Gerätewart genehmigt');
         static::getContainer()->get(EquipmentBookingLoanService::class)->issueAll($booking->getId());
+    }
+
+    public function testRentalCollectionFormRequiresCashRoleButLoanRemainsAvailable(): void
+    {
+        $booking = $this->booking($this->item('INV-CASH-UI'));
+        static::getContainer()->get(EquipmentBookingLoanService::class)->issueAll($booking->getId());
+        $manager = $this->account('loan-manager-without-cash', [User::ROLE_EQUIPMENT_MANAGER], $this->club);
+        $this->client->loginUser($manager);
+        $this->client->request('GET', '/equipment-manager/loans');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Leihgebühr noch offen');
+        self::assertSelectorNotExists('form[action="/equipment-manager/loans/'.$booking->getId().'/collect-fee"]');
+        $this->client->loginUser($this->manager);
+        $this->client->request('GET', '/equipment-manager/loans');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('form[action="/equipment-manager/loans/'.$booking->getId().'/collect-fee"]');
+    }
+
+    public function testLegacyTankRoutesAreClubScopedAndNeverBookOnGet(): void
+    {
+        $own = $this->tank('OWN-SCOPED-TANK');
+        $admin = $this->account('legacy-admin', [User::ROLE_ADMIN], $this->club);
+        $foreignClub = (new Club())->setName('Foreign legacy tank club');
+        $foreign = (new Tank())->setClub($foreignClub)->setInventory('FOREIGN-SECRET-TANK')
+            ->setSize(12)->setSerialnumber('FOREIGN-SECRET-TANK')
+            ->setLastCheckDate(new \DateTimeImmutable('-1 year'))->setNextCheckDate(new \DateTimeImmutable('+1 year'));
+        $check = (new TankCheck())->setCheckDate(new \DateTimeImmutable('+10 days'))->setIsPublished(true);
+        foreach ([$foreignClub, $foreign, $check] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $this->client->request('GET', '/tank/');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'OWN-SCOPED-TANK');
+        self::assertSelectorTextNotContains('body', 'FOREIGN-SECRET-TANK');
+        $this->client->request('GET', '/tank/'.$foreign->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/tank/book-inspection/'.$foreign->getId().'/'.$check->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/tankcheck/book-inspection/'.$foreign->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/tankcheck/book-inspection/'.$own->getId());
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
+        $before = $this->em->getRepository(TankCheckDetail::class)->count([]);
+        $this->client->request('GET', '/tank/book-inspection/'.$own->getId().'/'.$check->getId());
+        self::assertResponseRedirects('/equipment-manager/tuv/'.$check->getId().'/club-tanks', 303);
+        self::assertSame($before, $this->em->getRepository(TankCheckDetail::class)->count([]));
+        $this->client->request('GET', '/tankcheck/');
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
+        $this->client->request('GET', '/tankcheck/'.$check->getId());
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/tank/'.$foreign->getId().'/edit');
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
+        $this->client->request('POST', '/tank/'.$foreign->getId(), ['_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('POST', '/tankcheck/'.$check->getId(), ['_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('GET', '/tankcheck/'.$check->getId().'/edit');
+        self::assertResponseRedirects('/equipment-manager/tuv', 303);
+        $this->client->request('POST', '/tankcheck/'.$check->getId().'/edit');
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('POST', '/tankcheck/new');
+        self::assertResponseStatusCodeSame(410);
+        self::assertSame($before, $this->em->getRepository(TankCheckDetail::class)->count([]));
+        self::assertNotNull($this->em->find(Tank::class, $foreign->getId()));
+        self::assertNotNull($this->em->find(TankCheck::class, $check->getId()));
     }
 
     public function testCancelledBookingReleasesAvailabilityAndLegacyReservationsSeeIssuedBookings(): void

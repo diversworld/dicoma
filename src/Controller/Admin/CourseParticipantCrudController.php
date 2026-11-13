@@ -466,6 +466,9 @@ class CourseParticipantCrudController extends AbstractCrudController
         if ($entityInstance instanceof CourseParticipant) {
             $this->assertParticipantAccess($entityInstance);
             $course = $entityInstance->getCourse();
+            if ($course !== null && !$course->allowsNewTrainingRegistrations()) {
+                throw $this->createAccessDeniedException('Für diesen Kurs sind derzeit keine neuen Anmeldungen möglich.');
+            }
             if ($course !== null) {
                 $entityInstance->setFeeCents(\App\Service\FrontendCourseRegistrationService::moneyToCents($course->getCourseFee()));
                 if (!$course->hasFreePlaces() && $entityInstance->getStatus() === CourseParticipantStatus::REGISTERED) {

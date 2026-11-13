@@ -428,10 +428,16 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         self::assertSelectorExists('[data-event-key="bar-duty-'.$shift->getId().'"] a[href="/admin/bar-duty/'.$shift->getId().'"]');
 
         $crawler = $this->client->request('GET', '/admin/settings');
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_settings_bar_services"]');
+        self::assertSelectorExists('a[href="/admin/settings/bar-services"]');
         $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
             'admin_club[club]' => (string) $other->getId(),
         ]);
         self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/settings');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('aside.sidebar a[href*="routeName=admin_settings_bar_services"]');
+        self::assertSelectorNotExists('a[href="/admin/settings/bar-services"]');
         foreach (['/admin/bar-duty', '/admin/bar-duty/'.$shift->getId(), '/admin/bar-duty/cash',
             '/admin/bar-duty/cash/'.$session->getId().'.csv', '/admin/bar-duty/plan',
             '/admin/bar-duty/settings', '/admin/bar-duty/report', '/admin/bar-duty/report.csv',

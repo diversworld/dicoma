@@ -87,7 +87,7 @@ trait EquipmentBookingBasketTrait
                 }
                 // The booking service must perform the final transactional availability check.
                 $bookingService->saveNew($booking);
-                $this->addFlash('success', 'Sammelreservierung angelegt.');
+                $this->addFlash('success', 'Reservierung angelegt.');
                 return $this->redirect((clone $adminUrlGenerator)->unsetAll()
                     ->setController(EquipmentBookingCrudController::class)
                     ->setAction(Crud::PAGE_DETAIL)->setEntityId($booking->getId())->generateUrl());

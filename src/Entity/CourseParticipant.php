@@ -271,6 +271,11 @@ class CourseParticipant
     public function validateAssignment(
         ExecutionContextInterface $context
     ): void {
+        if ($this->id === null && $this->course !== null && !$this->course->allowsNewTrainingRegistrations()) {
+            $context->buildViolation('Für diesen Kurs sind derzeit keine neuen Anmeldungen möglich.')
+                ->atPath('course')->addViolation();
+        }
+
         if ($this->course === null || $this->member === null) {
             return;
         }

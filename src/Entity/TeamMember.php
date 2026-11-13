@@ -198,6 +198,11 @@ class TeamMember
             return;
         }
 
+        if ($this->id === null && !$sport->isCompetitionEnabled()) {
+            $context->buildViolation('Für diese Sparte sind keine neuen Kaderzuordnungen möglich.')
+                ->atPath('team')->addViolation();
+        }
+
         if ($sport->getClub() !== $this->member->getClub()) {
             $context
                 ->buildViolation(

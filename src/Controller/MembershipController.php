@@ -66,20 +66,18 @@ final class MembershipController extends AbstractController
     public function applicationClubs(SingleClubMode $singleClub): Response
     {
         $criteria = ['applicationsEnabled' => true];
-        if ($singleClub->isEnabled()) {
-            $club = $singleClub->club();
-            if ($this->memberships->policy($club)?->isApplicationsEnabled()) {
-                return $this->redirectToRoute('membership_apply', ['id' => $club->getId()]);
-            }
-            $criteria['club'] = $club;
+        $club = $singleClub->club();
+        if ($this->memberships->policy($club)?->isApplicationsEnabled()) {
+            return $this->redirectToRoute('membership_apply', ['id' => $club->getId()]);
         }
+        $criteria['club'] = $club;
         return $this->render('membership/clubs.html.twig', ['policies' => $this->em->getRepository(MembershipPolicy::class)->findBy($criteria)]);
     }
 
     #[Route('/membership/apply/{id}', name: 'membership_apply', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function apply(Club $club, Request $request, SingleClubMode $singleClub): Response
     {
-        if (($singleClub->isEnabled() && $club->getId() !== $singleClub->club()->getId())
+        if ($club->getId() !== $singleClub->club()->getId()
             || !$club->isActive() || !$this->memberships->policy($club)?->isApplicationsEnabled()) {
             throw $this->createNotFoundException(); 
         }
@@ -127,8 +125,9 @@ final class MembershipController extends AbstractController
             throw $this->createAccessDeniedException();
         }
         return $this->adminPage('admin/settings.html.twig', [
-            'canWebsite' => $this->isGranted('ROLE_SUPER_ADMIN') || $website->canManageEditorial(),
-            'canBar' => $barAccess->isManager(),
+            'canWebsite' => $this->clubContext->getClub() !== null
+                && ($this->isGranted('ROLE_SUPER_ADMIN') || $website->canManageEditorial()),
+            'canBar' => $barAccess->isManager() && $barAccess->selectedClubIsMembershipClub(),
         ]);
     }
 
@@ -348,6 +347,11 @@ final class MembershipController extends AbstractController
             'classes' => $this->em->getRepository(ContributionClass::class)->findBy(['club' => $club]),
             'applications' => $this->em->getRepository(MembershipApplication::class)->findBy(['club' => $club], ['id' => 'DESC']),
             'members' => $this->em->getRepository(Member::class)->findBy(['club' => $club], ['id' => 'DESC']),
+            'roleEvents' => $this->em->getRepository(MembershipEvent::class)->createQueryBuilder('event')
+                ->join('event.member', 'membership')->where('membership.club = :club')
+                ->andWhere('event.kind IN (:kinds)')->setParameter('club', $club)
+                ->setParameter('kinds', ['role_continuity', 'role_vacancy'])
+                ->orderBy('event.id', 'DESC')->getQuery()->getResult(),
         ]);
     }
 

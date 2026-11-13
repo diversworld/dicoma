@@ -60,8 +60,8 @@ final class EquipmentBookingCrudController extends AbstractCrudController
     }
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud->setEntityLabelInSingular('Sammelreservierung')
-            ->setEntityLabelInPlural('Sammelreservierungen')
+        return $crud->setEntityLabelInSingular('Reservierung')
+            ->setEntityLabelInPlural('Reservierungen')
             ->setDefaultSort(['createdAt' => 'DESC'])
             ->overrideTemplate('crud/detail', 'admin/equipment/booking_detail.html.twig');
     }

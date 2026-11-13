@@ -12,6 +12,7 @@ security:
             - ROLE_BAR_MANAGER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
+            - ROLE_EQUIPMENT_CASH
             - ROLE_COMPRESSOR_OPERATOR
             - ROLE_TREASURER
 

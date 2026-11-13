@@ -166,9 +166,9 @@ $buildFormView = static function (string $file) use ($factory): FormView {
         $data = new App\Entity\WebsitePublication($options['club']);
         $options['data_class'] = App\Entity\WebsitePublication::class;
     }
-    if ($class === App\Form\ConfigurationClubSelectionType::class) { $options['clubs'] = []; }
     if ($class === App\Form\CourseDivisionSelectionType::class) { $options['divisions'] = []; }
     if ($class === App\Form\DivisionRoleAssignmentType::class) { $options['members'] = []; }
+    if ($class === App\Form\TournamentType::class) { $options['divisions'] = []; }
     if ($class === App\Form\ClubEventType::class) {
         $data = new App\Entity\ClubEvent(new App\Entity\Club());
         $options['data_class'] = App\Entity\ClubEvent::class;
@@ -176,6 +176,13 @@ $buildFormView = static function (string $file) use ($factory): FormView {
     return $factory->create($class, $data, $options)->createView();
 };
 foreach (glob('src/Form/*.php') as $file) {
+    $class = 'App\\Form\\'.basename($file, '.php');
+    if (!class_exists($class)) {
+        throw new RuntimeException("Form file does not define $class: $file");
+    }
+    if (!is_subclass_of($class, FormTypeInterface::class)) {
+        continue;
+    }
     $inspect($buildFormView($file), $file);
 }
 $parser = (new PhpParser\ParserFactory())->createForHostVersion();
