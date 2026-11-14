@@ -27,7 +27,7 @@
         <div class="card mb-12">
             <div class="row g-0">
                 <div class="col-md-3">
-                    <img class="img-fluid rounded-start" src="{{asset('images/kurse/' ~ course.image)}}" alt="Brevetbild">
+                    {% if course.image %}<img class="img-fluid rounded-start" src="{{ path('app_courses_image', {id: course.id}) }}" alt="Brevetbild">{% endif %}
                 </div>
                 <div class="col-md-9">
                     <div class="card-header">{{ course.title }}</div>

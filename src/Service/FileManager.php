@@ -7,6 +7,8 @@ namespace App\Service;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 final class FileManager
 {
@@ -14,8 +16,12 @@ final class FileManager
 
     public function __construct(
         #[Autowire('%bilder_ordner%')]
-        string $rootPath
+        string $rootPath,
+        ?CourseImageStorage $storage = null,
     ) {
+        if ($storage !== null && $storage->directory() !== $rootPath) {
+            throw new \LogicException('Der Explorer verwendet nicht den Kursbildspeicher.');
+        }
         $root = realpath($rootPath);
 
         if ($root === false || !is_dir($root)) {
@@ -43,6 +49,21 @@ final class FileManager
         }
 
         return $fullPath;
+    }
+
+    public function imageResponse(string $relativePath): BinaryFileResponse
+    {
+        $path = $this->getFile($relativePath);
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($path);
+        if (!isset(ImageUploadValidator::EXTENSIONS[$mime])) {
+            throw new NotFoundHttpException('Bild nicht gefunden.');
+        }
+        $response = new BinaryFileResponse($path);
+        $response->headers->set('Content-Type', $mime);
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE);
+        $response->setPrivate()->headers->addCacheControlDirective('no-store');
+        return $response;
     }
 
     public function normalizePath(string $relativePath): string

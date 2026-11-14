@@ -9,6 +9,7 @@ use App\Entity\Club;
 use App\Entity\User;
 use App\Form\ScheduleType;
 use App\Repository\ScheduleRepository;
+use App\Service\CourseImageStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -58,7 +59,7 @@ class ScheduleController extends AbstractController
 
     #[Route('/new', name: 'app_schedule_new', methods: ['GET', 'POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, CourseImageStorage $storage): Response
     {
         $schedule = new Schedule();
         $form = $this->createForm(ScheduleType::class, $schedule);
@@ -69,9 +70,7 @@ class ScheduleController extends AbstractController
             $imageFile = $form->get('image')->getData();
 
             if ($imageFile) {
-                $dateiName = $imageFile->getFilename(). '.' .$imageFile->guessClientExtension();
-                $imageFile->move($this->getParameter('bilder_ordner'), $dateiName);
-                $schedule->setImage($dateiName);
+                $schedule->setImage($storage->store($imageFile));
             }
 
             $entityManager->persist($schedule);
@@ -113,12 +112,16 @@ class ScheduleController extends AbstractController
 
     #[Route('/{id}/edit', name: 'app_schedule_edit', methods: ['GET', 'POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function edit(Request $request, Schedule $schedule, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Schedule $schedule, EntityManagerInterface $entityManager, CourseImageStorage $storage): Response
     {
         $form = $this->createForm(ScheduleType::class, $schedule);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $imageFile = $form->get('image')->getData();
+            if ($imageFile) {
+                $schedule->setImage($storage->store($imageFile));
+            }
             $entityManager->flush();
 
             return $this->redirectToRoute('app_schedule_index', [], Response::HTTP_SEE_OTHER);

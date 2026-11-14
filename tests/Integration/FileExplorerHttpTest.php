@@ -82,7 +82,7 @@ final class FileExplorerHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');
         self::assertSelectorTextContains('h1', 'Dateiverwaltung');
-        self::assertSelectorTextContains('body', 'getrennt');
+        self::assertSelectorTextContains('body', 'Kursbilder können hier nur angesehen und heruntergeladen werden.');
         self::assertSelectorExists('form[action="/admin/media/upload"]');
         self::assertSelectorTextContains('table', 'root.txt');
         self::assertSelectorTextNotContains('table', 'outside');
@@ -125,7 +125,7 @@ final class FileExplorerHttpTest extends WebTestCase
         $this->client->loginUser($press);
         $this->client->request('GET', '/admin/media');
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextNotContains('body', 'Kursbilder (Altbestand)');
+        self::assertSelectorNotExists('#legacy-course-files');
         $this->client->request('GET', '/admin/media', ['legacy_path' => '']);
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/files/download', ['path' => 'root.txt']);

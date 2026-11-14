@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use App\Controller\Admin\CoursesCrudController;
 use App\Controller\Admin\ScheduleCrudController;
 use App\Service\ImageUploadValidator;
+use App\Service\CourseImageStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -32,6 +33,7 @@ final class CourseImageControllerFieldsTest extends KernelTestCase
         putenv('MAILER_DSN=null://null');
         self::bootKernel(['environment' => 'test']);
         $container = self::getContainer();
+        $container->set(CourseImageStorage::class, new CourseImageStorage(sys_get_temp_dir()));
         $em = $container->get(EntityManagerInterface::class);
         self::assertSame('pdo_sqlite', $em->getConnection()->getParams()['driver']);
         (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());

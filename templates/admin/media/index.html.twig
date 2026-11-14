@@ -9,8 +9,8 @@
     {% if is_granted('ROLE_ADMIN') %}
         <section id="legacy-course-files" class="card mb-4">
             <div class="card-body">
-                <h2>{{ 'Kursbilder (Altbestand)'|trans }}</h2>
-                <p>{{ 'Kursbilder liegen noch getrennt und können hier nur angesehen und heruntergeladen werden.'|trans }}</p>
+                <h2>{{ 'Kursbilder'|trans }}</h2>
+                <p>{{ 'Kursbilder können hier nur angesehen und heruntergeladen werden.'|trans }}</p>
                 {% if legacy is null %}
                     <a href="{{ path('admin_media_index', {folder: folder ? folder.id : '', legacy_path: '', _fragment: 'legacy-course-files'}) }}">{{ 'Kursbilder anzeigen'|trans }}</a>
                 {% else %}

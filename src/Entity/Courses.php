@@ -243,8 +243,6 @@ class Courses
 
     public function setImage(?string $image): static
     {
-        error_log("Setting image: ". print_r($image, true)); // Write the value of image to the log
-
         $this->image = $image;
 
         return $this;

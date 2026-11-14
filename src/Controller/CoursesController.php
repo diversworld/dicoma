@@ -11,6 +11,7 @@ use App\Repository\CoursesRepository;
 use App\Repository\ScheduleRepository;
 use App\Service\AdminClubContext;
 use App\Service\CourseImageStorage;
+use App\Service\FileManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -44,7 +45,7 @@ class CoursesController extends AbstractController
 
     #[Route('/new', name: 'app_courses_new', methods: ['GET', 'POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, CourseImageStorage $storage): Response
     {
         $course = new Courses();
         // Die Vereinszuordnung kommt ausschließlich aus dem angemeldeten Konto.
@@ -61,9 +62,7 @@ class CoursesController extends AbstractController
             $imageFile = $form->get('image')->getData();
 
             if ($imageFile) {
-                $dateiName = $imageFile->getFilename(). '.' .$imageFile->guessClientExtension();
-                $imageFile->move($this->getParameter('bilder_ordner'), $dateiName);
-                $course->setImage($dateiName);
+                $course->setImage($storage->store($imageFile));
             }
 
             $entityManager->persist($course);
@@ -126,13 +125,27 @@ class CoursesController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/image', name: 'app_courses_image', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[IsGranted('ROLE_MEMBER')]
+    public function image(Courses $course, FileManager $files): Response
+    {
+        if ($course->getClub()?->getId() !== $this->currentClub()->getId()
+            || $course->getStatus() !== CourseStatus::OPEN || $course->getImage() === null) {
+            throw $this->createNotFoundException('Kursbild nicht verfügbar.');
+        }
+        return $files->imageResponse($course->getImage());
+    }
+
     #[Route('/{id}/edit', name: 'app_courses_edit', methods: ['GET', 'POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function edit(Request $request, Courses $course, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Courses $course, EntityManagerInterface $entityManager, FileManager $manager, CourseImageStorage $storage): Response
     {
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $originalClub = $course->getClub();
-        $files = $this->getFiles();
+        $files = array_map(
+            static fn (array $file): string => $file['path'],
+            array_values(array_filter($manager->listDirectory(), static fn (array $file): bool => !$file['isDirectory']))
+        );
 
         $form = $this->createForm(CoursesType::class, $course, [
             'files' => $files
@@ -144,7 +157,13 @@ class CoursesController extends AbstractController
             $course->setClub($originalClub);
             $selectedFile = $request->request->get('selectedFile');
 
-                if ($selectedFile) {
+                $imageFile = $form->get('image')->getData();
+                if ($imageFile) {
+                    $course->setImage($storage->store($imageFile));
+                } elseif (is_string($selectedFile) && $selectedFile !== '') {
+                    if (!in_array($selectedFile, $files, true)) {
+                        throw $this->createAccessDeniedException('Ungültige Bildauswahl.');
+                    }
                     $course->setImage($selectedFile);
                 }
 
@@ -167,16 +186,6 @@ class CoursesController extends AbstractController
         if (!$club) throw $this->createAccessDeniedException('Keine Vereinszuordnung.');
         return $club;
     }
-    private function getFiles(): array
-    {
-        $dirPath = $this->getParameter('bilder_ordner');
-        $files = scandir($dirPath);
-        $files = array_diff($files, ['.', '..']);
-        // logic to prefix the file paths with $dirPath to form full URLs
-        // depends on your directory structure and may not be needed
-        return array_map(function($filename) use ($dirPath) { return  '/' . $filename; }, $files);
-    }
-
     #[Route('/{id}', name: 'app_courses_delete', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
     public function delete(Request $request, Courses $course, EntityManagerInterface $entityManager): Response

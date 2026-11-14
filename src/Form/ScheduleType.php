@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Courses;
 use App\Entity\Schedule;
+use App\Service\ImageUploadValidator;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -33,6 +34,7 @@ class ScheduleType extends AbstractType
                 'mapped' => false,
                 'label' => 'Bild wählen',
                 'required' => false,
+                'constraints' => [ImageUploadValidator::constraint()],
                 'attr' => [
                     'id' => 'image',
                     'class' => 'form-control',

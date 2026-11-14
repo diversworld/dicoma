@@ -39,7 +39,7 @@
                     <div class="row shuffle-wrapper">
                         {% for course in courses %}
                         <div class="col-lg-4 col-sm-6 portfolio-item shuffle-item" data-groups="[&quot;{{  course.category }}&quot;]">
-                            <img src="{{asset('images/kurse/' ~ course.image)}}" alt="">
+                            {% if course.image %}<img src="{{ path('app_courses_image', {id: course.id}) }}" alt="">{% endif %}
                             <div class="portfolio-hover">
                                 <div class="portfolio-content">
                                     <a class="h3" href="{{ path('app_courses_show', {'id': course.id}) }}">{{ course.title }}</a>

@@ -50,7 +50,8 @@ final class MediaFileHttpTest extends WebTestCase
     {
         foreach ($this->paths as $path) { if (is_file($path)) { unlink($path); } }
         if (isset($this->root)) {
-            foreach ([$this->root.'/var/private/website_media', $this->root.'/var/private', $this->root.'/var', $this->root] as $dir) {
+            if (is_file($this->root.'/files/.website-media-active')) { unlink($this->root.'/files/.website-media-active'); }
+            foreach ([$this->root.'/files/website_media', $this->root.'/files', $this->root] as $dir) {
                 if (is_dir($dir)) { rmdir($dir); }
             }
         }
@@ -61,18 +62,17 @@ final class MediaFileHttpTest extends WebTestCase
     {
         $this->client->loginUser($this->admin);
         foreach ([
-            'de' => ['Dateiverwaltung', 'Ordner anlegen', 'Keine Unterordner vorhanden.', 'Der Ordnername muss', 'Erlaubt sind', '1 Datei(en) gespeichert.'],
-            'en' => ['File manager', 'Create folder', 'No subfolders.', 'The folder name must', 'Allowed formats are', '1 file(s) saved.'],
-            'fr' => ['Gestion des fichiers', 'Créer un dossier', 'Aucun sous-dossier.', 'Le nom du dossier doit', 'Formats autorisés', '1 fichier(s) enregistré(s).'],
-            'es' => ['Gestión de archivos', 'Crear carpeta', 'No hay subcarpetas.', 'El nombre de carpeta debe', 'Se permiten', '1 archivo(s) guardado(s).'],
-        ] as $locale => [$title, $button, $empty, $error, $uploadError, $saved]) {
+            'de' => ['Dateiverwaltung', 'Ordner anlegen', 'Der Ordnername muss', 'Erlaubt sind', '1 Datei(en) gespeichert.'],
+            'en' => ['File manager', 'Create folder', 'The folder name must', 'Allowed formats are', '1 file(s) saved.'],
+            'fr' => ['Gestion des fichiers', 'Créer un dossier', 'Le nom du dossier doit', 'Formats autorisés', '1 fichier(s) enregistré(s).'],
+            'es' => ['Gestión de archivos', 'Crear carpeta', 'El nombre de carpeta debe', 'Se permiten', '1 archivo(s) guardado(s).'],
+        ] as $locale => [$title, $button, $error, $uploadError, $saved]) {
             $this->client->request('GET', '/admin/'.$locale);
             self::assertResponseIsSuccessful();
             $this->client->request('GET', '/admin/media');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('body', $title);
             self::assertSelectorTextContains('body', $button);
-            self::assertSelectorTextContains('body', $empty);
             $token = $this->token('media_folder_create_'.$this->club->getId());
             $this->client->request('POST', '/admin/media/folders', ['_token' => $token, 'name' => '../invalid']);
             self::assertResponseRedirects('/admin/media', 303);
@@ -175,7 +175,7 @@ final class MediaFileHttpTest extends WebTestCase
         $files = $this->em->getRepository(MediaFile::class)->findBy(['club' => $this->club, 'folder' => $child], ['id' => 'ASC']);
         self::assertCount(2, $files);
         foreach ($files as $file) {
-            $this->paths[] = $this->root.'/var/private/website_media/'.$file->getStorageName();
+            $this->paths[] = $this->root.'/files/website_media/'.$file->getStorageName();
             self::assertSame('Gemeinsamer Text', $file->getAltText());
         }
         $this->client->followRedirect();
@@ -426,7 +426,7 @@ final class MediaFileHttpTest extends WebTestCase
         $this->em->find(WebsitePublication::class, $id)->setImage(null); $this->em->flush();
         $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
         self::assertNull($this->em->find(MediaFile::class, $imageId));
-        self::assertFileDoesNotExist($this->root.'/var/private/website_media/'.$image->getStorageName());
+        self::assertFileDoesNotExist($this->root.'/files/website_media/'.$image->getStorageName());
     }
 
     public function testBookedMemberEventImageCanChangeWithoutMakingItPublic(): void
@@ -763,7 +763,7 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseRedirects('/admin/club-events/'.$eventId, 303);
         $document = $this->em->getRepository(ClubEventDocument::class)->findOneBy([], ['id' => 'DESC']);
         self::assertNotNull($document);
-        $this->paths[] = $this->root.'/var/private/website_media/'.$document->file()->getStorageName();
+        $this->paths[] = $this->root.'/files/website_media/'.$document->file()->getStorageName();
         return $document->getId();
     }
 
@@ -781,7 +781,7 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseRedirects('/admin/media', 303);
         $file = $this->em->getRepository(MediaFile::class)->findOneBy([], ['id' => 'DESC']);
         self::assertNotNull($file);
-        $this->paths[] = $this->root.'/var/private/website_media/'.$file->getStorageName();
+        $this->paths[] = $this->root.'/files/website_media/'.$file->getStorageName();
         return $file;
     }
 

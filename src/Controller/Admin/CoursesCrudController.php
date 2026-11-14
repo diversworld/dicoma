@@ -67,6 +67,7 @@ class CoursesCrudController extends AbstractCrudController
         private readonly \App\Repository\MemberRepository $members,
         private readonly \Symfony\Component\Security\Core\Role\RoleHierarchyInterface $roleHierarchy,
         private readonly AdminClubContext $clubContext,
+        private readonly \App\Service\CourseImageStorage $courseImages,
 	) {
 	}
 	
@@ -417,6 +418,7 @@ class CoursesCrudController extends AbstractCrudController
          */
         yield FormField::addFieldset('Bild')
             ->collapsible();
+        $this->courseImages->directory();
         yield CourseImageField::create();
         /*
          * Legacy-Kategorie.

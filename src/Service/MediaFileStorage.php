@@ -83,10 +83,6 @@ final class MediaFileStorage
 
     private function directory(): string
     {
-        $path = $this->root.'/var/private/website_media';
-        if (!is_dir($path) && !mkdir($path, 0700, true) && !is_dir($path)) {
-            throw new \RuntimeException('Private Dateiablage nicht verfügbar.');
-        }
-        return $path;
+        return PrivateStorageMigration::activate($this->root, 'website_media', 'var/private/website_media', '.website-media-active', 'Mediatheksdateien');
     }
 }

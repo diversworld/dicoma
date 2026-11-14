@@ -9,6 +9,7 @@ use App\Service\ImageUploadValidator;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\Validator\Validation;
 
@@ -64,6 +65,28 @@ final class CourseImageFieldTest extends TestCase
             } finally {
                 unlink($path);
             }
+
         }
+    }
+
+    public function testReplacingAnImageDoesNotDeleteSharedFile(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'dicoma-shared-image-');
+        self::assertIsString($path);
+        file_put_contents($path, 'shared image');
+        try {
+            $delete = CourseImageField::create()->getAsDto()->getFormTypeOption('upload_delete');
+            $delete(new File($path));
+            self::assertSame('shared image', file_get_contents($path));
+        } finally {
+            unlink($path);
+        }
+
+    }
+
+    public function testPreviewEncodesNestedFileNames(): void
+    {
+        $format = CourseImageField::create()->getAsDto()->getFormatValueCallable();
+        self::assertSame('/admin/files/preview/nested/a%23%20b.jpg', $format('nested/a# b.jpg'));
     }
 }

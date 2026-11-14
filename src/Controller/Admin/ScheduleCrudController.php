@@ -50,6 +50,7 @@ class ScheduleCrudController extends AbstractCrudController
         private readonly ScheduleParticipantSyncService $participantSyncService,
         private readonly AdminClubContext $clubContext,
         private readonly EntityManagerInterface $em,
+        private readonly \App\Service\CourseImageStorage $courseImages,
     ) {
     }
 
@@ -202,6 +203,7 @@ class ScheduleCrudController extends AbstractCrudController
         yield TextField::new('title','Terminbezeichnung')
             ->setColumns(6);
 
+        $this->courseImages->directory();
         yield CourseImageField::create();
 
         /*

@@ -38,7 +38,7 @@
                 <div class="row">
                     {% for file in files %}
                         <div class="img-wrapper col-md-6">
-                            <img src="{{ asset('images/kurse/' ~ file) }}" width="100" alt="{{ file }}" class="img-responsive" />
+                            <img src="{{ path('admin_files_preview', {path: file}) }}" width="100" alt="{{ file }}" class="img-responsive" />
                             <button class="choose-file-btn" data-filename="{{ file }}">{{ 'Choose'|trans }}</button>
                         </div>
                     {% endfor %}

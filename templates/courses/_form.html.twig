@@ -15,7 +15,7 @@
     <div class="row form-group">
         <div class="col-md-4">
             {% if course.image %}
-                <img src="{{ asset('images/kurse/'  ~ '/' ~ course.image) }}" width="200px" alt="Brevetbild">
+                <img src="{{ path('admin_files_preview', {path: course.image}) }}" width="200px" alt="Brevetbild">
             {% endif %}
         </div>
         <div class="col-md-5">

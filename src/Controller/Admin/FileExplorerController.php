@@ -42,4 +42,10 @@ final class FileExplorerController extends AbstractController
         $response->setPrivate()->headers->addCacheControlDirective('no-store');
         return $response;
     }
+
+    #[Route('/admin/files/preview/{path}', name: 'admin_files_preview', requirements: ['path' => '.+'], methods: ['GET'])]
+    public function preview(string $path): BinaryFileResponse
+    {
+        return $this->fileManager->imageResponse($path);
+    }
 }

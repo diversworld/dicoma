@@ -70,11 +70,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
       privilegierter Notfallkonten und Konten ohne aktive Mitgliedschaft vor und
       nach der Migration einzeln vergleichen. Backup und Restore vor einem
       Einsatz auf der Ziel-Datenbank nachweisen.
-- [ ] Die gewünschte Zusammenführung von Kursbildern und Mediathek in einen
-      gemeinsamen Speicher ist noch umzusetzen. Vor der Übernahme sind
-      Dateibestand, Dateitypen, fehlende Referenzen, Mehrfachverwendungen und
-      nicht referenzierte Dateien zu erfassen; anschließend sind Inhalte,
-      Referenzen und Wiederherstellung zu vergleichen.
+- [ ] Die unter `files/` abgelegten Kursbilder und Mediendateien sind auch
+      logisch in einer gemeinsamen, vollständig bearbeitbaren Ordnerstruktur
+      zusammenzuführen; die funktionsbezogenen Ordnerrechte fehlen weiterhin.
 - [ ] Nach der Zusammenführung sind Kurse und Termine samt Bildanzeige,
       Upload, Ordnern, Umbenennen, Verschieben, Löschen und Verwendungsschutz
       über den Datei-Explorer zu prüfen. Öffentliche Bildauslieferung darf
@@ -137,12 +135,61 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Ordnerrechte.
 - Die bestehende Dateiverwaltung und der schreibgeschützte Kursbild-Explorer
   sind über eine gemeinsame Seite erreichbar. Beide Bestände werden dort
-  hierarchisch mit ihren Dateien dargestellt; Kursbilder sind weiterhin als
-  getrennter Altbestand gekennzeichnet und nur für Administratoren sichtbar.
+  hierarchisch mit ihren Dateien dargestellt; Kursbilder sind dort weiterhin
+  nur lesbar und nur für Administratoren sichtbar.
   Medienordner können umbenannt, verschoben und leer gelöscht werden.
-  Die beiden physischen Speicher und die bisherige rollenbasierte
-  Zugriffskontrolle sind dadurch **nicht** zusammengeführt oder durch die
-  vereinbarten Ordnerrechte ersetzt.
+  Die Bestände liegen jetzt unter `files/kurse` und `files/website_media`.
+  Ihre Ordner- und Metadatenverwaltung ist noch getrennt und die vereinbarten
+  Ordnerrechte sind noch nicht umgesetzt.
+- `app:files:check-migration` inventarisiert Kursbilder, Mediathek und
+  separat geschützte Veranstaltungsdokumente schreibgeschützt. Es meldet
+  fehlende oder ungültige Referenzen, abweichende Dateigrößen, gemeinsam
+  referenzierte Mediendateien und symbolische Links. Nicht referenzierte
+  Dateien werden mitgezählt und dürfen bei der Übernahme nicht verloren
+  gehen. Im aktuellen lokalen DDEV-Bestand wurden 19 Kursbilder mit drei
+  Referenzen und 25 Mediendateien mit 25 Referenzen gezählt; 16 Kursbilder
+  waren nicht referenziert. Die Prüfung ersetzt weder die Übernahme noch
+  Inhaltsvergleich, Sicherung, Wiederherstellung und Schreibsperre.
+- `app:files:stage-migration` führt die Vorprüfung aus und kopiert anschließend
+  Kursbilder einschließlich nicht referenzierter Dateien nach `files/kurse`
+  und Mediathek einschließlich Veranstaltungsdokumenten nach
+  `files/website_media`. Es vergleicht SHA-256-Inhalte und überschreibt keine
+  abweichenden Dateien. Vor der Aktivierung kann es bei unveränderten Quellen
+  wiederholt werden; danach verweigert es eine erneute Übernahme.
+  Das private `files/` ist gegen versehentliches Einchecken ignoriert.
+  Lokal wurden so 19 Kursbilder und 25 Mediendateien kopiert. Die Mediathek
+  und separat geschützte Veranstaltungsdokumente verwenden nun
+  `files/website_media`. Beim ersten Zugriff wird der gesamte alte Bestand
+  mit dem neuen Inhalt verglichen; fehlende oder abweichende Dateien blockieren
+  die Umstellung. Die Aktivierungsmarkierung verhindert, dass eine erneute
+  Übernahme später gelöschte Dateien wiederherstellt. Der alte Medienbestand
+  bleibt als unveränderter Altbestand erhalten und ist nach der Aktivierung
+  nicht mehr maßgeblich. Kursbilder werden aus `files/kurse` geladen; die
+  Kursanzeige liefert sie über einen mitglieds- und kursgebundenen Endpunkt aus.
+  EasyAdmin ersetzt oder entfernt Bildzuordnungen, ohne gemeinsam verwendete
+  Bilddateien zu löschen. Die vollständige Verwaltung im Explorer fehlt.
+  Der lokale öffentliche Kursbildordner wurde nach erfolgreichem
+  Inhaltsvergleich und einem Restore-Test in einen privaten Altbestand
+  verschoben; der frühere öffentliche Bildpfad liefert 404.
+  Die Kopie ist keine Sicherung und keine Schreibsperre. Für weitere
+  Installationen sind vor dem Deployment Backup und Restore zu prüfen,
+  alle Schreibzugriffe und alten Anwendungsinstanzen anzuhalten, die Übernahme
+  auszuführen und der Inhaltsvergleich vor Freigabe abzuwarten. Die Markierung
+  ist keine verteilte Sperre. Ein Rollback erfordert einen gesonderten Abgleich
+  der seit der Aktivierung geänderten Dateien und darf nicht einfach auf den
+  alten Ordner zeigen.
+- Für die Kursbildumstellung auf einer anderen Installation muss der alte
+  öffentliche Ordner während der Wartung verfügbar bleiben: Datenbank und
+  Dateien sichern und die Wiederherstellung testen, sämtliche Anwendungs-
+  instanzen und Schreibzugriffe anhalten, die neue Version bereitstellen und
+  gegebenenfalls den durch das Deployment entfernten alten Ordner aus der
+  Sicherung für die Übernahme wiederherstellen. Anschließend
+  `app:files:stage-migration --courses-only` ausführen und Inhalt und Referenzen
+  prüfen. Erst danach Cache und Worker aktualisieren, den alten Ordner aus dem
+  öffentlichen Webverzeichnis entfernen und den Zugriff wieder freigeben.
+  Die im Repository entfernten alten Bilddateien werden nicht automatisch nach
+  `files/` ausgeliefert; `files/` und seine Sicherung müssen beim Deployment
+  persistent bleiben. Die Markierung ersetzt keine Schreibsperre.
 - Eine erneute schreibgeschützte Doctrine-Schemaprüfung meldet eine Abweichung
   bei `tank`; die Ursache und eine geeignete Migration müssen gesondert
   untersucht werden. Das ausgegebene Schema-Update darf nicht ungeprüft

@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Enum\CourseStatus;
 use App\Enum\MembershipStatus;
 use App\Service\CourseImageStorage;
+use App\Service\FileManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -180,6 +181,7 @@ final class Phase0SecurityHttpTest extends WebTestCase
             $this->postUpload($own->getId(), $token, $name, $content);
             self::assertResponseStatusCodeSame(422);
         }
+
         $this->postUpload($own->getId(), $token, 'oversized.png', str_repeat('x', 10 * 1024 * 1024 + 1));
         self::assertResponseStatusCodeSame(422);
 
@@ -199,17 +201,54 @@ final class Phase0SecurityHttpTest extends WebTestCase
             self::assertArrayNotHasKey('allFiles', $response);
         }
         $this->client->loginUser($super);
-        $crawler = $this->client->request('GET', '/admin/settings');
-        $this->client->submit($crawler->filter('form[name="admin_club"]')->first()->form(), [
-            'admin_club[club]' => (string) $this->otherClub->getId(),
-        ]);
-        self::assertResponseRedirects();
         $ownToken = $this->token('course_image_upload_'.$own->getId());
         $this->client->request('POST', '/courses/upload', ['course_id' => $own->getId(), '_token' => $ownToken]);
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(400);
         $foreignToken = $this->token('course_image_upload_'.$foreign->getId());
         $this->client->request('POST', '/courses/upload', ['course_id' => $foreign->getId(), '_token' => $foreignToken]);
-        self::assertResponseStatusCodeSame(400);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testPrivateCourseImagesRequireAccessToTheirCourse(): void
+    {
+        $this->initialize(false);
+        $this->imageDirectory = sys_get_temp_dir().'/dicoma-course-image-'.bin2hex(random_bytes(8));
+        mkdir($this->imageDirectory, 0700);
+        static::getContainer()->set(FileManager::class, new FileManager($this->imageDirectory));
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true);
+        file_put_contents($this->imageDirectory.'/shared.png', $png);
+        file_put_contents($this->imageDirectory.'/not-image.png', '<script>not an image</script>');
+        $member = $this->account('image-member', $this->ownClub);
+        $admin = $this->account('image-admin', $this->ownClub, [User::ROLE_ADMIN]);
+        $own = $this->course($this->ownClub, CourseStatus::OPEN, 'Visible');
+        $own->setImage('shared.png');
+        $foreign = $this->course($this->otherClub, CourseStatus::OPEN, 'Foreign');
+        $foreign->setImage('shared.png');
+        $draft = $this->course($this->ownClub, CourseStatus::DRAFT, 'Draft');
+        $draft->setImage('shared.png');
+        $invalid = $this->course($this->ownClub, CourseStatus::OPEN, 'Invalid');
+        $invalid->setImage('not-image.png');
+        $this->em->flush();
+
+        $this->client->request('GET', '/courses/'.$own->getId().'/image');
+        self::assertResponseRedirects();
+        $this->client->loginUser($member);
+        $this->client->request('GET', '/courses/'.$own->getId().'/image');
+        self::assertResponseIsSuccessful();
+        self::assertSame('image/png', $this->client->getResponse()->headers->get('Content-Type'));
+        self::assertSame('nosniff', $this->client->getResponse()->headers->get('X-Content-Type-Options'));
+        self::assertSame($png, file_get_contents($this->client->getResponse()->getFile()->getPathname()));
+        foreach ([$foreign, $draft, $invalid] as $course) {
+            $this->client->request('GET', '/courses/'.$course->getId().'/image');
+            self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->request('GET', '/admin/files/preview/shared.png');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/admin/files/preview/shared.png');
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/admin/files/preview/not-image.png');
+        self::assertResponseStatusCodeSame(404);
     }
 
     private function schedule(Club $club, CourseStatus $status, string $title): Schedule

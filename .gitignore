@@ -8,6 +8,7 @@ public/bundles/
 var/
 var/log/*
 vendor/*
+/files/
 ###< symfony/framework-bundle ###
 
 .env.local
