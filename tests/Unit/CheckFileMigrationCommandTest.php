@@ -91,4 +91,55 @@ final class CheckFileMigrationCommandTest extends TestCase
         self::assertStringNotContainsString('private.jpg', $tester->getDisplay());
         self::assertFileExists($media.'/'.$shared);
     }
+
+    public function testActiveStorageIsInventoriedInsteadOfStaleLegacyFiles(): void
+    {
+        mkdir($this->root.'/files/kurse/nested', 0700, true);
+        mkdir($this->root.'/files/website_media', 0700);
+        file_put_contents($this->root.'/files/.course-images-active', '');
+        file_put_contents($this->root.'/files/.website-media-active', '');
+        file_put_contents($this->root.'/files/kurse/nested/current.jpg', 'current');
+        file_put_contents($this->root.'/files/kurse/unused.png', 'unused');
+        file_put_contents($this->root.'/public/images/kurse/stale.jpg', 'stale');
+        $name = str_repeat('d', 40).'.pdf';
+        file_put_contents($this->root.'/files/website_media/'.$name, 'document');
+        $this->connection->insert('courses', ['id' => 1, 'image' => 'nested/current.jpg']);
+        $this->connection->insert('schedule', ['id' => 1, 'image' => 'nested/current.jpg']);
+        $this->connection->insert('club_event_document', ['id' => 1, 'storage_name' => $name, 'size' => 8]);
+
+        $tester = new CommandTester(new CheckFileMigrationCommand($this->connection, $this->root));
+        self::assertSame(Command::SUCCESS, $tester->execute([]), $tester->getDisplay());
+        self::assertStringContainsString('Kursbilddateien: 2', $tester->getDisplay());
+        self::assertStringContainsString('Mehrfach referenzierte Kursbilder: 1', $tester->getDisplay());
+        self::assertStringContainsString('Nicht referenzierte Kursbilddateien: 1', $tester->getDisplay());
+        self::assertStringContainsString('Mediatheksdateien einschließlich Veranstaltungsdokumente: 1', $tester->getDisplay());
+    }
+
+    public function testBrokenActiveStorageAndMarkersBlockTheAudit(): void
+    {
+        mkdir($this->root.'/files', 0700);
+        file_put_contents($this->root.'/files/.course-images-active', '');
+        symlink($this->root.'/missing', $this->root.'/files/.website-media-active');
+        $tester = new CommandTester(new CheckFileMigrationCommand($this->connection, $this->root));
+        self::assertSame(Command::FAILURE, $tester->execute([]));
+        self::assertStringContainsString('Kursbilder: Aktives Dateiverzeichnis fehlt.', $tester->getDisplay());
+        self::assertStringContainsString('Mediathek: Ungültige Markierung der Datei-Umstellung.', $tester->getDisplay());
+    }
+
+    public function testEachStorageUsesItsOwnCutoverMarker(): void
+    {
+        mkdir($this->root.'/files/website_media', 0700, true);
+        file_put_contents($this->root.'/files/.website-media-active', '');
+        file_put_contents($this->root.'/public/images/kurse/legacy.jpg', 'image');
+        $name = str_repeat('e', 40).'.pdf';
+        file_put_contents($this->root.'/files/website_media/'.$name, 'document');
+        $this->connection->insert('courses', ['id' => 1, 'image' => 'legacy.jpg']);
+        $this->connection->insert('media_file', ['id' => 1, 'storage_name' => $name, 'size' => 8]);
+
+        $tester = new CommandTester(new CheckFileMigrationCommand($this->connection, $this->root));
+        self::assertSame(Command::SUCCESS, $tester->execute([]), $tester->getDisplay());
+        unlink($this->root.'/files/website_media/'.$name);
+        self::assertSame(Command::FAILURE, $tester->execute([]));
+        self::assertStringContainsString('Mediathek-ID 1: Datei fehlt', $tester->getDisplay());
+    }
 }

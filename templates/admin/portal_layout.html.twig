@@ -19,6 +19,13 @@
                 {% if (club_function_membership_enabled and editorial_access.canViewSettings) or (not club_function_membership_enabled and is_granted('ROLE_PRESS_OFFICER')) %}
                     <p><a href="{{ path('admin_settings_website') }}">{{ 'Website-Anzeige'|trans }}</a></p>
                 {% endif %}
+                {% if club_function_membership_enabled %}
+                    {% if editorial_access.can(constant('App\\Enum\\PermissionAction::READ')) %}
+                        <p><a href="{{ path('admin_club_events') }}">Veranstaltungsbuchungen</a></p>
+                    {% elseif editorial_access.can(constant('App\\Enum\\PermissionAction::CREATE')) %}
+                        <p><a href="{{ path('admin_club_event_new') }}">Veranstaltungsbuchungen</a></p>
+                    {% endif %}
+                {% endif %}
                 {% if (club_function_membership_enabled and is_granted('ROLE_MEMBER')) or is_granted('ROLE_PRESS_OFFICER') %}
                     <p><a href="{{ path('admin_media_index') }}">{{ 'Dateiverwaltung'|trans }}</a></p>
                 {% endif %}

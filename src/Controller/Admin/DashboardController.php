@@ -615,6 +615,9 @@ class DashboardController extends AbstractDashboardController
         $websiteSettings = $this->functionModelEnabled
             ? $this->editorialAccess->canViewSettings()
             : $this->publicWebsite->canManageEditorial();
+        $eventRoute = $this->editorialAccess->can(PermissionAction::READ)
+            ? 'admin_club_events'
+            : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_club_event_new' : null);
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
                 ...($websiteSettings
@@ -625,6 +628,8 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::section('Website & Redaktion'),
                     MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
                 ] : []),
+                ...($this->functionModelEnabled && $eventRoute !== null
+                    ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
                 MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')
                     ->setPermission('ROLE_PRESS_OFFICER'),
             ];
@@ -639,7 +644,8 @@ class DashboardController extends AbstractDashboardController
                 ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),
-            MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', 'admin_club_events'),
+            ...(!$this->functionModelEnabled || $eventRoute !== null
+                ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute ?? 'admin_club_events')] : []),
             MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index'),
             MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'admin_portal_bar_duty')
                 ->setPermission('ROLE_BAR_MANAGER'),

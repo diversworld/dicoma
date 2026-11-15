@@ -14,8 +14,9 @@ Prüfungen.
   vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) können
   getrennt von den bisherigen Rollen gespeichert werden. Ihre serverseitige
   Durchsetzung ist bislang nur für die Mediathek, die redaktionelle
-  Bildauswahl, die redaktionellen Beiträge und die Website-Anzeigeeinstellungen implementiert, nicht für die
-  übrigen Zugriffswege oder Kursbilder.
+  Bildauswahl, die redaktionellen Beiträge, die Website-Anzeigeeinstellungen
+  und Teile der Veranstaltungsverwaltung implementiert, nicht für die übrigen
+  Zugriffswege oder Kursbilder.
 - Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
   Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
   Gerätekasse, Thekendienst, Thekenkasse, Website und Veranstaltungen,
@@ -146,7 +147,13 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Modell das Website-Modulrecht Lesen, Anlegen beziehungsweise Bearbeiten.
   Website-Anzeigeeinstellungen sind mit Lesen sichtbar und mit Bearbeiten
   änderbar; Schreibzugriffe prüfen die Berechtigung unter der Vereinssperre erneut;
-  die übrigen Website- und anderen Modulpfade sind noch nicht vollständig
+  die Veranstaltungsverwaltung prüft Website-Rechte getrennt nach Aktion.
+  Teilnehmerdaten erfordern zusätzlich Mitglieder-Leserecht; Zahlungsdaten
+  und Veranstaltungsdokumente außerdem Finanz-Leserecht. Zahlungen benötigen
+  zusätzlich Finanz-Anlegerecht, Dokument-Uploads Website-Anlegerecht und
+  Dokument-Löschungen Website-Löschrecht. Die Auswahl und Anzeige eines
+  Veranstaltungsbilds berücksichtigt Dateimodul- und Ordnerleserechte.
+  Die übrigen Website- und anderen Modulpfade sind noch nicht vollständig
   umgestellt. Bestehende Pressefunktionen erhalten dadurch nicht automatisch
   Website-Modulrechte und müssen vor einer Aktivierung geprüft werden.
   Altrollen bleiben während des Übergangs getrennt gespeichert. Die additive
@@ -179,6 +186,22 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Dateien im Hauptordner bleiben nach Aktivierung nur Administratoren zugänglich. Bereits
   vorbereitete Funktionen mit widersprüchlichen Namen oder Rechten können
   die Übernahme blockieren und müssen vorher geprüft werden.
+  Für die ausdrücklich bestätigte Zusammenführung der bestehenden Funktion
+  „Ausbildungsleiter“ gibt es `--merge-training-manager`: Ihre vier
+  Ausbildungs-Modulrechte bleiben erhalten, die bisherige Rolle wird
+  ergänzt und die Nachfolgepflicht eingeschaltet. Das Kommando bricht ab,
+  wenn die geprüfte Funktion zwischenzeitlich geändert oder bereits jemand
+  zugeordnet wurde. Auf einer am 15. November 2026 wiederhergestellten
+  Datenbankkopie wurden mit dieser Option alle 23 Rollenzuordnungen und
+  Zeiträume sowie beide Superadminrollen verglichen. Die Anwendungsdatenbank
+  wurde dabei nicht geändert. Diese Option ersetzt nicht die übrigen Freigaben.
+- `app:functions:migrate-roles --dry-run` führt denselben Übernahmeablauf
+  auch bei deaktiviertem Modell aus und rollt Datenänderungen zurück.
+  Der Probelauf ersetzt weder die Übernahme noch den Vergleich nach der
+  Umstellung. Da Datenbanksequenzen und Sperren betroffen sein können, nur
+  auf einer isolierten, wiederhergestellten Sicherung ausführen. Übernahme
+  und Probelauf benötigen eine eigene Transaktion; unter MySQL/MariaDB
+  müssen die beteiligten Tabellen InnoDB verwenden.
 - Nach gesicherter und geprüfter Übertragung des einzigen fremd zugeordneten
   Turniers wurde der zentrale Vereinskontext auf einen Verein umgestellt. Die
   vollständige Prüfung und Anpassung der früheren Mehrvereinstests und aller
@@ -209,7 +232,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Ihre Ordner- und Metadatenverwaltung ist noch getrennt; die neuen
   Ordnerrechte gelten bislang nur für die Mediathek.
 - `app:files:check-migration` inventarisiert Kursbilder, Mediathek und
-  separat geschützte Veranstaltungsdokumente schreibgeschützt. Es meldet
+  separat geschützte Veranstaltungsdokumente schreibgeschützt. Nach der
+  jeweiligen Speicherumstellung prüft es den aktiven Bestand unter `files/`
+  statt der historischen Quelldateien. Es meldet
   fehlende oder ungültige Referenzen, abweichende Dateigrößen, gemeinsam
   referenzierte Mediendateien und symbolische Links. Nicht referenzierte
   Dateien werden mitgezählt und dürfen bei der Übernahme nicht verloren

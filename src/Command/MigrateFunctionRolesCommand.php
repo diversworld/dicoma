@@ -45,18 +45,46 @@ final class MigrateFunctionRolesCommand extends Command
     protected function configure(): void
     {
         $this->addOption('confirm', null, InputOption::VALUE_NONE, 'Bestätigt die Übernahme nach Backup und überprüftem Restore.');
+        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Prüft die Übernahme in einer Transaktion und verwirft alle Datenänderungen.');
+        $this->addOption('merge-training-manager', null, InputOption::VALUE_NONE, 'Übernimmt Ausbildungsleiter in die geprüfte bestehende Funktion und aktiviert deren Nachfolgepflicht.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (!$input->getOption('confirm') || !$this->enabled) {
+        $dryRun = (bool) $input->getOption('dry-run');
+        $mergeTrainingManager = (bool) $input->getOption('merge-training-manager');
+        if ($dryRun && $input->getOption('confirm')) {
+            $output->writeln('<error>--dry-run und --confirm dürfen nicht gleichzeitig verwendet werden.</error>');
+            return Command::FAILURE;
+        }
+        if (!$dryRun && (!$input->getOption('confirm') || !$this->enabled)) {
             $output->writeln('<error>Die Übernahme benötigt --confirm und das aktivierte Funktionsmodell. Zuerst Backup und Restore prüfen.</error>');
             return Command::FAILURE;
         }
         $club = $this->singleClub->club();
         $clubId = $club->getId();
+        $connection = $this->em->getConnection();
+        if ($connection->isTransactionActive() || !$connection->isAutoCommit()) {
+            $output->writeln('<error>Die Übernahme benötigt eine eigene, nicht bereits aktive Transaktion.</error>');
+            return Command::FAILURE;
+        }
+        if ($connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            $tables = ['club', 'user', 'member', 'club_function', 'club_function_assignment', 'media_folder', 'media_folder_permission'];
+            foreach ($tables as $table) {
+                $engine = $connection->fetchOne(
+                    'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+                    [$table],
+                );
+                if (!is_string($engine) || strcasecmp($engine, 'InnoDB') !== 0) {
+                    $output->writeln(sprintf('<error>Die Übernahme benötigt InnoDB für Tabelle %s.</error>', $table));
+                    return Command::FAILURE;
+                }
+            }
+        }
+        $connection->beginTransaction();
+        $completed = false;
         try {
-            $count = $this->em->getConnection()->transactional(function () use ($club, $clubId): int {
+            $count = (function () use ($club, $clubId, $mergeTrainingManager): int {
                 $this->continuity->lockClub($club);
                 $connection = $this->em->getConnection();
                 $lock = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? ' FOR UPDATE' : '';
@@ -90,7 +118,7 @@ final class MigrateFunctionRolesCommand extends Command
                     $validity = $user->getRoleValidity();
                     foreach (array_diff($stored, [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]) as $role) {
                         $folderAccess = in_array(User::ROLE_PRESS_OFFICER, $this->hierarchy->getReachableRoleNames([$role]), true);
-                        $function = $this->legacyFunction($club, $labels[$role], [$role], true, $folderAccess);
+                        $function = $this->legacyFunction($club, $labels[$role], [$role], true, $folderAccess, $mergeTrainingManager && $role === User::ROLE_TRAINING_MANAGER);
                         $this->assign($function, $user, $validity[$role] ?? ['startsAt' => null, 'endsAt' => null]);
                         ++$count;
                     }
@@ -102,23 +130,67 @@ final class MigrateFunctionRolesCommand extends Command
                 }
                 $this->em->flush();
                 return $count;
-            });
+            })();
+            if ($dryRun) {
+                $connection->rollBack();
+            } else {
+                $connection->commit();
+            }
+            $completed = true;
         } catch (\DomainException $exception) {
-            $this->em->clear();
             $output->writeln('<error>'.$exception->getMessage().'</error>');
             return Command::FAILURE;
+        } finally {
+            if ($connection->isTransactionActive()) {
+                $connection->rollBack();
+            }
+            if ($dryRun || !$completed) {
+                $this->em->clear();
+            }
+        }
+        if ($dryRun) {
+            $output->writeln(sprintf('Probelauf erfolgreich: %d direkte Funktionsrollenzuordnungen geprüft; alle Datenänderungen wurden zurückgerollt.', $count));
+            $output->writeln('Keine Rollen übernommen und kein Funktionsmodell aktiviert. Datenbanksequenzen können sich geändert haben; Probelauf auf einer isolierten Datenbankkopie ausführen.');
+            return Command::SUCCESS;
         }
         $output->writeln(sprintf('%d direkte Funktionsrollenzuordnungen übernommen; die Superadmin-Notfallrolle bleibt erhalten.', $count));
         return Command::SUCCESS;
     }
 
-    private function legacyFunction(Club $club, string $name, array $roles, bool $successorRequired, bool $folderAccess): ClubFunction
+    private function legacyFunction(Club $club, string $name, array $roles, bool $successorRequired, bool $folderAccess, bool $mergeTrainingManager = false): ClubFunction
     {
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['club' => $club, 'name' => $name]);
         $folders = $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club, 'parent' => null]);
         $modulePermissions = $folderAccess
             ? array_map(static fn (PermissionAction $action): string => ModulePermission::key(PermissionModule::FILES, $action), PermissionAction::cases())
             : [];
+        if ($mergeTrainingManager) {
+            if ($function === null || $roles !== [User::ROLE_TRAINING_MANAGER] || $folderAccess) {
+                throw new \DomainException('Die geprüfte Funktion „Ausbildungsleiter“ ist nicht vorhanden oder widerspricht der Übernahme.');
+            }
+            $modulePermissions = array_map(static fn (PermissionAction $action): string => ModulePermission::key(PermissionModule::TRAINING, $action), PermissionAction::cases());
+            $existingModules = $function->getModulePermissions();
+            $rules = $this->em->getRepository(MediaFolderPermission::class)->count(['clubFunction' => $function]);
+            foreach (FileAction::cases() as $action) {
+                if ($function->rootPermission($action) !== null) {
+                    throw new \DomainException('Die Funktion „Ausbildungsleiter“ wurde geändert und widerspricht der bestätigten Übernahme.');
+                }
+            }
+            $newMerge = $function->getPermissions() === [] && !$function->isSuccessorRequired()
+                && $this->em->getRepository(ClubFunctionAssignment::class)->count(['clubFunction' => $function]) === 0;
+            $alreadyMerged = $function->getPermissions() === $roles && $function->isSuccessorRequired();
+            if ((!$newMerge && !$alreadyMerged) || count($existingModules) !== count($modulePermissions)
+                || array_diff($existingModules, $modulePermissions) !== [] || $rules !== 0
+                || $function->getStartsAt() !== null || $function->getEndsAt() !== null) {
+                throw new \DomainException('Die Funktion „Ausbildungsleiter“ wurde geändert und widerspricht der bestätigten Übernahme.');
+            }
+            if ($newMerge) {
+                $function->setPermissions($roles);
+                $function->setSuccessorRequired(true);
+                $this->em->flush();
+            }
+            return $function;
+        }
         if ($function !== null) {
             $existingModulePermissions = $function->getModulePermissions();
             if ($function->getPermissions() !== $roles || count($existingModulePermissions) !== count($modulePermissions)

@@ -31,7 +31,8 @@ final class FunctionRoleMigrationTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        foreach (['DATABASE_URL' => 'sqlite:///:memory:', 'MAILER_DSN' => 'null://null', 'PUBLIC_SITE_CLUB_ID' => '1', 'CLUB_FUNCTION_MEMBERSHIP_ENABLED' => '1'] as $name => $value) {
+        $enabled = str_starts_with($this->name(), 'testDryRun') ? '0' : '1';
+        foreach (['DATABASE_URL' => 'sqlite:///:memory:', 'MAILER_DSN' => 'null://null', 'PUBLIC_SITE_CLUB_ID' => '1', 'CLUB_FUNCTION_MEMBERSHIP_ENABLED' => $enabled] as $name => $value) {
             $_ENV[$name] = $_SERVER[$name] = $value;
             putenv($name.'='.$value);
         }
@@ -115,6 +116,136 @@ final class FunctionRoleMigrationTest extends KernelTestCase
         self::assertNull($this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ausbilder / Trainer']));
         self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count([]));
         self::assertSame('["ROLE_INSTRUCTOR","ROLE_PRESS_OFFICER"]', $this->em->getConnection()->fetchOne('SELECT roles FROM `user` WHERE id = ?', [$id]));
+    }
+
+    public function testDryRunWithDisabledModelRollsBackRolesFunctionsAndFolderRules(): void
+    {
+        $user = $this->account('dry-run', [User::ROLE_INSTRUCTOR, User::ROLE_PRESS_OFFICER]);
+        $user->setRoleValidity([User::ROLE_INSTRUCTOR => ['startsAt' => '2020-01-01', 'endsAt' => null]]);
+        $this->em->persist(new MediaFolder($this->club, 'Ablage'));
+        $this->em->flush();
+        $userId = $user->getId();
+        $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+        self::assertSame(Command::FAILURE, $tester->execute(['--confirm' => true]));
+        self::assertSame(Command::FAILURE, $tester->execute(['--confirm' => true, '--dry-run' => true]));
+        self::assertSame(Command::SUCCESS, $tester->execute(['--dry-run' => true]), $tester->getDisplay());
+        self::assertStringContainsString('2 direkte Funktionsrollenzuordnungen geprüft', $tester->getDisplay());
+        $user = $this->em->find(User::class, $userId);
+        self::assertSame([User::ROLE_INSTRUCTOR, User::ROLE_PRESS_OFFICER], $user->getStoredRoles());
+        self::assertSame(['startsAt' => '2020-01-01', 'endsAt' => null], $user->getRoleValidity()[User::ROLE_INSTRUCTOR]);
+        self::assertContains(User::ROLE_INSTRUCTOR, $user->getRoles());
+        self::assertSame(0, $this->em->getRepository(ClubFunction::class)->count([]));
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count([]));
+        self::assertSame(0, $this->em->getRepository(MediaFolderPermission::class)->count([]));
+    }
+
+    public function testDryRunConflictRollsBackAllChanges(): void
+    {
+        $user = $this->account('dry-run-conflict', [User::ROLE_INSTRUCTOR, User::ROLE_PRESS_OFFICER]);
+        $id = $user->getId();
+        $existing = new ClubFunction($this->club, 'Pressewart');
+        $this->em->persist($existing);
+        $this->em->flush();
+        $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+        self::assertSame(Command::FAILURE, $tester->execute(['--dry-run' => true]));
+        self::assertStringContainsString('widerspricht', $tester->getDisplay());
+        self::assertSame(1, $this->em->getRepository(ClubFunction::class)->count([]));
+        self::assertNull($this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ausbilder / Trainer']));
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count([]));
+        self::assertSame([User::ROLE_INSTRUCTOR, User::ROLE_PRESS_OFFICER], $this->em->find(User::class, $id)->getStoredRoles());
+    }
+
+    public function testMigrationRejectsAnExistingTransaction(): void
+    {
+        $user = $this->account('nested', [User::ROLE_INSTRUCTOR]);
+        $id = $user->getId();
+        $connection = $this->em->getConnection();
+        $connection->beginTransaction();
+        try {
+            $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+            self::assertSame(Command::FAILURE, $tester->execute(['--dry-run' => true]));
+            self::assertStringContainsString('eigene, nicht bereits aktive Transaktion', $tester->getDisplay());
+            self::assertSame(Command::FAILURE, $tester->execute(['--confirm' => true]));
+            self::assertStringContainsString('eigene, nicht bereits aktive Transaktion', $tester->getDisplay());
+            self::assertSame('["ROLE_INSTRUCTOR"]', $connection->fetchOne('SELECT roles FROM `user` WHERE id = ?', [$id]));
+            self::assertSame(0, $this->em->getRepository(ClubFunction::class)->count([]));
+        } finally {
+            $connection->rollBack();
+        }
+    }
+
+    public function testDryRunTrainingMergePreservesExistingDefinitionAndRoles(): void
+    {
+        $user = $this->account('training-dry-run', [User::ROLE_TRAINING_MANAGER]);
+        $function = new ClubFunction($this->club, 'Ausbildungsleiter');
+        $function->setModulePermissions(['training:read', 'training:create', 'training:edit', 'training:delete']);
+        $this->em->persist($function);
+        $this->em->flush();
+        $userId = $user->getId();
+        $functionId = $function->getId();
+        $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+
+        self::assertSame(Command::FAILURE, $tester->execute(['--dry-run' => true]));
+        self::assertSame(Command::SUCCESS, $tester->execute(['--dry-run' => true, '--merge-training-manager' => true]), $tester->getDisplay());
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        self::assertSame([], $function->getPermissions());
+        self::assertFalse($function->isSuccessorRequired());
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count([]));
+        self::assertSame([User::ROLE_TRAINING_MANAGER], $this->em->find(User::class, $userId)->getStoredRoles());
+    }
+
+    public function testTrainingMergeTransfersMultipleHoldersAndPreservesModulePermissions(): void
+    {
+        $first = $this->account('training-one', [User::ROLE_TRAINING_MANAGER]);
+        $first->setRoleValidity([User::ROLE_TRAINING_MANAGER => ['startsAt' => '2020-01-01', 'endsAt' => '2999-12-31']]);
+        $second = $this->account('training-two', [User::ROLE_TRAINING_MANAGER]);
+        $function = new ClubFunction($this->club, 'Ausbildungsleiter');
+        $function->setModulePermissions(['training:read', 'training:create', 'training:edit', 'training:delete']);
+        $this->em->persist($function);
+        $this->em->flush();
+        $functionId = $function->getId();
+        $firstId = $first->getId();
+        $secondId = $second->getId();
+        $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--confirm' => true, '--merge-training-manager' => true]), $tester->getDisplay());
+        $this->em->clear();
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        self::assertSame([User::ROLE_TRAINING_MANAGER], $function->getPermissions());
+        self::assertSame(['training:read', 'training:create', 'training:edit', 'training:delete'], $function->getModulePermissions());
+        self::assertTrue($function->isSuccessorRequired());
+        self::assertSame(2, $this->em->getRepository(ClubFunctionAssignment::class)->count(['clubFunction' => $function]));
+        $assignment = $this->em->getRepository(ClubFunctionAssignment::class)->findOneBy(['clubFunction' => $function, 'user' => $firstId]);
+        self::assertSame('2020-01-01', $assignment->getStartsAt()->format('Y-m-d'));
+        self::assertSame('2999-12-31', $assignment->getEndsAt()->format('Y-m-d'));
+        self::assertSame([], $this->em->find(User::class, $firstId)->getStoredRoles());
+        self::assertSame([], $this->em->find(User::class, $secondId)->getStoredRoles());
+        self::assertSame(Command::SUCCESS, $tester->execute(['--confirm' => true, '--merge-training-manager' => true]));
+    }
+
+    public function testTrainingMergeRejectsExistingHoldersOrChangedPermissions(): void
+    {
+        $this->account('old-training', [User::ROLE_TRAINING_MANAGER]);
+        $other = $this->account('existing-holder', []);
+        $function = new ClubFunction($this->club, 'Ausbildungsleiter');
+        $function->setModulePermissions(['training:read', 'training:create', 'training:edit', 'training:delete']);
+        $assignment = new ClubFunctionAssignment($function, $other);
+        $this->em->persist($function);
+        $this->em->persist($assignment);
+        $this->em->flush();
+        $functionId = $function->getId();
+        $assignmentId = $assignment->getId();
+        $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
+        self::assertSame(Command::FAILURE, $tester->execute(['--confirm' => true, '--merge-training-manager' => true]));
+        self::assertStringContainsString('widerspricht der bestätigten Übernahme', $tester->getDisplay());
+        $assignment = $this->em->find(ClubFunctionAssignment::class, $assignmentId);
+        $this->em->remove($assignment);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['training:read']);
+        $this->em->flush();
+        self::assertSame(Command::FAILURE, $tester->execute(['--confirm' => true, '--merge-training-manager' => true]));
+        self::assertStringContainsString('widerspricht der bestätigten Übernahme', $tester->getDisplay());
+        self::assertSame([], $this->em->find(ClubFunction::class, $functionId)->getPermissions());
     }
 
     private function account(string $name, array $roles): User

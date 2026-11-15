@@ -31,8 +31,10 @@ final class CheckFileMigrationCommand extends Command
     {
         $issues = [];
         $coursesOnly = (bool) $input->getOption('courses-only');
-        $courseFiles = $this->inventory($this->root.'/public/images/kurse', 'Kursbilder', $issues);
-        $mediaFiles = $coursesOnly ? [] : $this->inventory($this->root.'/var/private/website_media', 'Mediathek', $issues);
+        $coursePath = $this->sourcePath('kurse', 'public/images/kurse', '.course-images-active', 'Kursbilder', $issues);
+        $mediaPath = $coursesOnly ? null : $this->sourcePath('website_media', 'var/private/website_media', '.website-media-active', 'Mediathek', $issues);
+        $courseFiles = $coursePath === null ? [] : $this->inventory($coursePath, 'Kursbilder', $issues);
+        $mediaFiles = $mediaPath === null ? [] : $this->inventory($mediaPath, 'Mediathek', $issues);
         $courseReferences = [];
         $mediaReferences = [];
 
@@ -92,6 +94,29 @@ final class CheckFileMigrationCommand extends Command
         }
         $output->writeln('Keine Dateien oder Daten geändert. Paralleländerungen, Dateiinhalt und Wiederherstellung sind gesondert zu prüfen.');
         return $issues === [] ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /** @param list<string> $issues */
+    private function sourcePath(string $active, string $legacy, string $markerName, string $label, array &$issues): ?string
+    {
+        $parent = $this->root.'/files';
+        if (is_link($parent) || (file_exists($parent) && !is_dir($parent))) {
+            return $this->root.'/'.$legacy;
+        }
+        $marker = $parent.'/'.$markerName;
+        if (is_link($marker) || (file_exists($marker) && !is_file($marker))) {
+            $issues[] = $label.': Ungültige Markierung der Datei-Umstellung.';
+            return null;
+        }
+        if (!is_file($marker)) {
+            return $this->root.'/'.$legacy;
+        }
+        $path = $parent.'/'.$active;
+        if (!file_exists($path) && !is_link($path)) {
+            $issues[] = $label.': Aktives Dateiverzeichnis fehlt.';
+            return null;
+        }
+        return $path;
     }
 
     /**

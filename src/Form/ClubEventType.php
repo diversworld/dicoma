@@ -17,8 +17,6 @@ final class ClubEventType extends AbstractType
             'label' => 'Titel'])
             ->add('description', TextareaType::class, [
                 'label' => 'Beschreibung'])
-            ->add('image', MediaImageType::class, [
-                'club' => $builder->getData()->getClub()])
             ->add('pricing', ChoiceType::class, [
                 'label' => 'Veranstaltungsart', 
                 'choices' => [
@@ -80,9 +78,13 @@ final class ClubEventType extends AbstractType
                 'required' => false
                 ]
             );
+        if (!$options['image_locked']) {
+            $builder->add('image', MediaImageType::class, ['club' => $builder->getData()->getClub()]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void { 
-        $resolver->setDefaults(['data_class' => ClubEvent::class]); 
+        $resolver->setDefaults(['data_class' => ClubEvent::class, 'image_locked' => false]);
+        $resolver->setAllowedTypes('image_locked', 'bool');
     }
 }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, Member, Person, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{Club, ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration, ClubFunction, ClubFunctionAssignment, MediaFile, Member, Person, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\MembershipStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -27,6 +27,9 @@ final class ClubEventBookingHttpTest extends WebTestCase
         foreach (['DATABASE_URL' => 'sqlite:///:memory:', 'MAILER_DSN' => 'null://null', 'PUBLIC_SITE_CLUB_ID' => '1'] as $key => $value) {
             $_ENV[$key] = $_SERVER[$key] = $value; putenv($key.'='.$value);
         }
+        $enabled = str_starts_with($this->name(), 'testFunctionModel') ? '1' : '0';
+        $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $enabled;
+        putenv('CLUB_FUNCTION_MEMBERSHIP_ENABLED='.$enabled);
         $this->client = static::createClient(['environment' => 'test']); $this->client->disableReboot();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
         (new SchemaTool($this->em))->createSchema($this->em->getMetadataFactory()->getAllMetadata());
@@ -331,6 +334,162 @@ final class ClubEventBookingHttpTest extends WebTestCase
         $this->client->request('GET', '/event-registrations/'.$first->getId()); $this->client->submitForm('Anmeldung stornieren');
         $this->em->clear();
         self::assertSame('ineligible', $this->em->find(ClubEventRegistration::class, $queued->getId())->getStatus());
+    }
+
+    public function testFunctionModelSeparatesWebsiteParticipantsAndPayments(): void
+    {
+        $event = $this->event('paid');
+        $registration = new ClubEventRegistration($event, $this->guest->getPerson(), 'registered', 2000, 'guest');
+        $payment = new ClubEventPayment($registration, 500, 'cash', 'private-receipt', 'bookkeeper');
+        $function = new ClubFunction($this->club, 'Event rights');
+        $function->setModulePermissions(['website:read']);
+        $this->em->persist($registration); $this->em->persist($payment); $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member)); $this->em->flush();
+        $eventId = $event->getId(); $registrationId = $registration->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'guest Synthetic');
+        self::assertSelectorNotExists('a[href="/admin/club-events/new"]');
+        $this->client->request('GET', '/admin/club-events/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->postWithToken('/admin/club-events/registrations/'.$registrationId.'/payment', 'event_payment_'.$registrationId,
+            ['amount' => '1', 'method' => 'cash', 'reference' => 'forbidden']);
+        self::assertResponseStatusCodeSame(403);
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'membership:read']); $this->em->flush();
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertSelectorTextContains('body', 'guest Synthetic');
+        self::assertSelectorTextNotContains('body', 'private-receipt');
+        self::assertSelectorNotExists('form[action="/admin/club-events/registrations/'.$registrationId.'/payment"]');
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'membership:read', 'finance:read', 'finance:create']); $this->em->flush();
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertSelectorTextContains('body', 'private-receipt');
+        self::assertSelectorExists('form[action="/admin/club-events/registrations/'.$registrationId.'/payment"]');
+        $this->postWithToken('/admin/club-events/registrations/'.$registrationId.'/payment', 'event_payment_'.$registrationId,
+            ['amount' => '1', 'method' => 'cash', 'reference' => 'new-receipt']);
+        self::assertResponseStatusCodeSame(303);
+        self::assertSame(2, $this->em->getRepository(ClubEventPayment::class)->count([]));
+        $this->postWithToken('/admin/club-events/registrations/'.$registrationId.'/payment', 'event_payment_'.$registrationId,
+            ['amount' => '1', 'method' => 'cash', 'reference' => 'new-receipt']);
+        self::assertResponseStatusCodeSame(303);
+        self::assertSame(2, $this->em->getRepository(ClubEventPayment::class)->count([]));
+    }
+
+    public function testFunctionModelPreservesUnreadableEventImageAndRechecksWrites(): void
+    {
+        $event = $this->event('paid');
+        $image = new MediaFile($this->club, str_repeat('b', 40).'.png', 'confidential.png', 'image/png', 1, 'Secret image description');
+        $event->setImage($image);
+        $function = new ClubFunction($this->club, 'Event editing');
+        $function->setModulePermissions(['website:read', 'website:edit']);
+        $this->em->persist($image); $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member)); $this->em->flush();
+        $eventId = $event->getId(); $imageId = $image->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Secret image description');
+        self::assertSelectorNotExists('a[href="/admin/club-events/'.$eventId.'/image"]');
+        $this->client->request('GET', '/admin/club-events/'.$eventId.'/image');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/club-events/'.$eventId.'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('select[name="club_event[image]"]');
+        $this->client->submitForm('Veranstaltung speichern', ['club_event[title]' => 'Updated event']);
+        self::assertResponseRedirects('/admin/club-events/'.$eventId, 303);
+        self::assertSame($imageId, $this->em->find(ClubEvent::class, $eventId)->getImage()?->getId());
+        $this->client->request('GET', '/admin/club-events/'.$eventId.'/edit');
+        $form = $this->client->getCrawler()->selectButton('Veranstaltung speichern')->form(['club_event[title]' => 'Forbidden update']);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read']); $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('Updated event', $this->em->find(ClubEvent::class, $eventId)->getTitle());
+    }
+
+    public function testFunctionModelSeparatesCreateAndCancelAndRejectsRevokedPermissions(): void
+    {
+        $event = $this->event('paid');
+        $function = new ClubFunction($this->club, 'Event creation');
+        $function->setModulePermissions(['website:create']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member)); $this->em->flush();
+        $eventId = $event->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/club-events');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/club-events/new');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('a[href="/admin/club-events/new"]');
+        $form = $this->client->getCrawler()->selectButton('Veranstaltung speichern')->form([
+            'club_event[title]' => 'New event', 'club_event[description]' => 'Test description',
+            'club_event[pricing]' => 'paid', 'club_event[memberFeeCents]' => '10,00', 'club_event[guestFeeCents]' => '20,00',
+            'club_event[startsAt]' => (new \DateTimeImmutable('+10 days 18:00'))->format('Y-m-d\TH:i'),
+            'club_event[endsAt]' => (new \DateTimeImmutable('+10 days 20:00'))->format('Y-m-d\TH:i'),
+            'club_event[location]' => 'Clubhouse',
+        ]);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions([]); $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNull($this->em->getRepository(ClubEvent::class)->findOneBy(['title' => 'New event']));
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:create']); $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/portal', 303);
+        self::assertNotNull($this->em->getRepository(ClubEvent::class)->findOneBy(['title' => 'New event']));
+        $this->postWithToken('/admin/club-events/'.$eventId.'/cancel', 'event_admin_cancel_'.$eventId);
+        self::assertResponseStatusCodeSame(403);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:delete']); $this->em->flush();
+        $this->client->request('POST', '/admin/club-events/'.$eventId.'/cancel', ['_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(403);
+        $this->postWithToken('/admin/club-events/'.$eventId.'/cancel', 'event_admin_cancel_'.$eventId);
+        self::assertResponseRedirects('/portal', 303);
+        self::assertTrue($this->em->find(ClubEvent::class, $eventId)->isCancelled());
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setValidity(null, new \DateTimeImmutable('yesterday')); $this->em->flush();
+        $this->postWithToken('/admin/club-events/'.$eventId.'/cancel', 'event_admin_cancel_'.$eventId);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionModelRequiresParticipantFinanceAndDocumentActionRights(): void
+    {
+        $event = $this->event('paid');
+        $file = new MediaFile($this->club, str_repeat('c', 40).'.pdf', 'confidential-document.pdf', 'application/pdf', 1, '');
+        $document = new ClubEventDocument($event, null, $file);
+        $function = new ClubFunction($this->club, 'Event documents');
+        $function->setModulePermissions(['website:read', 'website:edit', 'membership:read']);
+        $this->em->persist($document); $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member)); $this->em->flush();
+        $eventId = $event->getId(); $documentId = $document->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertSelectorTextNotContains('body', 'confidential-document.pdf');
+        $this->client->request('GET', '/admin/club-events/'.$eventId.'/documents/'.$documentId);
+        self::assertResponseStatusCodeSame(403);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'website:edit', 'membership:read', 'finance:read']); $this->em->flush();
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertSelectorTextContains('body', 'confidential-document.pdf');
+        self::assertSelectorNotExists('form[action="/admin/club-events/'.$eventId.'/documents"]');
+        self::assertSelectorNotExists('form[action="/admin/club-events/'.$eventId.'/documents/'.$documentId.'/delete"]');
+        $this->postWithToken('/admin/club-events/'.$eventId.'/documents', 'event_document_upload_'.$eventId, ['audience' => 'all']);
+        self::assertResponseStatusCodeSame(403);
+        $this->postWithToken('/admin/club-events/'.$eventId.'/documents/'.$documentId.'/delete', 'event_document_delete_'.$documentId);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNotNull($this->em->find(ClubEventDocument::class, $documentId));
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'website:create', 'membership:read', 'finance:read']); $this->em->flush();
+        $this->client->request('GET', '/admin/club-events/'.$eventId);
+        self::assertSelectorExists('form[action="/admin/club-events/'.$eventId.'/documents"]');
+        $this->postWithToken('/admin/club-events/'.$eventId.'/documents', 'event_document_upload_'.$eventId, ['audience' => 'all']);
+        self::assertResponseRedirects('/admin/club-events/'.$eventId, 303);
+        self::assertSame(1, $this->em->getRepository(ClubEventDocument::class)->count([]));
     }
 
     private function event(string $pricing, ?int $capacity = null): ClubEvent

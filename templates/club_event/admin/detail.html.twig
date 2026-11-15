@@ -5,12 +5,14 @@
 <p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
 <p>{{ event.description|nl2br }}</p>
 <p>Status: {{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }} · Mitglieder {{ (event.memberFeeCents / 100)|number_format(2, ',', '.') }} EUR · Gäste {{ (event.guestFeeCents / 100)|number_format(2, ',', '.') }} EUR</p>
-{% if event.image %}<p><img src="{{ path('admin_media_file', {id:event.image.id}) }}" alt="{{ event.image.altText }}" width="200"></p>{% endif %}
-<p><a href="{{ path('admin_club_event_image', {id:event.id}) }}">Veranstaltungsbild ändern</a></p>
-{% if not event.cancelled %}<p>Bei einer Absage müssen Teilnehmende außerhalb der Anwendung informiert und Zahlungen manuell erstattet werden.</p><form method="post" action="{{ path('admin_club_event_cancel', {id: event.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('event_admin_cancel_' ~ event.id) }}"><button type="submit">Veranstaltung absagen</button></form>{% endif %}
-{% if not event.cancelled and rows is empty %}<a href="{{ path('admin_club_event_edit', {id: event.id}) }}">Veranstaltung bearbeiten</a>{% endif %}
+{% if event.image and canReadImage %}<p><img src="{{ path('admin_media_file', {id:event.image.id}) }}" alt="{{ event.image.altText }}" width="200"></p>{% endif %}
+{% if canEdit and canReadImage %}<p><a href="{{ path('admin_club_event_image', {id:event.id}) }}">Veranstaltungsbild ändern</a></p>{% endif %}
+{% if not event.cancelled and canDelete %}<p>Bei einer Absage müssen Teilnehmende außerhalb der Anwendung informiert und Zahlungen manuell erstattet werden.</p><form method="post" action="{{ path('admin_club_event_cancel', {id: event.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('event_admin_cancel_' ~ event.id) }}"><button type="submit">Veranstaltung absagen</button></form>{% endif %}
+{% if not event.cancelled and canEditEvent %}<a href="{{ path('admin_club_event_edit', {id: event.id}) }}">Veranstaltung bearbeiten</a>{% endif %}
+{% if canFinance %}
 <h2>Veranstaltungsdokumente</h2>
 <p>Gemeinsame Dokumente sind für bestätigte Teilnehmende sichtbar. Individuelle Dokumente sind nur für die gewählte Anmeldung zugänglich. Bei Warteliste, Storno oder Veranstaltungsabsage ist kein Zugriff möglich. Dateien werden nicht in der allgemeinen Dateiverwaltung angezeigt.</p>
+{% if canCreate %}
 <form method="post" action="{{ path('admin_club_event_document_upload', {id: event.id}) }}" enctype="multipart/form-data">
     <input type="hidden" name="_token" value="{{ csrf_token('event_document_upload_' ~ event.id) }}">
     <label>Datei (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max. 10 MB) <input name="file" type="file" required></label>
@@ -21,32 +23,38 @@
     </fieldset>
     <button type="submit">Dokument hochladen</button>
 </form>
+{% endif %}
 <ul>{% for document in documents %}
     <li><a href="{{ path('admin_club_event_document', {id:event.id, documentId:document.id}) }}">{{ document.originalName }}</a>
         · {{ document.registration ? document.registration.person.fullName ~ ' · Anmeldung #' ~ document.registration.id : 'Alle bestätigten Teilnehmenden' }}
-        <form method="post" action="{{ path('admin_club_event_document_delete', {id:event.id, documentId:document.id}) }}">
+        {% if canDelete %}<form method="post" action="{{ path('admin_club_event_document_delete', {id:event.id, documentId:document.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('event_document_delete_' ~ document.id) }}"><button type="submit">Dokument löschen</button>
-        </form>
+        </form>{% endif %}
     </li>
 {% else %}<li>Keine Veranstaltungsdokumente.</li>{% endfor %}</ul>
+{% endif %}
+{% if canMembers %}
 <h2>Teilnehmer und Zahlungsstatus</h2>
 {% for row in rows %}
     {% set registration = row.registration %}
     <section class="card card-body mb-3">
         <h3>{{ registration.person.firstname }} {{ registration.person.lastname }}</h3>
-        <p>{{ registration.status }} · {{ registration.tariff }} · Preis {{ (registration.feeCents / 100)|number_format(2, ',', '.') }} EUR · bezahlt {{ (row.paid / 100)|number_format(2, ',', '.') }} EUR</p>
+        <p>{{ registration.status }}{% if canFinance %} · {{ registration.tariff }} · Preis {{ (registration.feeCents / 100)|number_format(2, ',', '.') }} EUR · bezahlt {{ (row.paid / 100)|number_format(2, ',', '.') }} EUR{% endif %}</p>
+        {% if canFinance %}
         {% if (event.cancelled or registration.status == 'cancelled') and row.paid > 0 %}
             <p>Erstattung offen: {{ (row.paid / 100)|number_format(2, ',', '.') }} EUR. Betrag zunächst tatsächlich manuell erstatten und anschließend unten mit negativem Betrag und neuer Belegreferenz erfassen.</p>
         {% endif %}
         <ul>{% for payment in row.payments %}<li>{{ payment.recordedAt|date('d.m.Y H:i') }} · {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.method }} · {{ payment.reference }} · {{ payment.recordedBy }}</li>{% endfor %}</ul>
-        <form method="post" action="{{ path('admin_club_event_payment', {id: registration.id}) }}">
+        {% if canPay %}<form method="post" action="{{ path('admin_club_event_payment', {id: registration.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('event_payment_' ~ registration.id) }}">
             <label>Betrag EUR (Erstattung negativ) <input name="amount" required inputmode="decimal"></label>
             <label>Zahlungsart <select name="method"><option value="transfer">Überweisung</option><option value="cash">Bar</option></select></label>
             <label>Belegreferenz <input name="reference" required maxlength="120"></label>
             <button type="submit">Zahlung / Erstattung buchen</button>
-        </form>
+        </form>{% endif %}
+        {% endif %}
     </section>
 {% else %}<p>Keine Anmeldungen.</p>{% endfor %}
+{% endif %}
 <a href="{{ path('admin_club_events') }}">Zur Veranstaltungsverwaltung</a>
 {% endblock %}

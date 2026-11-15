@@ -64,8 +64,10 @@ final class PortalNavigation
         if ($this->editorialAccess->functionModelEnabled()) {
             if ($this->editorialAccess->can(PermissionAction::READ)) {
                 $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen', 'route' => 'admin_website_editorial']];
+                $roles['Website-Redaktion'][] = ['label' => 'Veranstaltungsbuchungen', 'route' => 'admin_club_events'];
             } elseif ($this->editorialAccess->can(PermissionAction::CREATE)) {
                 $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen erstellen', 'route' => 'admin_website_editorial_new']];
+                $roles['Website-Redaktion'][] = ['label' => 'Veranstaltung anlegen', 'route' => 'admin_club_event_new'];
             }
             if ($this->editorialAccess->canViewSettings()) {
                 $roles['Website-Redaktion'][] = ['label' => 'Website-Anzeige', 'route' => 'admin_settings_website'];

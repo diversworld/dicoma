@@ -275,6 +275,10 @@ final class MigrationChainTest extends TestCase
     public function testFunctionRoleImportRunsOnMigratedMariaDbSchema(): void
     {
         $this->migrate('latest');
+        // DDL migrations can leave DBAL's nesting counter out of sync with MariaDB.
+        $params = $this->connection->getParams();
+        $this->connection->close();
+        $this->connection = DriverManager::getConnection($params);
         $clubId = $this->createClub();
         $this->connection->insert('media_folder', ['club_id' => $clubId, 'name' => 'First level']);
         $folderId = (int) $this->connection->lastInsertId();
@@ -298,6 +302,25 @@ final class MigrationChainTest extends TestCase
             new \App\Command\CheckFunctionMigrationCommand($this->connection), true,
         );
         $tester = new \Symfony\Component\Console\Tester\CommandTester($command);
+        self::assertSame('InnoDB', $this->connection->fetchOne("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user'"));
+        self::assertSame(0, $this->connection->getTransactionNestingLevel(), 'Unexpected transaction left by schema migration.');
+        $rolesBefore = $this->connection->fetchAssociative('SELECT roles, role_validity FROM `user` WHERE id = ?', [$userId]);
+        self::assertSame(0, $tester->execute(['--dry-run' => true]), $tester->getDisplay());
+        self::assertSame($rolesBefore, $this->connection->fetchAssociative('SELECT roles, role_validity FROM `user` WHERE id = ?', [$userId]));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM media_folder_permission'));
+        self::assertFalse($this->connection->isTransactionActive());
+        $this->connection->insert('club_function', ['club_id' => $clubId, 'name' => 'Pressewart', 'permissions' => '[]', 'successor_required' => 0]);
+        $conflictId = (int) $this->connection->lastInsertId();
+        self::assertSame(1, $tester->execute(['--dry-run' => true]));
+        self::assertStringContainsString('widerspricht', $tester->getDisplay());
+        self::assertSame($rolesBefore, $this->connection->fetchAssociative('SELECT roles, role_validity FROM `user` WHERE id = ?', [$userId]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM media_folder_permission'));
+        self::assertFalse($this->connection->isTransactionActive());
+        $this->connection->delete('club_function', ['id' => $conflictId]);
         self::assertSame(0, $tester->execute(['--confirm' => true]), $tester->getDisplay());
         self::assertSame('[]', $this->connection->fetchOne('SELECT roles FROM `user` WHERE id = ?', [$userId]));
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$userId]));
@@ -310,6 +333,13 @@ final class MigrationChainTest extends TestCase
             [$folderId],
         ));
         self::assertNull($this->connection->fetchOne("SELECT root_read FROM club_function WHERE name = 'Pressewart'"));
+        $this->connection->executeStatement('ALTER TABLE media_folder_permission DROP FOREIGN KEY FK_5DFEDFD0B9F6D08A');
+        $this->connection->executeStatement('ALTER TABLE media_folder_permission DROP FOREIGN KEY FK_5DFEDFD0162CB942');
+        $this->connection->executeStatement('ALTER TABLE media_folder_permission ENGINE = MyISAM');
+        self::assertSame(1, $tester->execute(['--dry-run' => true]));
+        self::assertStringContainsString('InnoDB für Tabelle media_folder_permission', $tester->getDisplay());
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$userId]));
+        self::assertFalse($this->connection->isTransactionActive());
     }
 
     public function testFolderPermissionMigrationRejectsNestedOverridesAndPreservesFirstLevelDecisions(): void
