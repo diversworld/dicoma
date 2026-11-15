@@ -1,0 +1,17 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ 'Funktionszuordnung bearbeiten'|trans }}{% endblock %}
+{% block main %}
+<h2>{{ function.name }}</h2>
+<p>{{ account.member.fullName }} ({{ account.user }})</p>
+<p>{{ 'Die Funktion gilt nur während des gemeinsamen und des individuellen Zeitraums.'|trans }}</p>
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{{ form_row(form.assigned) }}
+{{ form_row(form.startsAt) }}
+{{ form_row(form.endsAt) }}
+{{ form_rest(form) }}
+<button type="submit" class="btn btn-primary">{{ 'Zuordnung speichern'|trans }}</button>
+{{ form_end(form) }}
+<a href="{{ path('admin_function_definition_edit', {id: function.id}) }}">{{ 'Zurück zur Funktion'|trans }}</a>
+{% endblock %}

@@ -184,8 +184,8 @@ final class MigrationChainTest extends TestCase
         $firstEm = EntityManager::create($firstConnection, $config);
         $secondEm = EntityManager::create($secondConnection, $config);
         $logger = new \Psr\Log\NullLogger();
-        $firstService = new \App\Service\MembershipService($firstEm, $logger, new \App\Service\MembershipRoleContinuity($firstEm, $logger));
-        $secondService = new \App\Service\MembershipService($secondEm, $logger, new \App\Service\MembershipRoleContinuity($secondEm, $logger));
+        $firstService = new \App\Service\MembershipService($firstEm, $logger, new \App\Service\MembershipRoleContinuity($firstEm, $logger), new \App\Service\FunctionSuccession($firstEm, false));
+        $secondService = new \App\Service\MembershipService($secondEm, $logger, new \App\Service\MembershipRoleContinuity($secondEm, $logger), new \App\Service\FunctionSuccession($secondEm, false));
         $first = $firstEm->find(\App\Entity\Member::class, $memberIds[0]);
         $second = $secondEm->find(\App\Entity\Member::class, $memberIds[1]);
         $firstConnection->beginTransaction();
@@ -211,6 +211,99 @@ final class MigrationChainTest extends TestCase
             $firstConnection->close();
             $secondConnection->close();
         }
+    }
+
+    public function testFunctionSuccessionSerializesAndRefreshesConcurrentStatusChanges(): void
+    {
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $memberIds = [];
+        $userIds = [];
+        foreach (['first', 'second'] as $name) {
+            $this->connection->insert('person', ['firstname' => $name, 'lastname' => 'Synthetic', 'email' => $name.'@example.invalid']);
+            $personId = (int) $this->connection->lastInsertId();
+            $this->connection->insert('user', ['user' => $name, 'email' => $name.'@example.invalid', 'roles' => '[]', 'password' => 'unused', 'is_verified' => 1, 'person_id' => $personId]);
+            $userIds[] = (int) $this->connection->lastInsertId();
+            $this->connection->insert('member', ['club_id' => $clubId, 'person_id' => $personId, 'user_id' => end($userIds), 'membership_status' => 'active']);
+            $memberIds[] = (int) $this->connection->lastInsertId();
+        }
+        $this->connection->insert('club_function', ['club_id' => $clubId, 'name' => 'Ausbildung', 'permissions' => '["ROLE_INSTRUCTOR"]', 'successor_required' => 1]);
+        $functionId = (int) $this->connection->lastInsertId();
+        foreach ($userIds as $userId) {
+            $this->connection->insert('club_function_assignment', ['club_function_id' => $functionId, 'user_id' => $userId]);
+        }
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $firstConnection = DriverManager::getConnection($this->connection->getParams());
+        $secondConnection = DriverManager::getConnection($this->connection->getParams());
+        $secondConnection->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        $firstEm = EntityManager::create($firstConnection, $config);
+        $secondEm = EntityManager::create($secondConnection, $config);
+        $logger = new \Psr\Log\NullLogger();
+        $firstService = new \App\Service\MembershipService($firstEm, $logger, new \App\Service\MembershipRoleContinuity($firstEm, $logger), new \App\Service\FunctionSuccession($firstEm, true));
+        $secondService = new \App\Service\MembershipService($secondEm, $logger, new \App\Service\MembershipRoleContinuity($secondEm, $logger), new \App\Service\FunctionSuccession($secondEm, true));
+        $first = $firstEm->find(\App\Entity\Member::class, $memberIds[0]);
+        $second = $secondEm->find(\App\Entity\Member::class, $memberIds[1]);
+        $secondEm->find(\App\Entity\Member::class, $memberIds[0]);
+        $secondEm->getRepository(\App\Entity\ClubFunctionAssignment::class)->findBy(['clubFunction' => $functionId]);
+        $firstConnection->beginTransaction();
+        try {
+            $firstConnection->fetchOne('SELECT id FROM club WHERE id = ? FOR UPDATE', [$clubId]);
+            try {
+                $secondService->changeStatus($second, \App\Enum\MembershipStatus::SUSPENDED, 'second');
+                self::fail('A concurrent status change must wait for the club lock.');
+            } catch (\Doctrine\DBAL\Exception\LockWaitTimeoutException) {
+                self::assertSame('active', $this->connection->fetchOne('SELECT membership_status FROM member WHERE id = ?', [$memberIds[1]]));
+            }
+            $firstService->changeStatus($first, \App\Enum\MembershipStatus::SUSPENDED, 'first');
+            $firstConnection->commit();
+            try {
+                $secondService->changeStatus($second, \App\Enum\MembershipStatus::SUSPENDED, 'second');
+                self::fail('The second status change must recheck the committed function assignments.');
+            } catch (\DomainException $exception) {
+                self::assertStringContainsString('Ausbildung', $exception->getMessage());
+            }
+            self::assertSame(['suspended', 'active'], $this->connection->fetchFirstColumn('SELECT membership_status FROM member WHERE id IN (?, ?) ORDER BY id', $memberIds));
+            self::assertSame([$userIds[1]], array_map('intval', $this->connection->fetchFirstColumn('SELECT user_id FROM club_function_assignment WHERE club_function_id = ?', [$functionId])));
+        } finally {
+            if ($firstConnection->isTransactionActive()) { $firstConnection->rollBack(); }
+            $firstConnection->close();
+            $secondConnection->close();
+        }
+    }
+
+    public function testFunctionRoleImportRunsOnMigratedMariaDbSchema(): void
+    {
+        $this->migrate('latest');
+        $clubId = $this->createClub();
+        $this->connection->insert('person', ['firstname' => 'Import', 'lastname' => 'Synthetic']);
+        $personId = (int) $this->connection->lastInsertId();
+        $this->connection->insert('user', [
+            'user' => 'role-import', 'email' => 'role-import@example.invalid', 'roles' => '["ROLE_INSTRUCTOR","ROLE_PRESS_OFFICER"]',
+            'role_validity' => '{"ROLE_INSTRUCTOR":{"startsAt":"2020-01-01","endsAt":"2999-12-31"}}',
+            'password' => 'unused', 'is_verified' => 1, 'person_id' => $personId,
+        ]);
+        $userId = (int) $this->connection->lastInsertId();
+        $this->connection->insert('member', ['club_id' => $clubId, 'person_id' => $personId, 'user_id' => $userId, 'membership_status' => 'active']);
+        $config = ORMSetup::createAttributeMetadataConfiguration([dirname(__DIR__, 2).'/src/Entity'], true);
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER, true));
+        $em = EntityManager::create($this->connection, $config);
+        $security = $this->createStub(\Symfony\Bundle\SecurityBundle\Security::class);
+        $singleClub = new \App\Service\SingleClubMode(new \App\Service\PublicWebsite($em, $security, $clubId), $em);
+        $continuity = new \App\Service\MembershipRoleContinuity($em, new \Psr\Log\NullLogger());
+        $command = new \App\Command\MigrateFunctionRolesCommand(
+            $em, $singleClub, $continuity, new \Symfony\Component\Security\Core\Role\RoleHierarchy([]),
+            new \App\Command\CheckFunctionMigrationCommand($this->connection), true,
+        );
+        $tester = new \Symfony\Component\Console\Tester\CommandTester($command);
+        self::assertSame(0, $tester->execute(['--confirm' => true]), $tester->getDisplay());
+        self::assertSame('[]', $this->connection->fetchOne('SELECT roles FROM `user` WHERE id = ?', [$userId]));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$userId]));
+        self::assertSame('2020-01-01', $this->connection->fetchOne(
+            "SELECT a.starts_at FROM club_function_assignment a JOIN club_function f ON f.id = a.club_function_id WHERE a.user_id = ? AND f.name = 'Ausbilder / Trainer'",
+            [$userId],
+        ));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT root_read FROM club_function WHERE name = 'Pressewart'"));
     }
 
     public function testEventBookingUpgradePreservesExistingPublicationsAndMembers(): void

@@ -41,6 +41,32 @@ final class MembershipRoleContinuity
         $this->em->refresh($entity, $mode);
     }
 
+    /** @param list<string> $items */
+    public static function summarize(array $items): string
+    {
+        $shown = [];
+        foreach ($items as $item) {
+            $candidate = implode(', ', [...$shown, $item]);
+            if (mb_strlen($candidate) > 350) {
+                break;
+            }
+            $shown[] = $item;
+        }
+        $remaining = count($items) - count($shown);
+        return implode(', ', $shown).($remaining > 0 ? sprintf(' und %d weitere', $remaining) : '');
+    }
+
+    /** @param list<string> $items */
+    public function recordOverflow(Member $member, string $kind, string $actor, string $prefix, array $items): void
+    {
+        if (mb_strlen(implode(', ', $items)) <= 350) {
+            return;
+        }
+        foreach ($items as $item) {
+            $this->em->persist(new MembershipEvent($member, $kind, $actor, $prefix.$item.'.'));
+        }
+    }
+
     /** @return list<string> */
     public function functions(?User $user): array
     {
@@ -118,8 +144,7 @@ final class MembershipRoleContinuity
                     continue;
                 }
                 $this->refresh($account);
-                if (in_array(User::ROLE_BOARD, $account->getStoredRoles(), true)
-                    && in_array(User::ROLE_BOARD, $this->validRoles($account) ?? [], true)
+                if (in_array(User::ROLE_BOARD, $this->validRoles($account) ?? [], true)
                     && filter_var($account->getEmail(), FILTER_VALIDATE_EMAIL)) {
                     $recipients[$account->getEmail()] = true;
                 }

@@ -22,6 +22,7 @@ final class MembershipService
         private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
         private readonly MembershipRoleContinuity $continuity,
+        private readonly FunctionSuccession $functionSuccession,
     ) {}
 
     public function policy(Club $club): ?MembershipPolicy
@@ -107,10 +108,14 @@ final class MembershipService
             $user = $member->getUser();
             if ($user !== null) { $this->continuity->refresh($user); }
             $roles = $this->continuity->functions($user);
-            $missing = $this->continuity->missingSuccessors($member, $roles);
-            $boardNotified = $this->continuity->notifyBoard($member, $roles, $missing, 'Kündigung zum '.$date->format('d.m.Y').'.', 'requested:'.$member->getId().':'.$date->format('Y-m-d'), $this);
-            if ($roles !== []) {
-                $this->em->persist(new MembershipEvent($member, 'role_continuity', $actor, 'Kündigung zum '.$date->format('d.m.Y').'; Funktionsrollen: '.implode(', ', $roles).'. '.($missing === [] ? 'Nachfolge bei Erfassung vorhanden.' : 'Nachfolge bei Erfassung offen: '.implode(', ', $missing).'.').($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+            $functions = $this->functionSuccession->functions($user);
+            $all = [...$roles, ...$functions];
+            $missing = [...$this->continuity->missingSuccessors($member, $roles), ...$this->functionSuccession->missingLabels($user)];
+            $boardNotified = $this->continuity->notifyBoard($member, $all, $missing, 'Kündigung zum '.$date->format('d.m.Y').'.', 'requested:'.$member->getId().':'.$date->format('Y-m-d'), $this);
+            if ($all !== []) {
+                $this->em->persist(new MembershipEvent($member, 'role_continuity', $actor, 'Kündigung zum '.$date->format('d.m.Y').'; Funktionsrollen: '.MembershipRoleContinuity::summarize($all).'. '.($missing === [] ? 'Nachfolge bei Erfassung vorhanden.' : 'Nachfolge bei Erfassung offen: '.MembershipRoleContinuity::summarize($missing).'.').($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+                $this->continuity->recordOverflow($member, 'role_continuity', $actor, 'Funktionsrolle bei Kündigung: ', $all);
+                $this->continuity->recordOverflow($member, 'role_continuity', $actor, 'Nachfolge bei Erfassung offen: ', $missing);
             }
             $member->setTerminationDate($date);
             $this->record($member, 'termination_requested', $actor, 'Kündigung zum ' . $date->format('d.m.Y') . '; Mitgliedsrechte bleiben bis zum wirksamen Austritt erhalten.');
@@ -130,11 +135,12 @@ final class MembershipService
                 $user = $member->getUser();
                 if ($user !== null) { $this->continuity->refresh($user); }
                 $roles = $this->continuity->functions($user);
-                $missing = $this->continuity->missingSuccessors($member, $roles);
+                $missing = [...$this->continuity->missingSuccessors($member, $roles), ...$this->functionSuccession->missingLabels($user)];
                 if ($missing !== []) {
                     throw new \DomainException('Statuswechsel nicht möglich. Zuerst eine aktive Nachfolge im selben Verein zuweisen: '.implode(', ', $missing).'.');
                 }
                 $this->continuity->revoke($member, $roles, $actor);
+                $this->functionSuccession->revoke($member, $actor);
             }
             $old = $member->getMembershipStatus()->label();
             $member->setMembershipStatus($status);

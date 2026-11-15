@@ -418,8 +418,10 @@ class CoursesCrudController extends AbstractCrudController
          */
         yield FormField::addFieldset('Bild')
             ->collapsible();
-        $this->courseImages->directory();
-        yield CourseImageField::create();
+        if ($this->courseImages->legacyEditingEnabled()) {
+            $this->courseImages->directory();
+            yield CourseImageField::create();
+        }
         /*
          * Legacy-Kategorie.
          *

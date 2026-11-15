@@ -17,6 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -38,12 +39,16 @@ final class DelegatedRoleController extends AbstractController
         private readonly AdminClubContext $clubContext,
         private readonly LoggerInterface $logger,
         private readonly MembershipRoleContinuity $continuity,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
     ) {}
 
     #[Route('', name: 'admin_delegated_roles', methods: ['GET'])]
     public function index(): Response
     {
         $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+        if ($this->functionModelEnabled) {
+            return $this->redirectToRoute('admin_club_functions');
+        }
 
         return $this->render('admin/roles/functions.html.twig', [
             'functions' => self::functionChoices(),
@@ -60,6 +65,7 @@ final class DelegatedRoleController extends AbstractController
     #[Route('/functions/{role}/members', name: 'admin_function_members', requirements: ['role' => 'ROLE_[A-Z_]+'], methods: ['GET'])]
     public function members(string $role, AdminUrlGenerator $urls): Response
     {
+        $this->requireLegacyModel();
         $this->functionLabel($role);
         $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
 
@@ -70,6 +76,7 @@ final class DelegatedRoleController extends AbstractController
     #[Route('/functions/{role}/members/{id}/edit', name: 'admin_function_assignment_edit', requirements: ['role' => 'ROLE_[A-Z_]+', 'id' => '\d+'], methods: ['GET', 'POST'])]
     public function editAssignment(string $role, User $user, Request $request): Response
     {
+        $this->requireLegacyModel();
         $label = $this->functionLabel($role);
         if (!in_array($role, DelegatedRoles::ALLOWED, true)) {
             throw $this->createAccessDeniedException('Geschützte Rollen können hier nicht vergeben werden.');
@@ -161,6 +168,7 @@ final class DelegatedRoleController extends AbstractController
     #[Route('/{id}/edit', name: 'admin_delegated_roles_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(User $user, Request $request): Response
     {
+        $this->requireLegacyModel();
         $this->denyAccessUnlessGranted(DelegatedRoleVoter::MANAGE, $user);
         $audit = null;
         $response = $this->em->getConnection()->transactional(function () use ($user, $request, &$audit): Response {
@@ -256,6 +264,9 @@ final class DelegatedRoleController extends AbstractController
             }
             $choices = array_filter(User::getAvailableRoles(), static fn (string $role): bool =>
                 !in_array($role, [User::ROLE_USER, User::ROLE_MEMBER], true) && in_array($role, $user->getStoredRoles(), true));
+            if ($this->functionModelEnabled) {
+                $choices = array_filter($choices, static fn (string $role): bool => $role === User::ROLE_SUPER_ADMIN);
+            }
             $roles = array_values($choices);
             $before = $user->getRoleValidity();
             $fingerprint = DelegatedRoles::fingerprint($user);
@@ -290,5 +301,12 @@ final class DelegatedRoleController extends AbstractController
             $this->addFlash('success', 'Rollengültigkeiten gespeichert.');
         }
         return $response;
+    }
+
+    private function requireLegacyModel(): void
+    {
+        if ($this->functionModelEnabled) {
+            throw $this->createNotFoundException('Direkte Funktionsrollen werden nicht mehr verwaltet.');
+        }
     }
 }

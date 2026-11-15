@@ -7,6 +7,7 @@ parameters:
     bilder_ordner: '%kernel.project_dir%/files/kurse'
     env(SITE_THEME): 'airspace'
     env(PUBLIC_SITE_CLUB_ID): '0'
+    env(CLUB_FUNCTION_MEMBERSHIP_ENABLED): '0'
     site.themes:
         airspace:
             layout: 'themes/airspace/layout.html.twig'
@@ -43,5 +44,11 @@ services:
     App\Service\PublicWebsite:
         arguments:
             $clubId: '%env(int:PUBLIC_SITE_CLUB_ID)%'
+    App\Service\FunctionSuccession:
+        arguments:
+            $enabled: '%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%'
+    App\EventListener\FunctionModelUserListener:
+        arguments:
+            $enabled: '%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

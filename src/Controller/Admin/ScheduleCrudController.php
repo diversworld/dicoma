@@ -203,8 +203,10 @@ class ScheduleCrudController extends AbstractCrudController
         yield TextField::new('title','Terminbezeichnung')
             ->setColumns(6);
 
-        $this->courseImages->directory();
-        yield CourseImageField::create();
+        if ($this->courseImages->legacyEditingEnabled()) {
+            $this->courseImages->directory();
+            yield CourseImageField::create();
+        }
 
         /*
          * Datum / Uhrzeit

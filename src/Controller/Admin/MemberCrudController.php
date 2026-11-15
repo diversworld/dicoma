@@ -42,12 +42,13 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use App\Form\MemberQualificationType;
 
 #[IsGranted('ROLE_ADMIN')]
 class MemberCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships, private readonly AdminClubContext $clubContext, private readonly MembershipRoleContinuity $continuity) {}
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships, private readonly AdminClubContext $clubContext, private readonly MembershipRoleContinuity $continuity, #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled) {}
 
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
@@ -181,7 +182,8 @@ class MemberCrudController extends AbstractCrudController
                 throw new ConflictHttpException('Benutzerkonto nicht mehr vorhanden.');
             }
             $functions = array_diff(json_decode((string) $storedRoles, true, 512, JSON_THROW_ON_ERROR), [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]);
-            if (($oldUserId !== $newUserId || ($id === $newUserId && !$member->isActiveMember())) && $functions !== []) {
+            $hasAssignments = $this->functionModelEnabled && (int) $connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$id]) > 0;
+            if (($oldUserId !== $newUserId || ($id === $newUserId && !$member->isActiveMember())) && ($functions !== [] || $hasAssignments)) {
                 throw new ConflictHttpException('Kontozuordnungen und inaktive Mitgliedschaften mit Funktionsrollen müssen zuerst gesondert geklärt werden.');
             }
         }

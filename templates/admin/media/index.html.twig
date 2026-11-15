@@ -6,7 +6,7 @@
     {% if canManageEditorial %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">{{ 'Zur Website-Redaktion'|trans }}</a></p>{% endif %}
     <p>{{ 'Vereinsdateien werden geschützt gespeichert. Bilder können in Artikeln und Veranstaltungen ausgewählt werden. Verwendete Dateien können nicht gelöscht werden.'|trans }}</p>
     <p>{{ 'Erlaubt: JPG, PNG, WebP, PDF, DOCX, XLSX und PPTX, jeweils bis 10 MB. Bilder werden bei sichtbaren Inhalten öffentlich angezeigt; bitte Rechte und Bildmetadaten prüfen.'|trans }}</p>
-    {% if is_granted('ROLE_ADMIN') %}
+    {% if is_granted('ROLE_ADMIN') and not functionModelEnabled %}
         <section id="legacy-course-files" class="card mb-4">
             <div class="card-body">
                 <h2>{{ 'Kursbilder'|trans }}</h2>
@@ -29,13 +29,13 @@
     {% endif %}
     <div class="row g-4">
     <aside class="col-lg-4 col-xl-3">
-        <form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
+        {% if canEdit %}<form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
             <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create_' ~ club.id) }}">
             <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
             <label for="media-folder-name" class="form-label">{{ 'Neuer Ordner in %folder%'|trans({'%folder%': folder ? folder.path : 'Hauptordner'|trans}) }}</label>
             <input id="media-folder-name" class="form-control" name="name" type="text" maxlength="120" required>
             <button type="submit" class="btn btn-secondary mt-2">{{ 'Ordner anlegen'|trans }}</button>
-        </form>
+        </form>{% endif %}
         <nav id="media-folder-tree" aria-label="{{ 'Ordnerstruktur'|trans }}">
             <h2>{{ 'Ordnerstruktur'|trans }}</h2>
             <a href="{{ path('admin_media_index') }}" {% if not folder %}aria-current="page"{% endif %}>{{ 'Hauptordner'|trans }}</a>
@@ -49,35 +49,35 @@
             / <a href="{{ path('admin_media_index', {folder: ancestor.id}) }}">{{ ancestor.name }}</a>
         {% endfor %}
     </nav>
-    {% if folder %}
+    {% if folder and (canEdit or canDelete) %}
         <section class="card mb-4">
             <div class="card-body">
                 <h2>{{ 'Ordner bearbeiten'|trans }}</h2>
-                <form method="post" action="{{ path('admin_media_folder_edit', {id: folder.id}) }}">
+                {% if canEdit %}<form method="post" action="{{ path('admin_media_folder_edit', {id: folder.id}) }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('media_folder_edit_' ~ folder.id) }}">
                     <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
                     <label class="form-label" for="media-current-folder-name">{{ 'Ordnername'|trans }}</label>
                     <input class="form-control" id="media-current-folder-name" name="name" value="{{ folder.name }}" maxlength="120" required>
                     <label class="form-label mt-2" for="media-parent-folder">{{ 'Übergeordneter Ordner'|trans }}</label>
                     <select class="form-select" id="media-parent-folder" name="parent">
-                        <option value="" {{ not folder.parent ? 'selected' : '' }}>{{ 'Hauptordner'|trans }}</option>
+                        {% if canEditRoot or not folder.parent %}<option value="" {{ not folder.parent ? 'selected' : '' }}>{{ 'Hauptordner'|trans }}</option>{% endif %}
                         {% for target in parentChoices %}
                             <option value="{{ target.id }}" {{ folder.parent and target.id == folder.parent.id ? 'selected' : '' }}>{{ target.path }}</option>
                         {% endfor %}
                     </select>
                     <button class="btn btn-secondary mt-2" type="submit">{{ 'Ordner speichern'|trans }}</button>
-                </form>
-                <form method="post" action="{{ path('admin_media_folder_delete', {id: folder.id}) }}" class="mt-3">
+                </form>{% endif %}
+                {% if canDelete %}<form method="post" action="{{ path('admin_media_folder_delete', {id: folder.id}) }}" class="mt-3">
                     <input type="hidden" name="_token" value="{{ csrf_token('media_folder_delete_' ~ folder.id) }}">
                     <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
                     <button class="btn btn-outline-danger" type="submit" {{ children or rows ? 'disabled' : '' }}>{{ 'Leeren Ordner löschen'|trans }}</button>
                     <div class="form-text">{{ 'Nur leere Ordner können gelöscht werden.'|trans }}</div>
-                </form>
+                </form>{% endif %}
             </div>
         </section>
     {% endif %}
 
-    <h2>{{ 'Dateien hochladen'|trans }}</h2>
+    {% if canUpload %}<h2>{{ 'Dateien hochladen'|trans }}</h2>
     <p>{{ 'Die Dateien werden in %folder% hochgeladen. Ungültige Dateien werden einzeln gemeldet; gültige Dateien werden gespeichert.'|trans({'%folder%': folder ? folder.path : 'den Hauptordner'|trans}) }}</p>
     {% if maxFileUploads > 0 %}<p>{{ 'Der Server erlaubt höchstens %count% Dateien pro Upload; zusätzlich gilt ein Limit für die Gesamtgröße.'|trans({'%count%': maxFileUploads}) }}</p>{% endif %}
     <form method="post" action="{{ path('admin_media_upload') }}" enctype="multipart/form-data" class="mb-4">
@@ -90,7 +90,7 @@
         <input id="media-alt" class="form-control" name="alt_text" type="text" maxlength="255">
         <div class="form-text">{{ 'Bei Bedarf den Alternativtext anschließend für jedes Bild einzeln bearbeiten.'|trans }}</div>
         <button type="submit" class="btn btn-primary mt-2">{{ 'Dateien hochladen'|trans }}</button>
-    </form>
+    </form>{% endif %}
     <h2>{{ 'Gespeicherte Dateien'|trans }}</h2>
     <div class="table-responsive"><table class="table">
         <thead><tr><th>{{ 'Vorschau'|trans }}</th><th>{{ 'Datei'|trans }}</th><th>{{ 'Typ / Größe'|trans }}</th><th>{{ 'Verwendung'|trans }}</th><th>{{ 'Aktion'|trans }}</th></tr></thead>
@@ -102,24 +102,24 @@
                 <td><a href="{{ path('admin_media_file', {id:file.id}) }}">{{ file.originalName }}</a>{% if file.image %}<br>{{ 'Alternativtext'|trans }}: {{ file.altText ?: 'keiner'|trans }}{% endif %}</td>
                 <td>{{ file.mimeType }} · {{ (file.size / 1024)|number_format(0, ',', '.') }} KB</td>
                 <td>{{ row.used }}</td>
-                <td><a href="{{ path('admin_media_edit', {id:file.id}) }}">{{ 'Angaben bearbeiten'|trans }}</a>
+                <td>{% if canEdit %}<a href="{{ path('admin_media_edit', {id:file.id}) }}">{{ 'Angaben bearbeiten'|trans }}</a>
                 <form method="post" action="{{ path('admin_media_move', {id:file.id}) }}" class="my-2">
                     <input type="hidden" name="_token" value="{{ csrf_token('media_move_' ~ file.id) }}">
                     <label class="form-label" for="media-move-{{ file.id }}">{{ 'Zielordner für %file%'|trans({'%file%': file.originalName}) }}</label>
                     <select class="form-select" id="media-move-{{ file.id }}" name="folder">
-                        <option value="" {{ not folder ? 'selected' : '' }}>{{ 'Hauptordner'|trans }}</option>
+                        {% if canUploadRoot %}<option value="" {{ not folder ? 'selected' : '' }}>{{ 'Hauptordner'|trans }}</option>{% endif %}
                         {% for target in folders %}
                             <option value="{{ target.id }}" {{ folder and target.id == folder.id ? 'selected' : '' }}>{{ target.path }}</option>
                         {% endfor %}
                     </select>
                     <button class="btn btn-secondary btn-sm mt-2" type="submit">{{ 'Verschieben'|trans }}</button>
-                </form>
-                {% if not row.used %}
+                </form>{% endif %}
+                {% if canDelete and not row.used %}
                     <form method="post" action="{{ path('admin_media_delete', {id:file.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('media_delete_' ~ file.id) }}">
                         <button type="submit">{{ 'Löschen'|trans }}</button>
                     </form>
-                {% else %}{{ 'In Verwendung'|trans }}{% endif %}</td>
+                {% elseif row.used %}{{ 'In Verwendung'|trans }}{% endif %}</td>
             </tr>
         {% else %}<tr><td colspan="5">{{ 'Noch keine Dateien.'|trans }}</td></tr>{% endfor %}
         </tbody>

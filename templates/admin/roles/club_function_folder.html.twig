@@ -1,0 +1,17 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ 'Ordnerrechte bearbeiten'|trans }}{% endblock %}
+{% block main %}
+<h2>{{ function.name }}: {{ folder.path }}</h2>
+<p>{{ 'Eine Sperre gilt nur für diese Funktion. Eine andere Funktion kann den Zugriff weiterhin erlauben.'|trans }}</p>
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{{ form_row(form.read) }}
+{{ form_row(form.upload) }}
+{{ form_row(form.edit) }}
+{{ form_row(form.delete) }}
+{{ form_rest(form) }}
+<button type="submit" class="btn btn-primary">{{ 'Ordnerrechte speichern'|trans }}</button>
+{{ form_end(form) }}
+<a href="{{ path('admin_function_definition_edit', {id: function.id}) }}">{{ 'Zurück zur Funktion'|trans }}</a>
+{% endblock %}

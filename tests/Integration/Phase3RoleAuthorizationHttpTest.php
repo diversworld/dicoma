@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Entity\Club;
+use App\Entity\ClubFunction;
+use App\Entity\ClubFunctionAssignment;
+use App\Entity\FileAction;
+use App\Entity\MediaFolder;
 use App\Entity\Member;
 use App\Entity\Person;
 use App\Entity\TankCheck;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
 use App\Security\DelegatedRoles;
+use App\Security\FolderPermissions;
 use App\Service\MembershipService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -33,6 +38,7 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
         $_ENV['DATABASE_URL'] = $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:';
         $_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null';
+        $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = str_starts_with($this->name(), 'testNewFunction') || $this->name() === 'testFunctionRolesOverlapAndSessionRefreshesAfterRevocation' ? '1' : '0';
         putenv('DATABASE_URL=sqlite:///:memory:');
         putenv('MAILER_DSN=null://null');
         $this->client = static::createClient(['environment' => 'test']);
@@ -43,6 +49,154 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->club = (new Club())->setName('Role Test Club');
         $this->em->persist($this->club);
         $this->em->flush();
+    }
+
+    public function testFunctionRolesOverlapAndSessionRefreshesAfterRevocation(): void
+    {
+        $user = $this->account('function-session', [], $this->club);
+        $first = new ClubFunction($this->club, 'Erste');
+        $second = new ClubFunction($this->club, 'Zweite');
+        $first->setPermissions([User::ROLE_INSTRUCTOR]);
+        $second->setPermissions([User::ROLE_INSTRUCTOR]);
+        $first->setValidity(new \DateTimeImmutable('2999-01-01'), null);
+        $firstAssignment = new ClubFunctionAssignment($first, $user);
+        $secondAssignment = new ClubFunctionAssignment($second, $user);
+        foreach ([$first, $second, $firstAssignment, $secondAssignment] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        self::assertContains(User::ROLE_INSTRUCTOR, $user->getRoles());
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/profile/membership');
+        self::assertResponseIsSuccessful();
+        $first->setValidity(null, null);
+        $user->removeFunctionAssignment($secondAssignment);
+        $this->em->remove($secondAssignment);
+        $this->em->flush();
+        $this->em->clear();
+        $this->client->request('GET', '/profile/membership');
+        self::assertResponseIsSuccessful();
+        $firstAssignment = $this->em->find(ClubFunctionAssignment::class, $firstAssignment->getId());
+        $this->em->remove($firstAssignment);
+        $this->em->flush();
+        $this->em->clear();
+        $this->client->request('GET', '/profile/membership');
+        self::assertResponseRedirects();
+        self::assertStringContainsString('/login', (string) $this->client->getResponse()->headers->get('Location'));
+    }
+
+    public function testNewFunctionAdministrationChecksPrivilegesAndStaleForms(): void
+    {
+        $admin = $this->account('new-function-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('new-function-target', [], $this->club);
+        $board = $this->account('new-function-board', [User::ROLE_BOARD], $this->club);
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin/club-functions/new');
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[name="form"]')->form();
+        $this->client->submit($form, ['form[name]' => 'Ausbildungshelfer', 'form[permissions]' => [User::ROLE_INSTRUCTOR]]);
+        self::assertResponseRedirects();
+        $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ausbildungshelfer']);
+        self::assertNotNull($function);
+        $id = $function->getId();
+        $url = '/admin/club-functions/'.$id.'/holder/'.$target->getId();
+        $crawler = $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[name="form"]')->form();
+        $this->client->submit($form, ['form[assigned]' => '1']);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $target = $this->em->find(User::class, $target->getId());
+        self::assertContains(User::ROLE_INSTRUCTOR, $target->getRoles());
+        $this->client->request('GET', '/admin/club-functions/'.$id.'/holder/'.$admin->getId());
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/club-functions/'.$id.'/holder/'.$board->getId());
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        self::assertResponseIsSuccessful();
+        $staleForm = $crawler->filter('form[name="form"]')->form();
+        $function = $this->em->find(ClubFunction::class, $id);
+        $function->rename('Zwischenzeitlich geändert');
+        $this->em->flush();
+        $this->client->submit($staleForm, ['form[name]' => 'Veraltet']);
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('Zwischenzeitlich geändert', $this->em->find(ClubFunction::class, $id)->getName());
+    }
+
+    public function testNewFunctionFolderRulesArePersistedAndInherited(): void
+    {
+        $admin = $this->account('new-function-folder-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('new-function-folder-target', [], $this->club);
+        $function = new ClubFunction($this->club, 'Ablage');
+        $function->setRootPermission(FileAction::READ, true);
+        $folder = new MediaFolder($this->club, 'Intern');
+        $child = new MediaFolder($this->club, 'Unterordner', $folder);
+        foreach ([$function, $folder, $child, new ClubFunctionAssignment($function, $target)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $id = $function->getId();
+        $folderId = $folder->getId();
+        $childId = $child->getId();
+        $userId = $target->getId();
+        $clubId = $this->club->getId();
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/folder/'.$folderId);
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form[name="form"]')->form(), ['form[read]' => 'deny']);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $access = new FolderPermissions($this->em);
+        $target = $this->em->find(User::class, $userId);
+        $club = $this->em->find(Club::class, $clubId);
+        self::assertTrue($access->can($target, $club, null, FileAction::READ));
+        self::assertFalse($access->can($target, $club, $this->em->find(MediaFolder::class, $childId), FileAction::READ));
+    }
+
+    public function testNewFunctionDeletionRequiresCsrfAndRejectsExistingHolders(): void
+    {
+        $admin = $this->account('delete-function-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('delete-function-target', [], $this->club);
+        $occupied = new ClubFunction($this->club, 'Besetzt');
+        $empty = new ClubFunction($this->club, 'Unbesetzt');
+        foreach ([$occupied, $empty, new ClubFunctionAssignment($occupied, $target)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $occupiedId = $occupied->getId();
+        $emptyId = $empty->getId();
+        $this->client->loginUser($admin);
+        $this->client->request('POST', '/admin/club-functions/'.$emptyId.'/delete', ['version' => $empty->getVersion(), '_token' => 'invalid']);
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$occupiedId.'/edit');
+        $this->client->submit($crawler->filter('form[action$="/delete"]')->form());
+        self::assertResponseRedirects();
+        self::assertNotNull($this->em->find(ClubFunction::class, $occupiedId));
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$emptyId.'/edit');
+        $this->client->submit($crawler->filter('form[action$="/delete"]')->form());
+        self::assertResponseRedirects();
+        self::assertNull($this->em->find(ClubFunction::class, $emptyId));
+    }
+
+    public function testNewFunctionRejectsForgedPrivilegedPermissionsAndSelfEscalation(): void
+    {
+        $admin = $this->account('new-function-admin-security', [User::ROLE_ADMIN], $this->club);
+        $function = new ClubFunction($this->club, 'Eigene Funktion');
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $admin));
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/admin/club-functions/'.$function->getId().'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $crawler = $this->client->request('GET', '/admin/club-functions/new');
+        $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();
+        $values['form']['name'] = 'Manipuliert';
+        $values['form']['permissions'] = [User::ROLE_ADMIN];
+        $this->client->request('POST', '/admin/club-functions/new', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Manipuliert']));
+        $this->client->request('GET', '/admin/roles/functions/ROLE_INSTRUCTOR/members');
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testDelegationIsClubScopedAndRejectsEscalationCsrfAndStaleForms(): void
@@ -540,10 +694,19 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $person = (new Person())->setFirstname($name)->setLastname('Test')->setEmail($name.'@example.invalid');
         $member = (new Member())->setPerson($person)->setClub($club)
             ->setMembershipStatus($active ? MembershipStatus::ACTIVE : MembershipStatus::FORMER);
+        $newModel = str_starts_with($this->name(), 'testNewFunction') || $this->name() === 'testFunctionRolesOverlapAndSessionRefreshesAfterRevocation';
+        $storedRoles = $newModel ? array_values(array_intersect($roles, [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN])) : $roles;
         $user = (new User())->setUser($name)->setEmail($name.'@example.invalid')->setPassword('unused')
-            ->setIsVerified(true)->setRoles($roles)->setMember($member);
+            ->setIsVerified(true)->setRoles($storedRoles)->setMember($member);
         $this->em->persist($user);
         $this->em->persist($member);
+        $functionRoles = array_values(array_diff($roles, [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]));
+        if ($newModel && $functionRoles !== []) {
+            $function = new ClubFunction($club, 'Testfunktion '.$name);
+            $function->setPermissions($functionRoles);
+            $this->em->persist($function);
+            $this->em->persist(new ClubFunctionAssignment($function, $user));
+        }
         $this->em->flush();
         return $user;
     }

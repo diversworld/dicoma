@@ -72,7 +72,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
       Einsatz auf der Ziel-Datenbank nachweisen.
 - [ ] Die unter `files/` abgelegten Kursbilder und Mediendateien sind auch
       logisch in einer gemeinsamen, vollständig bearbeitbaren Ordnerstruktur
-      zusammenzuführen; die funktionsbezogenen Ordnerrechte fehlen weiterhin.
+      zusammenzuführen; die für die Mediathek implementierten Ordnerrechte
+      müssen auch für Kursbilder und ihre Bearbeitung gelten.
 - [ ] Nach der Zusammenführung sind Kurse und Termine samt Bildanzeige,
       Upload, Ordnern, Umbenennen, Verschieben, Löschen und Verwendungsschutz
       über den Datei-Explorer zu prüfen. Öffentliche Bildauslieferung darf
@@ -115,6 +116,25 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 
 ## Technische Vorbereitung und offene Gates
 
+- Schema, Funktionsverwaltung, Nachfolgeprüfung, Rollenauflösung und
+  vererbte Ordnerregeln sind implementiert. Die Mediathek prüft diese Regeln
+  für ihre Lese- und Schreibaktionen; bisherige Kursbild-Explorer und
+  Kursbild-Uploads sind bei eingeschaltetem Modell vorsorglich gesperrt,
+  weil sie noch nicht in dieselbe Ordnerstruktur integriert sind.
+  `CLUB_FUNCTION_MEMBERSHIP_ENABLED` ist standardmäßig ausgeschaltet und darf
+  vor der vollständigen Umstellung und Abnahme nicht aktiviert werden.
+  Das neue Schema und die Rollenübernahme wurden auf der lokalen
+  Anwendungsdatenbank noch nicht angewendet; die bisherigen Rollenregeln
+  bleiben deshalb weiterhin maßgeblich.
+- `app:functions:migrate-roles --confirm` übernimmt direkte Funktionsrollen
+  und ihre individuellen Zeiträume transaktional in Funktionszuordnungen.
+  Bei aktiviertem Modell wirken direkte Funktionsrollen nicht mehr; die
+  direkte Superadministrator-Notfallrolle bleibt bestehen. Das Kommando
+  setzt das aktivierte Funktionsmodell voraus, prüft den Bestand erneut und
+  bricht bei unklaren oder widersprüchlichen Daten ab. Es wurde in isolierten
+  SQLite- und MariaDB-Tests ausgeführt, nicht auf der Anwendungsdatenbank.
+  Die Zuordnung der bisherigen Presse- und Administratorrechte zu
+  Hauptordnerrechten ist vor der Übernahme fachlich zu prüfen.
 - Nach gesicherter und geprüfter Übertragung des einzigen fremd zugeordneten
   Turniers wurde der zentrale Vereinskontext auf einen Verein umgestellt. Die
   vollständige Prüfung und Anpassung der früheren Mehrvereinstests und aller
@@ -129,6 +149,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Sie ist keine Migration oder Freigabe: doppelte JSON-Objektschlüssel und
   parallele Datenänderungen werden nicht geprüft; unbekannte Bestandsszenarien,
   Migrationssperre, Backup/Restore und Einzelvergleich bleiben nachzuweisen.
+  Das nicht zugeordnete Konto trägt weder eine Funktionsrolle noch die
+  Superadministrator-Notfallrolle.
 - Die Mediathek-HTTP-Suite wurde an den Einzelvereinsbetrieb angepasst und
   bestand isoliert in DDEV mit 11 Tests und 371 Assertions. Sie prüft die
   bestehende Mediathek, nicht den noch fehlenden gemeinsamen Speicher oder
@@ -139,8 +161,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   nur lesbar und nur für Administratoren sichtbar.
   Medienordner können umbenannt, verschoben und leer gelöscht werden.
   Die Bestände liegen jetzt unter `files/kurse` und `files/website_media`.
-  Ihre Ordner- und Metadatenverwaltung ist noch getrennt und die vereinbarten
-  Ordnerrechte sind noch nicht umgesetzt.
+  Ihre Ordner- und Metadatenverwaltung ist noch getrennt; die neuen
+  Ordnerrechte gelten bislang nur für die Mediathek.
 - `app:files:check-migration` inventarisiert Kursbilder, Mediathek und
   separat geschützte Veranstaltungsdokumente schreibgeschützt. Es meldet
   fehlende oder ungültige Referenzen, abweichende Dateigrößen, gemeinsam

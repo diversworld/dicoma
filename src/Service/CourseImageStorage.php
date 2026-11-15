@@ -7,6 +7,7 @@ namespace App\Service;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class CourseImageStorage
 {
@@ -14,6 +15,7 @@ final class CourseImageStorage
         #[Autowire('%bilder_ordner%')] private readonly string $directory,
         #[Autowire('%kernel.project_dir%')] private readonly ?string $root = null,
         #[Autowire(service: Connection::class)] private readonly ?Connection $connection = null,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled = false,
     ) {}
 
     public function directory(): string
@@ -58,6 +60,9 @@ final class CourseImageStorage
 
     public function store(UploadedFile $file): string
     {
+        if ($this->functionModelEnabled) {
+            throw new AccessDeniedException('Kursbild-Uploads sind bis zur vollständigen Ordnerrechte-Umstellung gesperrt.');
+        }
         $size = $file->getSize();
         if (!$file->isValid() || $size === false || $size < 1 || $size > ImageUploadValidator::MAX_BYTES) {
             throw new \InvalidArgumentException('Bild ungültig oder größer als 10 MB.');
@@ -73,5 +78,10 @@ final class CourseImageStorage
         $file->move($this->directory(), $name);
 
         return $name;
+    }
+
+    public function legacyEditingEnabled(): bool
+    {
+        return !$this->functionModelEnabled;
     }
 }

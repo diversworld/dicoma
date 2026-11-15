@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -73,6 +75,50 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     private ?string $plainPassword = null;
 
+    /** @var Collection<int, ClubFunctionAssignment> */
+    #[ORM\OneToMany(targetEntity: ClubFunctionAssignment::class, mappedBy: 'user')]
+    private Collection $functionAssignments;
+
+    private bool $functionModelEnabled = false;
+
+    public function __construct()
+    {
+        $this->functionAssignments = new ArrayCollection();
+    }
+
+    public function enableFunctionModel(): void
+    {
+        $this->functionModelEnabled = true;
+    }
+
+    public function addFunctionAssignment(ClubFunctionAssignment $assignment): void
+    {
+        if ($assignment->getUser() !== $this) {
+            throw new \InvalidArgumentException('Die Zuordnung gehört zu einem anderen Konto.');
+        }
+        if (!$this->functionAssignments->contains($assignment)) {
+            $this->functionAssignments->add($assignment);
+        }
+    }
+
+    public function removeFunctionAssignment(ClubFunctionAssignment $assignment): void
+    {
+        $this->functionAssignments->removeElement($assignment);
+    }
+
+    public function __serialize(): array
+    {
+        return ['id' => $this->id, 'user' => $this->user, 'password' => $this->password];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->id = $data['id'] ?? $data["\0".self::class."\0id"] ?? null;
+        $this->user = $data['user'] ?? $data["\0".self::class."\0user"] ?? null;
+        $this->password = $data['password'] ?? $data["\0".self::class."\0password"] ?? null;
+        $this->functionAssignments = new ArrayCollection();
+    }
+
     public function __toString(): string
     {
         return (string) $this->user;
@@ -120,11 +166,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	 */
 	public function getRoles(): array
 	{
-        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
+        $day = new \DateTimeImmutable('today');
+        $today = $day->format('Y-m-d');
 		$roles = array_values(array_filter(
             $this->roles,
-            fn (string $role): bool => $role !== self::ROLE_MEMBER && $this->isRoleValidOn($role, $today)
+            fn (string $role): bool => $role !== self::ROLE_MEMBER
+                && (!$this->functionModelEnabled || in_array($role, [self::ROLE_USER, self::ROLE_SUPER_ADMIN], true))
+                && $this->isRoleValidOn($role, $today)
         ));
+        if ($this->functionModelEnabled) {
+            foreach ($this->functionAssignments as $assignment) {
+                if ($assignment->isEffectiveOn($day)) {
+                    array_push($roles, ...$assignment->getClubFunction()->getPermissions());
+                }
+            }
+        }
         $roles[] = self::ROLE_USER;
         if ($this->member !== null && $this->member->getClub() !== null && $this->member->isActiveMember()) {
             $roles[] = self::ROLE_MEMBER;

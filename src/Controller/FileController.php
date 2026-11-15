@@ -11,6 +11,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[Route('/files')]
 #[IsGranted('ROLE_ADMIN')]
@@ -18,7 +19,7 @@ class FileController extends AbstractController
 {
     private string $dirPath; // path to the directory with files
 
-    public function __construct(ParameterBagInterface $params)
+    public function __construct(ParameterBagInterface $params, #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled)
     {
         $this->dirPath = $params->get('bilder_ordner');
     }
@@ -26,6 +27,7 @@ class FileController extends AbstractController
     #[Route('/', name: 'app_files_index')]
     public function index(): Response
     {
+        $this->requireLegacyAccess();
         return $this->render('file/index.html.twig', [
             'controller_name' => 'FileController',
         ]);
@@ -34,6 +36,7 @@ class FileController extends AbstractController
     #[Route('/list', name: 'app_files_list')]
     public function listFiles(): Response
     {
+        $this->requireLegacyAccess();
         $files = scandir($this->dirPath);
         $files = array_diff($files, ['.', '..']); // remove . and ..
 
@@ -47,6 +50,7 @@ class FileController extends AbstractController
     #[Route('/choose', name: 'app_files_choose', methods: ['POST'] )]
     public function chooseFile(Request $request): Response
     {
+        $this->requireLegacyAccess();
         $filename = $request->request->get('filename');
         $filePath = $this->dirPath . '/' . $filename;
 
@@ -61,6 +65,7 @@ class FileController extends AbstractController
     #[Route('/upload', name: 'app_file_upload', methods: ['POST'] )]
     public function uploadFile(Request $request): Response
     {
+        $this->requireLegacyAccess();
         $form = $this->createFormBuilder()
             ->add('file', FileType::class)
             ->getForm();
@@ -87,5 +92,12 @@ class FileController extends AbstractController
         return $this->render('files/upload.html.twig', [
             'form' => $form->createView(),
         ]);
+    }
+
+    private function requireLegacyAccess(): void
+    {
+        if ($this->functionModelEnabled) {
+            throw $this->createAccessDeniedException('Die bisherige Dateiverwaltung ist noch nicht auf Ordnerrechte umgestellt.');
+        }
     }
 }

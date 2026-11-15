@@ -142,10 +142,10 @@ class CoursesController extends AbstractController
     {
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);
         $originalClub = $course->getClub();
-        $files = array_map(
+        $files = $storage->legacyEditingEnabled() ? array_map(
             static fn (array $file): string => $file['path'],
             array_values(array_filter($manager->listDirectory(), static fn (array $file): bool => !$file['isDirectory']))
-        );
+        ) : [];
 
         $form = $this->createForm(CoursesType::class, $course, [
             'files' => $files

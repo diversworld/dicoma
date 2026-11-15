@@ -112,7 +112,7 @@ security:
         - { path: ^/admin/settings/website$, roles: ROLE_PRESS_OFFICER }
         - { path: ^/admin/settings/bar-services$, roles: ROLE_BAR_MANAGER }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_PRESS_OFFICER }
-        - { path: ^/admin/media(?:/|$), roles: ROLE_PRESS_OFFICER }
+        - { path: ^/admin/media(?:/|$), roles: ROLE_USER }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }
 

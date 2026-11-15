@@ -39,6 +39,15 @@ final class UserRoleValidityTest extends TestCase
         $user->setRoleValidity([User::ROLE_ADMIN => ['startsAt' => '2027-02-31', 'endsAt' => null]]);
     }
 
+    public function testFunctionModelDoesNotGrantUnmigratedDirectRoles(): void
+    {
+        $user = (new User())->setRoles([User::ROLE_INSTRUCTOR, User::ROLE_SUPER_ADMIN]);
+        $user->enableFunctionModel();
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $user->getRoles());
+        self::assertContains(User::ROLE_SUPER_ADMIN, $user->getRoles());
+        self::assertContains(User::ROLE_INSTRUCTOR, $user->getStoredRoles());
+    }
+
     #[DataProvider('functionRoles')]
     public function testEachGlobalFunctionCanBeScheduled(string $role): void
     {

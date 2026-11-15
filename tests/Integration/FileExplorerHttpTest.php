@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Entity\Club;
+use App\Entity\ClubFunction;
+use App\Entity\ClubFunctionAssignment;
 use App\Entity\Member;
 use App\Entity\Person;
 use App\Entity\User;
@@ -36,6 +38,7 @@ final class FileExplorerHttpTest extends WebTestCase
             $_ENV[$key] = $_SERVER[$key] = $value;
             putenv($key.'='.$value);
         }
+        $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = str_starts_with($this->name(), 'testFunctionModel') ? '1' : '0';
         $this->root = sys_get_temp_dir().'/dicoma-explorer-'.bin2hex(random_bytes(8));
         mkdir($this->root, 0700);
         mkdir($this->root.'/0', 0700);
@@ -134,6 +137,29 @@ final class FileExplorerHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/files');
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/admin/files/download', ['path' => 'root.txt']);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionModelDoesNotAllowLegacyCourseFileAccessWithoutFolderChecks(): void
+    {
+        $admin = $this->account('function-explorer-admin', []);
+        $function = new ClubFunction($this->club, 'Administration');
+        $function->setPermissions([User::ROLE_ADMIN]);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $admin));
+        $this->em->flush();
+        $this->client->loginUser($admin);
+        foreach (['/admin/files', '/admin/files/download?path=root.txt', '/admin/files/preview/0/test.png'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertSame(403, $this->client->getResponse()->getStatusCode(), $url);
+        }
+        foreach (['/files/', '/files/list'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseRedirects('/admin/de/courses', 303);
+        }
+        $this->client->request('POST', '/files/upload');
+        self::assertResponseStatusCodeSame(410);
+        $this->client->request('GET', '/admin/media', ['legacy_path' => '']);
         self::assertResponseStatusCodeSame(403);
     }
 

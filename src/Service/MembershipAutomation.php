@@ -21,6 +21,7 @@ final class MembershipAutomation
         private readonly LoggerInterface $logger,
         private readonly SingleClubMode $singleClub,
         private readonly MembershipRoleContinuity $continuity,
+        private readonly FunctionSuccession $functionSuccession,
     ) {}
 
     public function run(\DateTimeImmutable $today): int
@@ -36,22 +37,26 @@ final class MembershipAutomation
                     $user = $member->getUser();
                     if ($user !== null) { $this->continuity->refresh($user); }
                     $roles = $this->continuity->functions($user);
-                    $missing = $this->continuity->missingSuccessors($member, $roles);
+                    $all = [...$roles, ...$this->functionSuccession->functions($user)];
+                    $missing = [...$this->continuity->missingSuccessors($member, $roles), ...$this->functionSuccession->missingLabels($user, $today)];
                     if ($termination >= $today && $missing !== []) {
-                        $this->continuity->notifyBoard($member, $roles, $missing, 'Bevorstehender Austritt zum '.$termination->format('d.m.Y').'.', 'pending:'.$member->getId().':'.$termination->format('Y-m-d').':'.$today->format('Y-m-d'), $this->memberships);
+                        $this->continuity->notifyBoard($member, $all, $missing, 'Bevorstehender Austritt zum '.$termination->format('d.m.Y').'.', 'pending:'.$member->getId().':'.$termination->format('Y-m-d').':'.$today->format('Y-m-d'), $this->memberships);
                     }
                 }
                 if ($termination !== null && $termination < $today && $member->getLeftAt() === null) {
                     $user = $member->getUser();
                     if ($user !== null) { $this->continuity->refresh($user); }
                     $roles = $this->continuity->functions($user);
-                    $missing = $this->continuity->missingSuccessors($member, $roles);
+                    $all = [...$roles, ...$this->functionSuccession->functions($user)];
+                    $missing = [...$this->continuity->missingSuccessors($member, $roles), ...$this->functionSuccession->missingLabels($user, $today)];
                     $this->continuity->revoke($member, $roles, 'system');
+                    $this->functionSuccession->revoke($member, 'system');
                     $member->setMembershipStatus(MembershipStatus::FORMER);
                     $member->setLeftAt(\DateTime::createFromImmutable($termination));
                     if ($missing !== []) {
-                        $boardNotified = $this->continuity->notifyBoard($member, $roles, $missing, 'Austritt zum '.$termination->format('d.m.Y').' durchgeführt.', 'departed:'.$member->getId().':'.$termination->format('Y-m-d'), $this->memberships, true);
-                        $this->em->persist(new MembershipEvent($member, 'role_vacancy', 'system', 'Nachfolge beim Austritt zum '.$termination->format('d.m.Y').' offen: '.implode(', ', $missing).'.'.($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+                        $boardNotified = $this->continuity->notifyBoard($member, $all, $missing, 'Austritt zum '.$termination->format('d.m.Y').' durchgeführt.', 'departed:'.$member->getId().':'.$termination->format('Y-m-d'), $this->memberships, true);
+                        $this->em->persist(new MembershipEvent($member, 'role_vacancy', 'system', 'Nachfolge beim Austritt zum '.$termination->format('d.m.Y').' offen: '.MembershipRoleContinuity::summarize($missing).'.'.($boardNotified ? ' Vorstandsmeldung zum Versand vorbereitet.' : ' ACHTUNG: Kein zustellbarer aktiver Vorstand; Vorstand anderweitig informieren.')));
+                        $this->continuity->recordOverflow($member, 'role_vacancy', 'system', 'Nachfolge beim Austritt offen: ', $missing);
                     }
                     $this->memberships->record($member, 'terminated', 'system', 'Mitgliedschaft zum ' . $termination->format('d.m.Y') . ' beendet.');
                     ++$processed;

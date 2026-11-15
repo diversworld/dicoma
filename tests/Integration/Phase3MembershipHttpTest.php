@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Entity\Club;
+use App\Entity\ClubFunction;
+use App\Entity\ClubFunctionAssignment;
 use App\Entity\ContributionClass;
 use App\Entity\Member;
 use App\Entity\MemberDocument;
@@ -45,6 +47,10 @@ final class Phase3MembershipHttpTest extends WebTestCase
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
         $_ENV['DATABASE_URL'] = $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:';
         $_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null';
+        $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] =
+            str_starts_with($this->name(), 'testFunctionSuccession')
+            || str_starts_with($this->name(), 'testFunctionVacancy')
+            || str_starts_with($this->name(), 'testLongFunctionLists') ? '1' : '0';
         putenv('DATABASE_URL=sqlite:///:memory:');
         putenv('MAILER_DSN=null://null');
         $this->client = static::createClient(['environment' => 'test']);
@@ -283,6 +289,112 @@ final class Phase3MembershipHttpTest extends WebTestCase
         }
         self::assertSame(MembershipStatus::ACTIVE, $user->getMember()->getMembershipStatus());
         self::assertContains(User::ROLE_EQUIPMENT_MANAGER, $user->getStoredRoles());
+    }
+
+    public function testFunctionSuccessionRequiresSameFunctionAndRevocationIsPermanent(): void
+    {
+        $holder = $this->memberUser('function-model-holder');
+        $candidate = $this->memberUser('function-model-candidate');
+        $required = new ClubFunction($this->club, 'Ausbildung');
+        $required->setSuccessorRequired(true);
+        $required->setPermissions([User::ROLE_INSTRUCTOR]);
+        $different = new ClubFunction($this->club, 'Andere Ausbildung');
+        $different->setPermissions([User::ROLE_INSTRUCTOR]);
+        $optional = new ClubFunction($this->club, 'Optional');
+        foreach ([$required, $different, $optional,
+            new ClubFunctionAssignment($required, $holder),
+            new ClubFunctionAssignment($optional, $holder),
+            new ClubFunctionAssignment($different, $candidate)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $service = static::getContainer()->get(MembershipService::class);
+        try {
+            $service->changeStatus($holder->getMember(), MembershipStatus::SUSPENDED, 'admin');
+            self::fail('The same permission in another function is not a successor.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('Ausbildung', $exception->getMessage());
+        }
+        $successor = new ClubFunctionAssignment($required, $candidate);
+        $successor->setValidity(new \DateTimeImmutable('2999-01-01'), null);
+        $this->em->persist($successor);
+        $this->em->flush();
+        try {
+            $service->changeStatus($holder->getMember(), MembershipStatus::SUSPENDED, 'admin');
+            self::fail('A future assignment is not a successor.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('Ausbildung', $exception->getMessage());
+        }
+        $successor->setValidity(null, null);
+        $this->em->flush();
+        $service->changeStatus($holder->getMember(), MembershipStatus::SUSPENDED, 'admin');
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count(['user' => $holder]));
+        self::assertSame(2, $this->em->getRepository(ClubFunctionAssignment::class)->count(['user' => $candidate]));
+        $service->changeStatus($holder->getMember(), MembershipStatus::ACTIVE, 'admin');
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count(['user' => $holder]));
+    }
+
+    public function testFunctionVacancyDoesNotDelayAutomaticTermination(): void
+    {
+        $policy = $this->policy();
+        $policy->setCancellationCutoff('09-30');
+        $policy->setMembershipYearEnd('12-31');
+        $board = $this->memberUser('function-model-board');
+        $boardFunction = new ClubFunction($this->club, 'Vorstand');
+        $boardFunction->setPermissions([User::ROLE_BOARD]);
+        $this->em->persist($boardFunction);
+        $this->em->persist(new ClubFunctionAssignment($boardFunction, $board));
+        $holder = $this->memberUser('function-model-departing');
+        $function = new ClubFunction($this->club, 'Kursleitung');
+        $function->setSuccessorRequired(true);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $holder));
+        $this->em->flush();
+        static::getContainer()->get(MembershipService::class)->requestTermination(
+            $holder->getMember(), 'member', new \DateTimeImmutable('2026-09-30'),
+        );
+        $message = $this->em->getRepository(MembershipMessage::class)->findOneBy([
+            'recipient' => 'function-model-board@example.invalid', 'subject' => 'Vereinsfunktionen: Nachfolge prüfen',
+        ]);
+        self::assertNotNull($message);
+        self::assertStringContainsString('Kursleitung', $message->getBody());
+        self::assertSame(1, static::getContainer()->get(MembershipAutomation::class)->run(new \DateTimeImmutable('2027-01-01')));
+        self::assertSame(MembershipStatus::FORMER, $holder->getMember()->getMembershipStatus());
+        self::assertSame(0, $this->em->getRepository(ClubFunctionAssignment::class)->count(['user' => $holder]));
+        $event = $this->em->getRepository(MembershipEvent::class)->findOneBy(['kind' => 'role_vacancy']);
+        self::assertStringContainsString('Kursleitung', $event->getDescription());
+    }
+
+    public function testLongFunctionListsPreserveEveryVacancyInBoundedEvents(): void
+    {
+        $policy = $this->policy();
+        $policy->setCancellationCutoff('09-30');
+        $policy->setMembershipYearEnd('12-31');
+        $holder = $this->memberUser('many-functions');
+        $names = [];
+        for ($i = 0; $i < 4; ++$i) {
+            $names[] = 'Funktion '.$i.' '.str_repeat('x', 100);
+            $function = new ClubFunction($this->club, $names[$i]);
+            $function->setSuccessorRequired(true);
+            $this->em->persist($function);
+            $this->em->persist(new ClubFunctionAssignment($function, $holder));
+        }
+        $this->em->flush();
+        static::getContainer()->get(MembershipService::class)->requestTermination(
+            $holder->getMember(), 'member', new \DateTimeImmutable('2026-09-30'),
+        );
+        self::assertSame(1, static::getContainer()->get(MembershipAutomation::class)->run(new \DateTimeImmutable('2027-01-01')));
+        foreach (['role_continuity', 'role_vacancy'] as $kind) {
+            $events = $this->em->getRepository(MembershipEvent::class)->findBy(['member' => $holder->getMember(), 'kind' => $kind]);
+            $descriptions = [];
+            foreach ($events as $event) {
+                self::assertLessThanOrEqual(1000, mb_strlen($event->getDescription()));
+                $descriptions[] = $event->getDescription();
+            }
+            foreach ($names as $name) {
+                self::assertStringContainsString($name, implode("\n", $descriptions));
+            }
+        }
     }
 
     public function testSuperAdminEmergencyAccountNeedsNoSuccessor(): void

@@ -19,6 +19,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -29,6 +30,7 @@ final class DelegatedUserCrudController extends AbstractCrudController
         private readonly AdminClubContext $clubContext,
         private readonly RequestStack $requests,
         private readonly TranslatorInterface $translator,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
     ) {}
 
     public static function getEntityFqcn(): string
@@ -97,6 +99,9 @@ final class DelegatedUserCrudController extends AbstractCrudController
 
     private function functionRole(): ?string
     {
+        if ($this->functionModelEnabled) {
+            throw $this->createNotFoundException('Direkte Funktionsrollen werden nicht mehr verwaltet.');
+        }
         $role = $this->requests->getCurrentRequest()?->query->get('function');
         if ($role !== null && !in_array($role, DelegatedRoleController::functionChoices(), true)) {
             throw $this->createNotFoundException('Unbekannte Vereinsfunktion.');

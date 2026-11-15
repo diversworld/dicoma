@@ -23,6 +23,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 // Benutzer- und Rollenverwaltung ist bis zur fachlichen Freigabe
 // einer delegierten Rollenvergabe ausschließlich Super-Admins erlaubt.
@@ -33,6 +34,7 @@ class UserCrudController extends AbstractCrudController
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly TranslatorInterface $translator,
         private readonly MembershipRoleContinuity $continuity,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
     ) {
     }
 
@@ -156,6 +158,9 @@ class UserCrudController extends AbstractCrudController
 
         $entityManager->getConnection()->transactional(function () use ($entityManager, $entityInstance): void {
             $this->continuity->lockClub($entityInstance->getMember()?->getClub());
+            if ($this->functionModelEnabled && array_diff($entityInstance->getStoredRoles(), [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]) !== []) {
+                throw new ConflictHttpException('Funktionsberechtigungen werden über Vereinsfunktionen zugeordnet.');
+            }
             $this->assertActiveRoleMember($entityManager, $entityInstance);
             $this->hashPassword($entityInstance, true);
             parent::persistEntity($entityManager, $entityInstance);
@@ -194,9 +199,16 @@ class UserCrudController extends AbstractCrudController
                 throw new ConflictHttpException('Die Rollen wurden zwischenzeitlich geändert. Bitte neu laden.');
             }
             $oldId = $oldMember === false ? null : (int) $oldMember['id'];
+            if ($this->functionModelEnabled && array_values(array_diff($original['roles'] ?? [], [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]))
+                !== array_values(array_diff($entityInstance->getStoredRoles(), [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]))) {
+                throw new ConflictHttpException('Funktionsberechtigungen werden über Vereinsfunktionen zugeordnet.');
+            }
+            $hasAssignments = $this->functionModelEnabled && (int) $connection->fetchOne(
+                'SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$entityInstance->getId()]
+            ) > 0;
             if ($oldId !== $newMember?->getId()
                 && (array_diff($original['roles'] ?? [], [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN]) !== []
-                    || $this->continuity->functions($entityInstance) !== [])) {
+                    || $this->continuity->functions($entityInstance) !== [] || $hasAssignments)) {
                 throw new ConflictHttpException('Die Mitgliedszuordnung von Konten mit Funktionsrollen kann nicht geändert werden. Rollen zuerst gesondert klären.');
             }
             $this->assertActiveRoleMember($entityManager, $entityInstance);
@@ -217,7 +229,9 @@ class UserCrudController extends AbstractCrudController
         if ($row === false || ($row['user_id'] !== null && (int) $row['user_id'] !== $user->getId())) {
             throw new ConflictHttpException('Die Mitgliedschaft ist nicht verfügbar oder bereits mit einem anderen Konto verbunden.');
         }
-        if ($this->continuity->functions($user) !== []
+        $hasAssignments = $this->functionModelEnabled && $user->getId() !== null
+            && (int) $connection->fetchOne('SELECT COUNT(*) FROM club_function_assignment WHERE user_id = ?', [$user->getId()]) > 0;
+        if (($this->continuity->functions($user) !== [] || $hasAssignments)
             && ($row['membership_status'] !== 'active' || $row['left_at'] !== null || $row['archived_at'] !== null)) {
             throw new ConflictHttpException('Funktionsrollen dürfen nur aktiven Mitgliedern zugewiesen bleiben.');
         }

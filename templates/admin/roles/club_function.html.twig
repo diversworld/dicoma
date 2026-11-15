@@ -1,0 +1,62 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ function ? 'Vereinsfunktion bearbeiten'|trans : 'Vereinsfunktion anlegen'|trans }}{% endblock %}
+{% block main %}
+{{ form_start(form) }}
+{{ form_errors(form) }}
+{{ form_row(form.name) }}
+{{ form_row(form.permissions) }}
+{{ form_row(form.successorRequired) }}
+{{ form_row(form.startsAt) }}
+{{ form_row(form.endsAt) }}
+<h2>{{ 'Dateirechte im Hauptordner'|trans }}</h2>
+<p>{{ 'Unterordner erben diese Rechte, sofern dort keine abweichende Regel hinterlegt ist.'|trans }}</p>
+{{ form_row(form.read) }}
+{{ form_row(form.upload) }}
+{{ form_row(form.edit) }}
+{{ form_row(form.delete) }}
+{{ form_rest(form) }}
+<button type="submit" class="btn btn-primary">{{ 'Funktion speichern'|trans }}</button>
+{{ form_end(form) }}
+{% if function %}
+    <h2 class="mt-4">{{ 'Inhaber'|trans }}</h2>
+    <table class="table">
+        <thead><tr><th>{{ 'Konto'|trans }}</th><th>{{ 'Gültig ab'|trans }}</th><th>{{ 'Gültig bis'|trans }}</th><th></th></tr></thead>
+        <tbody>
+        {% for assignment in assignments %}
+            <tr>
+                <td>{{ assignment.user }}</td>
+                <td>{{ assignment.startsAt ? assignment.startsAt|date('d.m.Y') : '–' }}</td>
+                <td>{{ assignment.endsAt ? assignment.endsAt|date('d.m.Y') : '–' }}</td>
+                <td><a href="{{ path('admin_club_function_holder', {id: function.id, userId: assignment.user.id}) }}">{{ 'Bearbeiten'|trans }}</a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4">{{ 'Keine Inhaber zugeordnet.'|trans }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <form method="get" action="{{ path('admin_club_function_choose_holder', {id: function.id}) }}">
+        <label for="function-account">{{ 'Mitglied auswählen'|trans }}</label>
+        <select id="function-account" name="user" class="form-select" required>
+            <option value="">{{ 'Bitte wählen'|trans }}</option>
+            {% for account in accounts %}<option value="{{ account.id }}">{{ account.member.fullName }} ({{ account.user }})</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary mt-2">{{ 'Zuordnung bearbeiten'|trans }}</button>
+    </form>
+    <h2 class="mt-4">{{ 'Ordnerrechte'|trans }}</h2>
+    <p>{{ 'Für jeden Unterordner kann die geerbte Regel dieser Funktion überschrieben werden.'|trans }}</p>
+    <ul>
+        {% for folder in folders %}
+            <li><a href="{{ path('admin_club_function_folder', {id: function.id, folderId: folder.id}) }}">{{ folder.path }}</a></li>
+        {% else %}
+            <li>{{ 'Keine Unterordner vorhanden.'|trans }}</li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="{{ path('admin_function_definition_delete', {id: function.id}) }}" class="mt-4">
+        <input type="hidden" name="_token" value="{{ csrf_token('club_function_delete_' ~ function.id) }}">
+        <input type="hidden" name="version" value="{{ function.version }}">
+        <button type="submit" class="btn btn-outline-danger" {{ assignments ? 'disabled' : '' }}>{{ 'Funktion löschen'|trans }}</button>
+    </form>
+{% endif %}
+<a href="{{ path('admin_club_functions') }}">{{ 'Zurück zur Funktionsliste'|trans }}</a>
+{% endblock %}
