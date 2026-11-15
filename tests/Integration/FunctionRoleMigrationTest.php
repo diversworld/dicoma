@@ -52,14 +52,14 @@ final class FunctionRoleMigrationTest extends KernelTestCase
         $this->em->flush();
         $userId = $user->getId();
         $emergencyId = $emergency->getId();
-        $before = $user->getRoles();
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $user->getRoles());
         $tester = new CommandTester(self::getContainer()->get(MigrateFunctionRolesCommand::class));
         self::assertSame(Command::FAILURE, $tester->execute([]));
         self::assertSame(Command::SUCCESS, $tester->execute(['--confirm' => true]), $tester->getDisplay());
         $this->em->clear();
         $user = $this->em->find(User::class, $userId);
         self::assertSame([], $user->getStoredRoles());
-        self::assertEqualsCanonicalizing($before, $user->getRoles());
+        self::assertEqualsCanonicalizing([User::ROLE_INSTRUCTOR, User::ROLE_MEMBER, User::ROLE_USER], $user->getRoles());
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Pressewart']);
         self::assertTrue($function->rootPermission(FileAction::READ));
         self::assertTrue($function->rootPermission(FileAction::DELETE));

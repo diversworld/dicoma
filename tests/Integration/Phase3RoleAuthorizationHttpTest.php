@@ -99,6 +99,10 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ausbildungshelfer']);
         self::assertNotNull($function);
         $id = $function->getId();
+        $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        self::assertSelectorExists('select[name="user"] option[value="'.$target->getId().'"]');
+        self::assertSelectorNotExists('select[name="user"] option[value="'.$admin->getId().'"]');
+        self::assertSelectorNotExists('select[name="user"] option[value="'.$board->getId().'"]');
         $url = '/admin/club-functions/'.$id.'/holder/'.$target->getId();
         $crawler = $this->client->request('GET', $url);
         self::assertResponseIsSuccessful();

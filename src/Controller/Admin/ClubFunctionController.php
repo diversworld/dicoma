@@ -152,6 +152,10 @@ final class ClubFunctionController extends AbstractController
                 ->join('account.member', 'membership')->where('membership.club = :club')->andWhere('membership.membershipStatus = :active')
                 ->andWhere('membership.leftAt IS NULL')->andWhere('membership.archivedAt IS NULL')
                 ->setParameter('club', $club)->setParameter('active', 'active')->orderBy('account.user', 'ASC')->getQuery()->getResult();
+            if (!$super) {
+                $accounts = array_values(array_filter($accounts, fn (User $account): bool =>
+                    $account->getId() !== $actor->getId() && !$this->isPrivileged($account)));
+            }
             return $this->render('admin/roles/club_function.html.twig', [
                 'function' => $function, 'form' => $form, 'assignments' => $assignments, 'accounts' => $accounts,
                 'folders' => $function === null ? [] : $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club], ['name' => 'ASC']),
