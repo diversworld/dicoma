@@ -20,6 +20,7 @@ use App\Entity\Person;
 use App\Entity\SepaMandate;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
+use App\Enum\PermissionAction;
 use App\Form\BarDutyPolicyType;
 use App\Form\ConfigurationYearSelectionType;
 use App\Form\ContributionClassType;
@@ -27,8 +28,10 @@ use App\Form\MemberContactType;
 use App\Form\MembershipPolicyType;
 use App\Form\WebsiteDisplaySettingsType;
 use App\Security\Voter\MemberManagementVoter;
+use App\Security\EditorialAccess;
 use App\Service\MembershipFinanceService;
 use App\Service\MembershipService;
+use App\Service\MembershipRoleContinuity;
 use App\Service\BarDutyAccess;
 use App\Service\BarDutyWorkflow;
 use App\Service\PublicWebsite;
@@ -62,6 +65,8 @@ final class MembershipController extends AbstractController
         private readonly MembershipFinanceService $finance,
         private readonly FormFactoryInterface $forms,
         private readonly AdminClubContext $clubContext,
+        private readonly EditorialAccess $editorialAccess,
+        private readonly MembershipRoleContinuity $continuity,
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
@@ -172,10 +177,6 @@ final class MembershipController extends AbstractController
     #[Route('/admin/settings/bar-services', name: 'admin_settings_bar_services', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'bar'], methods: ['GET', 'POST'])]
     public function configuration(Request $request, PublicWebsite $website, BarDutyAccess $barAccess, BarDutyWorkflow $barWorkflow): Response
     {
-        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_BAR_MANAGER')) {
-            throw $this->createAccessDeniedException();
-        }
-
         $section = $request->attributes->getString('configuration_section');
 
         if ($section === '') {
@@ -186,6 +187,22 @@ final class MembershipController extends AbstractController
                 'admin_settings_bar_services' => 'bar',
                 default => throw $this->createNotFoundException('Unbekannter Konfigurationsbereich.'),
             };
+        }
+
+        if ($section === 'website' && $this->editorialAccess->functionModelEnabled()) {
+            if ($request->isMethod('POST')) {
+                $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+                return $this->em->getConnection()->transactional(function () use ($club, $request, $website): Response {
+                    $this->continuity->lockClub($club);
+                    $this->em->clear();
+                    return $this->functionWebsiteSettings($request, $website);
+                });
+            }
+            return $this->functionWebsiteSettings($request, $website);
+        }
+
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_BAR_MANAGER')) {
+            throw $this->createAccessDeniedException();
         }
 
         $barOnly = $section === 'bar';
@@ -362,6 +379,44 @@ final class MembershipController extends AbstractController
 
         if ($request->isMethod('POST')) { $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY); }
         
+        return $response;
+    }
+
+    private function functionWebsiteSettings(Request $request, PublicWebsite $website): Response
+    {
+        $canEdit = $this->editorialAccess->can(PermissionAction::EDIT);
+        if (($request->isMethod('POST') && !$canEdit)
+            || (!$request->isMethod('POST') && !$canEdit && !$this->editorialAccess->can(PermissionAction::READ))) {
+            throw $this->createAccessDeniedException('Keine Berechtigung für Website-Einstellungen.');
+        }
+        $club = $website->club() ?? throw $this->createAccessDeniedException('Kein Website-Verein konfiguriert.');
+        $display = $this->em->find(WebsiteDisplaySettings::class, $club->getId()) ?? new WebsiteDisplaySettings($club);
+        $form = $this->createForm(WebsiteDisplaySettingsType::class, $display, [
+            'csrf_token_id' => 'website_display_'.$club->getId(),
+            'disabled' => !$canEdit,
+        ])->handleRequest($request);
+        if ($request->isMethod('POST') && !$form->isSubmitted()) {
+            throw $this->createAccessDeniedException('Unbekannter oder nicht erlaubter Konfigurationsbereich.');
+        }
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->em->persist($display);
+            $this->em->flush();
+            $this->addFlash('success', 'Änderung gespeichert.');
+            return $this->redirectToRoute('admin_settings_website', [], Response::HTTP_SEE_OTHER);
+        }
+        $response = $this->adminPage('admin/configuration.html.twig', [
+            'section' => 'website',
+            'ownClub' => $club,
+            'club' => null,
+            'websiteForm' => $form->createView(),
+            'canEditWebsite' => $canEdit,
+            'policyForm' => null,
+            'classForm' => null,
+            'canBar' => false,
+        ]);
+        if ($request->isMethod('POST')) {
+            $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
         return $response;
     }
 

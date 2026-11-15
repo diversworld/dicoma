@@ -14,7 +14,7 @@ Prüfungen.
   vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) können
   getrennt von den bisherigen Rollen gespeichert werden. Ihre serverseitige
   Durchsetzung ist bislang nur für die Mediathek, die redaktionelle
-  Bildauswahl und die redaktionellen Beiträge implementiert, nicht für die
+  Bildauswahl, die redaktionellen Beiträge und die Website-Anzeigeeinstellungen implementiert, nicht für die
   übrigen Zugriffswege oder Kursbilder.
 - Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
   Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
@@ -143,7 +143,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
   aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildpfade sind
   noch nicht integriert. Redaktionelle Beiträge verlangen bei eingeschaltetem
-  Modell das Website-Modulrecht Lesen, Anlegen beziehungsweise Bearbeiten;
+  Modell das Website-Modulrecht Lesen, Anlegen beziehungsweise Bearbeiten.
+  Website-Anzeigeeinstellungen sind mit Lesen sichtbar und mit Bearbeiten
+  änderbar; Schreibzugriffe prüfen die Berechtigung unter der Vereinssperre erneut;
   die übrigen Website- und anderen Modulpfade sind noch nicht vollständig
   umgestellt. Bestehende Pressefunktionen erhalten dadurch nicht automatisch
   Website-Modulrechte und müssen vor einer Aktivierung geprüft werden.

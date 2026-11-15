@@ -3,6 +3,7 @@ twig:
         site_theme: '@App\Service\SiteTheme'
         portal_navigation: '@App\Service\PortalNavigation'
         admin_club_context: '@App\Service\AdminClubContext'
+        editorial_access: '@App\Security\EditorialAccess'
         club_function_membership_enabled: '%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%'
     default_path: '%kernel.project_dir%/templates'
     date:

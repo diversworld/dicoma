@@ -244,6 +244,76 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertSame($imageId, $this->em->find(WebsitePublication::class, $id)->getImage()?->getId());
     }
 
+    public function testFunctionModelWebsiteSettingsEnforceReadAndEditSeparately(): void
+    {
+        $function = new ClubFunction($this->club, 'Website-Einstellungen');
+        $function->setModulePermissions(['website:read']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/portal/de');
+        self::assertSelectorExists('a[href="/admin/settings/website"]');
+        $this->client->request('GET', '/admin/settings/website');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="website_display_settings[articlesPerPage]"][disabled]');
+        self::assertSelectorNotExists('form[name="website_display_settings"] button');
+        $this->client->request('POST', '/admin/settings/website', ['website_display_settings' => ['articlesPerPage' => '20']]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, $this->em->getRepository(WebsiteDisplaySettings::class)->count([]));
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:edit']);
+        $this->em->flush();
+        $this->client->request('GET', '/admin/de/editorial/display-settings');
+        self::assertResponseRedirects('/admin/settings/website');
+        $crawler = $this->client->request('GET', '/admin/settings/website');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar a[href="/admin/settings/website"]');
+        $values = $crawler->selectButton('Anzeige speichern')->form()->getPhpValues();
+        $values['website_display_settings']['articlesPerPage'] = '12';
+        $values['website_display_settings']['eventsPerPage'] = '13';
+        $this->client->request('POST', '/admin/settings/website', $values);
+        self::assertResponseRedirects('/admin/settings/website', 303);
+        $this->em->clear();
+        $settings = $this->em->find(WebsiteDisplaySettings::class, $this->club->getId());
+        self::assertSame(12, $settings->getArticlesPerPage());
+        self::assertSame(13, $settings->getEventsPerPage());
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read']);
+        $this->em->flush();
+        $values['website_display_settings']['articlesPerPage'] = '25';
+        $this->client->request('POST', '/admin/settings/website', $values);
+        self::assertResponseStatusCodeSame(403);
+        $this->em->clear();
+        self::assertSame(12, $this->em->find(WebsiteDisplaySettings::class, $this->club->getId())->getArticlesPerPage());
+    }
+
+    public function testFunctionModelWebsiteSettingsRejectInvalidCsrfAndExpiredAssignments(): void
+    {
+        $function = new ClubFunction($this->club, 'Website ändern');
+        $function->setModulePermissions(['website:edit']);
+        $assignment = new ClubFunctionAssignment($function, $this->member);
+        $this->em->persist($function);
+        $this->em->persist($assignment);
+        $this->em->flush();
+        $assignmentId = $assignment->getId();
+        $this->client->loginUser($this->member);
+        $crawler = $this->client->request('GET', '/admin/settings/website');
+        $values = $crawler->selectButton('Anzeige speichern')->form()->getPhpValues();
+        $values['website_display_settings']['_token'] = 'invalid';
+        $values['website_display_settings']['articlesPerPage'] = '30';
+        $this->client->request('POST', '/admin/settings/website', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(0, $this->em->getRepository(WebsiteDisplaySettings::class)->count([]));
+        $this->em->find(ClubFunctionAssignment::class, $assignmentId)->setValidity(null, new \DateTimeImmutable('yesterday'));
+        $this->em->flush();
+        $this->client->request('GET', '/admin/settings/website');
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testEditorialOverviewSwitchPublishesAndWithdrawsWithAuditAndScheduledVisibility(): void
     {
         $article = $this->publication('Toggle article', false);

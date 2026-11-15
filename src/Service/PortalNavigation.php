@@ -67,6 +67,9 @@ final class PortalNavigation
             } elseif ($this->editorialAccess->can(PermissionAction::CREATE)) {
                 $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen erstellen', 'route' => 'admin_website_editorial_new']];
             }
+            if ($this->editorialAccess->canViewSettings()) {
+                $roles['Website-Redaktion'][] = ['label' => 'Website-Anzeige', 'route' => 'admin_settings_website'];
+            }
         }
         if ($isMember) {
             $personal[] = ['label' => 'Mein Dashboard', 'route' => 'member_portal_dashboard'];

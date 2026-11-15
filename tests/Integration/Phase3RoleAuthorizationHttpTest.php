@@ -250,8 +250,12 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $id = $function->getId();
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
-        self::assertSelectorTextContains('body', 'Modulrechte außerhalb der Dateiverwaltung sind noch nicht wirksam');
+        self::assertSelectorTextContains('body', 'Andere Zugriffswege, einschließlich Kursbilder und Veranstaltungen, sind noch nicht vollständig umgestellt');
         self::assertSelectorExists('input[name="form[modulePermissions][]"][value="training:read"]');
+        $trainingId = $crawler->filter('input[name="form[modulePermissions][]"][value="training:read"]')->attr('id');
+        $filesId = $crawler->filter('input[name="form[modulePermissions][]"][value="files:delete"]')->attr('id');
+        self::assertSelectorTextContains('label[for="'.$trainingId.'"]', 'Ausbildung und Kurse: Lesen');
+        self::assertSelectorTextContains('label[for="'.$filesId.'"]', 'Dateiverwaltung: Löschen');
         self::assertSelectorNotExists('input[name="form[modulePermissions][]"][value="finance:read"]');
         self::assertSelectorNotExists('input[name="form[modulePermissions][]"][value="bar_duty:edit"]');
         $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();

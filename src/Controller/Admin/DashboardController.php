@@ -336,6 +336,12 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET']])]
     public function websiteDisplaySettings(PublicWebsite $website): Response
     {
+        if ($this->functionModelEnabled) {
+            if (!$this->editorialAccess->canViewSettings()) {
+                throw $this->createAccessDeniedException();
+            }
+            return $this->redirectToRoute('admin_settings_website');
+        }
         $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
         if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
             $website->editorialClub();
@@ -606,9 +612,12 @@ class DashboardController extends AbstractDashboardController
         $editorialRoute = $this->editorialAccess->can(PermissionAction::READ)
             ? 'admin_website_editorial'
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_website_editorial_new' : null);
+        $websiteSettings = $this->functionModelEnabled
+            ? $this->editorialAccess->canViewSettings()
+            : $this->publicWebsite->canManageEditorial();
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
-                ...($this->publicWebsite->canManageEditorial()
+                ...($websiteSettings
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
                     ? [MenuItem::linkToRoute('Thekendienst-Jahresregel', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
@@ -746,7 +755,7 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkToRoute('TÜV-Benachrichtigungen', 'fa fa-bell', 'admin_settings_tuv_notifications')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     ...($this->clubContext->getClub() !== null
-                        && ($this->isGranted('ROLE_SUPER_ADMIN') || $this->publicWebsite->canManageEditorial())
+                        && ($websiteSettings || (!$this->functionModelEnabled && $this->isGranted('ROLE_SUPER_ADMIN')))
                         ? [MenuItem::linkToRoute('Website', 'fa fa-globe', 'admin_settings_website')] : []),
                     ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
                         ? [MenuItem::linkToRoute('Thekendienst', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),

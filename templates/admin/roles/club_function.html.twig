@@ -5,7 +5,7 @@
 {% if not functionModelEnabled %}
 <div class="alert alert-warning">{{ 'Vorbereitung: Diese Funktion und ihre Berechtigungen sind noch nicht aktiv. Die bisherige Rollenvergabe gilt weiterhin.'|trans }}</div>
 {% endif %}
-<div class="alert alert-warning">{{ 'Bei aktiviertem Funktionsmodell sind Modulrechte bisher nur für die Dateiverwaltung und die redaktionellen Beiträge wirksam. Andere Zugriffswege, einschließlich Kursbilder und Veranstaltungen, sind noch nicht vollständig umgestellt.'|trans }}</div>
+<div class="alert alert-warning">{{ 'Bei aktiviertem Funktionsmodell sind Modulrechte bisher nur für die Dateiverwaltung, redaktionelle Beiträge und Website-Einstellungen wirksam. Andere Zugriffswege, einschließlich Kursbilder und Veranstaltungen, sind noch nicht vollständig umgestellt.'|trans }}</div>
 {{ form_start(form) }}
 {{ form_errors(form) }}
 {{ form_row(form.name) }}

@@ -43,4 +43,9 @@ final class EditorialAccess
     {
         return $this->enabled;
     }
+
+    public function canViewSettings(): bool
+    {
+        return $this->can(PermissionAction::READ) || $this->can(PermissionAction::EDIT);
+    }
 }

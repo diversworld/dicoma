@@ -16,7 +16,7 @@
                 {% if is_granted('ROLE_BAR_MANAGER') %}
                     <p><a href="{{ path('admin_portal_bar_duty') }}">Clubheimverwaltung</a></p>
                 {% endif %}
-                {% if is_granted('ROLE_PRESS_OFFICER') %}
+                {% if (club_function_membership_enabled and editorial_access.canViewSettings) or (not club_function_membership_enabled and is_granted('ROLE_PRESS_OFFICER')) %}
                     <p><a href="{{ path('admin_settings_website') }}">{{ 'Website-Anzeige'|trans }}</a></p>
                 {% endif %}
                 {% if (club_function_membership_enabled and is_granted('ROLE_MEMBER')) or is_granted('ROLE_PRESS_OFFICER') %}

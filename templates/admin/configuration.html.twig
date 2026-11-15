@@ -7,7 +7,7 @@
         {{ form_start(websiteForm) }}
             {{ form_errors(websiteForm) }}
             {{ form_widget(websiteForm) }}
-            <button class="btn btn-primary">{{ 'Anzeige speichern'|trans }}</button>
+            {% if canEditWebsite is not defined or canEditWebsite %}<button class="btn btn-primary">{{ 'Anzeige speichern'|trans }}</button>{% endif %}
         {{ form_end(websiteForm) }}
     {% endif %}
     {% if policyForm %}

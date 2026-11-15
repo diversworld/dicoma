@@ -14,7 +14,7 @@ final class ModulePermission
         return $module->value.':'.$action->value;
     }
 
-    /** @return array<string, array<string, string>> */
+    /** @return array<string, string> */
     public static function choices(bool $super): array
     {
         $choices = [];
@@ -23,7 +23,8 @@ final class ModulePermission
                 continue;
             }
             foreach (PermissionAction::cases() as $action) {
-                $choices[$module->label()][$action->label()] = self::key($module, $action);
+                $key = self::key($module, $action);
+                $choices[self::describe($key)] = $key;
             }
         }
         return $choices;
