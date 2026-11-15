@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\{Club, ClubEvent, FileAction, MediaFile, MediaFolder, MediaFolderPermission, User, WebsitePublication};
+use App\Enum\PermissionAction;
 use App\Security\FolderPermissions;
 use App\Service\{AdminClubContext, FileManager, MediaFileStorage, MembershipRoleContinuity, PublicWebsite};
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
@@ -108,6 +109,7 @@ final class MediaFileController extends AbstractController
             'activeFolderIds' => array_map(static fn (MediaFolder $ancestor): ?int => $ancestor->getId(), $breadcrumbs),
             'canRead' => $canRead, 'canUpload' => $this->can($club, $folder, FileAction::UPLOAD),
             'canEdit' => $this->can($club, $folder, FileAction::EDIT), 'canDelete' => $this->can($club, $folder, FileAction::DELETE),
+            'canCreateFolder' => $this->can($club, $folder, FileAction::EDIT, PermissionAction::CREATE),
             'canEditFolder' => $folder !== null && $this->can($club, $folder->getParent() === null ? null : $folder, FileAction::EDIT),
             'canDeleteFolder' => $folder !== null && $this->can($club, $folder->getParent() === null ? null : $folder, FileAction::DELETE),
             'canUploadRoot' => $this->can($club, null, FileAction::UPLOAD),
@@ -129,7 +131,7 @@ final class MediaFileController extends AbstractController
                 $club = $em->find(Club::class, $clubId) ?? throw $this->createAccessDeniedException();
             }
             $parent = $this->folder($request->request->getString('parent'), $club, $em);
-            $this->requirePermission($club, $parent, FileAction::EDIT);
+            $this->requirePermission($club, $parent, FileAction::EDIT, PermissionAction::CREATE);
             try {
                 $folder = new MediaFolder($club, $request->request->getString('name'), $parent);
                 $this->assertUniqueFolder($em, $folder, $parent);
@@ -407,16 +409,16 @@ final class MediaFileController extends AbstractController
         return $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
     }
 
-    private function can(Club $club, ?MediaFolder $folder, FileAction $action): bool
+    private function can(Club $club, ?MediaFolder $folder, FileAction $action, ?PermissionAction $moduleAction = null): bool
     {
         if (!$this->functionModelEnabled) { return true; }
         $user = $this->getUser();
-        return $user instanceof User && $this->folderPermissions->can($user, $club, $folder, $action);
+        return $user instanceof User && $this->folderPermissions->can($user, $club, $folder, $action, moduleAction: $moduleAction);
     }
 
-    private function requirePermission(Club $club, ?MediaFolder $folder, FileAction $action): void
+    private function requirePermission(Club $club, ?MediaFolder $folder, FileAction $action, ?PermissionAction $moduleAction = null): void
     {
-        if (!$this->can($club, $folder, $action)) {
+        if (!$this->can($club, $folder, $action, $moduleAction)) {
             throw $this->createAccessDeniedException('Keine Berechtigung für diese Dateiaktion.');
         }
     }
@@ -424,6 +426,9 @@ final class MediaFileController extends AbstractController
     private function canAccessFolder(Club $club, MediaFolder $folder): bool
     {
         if ($folder->getParent() === null && $this->can($club, null, FileAction::READ)) {
+            return true;
+        }
+        if ($this->can($club, $folder, FileAction::EDIT, PermissionAction::CREATE)) {
             return true;
         }
         foreach (FileAction::cases() as $action) {

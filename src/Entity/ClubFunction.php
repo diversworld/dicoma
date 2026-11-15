@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
+use App\Security\ModulePermission;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
@@ -22,6 +25,10 @@ class ClubFunction
     /** @var list<string> */
     #[ORM\Column(type: 'json')]
     private array $permissions = [];
+
+    /** @var list<string>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $modulePermissions = null;
 
     #[ORM\Column]
     private bool $successorRequired = false;
@@ -76,6 +83,26 @@ class ClubFunction
     {
         self::assertPermissions($permissions);
         $this->permissions = $permissions;
+    }
+
+    /** @return list<string> */
+    public function getModulePermissions(): array
+    {
+        $permissions = $this->modulePermissions ?? [];
+        ModulePermission::validate($permissions);
+        return $permissions;
+    }
+
+    /** @param list<string> $permissions */
+    public function setModulePermissions(array $permissions): void
+    {
+        ModulePermission::validate($permissions);
+        $this->modulePermissions = $permissions;
+    }
+
+    public function hasModulePermission(PermissionModule $module, PermissionAction $action): bool
+    {
+        return in_array(ModulePermission::key($module, $action), $this->getModulePermissions(), true);
     }
 
     /** @param list<string> $permissions */

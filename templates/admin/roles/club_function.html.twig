@@ -5,10 +5,12 @@
 {% if not functionModelEnabled %}
 <div class="alert alert-warning">{{ 'Vorbereitung: Diese Funktion und ihre Berechtigungen sind noch nicht aktiv. Die bisherige Rollenvergabe gilt weiterhin.'|trans }}</div>
 {% endif %}
+<div class="alert alert-warning">{{ 'Modulrechte außerhalb der Dateiverwaltung sind noch nicht wirksam. Die bisherigen Rollenberechtigungen gelten unverändert, bis alle Zugriffswege umgestellt sind.'|trans }}</div>
 {{ form_start(form) }}
 {{ form_errors(form) }}
 {{ form_row(form.name) }}
 {{ form_row(form.permissions) }}
+{{ form_row(form.modulePermissions) }}
 {{ form_row(form.successorRequired) }}
 {{ form_row(form.startsAt) }}
 {{ form_row(form.endsAt) }}

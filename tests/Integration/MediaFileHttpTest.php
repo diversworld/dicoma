@@ -140,6 +140,7 @@ final class MediaFileHttpTest extends WebTestCase
     public function testFunctionFolderPermissionsRestrictListsAndDirectFileRequests(): void
     {
         $function = new ClubFunction($this->club, 'Ablage lesen');
+        $function->setModulePermissions(['files:read']);
         $allowedFolder = new MediaFolder($this->club, 'Freigegeben');
         $allowedRule = new MediaFolderPermission($function, $allowedFolder);
         $allowedRule->setPermission(FileAction::READ, true);
@@ -181,6 +182,7 @@ final class MediaFileHttpTest extends WebTestCase
     public function testFunctionFolderPermissionsAllowAuthorizedWrites(): void
     {
         $function = new ClubFunction($this->club, 'Ablage verwalten');
+        $function->setModulePermissions(['files:read', 'files:create', 'files:edit', 'files:delete']);
         $folder = new MediaFolder($this->club, 'Ablage');
         $child = new MediaFolder($this->club, 'Unterordner', $folder);
         $rule = new MediaFolderPermission($function, $folder);
@@ -217,12 +219,53 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertNull($this->em->find(MediaFile::class, $id));
     }
 
+    public function testFunctionFolderModuleActionsAndFolderRulesAreBothRequired(): void
+    {
+        $function = new ClubFunction($this->club, 'Nur lesen');
+        $function->setModulePermissions(['files:read']);
+        $folder = new MediaFolder($this->club, 'Gemeinsam');
+        $rule = new MediaFolderPermission($function, $folder);
+        foreach (FileAction::cases() as $action) {
+            $rule->setPermission($action, true);
+        }
+        $file = new MediaFile($this->club, str_repeat('9', 40).'.pdf', 'lesbar.pdf', 'application/pdf', 14, '');
+        $file->setFolder($folder);
+        foreach ([$function, $folder, $rule, $file, new ClubFunctionAssignment($function, $this->member)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $storage = static::getContainer()->get(MediaFileStorage::class);
+        $path = $storage->path($file);
+        file_put_contents($path, "%PDF-1.4\n%%EOF\n");
+        $this->paths[] = $path;
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/media?folder='.$folder->getId());
+        self::assertSelectorTextContains('table', 'lesbar.pdf');
+        self::assertSelectorNotExists('form[action="/admin/media/upload"]');
+        self::assertSelectorNotExists('form[action="/admin/media/folders"]');
+        $this->client->request('GET', '/admin/media/'.$file->getId().'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/media/'.$file->getId().'/delete', ['_token' => $this->token('media_delete_'.$file->getId())]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/media/folders', [
+            '_token' => $this->token('media_folder_create_'.$this->club->getId()), 'name' => 'Verweigert', 'parent' => $folder->getId(),
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/media/upload', [
+            '_token' => $this->token('media_upload_'.$this->club->getId()), 'folder' => $folder->getId(),
+        ]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNotNull($this->em->find(MediaFile::class, $file->getId()));
+    }
+
     public function testFunctionFolderUploadWithoutReadRemainsUsableWithoutListingFiles(): void
     {
         $function = new ClubFunction($this->club, 'Nur Upload');
+        $function->setModulePermissions(['files:create']);
         $folder = new MediaFolder($this->club, 'Abgabe');
         $rule = new MediaFolderPermission($function, $folder);
         $rule->setPermission(FileAction::UPLOAD, true);
+        $rule->setPermission(FileAction::EDIT, true);
         $hidden = new MediaFile($this->club, str_repeat('e', 40).'.pdf', 'vertraulich.pdf', 'application/pdf', 14, '');
         $hidden->setFolder($folder);
         foreach ([$function, $folder, $rule, $hidden, new ClubFunctionAssignment($function, $this->member)] as $entity) {
@@ -237,7 +280,13 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->request('GET', '/admin/media', ['folder' => $folder->getId()]);
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('form[action="/admin/media/upload"]');
+        self::assertSelectorExists('form[action="/admin/media/folders"]');
+        self::assertSelectorNotExists('form[action="/admin/media/folders/'.$folder->getId().'/edit"]');
         self::assertSelectorTextNotContains('body', 'vertraulich.pdf');
+        $this->client->request('POST', '/admin/media/folders', [
+            '_token' => $this->token('media_folder_create_'.$this->club->getId()), 'name' => 'Eingang', 'parent' => $folder->getId(),
+        ]);
+        self::assertResponseRedirects('/admin/media?folder='.$folder->getId(), 303);
         $path = tempnam($this->root, 'upload-');
         $this->paths[] = $path;
         file_put_contents($path, "%PDF-1.4\n%%EOF\n");
@@ -282,6 +331,7 @@ final class MediaFileHttpTest extends WebTestCase
     {
         $function = new ClubFunction($this->club, 'Vorstand');
         $function->setPermissions([User::ROLE_BOARD]);
+        $function->setModulePermissions(['files:create']);
         $assignment = new ClubFunctionAssignment($function, $this->member);
         $this->em->persist($function);
         $this->em->persist($assignment);
@@ -303,6 +353,7 @@ final class MediaFileHttpTest extends WebTestCase
     {
         $function = new ClubFunction($this->club, 'Redaktionsbilder');
         $function->setPermissions([User::ROLE_PRESS_OFFICER]);
+        $function->setModulePermissions(['files:read']);
         $allowedFolder = new MediaFolder($this->club, 'Bilder');
         $allowedRule = new MediaFolderPermission($function, $allowedFolder);
         $allowedRule->setPermission(FileAction::READ, true);

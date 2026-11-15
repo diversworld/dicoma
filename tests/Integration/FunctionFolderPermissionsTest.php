@@ -14,7 +14,10 @@ use App\Entity\Member;
 use App\Entity\Person;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Security\FolderPermissions;
+use App\Security\ModuleAccess;
 use App\Service\FunctionSuccession;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -42,7 +45,9 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         $member = (new Member())->setClub($club)->setPerson($person)->setMembershipStatus(MembershipStatus::ACTIVE);
         $user = (new User())->setUser('test')->setEmail('test@example.invalid')->setPassword('unused')->setMember($member);
         $first = new ClubFunction($club, 'Redaktion');
+        $first->setModulePermissions(['files:read', 'files:create']);
         $second = new ClubFunction($club, 'Archiv');
+        $second->setModulePermissions(['files:read']);
         $second->setValidity(new \DateTimeImmutable('2026-03-01'), new \DateTimeImmutable('2026-03-31'));
         $a = new ClubFunctionAssignment($first, $user);
         $b = new ClubFunctionAssignment($second, $user);
@@ -109,6 +114,59 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         }
         $this->expectException(\InvalidArgumentException::class);
         $function->setPermissions(['ROLE_UNKNOWN']);
+    }
+
+    public function testModulePermissionsAreExplicitAndRejectInvalidInput(): void
+    {
+        $function = new ClubFunction(new Club(), 'Training');
+        $function->setModulePermissions(['training:read', 'training:edit']);
+        self::assertTrue($function->hasModulePermission(PermissionModule::TRAINING, PermissionAction::READ));
+        self::assertFalse($function->hasModulePermission(PermissionModule::TRAINING, PermissionAction::DELETE));
+        self::assertFalse($function->hasModulePermission(PermissionModule::FINANCE, PermissionAction::READ));
+        foreach ([['training:read', 'training:read'], ['training:unknown'], ['unknown:read']] as $invalid) {
+            try {
+                $function->setModulePermissions($invalid);
+                self::fail('Invalid permissions must not be stored.');
+            } catch (\InvalidArgumentException) {
+                self::assertSame(['training:read', 'training:edit'], $function->getModulePermissions());
+            }
+        }
+    }
+
+    public function testModuleAccessCombinesOnlyEffectiveAssignmentsInTheSameClub(): void
+    {
+        $_ENV['DATABASE_URL'] = $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:';
+        $_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null';
+        putenv('DATABASE_URL=sqlite:///:memory:');
+        putenv('MAILER_DSN=null://null');
+        self::bootKernel(['environment' => 'test']);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $club = (new Club())->setName('Verein');
+        $other = (new Club())->setName('Fremder Verein');
+        $member = (new Member())->setClub($club)->setPerson((new Person())->setFirstname('Test')->setLastname('Person'))
+            ->setMembershipStatus(MembershipStatus::ACTIVE);
+        $user = (new User())->setUser('module-user')->setEmail('module@example.invalid')->setPassword('unused')->setMember($member);
+        $read = new ClubFunction($club, 'Lesen');
+        $read->setModulePermissions(['training:read']);
+        $edit = new ClubFunction($club, 'Bearbeiten');
+        $edit->setModulePermissions(['training:edit']);
+        $editAssignment = new ClubFunctionAssignment($edit, $user);
+        $editAssignment->setValidity(new \DateTimeImmutable('2026-03-10'), new \DateTimeImmutable('2026-03-31'));
+        foreach ([$club, $other, $user, $read, $edit, new ClubFunctionAssignment($read, $user), $editAssignment] as $entity) {
+            $em->persist($entity);
+        }
+        $em->flush();
+        $access = self::getContainer()->get(ModuleAccess::class);
+        $before = new \DateTimeImmutable('2026-03-09');
+        $lastDay = new \DateTimeImmutable('2026-03-31');
+        self::assertTrue($access->can($user, $club, PermissionModule::TRAINING, PermissionAction::READ, $before));
+        self::assertFalse($access->can($user, $club, PermissionModule::TRAINING, PermissionAction::EDIT, $before));
+        self::assertTrue($access->can($user, $club, PermissionModule::TRAINING, PermissionAction::EDIT, $lastDay));
+        self::assertFalse($access->can($user, $club, PermissionModule::TRAINING, PermissionAction::DELETE, $lastDay));
+        self::assertFalse($access->can($user, $other, PermissionModule::TRAINING, PermissionAction::READ, $lastDay));
+        $member->setMembershipStatus(MembershipStatus::FORMER);
+        self::assertFalse($access->can($user, $club, PermissionModule::TRAINING, PermissionAction::READ, $lastDay));
     }
 
     public function testDisabledSuccessionDoesNotQueryTheNewTables(): void

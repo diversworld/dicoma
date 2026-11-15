@@ -132,6 +132,7 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $admin = $this->account('new-function-folder-admin', [User::ROLE_ADMIN], $this->club);
         $target = $this->account('new-function-folder-target', [], $this->club);
         $function = new ClubFunction($this->club, 'Ablage');
+        $function->setModulePermissions(['files:read']);
         $folder = new MediaFolder($this->club, 'Intern');
         $child = new MediaFolder($this->club, 'Unterordner', $folder);
         foreach ([$function, $folder, $child, new ClubFunctionAssignment($function, $target)] as $entity) {
@@ -236,6 +237,52 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->client->request('POST', '/admin/club-functions/new', $values);
         self::assertResponseStatusCodeSame(422);
         self::assertNull($this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ungültiger Entwurf']));
+    }
+
+    public function testModulePermissionsRespectDelegationAndPreserveLegacyRoles(): void
+    {
+        $admin = $this->account('module-admin', [User::ROLE_ADMIN], $this->club);
+        $super = $this->account('module-super', [User::ROLE_SUPER_ADMIN], $this->club);
+        $function = new ClubFunction($this->club, 'Modul-Entwurf');
+        $function->setPermissions([User::ROLE_INSTRUCTOR]);
+        $this->em->persist($function);
+        $this->em->flush();
+        $id = $function->getId();
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        self::assertSelectorTextContains('body', 'Modulrechte außerhalb der Dateiverwaltung sind noch nicht wirksam');
+        self::assertSelectorExists('input[name="form[modulePermissions][]"][value="training:read"]');
+        self::assertSelectorNotExists('input[name="form[modulePermissions][]"][value="finance:read"]');
+        self::assertSelectorNotExists('input[name="form[modulePermissions][]"][value="bar_duty:edit"]');
+        $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();
+        $values['form']['modulePermissions'] = ['training:read', 'files:delete'];
+        $this->client->request('POST', '/admin/club-functions/'.$id.'/edit', $values);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $function = $this->em->find(ClubFunction::class, $id);
+        self::assertSame([User::ROLE_INSTRUCTOR], $function->getPermissions());
+        self::assertSame(['training:read', 'files:delete'], $function->getModulePermissions());
+        $this->client->request('GET', '/admin/club-functions');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table', 'Ausbildung und Kurse: Lesen');
+        self::assertSelectorTextContains('table', 'Dateiverwaltung: Löschen');
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();
+        $values['form']['modulePermissions'] = ['finance:edit'];
+        $this->client->request('POST', '/admin/club-functions/'.$id.'/edit', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(['training:read', 'files:delete'], $this->em->find(ClubFunction::class, $id)->getModulePermissions());
+        $this->client->loginUser($super);
+        $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        self::assertSelectorExists('input[name="form[modulePermissions][]"][value="finance:edit"]');
+        $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();
+        $values['form']['modulePermissions'] = ['finance:edit'];
+        $this->client->request('POST', '/admin/club-functions/'.$id.'/edit', $values);
+        self::assertResponseRedirects();
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testSettingsRedirectToDirectPagesAndKeepRoleSpecificSidebarLinks(): void

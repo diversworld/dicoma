@@ -12,6 +12,7 @@ use App\Entity\MediaFolder;
 use App\Entity\MediaFolderPermission;
 use App\Entity\User;
 use App\Security\DelegatedRoles;
+use App\Security\ModulePermission;
 use App\Service\AdminClubContext;
 use App\Service\MembershipRoleContinuity;
 use Doctrine\ORM\EntityManagerInterface;
@@ -95,13 +96,15 @@ final class ClubFunctionController extends AbstractController
             $data = [
                 'name' => $function?->getName() ?? '',
                 'permissions' => $function?->getPermissions() ?? [],
+                'modulePermissions' => $function?->getModulePermissions() ?? [],
                 'successorRequired' => $function?->isSuccessorRequired() ?? false,
                 'startsAt' => $function?->getStartsAt(),
                 'endsAt' => $function?->getEndsAt(),
             ];
             $builder = $this->createFormBuilder($data, ['csrf_token_id' => 'club_function_'.($id ?? 'new')])
                 ->add('name', TextType::class, ['label' => 'Name', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 120)]])
-                ->add('permissions', ChoiceType::class, ['label' => 'Berechtigungen', 'choices' => $permissions, 'multiple' => true, 'expanded' => true, 'required' => false])
+                ->add('permissions', ChoiceType::class, ['label' => 'Bisherige Rollenberechtigungen (Übergang)', 'choices' => $permissions, 'multiple' => true, 'expanded' => true, 'required' => false])
+                ->add('modulePermissions', ChoiceType::class, ['label' => 'Modulrechte', 'choices' => ModulePermission::choices($super), 'multiple' => true, 'expanded' => true, 'required' => false])
                 ->add('successorRequired', CheckboxType::class, ['label' => 'Nachfolge erforderlich', 'required' => false])
                 ->add('startsAt', DateType::class, ['label' => 'Gültig ab', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false])
                 ->add('endsAt', DateType::class, ['label' => 'Gültig bis einschließlich', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false]);
@@ -119,6 +122,7 @@ final class ClubFunctionController extends AbstractController
                         ClubFunction::assertValidity($values['startsAt'], $values['endsAt']);
                         $candidate = new ClubFunction($club, $values['name']);
                         $candidate->setPermissions($values['permissions']);
+                        $candidate->setModulePermissions($values['modulePermissions']);
                         $duplicate = $this->em->getRepository(ClubFunction::class)->findOneBy(['club' => $club, 'name' => $candidate->getName()]);
                         if ($duplicate !== null && $duplicate->getId() !== $id) {
                             throw new \InvalidArgumentException('Eine Funktion mit diesem Namen existiert bereits.');
@@ -126,6 +130,7 @@ final class ClubFunctionController extends AbstractController
                         $function ??= $candidate;
                         $function->rename($candidate->getName());
                         $function->setPermissions($values['permissions']);
+                        $function->setModulePermissions($values['modulePermissions']);
                         $function->setValidity($values['startsAt'], $values['endsAt']);
                         $function->setSuccessorRequired($values['successorRequired']);
                         $this->em->persist($function);
@@ -320,7 +325,8 @@ final class ClubFunctionController extends AbstractController
         if ($super) {
             return;
         }
-        if (array_diff($function->getPermissions(), DelegatedRoles::ALLOWED) !== []) {
+        if (array_diff($function->getPermissions(), DelegatedRoles::ALLOWED) !== []
+            || !ModulePermission::isDelegable($function->getModulePermissions())) {
             throw $this->createAccessDeniedException('Geschützte Funktionsberechtigungen.');
         }
         foreach ($this->em->getRepository(ClubFunctionAssignment::class)->findBy(['clubFunction' => $function]) as $assignment) {
@@ -337,7 +343,8 @@ final class ClubFunctionController extends AbstractController
             return true;
         }
         foreach ($this->em->getRepository(ClubFunctionAssignment::class)->findBy(['user' => $user]) as $assignment) {
-            if (array_diff($assignment->getClubFunction()->getPermissions(), DelegatedRoles::ALLOWED) !== []) {
+            if (array_diff($assignment->getClubFunction()->getPermissions(), DelegatedRoles::ALLOWED) !== []
+                || !ModulePermission::isDelegable($assignment->getClubFunction()->getModulePermissions())) {
                 return true;
             }
         }

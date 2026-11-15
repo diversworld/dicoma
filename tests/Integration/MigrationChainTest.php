@@ -349,6 +349,57 @@ final class MigrationChainTest extends TestCase
         self::assertNull($this->connection->fetchOne('SELECT root_read FROM club_function WHERE id = ?', [$function]));
     }
 
+    public function testModulePermissionUpgradeKeepsExistingRolesAndAssignments(): void
+    {
+        $this->migrate('20261115130000');
+        $club = $this->createClub();
+        $this->connection->insert('club_function', [
+            'club_id' => $club, 'name' => 'Bestehend', 'permissions' => '["ROLE_INSTRUCTOR"]', 'successor_required' => 1,
+        ]);
+        $id = (int) $this->connection->lastInsertId();
+        $before = $this->connection->fetchAssociative('SELECT * FROM club_function WHERE id = ?', [$id]);
+        $this->migrate('latest');
+        $after = $this->connection->fetchAssociative('SELECT * FROM club_function WHERE id = ?', [$id]);
+        self::assertSame([], json_decode($after['module_permissions'], true, 512, JSON_THROW_ON_ERROR));
+        unset($after['module_permissions']);
+        self::assertSame($before, $after);
+        $this->assertSchemaMatchesMapping();
+    }
+
+    public function testFileModuleMigrationKeepsExistingFolderAndAdministratorAccess(): void
+    {
+        $this->migrate('20261115140000');
+        $club = $this->createClub();
+        $this->connection->insert('media_folder', ['club_id' => $club, 'name' => 'Ablage']);
+        $folder = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_function', [
+            'club_id' => $club, 'name' => 'Ablage', 'permissions' => '[]', 'successor_required' => 0,
+        ]);
+        $function = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_folder_permission', [
+            'club_function_id' => $function, 'folder_id' => $folder, 'can_read' => 1, 'can_edit' => 1, 'can_delete' => 0,
+        ]);
+        $this->connection->insert('club_function', [
+            'club_id' => $club, 'name' => 'Vorstand', 'permissions' => '["ROLE_BOARD"]', 'successor_required' => 0,
+        ]);
+        $board = (int) $this->connection->lastInsertId();
+        $this->connection->insert('club_function', [
+            'club_id' => $club, 'name' => 'Ausdrücklich', 'permissions' => '[]', 'successor_required' => 0,
+            'module_permissions' => '["finance:read"]',
+        ]);
+        $explicit = (int) $this->connection->lastInsertId();
+        $this->migrate('latest');
+        self::assertSame(['files:read', 'files:create', 'files:edit'], json_decode(
+            $this->connection->fetchOne('SELECT module_permissions FROM club_function WHERE id = ?', [$function]), true, 512, JSON_THROW_ON_ERROR,
+        ));
+        self::assertSame(['files:read', 'files:create', 'files:edit', 'files:delete'], json_decode(
+            $this->connection->fetchOne('SELECT module_permissions FROM club_function WHERE id = ?', [$board]), true, 512, JSON_THROW_ON_ERROR,
+        ));
+        self::assertSame(['finance:read'], json_decode(
+            $this->connection->fetchOne('SELECT module_permissions FROM club_function WHERE id = ?', [$explicit]), true, 512, JSON_THROW_ON_ERROR,
+        ));
+    }
+
     public function testEventBookingUpgradePreservesExistingPublicationsAndMembers(): void
     {
         $this->migrate('20261025190000');

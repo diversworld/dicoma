@@ -46,6 +46,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
+use \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use \Doctrine\ORM\OptimisticLockException;
 
 final class MembershipController extends AbstractController
 {
@@ -86,13 +88,41 @@ final class MembershipController extends AbstractController
 
         $builder = $this->forms->createNamedBuilder('membership_application', F\FormType::class, $application, ['data_class' => MembershipApplication::class]);
         
-        foreach (['firstname' => 'Vorname', 'lastname' => 'Nachname', 'street' => 'Straße / Hausnummer', 'postalCode' => 'Postleitzahl', 'city' => 'Ort'] as $name => $label) {
+        foreach (
+            [
+                'firstname' => 'Vorname', 
+                'lastname' => 'Nachname', 
+                'street' => 'Straße / Hausnummer', 
+                'postalCode' => 'Postleitzahl', 
+                'city' => 'Ort'
+            ] 
+            as $name => $label) {
             $builder->add($name, F\TextType::class, ['label' => $label]);
         }
 
-        $builder->add('email', F\EmailType::class, ['label' => 'Kontakt-E-Mail'])
-            ->add('birthday', F\DateType::class, ['label' => 'Geburtsdatum', 'widget' => 'single_text', 'input' => 'datetime_immutable'])
-            ->add('privacy', F\CheckboxType::class, ['label' => 'Ich habe den Hinweis zur Verarbeitung meines Antrags gelesen und beantrage die Aufnahme.', 'mapped' => false, 'constraints' => [new Assert\IsTrue()]]);
+        $builder
+            ->add(
+                'email', 
+                F\EmailType::class, [
+                    'label' => 'Kontakt-E-Mail'
+                ]
+            )
+            ->add(
+                'birthday', 
+                F\DateType::class, [
+                    'label' => 'Geburtsdatum', 
+                    'widget' => 'single_text', 
+                    'input' => 'datetime_immutable'
+                ]
+            )
+            ->add(
+                'privacy', 
+                F\CheckboxType::class, [
+                    'label' => 'Ich habe den Hinweis zur Verarbeitung meines Antrags gelesen und beantrage die Aufnahme.', 
+                    'mapped' => false, 
+                    'constraints' => [new Assert\IsTrue()]
+                ]
+            );
         $form = $builder->getForm()->handleRequest($request);
 
         if ($response = $this->process($form, fn () => $this->memberships->submit($application), 'membership_application_clubs', [], 'Antrag eingereicht. Die Verwaltung prüft Ihre Identität; eine Mitgliedschaft entsteht erst durch Genehmigung.')) {
@@ -545,7 +575,14 @@ final class MembershipController extends AbstractController
             }
 
             $forms['status'] = $this->forms->createNamedBuilder('membership_status', F\FormType::class, ['status' => $member->getMembershipStatus()])
-                ->add('status', F\ChoiceType::class, ['label' => 'Mitgliedschaftswechsel', 'choices' => array_filter(MembershipStatus::choices(), static fn ($status) => $status !== MembershipStatus::FORMER)])->getForm()->handleRequest($request);
+                ->add(
+                    'status', 
+                    F\ChoiceType::class, [
+                    'label' => 'Mitgliedschaftswechsel', 
+                    'choices' => array_filter(MembershipStatus::choices(), static fn ($status) => $status !== MembershipStatus::FORMER)]
+                )
+                ->getForm()
+                ->handleRequest($request);
 
             if ($response = $this->process($forms['status'], fn () => $this->memberships->changeStatus($member, $forms['status']->getData()['status'], $actor), $route, $parameters)) { 
                 return $response; 
@@ -606,19 +643,43 @@ final class MembershipController extends AbstractController
 
             if ($response = $this->process($forms['assignment'], function () use ($forms, $member, $actor): void {
                 $d = $forms['assignment']->getData();
-                $this->finance->assign($member, $d['class'], $d['payer'], $d['discount'], $d['reason'], $actor);
+                $this->finance->assign(
+                    $member, 
+                    $d['class'], 
+                    $d['payer'], 
+                    $d['discount'], 
+                    $d['reason'], 
+                    $actor
+                );
             }, $route, $parameters)) { 
                 return $response; 
             }
 
             $forms['annual'] = $this->forms->createNamedBuilder('annual_charge', F\FormType::class, ['year' => (int) date('Y'), 'due' => new \DateTimeImmutable('today')])
-                ->add('year', F\IntegerType::class, ['label' => 'Beitragsjahr', 'constraints' => [new Assert\Range(min: 2000, max: 2200)]])
-                ->add('due', F\DateType::class, ['label' => 'Fälligkeit', 'widget' => 'single_text', 'input' => 'datetime_immutable'])->getForm()->handleRequest($request);
+                ->add('year', F\IntegerType::class, [
+                    'label' => 'Beitragsjahr', 
+                    'constraints' => [new Assert\Range(min: 2000, max: 2200)]
+                ])
+                ->add('due', F\DateType::class, [
+                    'label' => 'Fälligkeit', 
+                    'widget' => 'single_text', 
+                    'input' => 'datetime_immutable'
+                ])
+                    ->getForm()
+                    ->handleRequest($request);
             
                 if ($response = $this->process($forms['annual'], function () use ($forms, $member, $actor): void {
-                $d = $forms['annual']->getData();
-                $this->finance->annual($member, $d['year'], $d['due'], $actor);
-            }, $route, $parameters)) { return $response; }
+                    $d = $forms['annual']->getData();
+                    
+                    $this->finance->annual(
+                        $member, 
+                        $d['year'], 
+                        $d['due'], 
+                        $actor
+                    );
+                }, $route, $parameters)) { 
+                    return $response; 
+                }
             
             $forms['special'] = $this->forms->createNamedBuilder('special_charge')
                 ->add('description', F\TextType::class, [
@@ -675,8 +736,17 @@ final class MembershipController extends AbstractController
 
             if ($response = $this->process($forms['mandate'], function () use ($forms, $member, $actor): void {
                 $d = $forms['mandate']->getData();
-                $this->finance->createMandate($member, $d['reference'], $d['holder'], $d['iban'], $d['signed'], $d['proof'], $actor);
-            }, $route, $parameters)) { return $response; }
+                $this->finance->createMandate(
+                    $member, 
+                    $d['reference'], 
+                    $d['holder'], 
+                    $d['iban'], 
+                    $d['signed'], 
+                    $d['proof'], $actor
+                );
+            }, $route, $parameters)) { 
+                return $response; 
+            }
         }
         
         return $this->privatePage('membership/member.html.twig', [
@@ -698,16 +768,29 @@ final class MembershipController extends AbstractController
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $charge->getMember());
         $this->assertClub($charge->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
+        
         $form = $this->forms->createNamedBuilder('membership_payment')
             ->add('amount', F\MoneyType::class, $this->money('Zahlung EUR'))
-            ->add('reference', F\TextType::class, ['label' => 'Zahlungsreferenz / Beleg', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 180)]])
-            ->getForm()->handleRequest($request);
+            ->add(
+                'reference', 
+                F\TextType::class, [
+                    'label' => 'Zahlungsreferenz / Beleg', 
+                    'constraints' => [
+                        new Assert\NotBlank(), 
+                        new Assert\Length(max: 180)
+                    ]
+                ])
+            ->getForm()
+            ->handleRequest($request);
+
         if ($response = $this->process($form, function () use ($charge, $form): void {
             $d = $form->getData();
             $this->finance->pay($charge, $d['amount'], $d['reference'], $this->account()->getUserIdentifier());
         }, 'membership_member', ['id' => $charge->getMember()->getId()])) { return $response; }
+
         return $this->adminPage('membership/form.html.twig', [
-            'title' => 'Zahlung erfassen: ' . $charge->getDescription(), 'form' => $form->createView(),
+            'title' => 'Zahlung erfassen: ' . $charge->getDescription(), 
+            'form' => $form->createView(),
             'explanation' => 'Offen: ' . number_format($charge->getOutstandingCents() / 100, 2, ',', '.') . ' EUR. Jede Zahlung wird mit Referenz und Bearbeiter unveränderlich protokolliert.',
             'payments' => $this->em->getRepository(MembershipPayment::class)->findBy(['charge' => $charge]),
         ]);
@@ -718,14 +801,21 @@ final class MembershipController extends AbstractController
     public function revoke(SepaMandate $mandate, Request $request): Response
     {
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $mandate->getMember());
+        
         $this->assertClub($mandate->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
+
         if (!$this->isCsrfTokenValid('mandate_revoke_' . $mandate->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Ungültiges CSRF-Token.');
         }
         try {
             $this->em->wrapInTransaction(function () use ($mandate): void {
                 $mandate->revoke(new \DateTimeImmutable('today'));
-                $this->memberships->record($mandate->getMember(), 'sepa_revoked', $this->account()->getUserIdentifier(), 'SEPA-Mandat widerrufen.');
+                $this->memberships->record(
+                    $mandate->getMember(), 
+                    'sepa_revoked', 
+                    $this->account()->getUserIdentifier(), 
+                    'SEPA-Mandat widerrufen.'
+                );
             });
             $this->addFlash('success', 'Mandat widerrufen.');
         } catch (\DomainException $exception) {
@@ -737,14 +827,16 @@ final class MembershipController extends AbstractController
     private function process(FormInterface $form, callable $action, string $route, array $parameters = [], string $success = 'Änderung gespeichert.'): ?Response
     {
         if (!$form->isSubmitted() || !$form->isValid()) { return null; }
+
         try {
             $action();
             $this->addFlash('success', $success);
         } catch (\DomainException $exception) {
             $this->addFlash('danger', $exception->getMessage());
-        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException|\Doctrine\ORM\OptimisticLockException) {
+        } catch (UniqueConstraintViolationException|OptimisticLockException) {
             $this->addFlash('danger', 'Der Vorgang wurde zwischenzeitlich geändert oder der eindeutige Datensatz ist bereits vorhanden. Bitte den aktuellen Stand prüfen; keine doppelte Buchung wurde gespeichert.');
         }
+
         return $this->redirectToRoute($route, $parameters, Response::HTTP_SEE_OTHER);
     }
 
@@ -771,7 +863,13 @@ final class MembershipController extends AbstractController
 
     private function money(string $label): array
     {
-        return ['label' => $label, 'currency' => 'EUR', 'divisor' => 100, 'input' => 'integer', 'constraints' => [new Assert\Range(min: 0, max: 100000000)]];
+        return [
+            'label' => $label, 
+            'currency' => 'EUR', 
+            'divisor' => 100, 
+            'input' => 'integer', 
+            'constraints' => [new Assert\Range(min: 0, max: 100000000)]
+        ];
     }
 
     private function policyForm(MembershipPolicy $policy): FormInterface

@@ -10,10 +10,11 @@ Prüfungen.
 ## Vereinbarte Rollenregeln
 
 - Der zentrale Kontext ist auf einen Verein umgestellt. Frei anlegbare
-  Funktionen und einstellbare Nachfolgepflicht sind vorbereitet; ihre
-  Berechtigungen beziehen sich derzeit noch auf bisherige Rollen. Die
-  vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) einschließlich
-  ihrer serverseitigen Durchsetzung und Delegationsgrenzen fehlen.
+  Funktionen und einstellbare Nachfolgepflicht sind vorbereitet. Die
+  vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) können
+  getrennt von den bisherigen Rollen gespeichert werden. Ihre serverseitige
+  Durchsetzung ist bislang nur für die Mediathek und die redaktionelle
+  Bildauswahl implementiert, nicht für die übrigen Module oder Kursbilder.
 - Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
   Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
   Gerätekasse, Thekendienst, Thekenkasse, Website und Veranstaltungen,
@@ -136,6 +137,19 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   bleiben deshalb weiterhin maßgeblich. Funktionen können bereits als
   ausdrücklich gekennzeichnete Vorbereitung angelegt werden; ihre Rechte
   und Inhaberzuordnungen wirken erst nach der vollständigen Umstellung.
+- Die Mediathek verlangt bei aktiviertem Funktionsmodell sowohl die jeweilige
+  Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
+  Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
+  aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildpfade sind
+  noch nicht integriert; die übrigen Modulrechte sind noch nicht wirksam.
+  Altrollen bleiben während des Übergangs getrennt gespeichert. Die additive
+  Migration `Version20261115140000` wurde nach Sicherung und Restore-Test auf
+  der lokalen Anwendungsdatenbank ausgeführt. Auch `Version20261115150000`
+  wurde nach einem Test auf der wiederhergestellten Sicherung lokal ausgeführt.
+  Sie ergänzt Dateimodulrechte aus vorhandenen Ordnerregeln und Administrator-
+  funktionen, ohne ausdrücklich gespeicherte Modulrechte zu überschreiben.
+  Zum Ausführungszeitpunkt waren lokal keine Funktionen oder Ordnerregeln
+  vorhanden.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
@@ -149,7 +163,10 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   direkte Superadministrator-Notfallrolle bleibt bestehen. Das Kommando
   setzt das aktivierte Funktionsmodell voraus, prüft den Bestand erneut und
   bricht bei unklaren oder widersprüchlichen Daten ab. Es wurde in isolierten
-  SQLite- und MariaDB-Tests ausgeführt, nicht auf der Anwendungsdatenbank.
+  SQLite- und MariaDB-Tests sowie auf der wiederhergestellten lokalen
+  Sicherung ausgeführt, nicht auf der Anwendungsdatenbank. Auf der
+  Sicherung wurden alle 23 direkten Funktionsrollen einschließlich ihrer
+  gespeicherten Zeiträume sowie die beiden Superadmin-Notfallrollen verglichen.
   Die Zuordnung der bisherigen Presse- und Administratorrechte zu allen
   vorhandenen Ordnern der ersten Ebene ist vor der Übernahme fachlich zu prüfen;
   Dateien im Hauptordner bleiben nach Aktivierung nur Administratoren zugänglich. Bereits

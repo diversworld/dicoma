@@ -10,6 +10,8 @@ use App\Entity\FileAction;
 use App\Entity\MediaFolder;
 use App\Entity\MediaFolderPermission;
 use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 
@@ -18,9 +20,10 @@ final class FolderPermissions
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RoleHierarchyInterface $hierarchy,
+        private readonly ModuleAccess $moduleAccess,
     ) {}
 
-    public function can(User $user, Club $club, ?MediaFolder $folder, FileAction $action, ?\DateTimeImmutable $date = null): bool
+    public function can(User $user, Club $club, ?MediaFolder $folder, FileAction $action, ?\DateTimeImmutable $date = null, ?PermissionAction $moduleAction = null): bool
     {
         if (!$this->em->contains($user)) {
             $user = $user->getId() === null ? null : $this->em->find(User::class, $user->getId());
@@ -29,6 +32,15 @@ final class FolderPermissions
             }
         }
         if ($folder !== null && !self::sameClub($folder->getClub(), $club)) {
+            return false;
+        }
+        $moduleAction ??= match ($action) {
+            FileAction::READ => PermissionAction::READ,
+            FileAction::UPLOAD => PermissionAction::CREATE,
+            FileAction::EDIT => PermissionAction::EDIT,
+            FileAction::DELETE => PermissionAction::DELETE,
+        };
+        if (!$this->moduleAccess->can($user, $club, PermissionModule::FILES, $moduleAction, $date)) {
             return false;
         }
         if ($folder === null) {

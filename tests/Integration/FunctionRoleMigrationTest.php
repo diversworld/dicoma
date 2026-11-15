@@ -70,6 +70,7 @@ final class FunctionRoleMigrationTest extends KernelTestCase
         self::assertTrue($rule->permission(FileAction::READ));
         self::assertTrue($rule->permission(FileAction::DELETE));
         self::assertNull($function->rootPermission(FileAction::READ));
+        self::assertSame(['files:read', 'files:create', 'files:edit', 'files:delete'], $function->getModulePermissions());
         $assignment = $this->em->getRepository(ClubFunctionAssignment::class)->findOneBy(['user' => $user, 'clubFunction' => $function]);
         self::assertSame('2999-01-01', $assignment->getStartsAt()->format('Y-m-d'));
         $emergency = $this->em->find(User::class, $emergencyId);

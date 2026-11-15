@@ -11,6 +11,9 @@ use App\Entity\FileAction;
 use App\Entity\MediaFolder;
 use App\Entity\MediaFolderPermission;
 use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
+use App\Security\ModulePermission;
 use App\Service\MembershipRoleContinuity;
 use App\Service\SingleClubMode;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
@@ -113,8 +116,13 @@ final class MigrateFunctionRolesCommand extends Command
     {
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['club' => $club, 'name' => $name]);
         $folders = $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club, 'parent' => null]);
+        $modulePermissions = $folderAccess
+            ? array_map(static fn (PermissionAction $action): string => ModulePermission::key(PermissionModule::FILES, $action), PermissionAction::cases())
+            : [];
         if ($function !== null) {
-            if ($function->getPermissions() !== $roles || $function->isSuccessorRequired() !== $successorRequired
+            $existingModulePermissions = $function->getModulePermissions();
+            if ($function->getPermissions() !== $roles || count($existingModulePermissions) !== count($modulePermissions)
+                || array_diff($existingModulePermissions, $modulePermissions) !== [] || $function->isSuccessorRequired() !== $successorRequired
                 || $function->getStartsAt() !== null || $function->getEndsAt() !== null) {
                 throw new \DomainException('Eine bestehende Funktion mit dem Namen „'.$name.'“ widerspricht der Rollenübernahme.');
             }
@@ -136,6 +144,7 @@ final class MigrateFunctionRolesCommand extends Command
         }
         $function = new ClubFunction($club, $name);
         $function->setPermissions($roles);
+        $function->setModulePermissions($modulePermissions);
         $function->setSuccessorRequired($successorRequired);
         $this->em->persist($function);
         if ($folderAccess) {

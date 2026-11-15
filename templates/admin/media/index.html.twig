@@ -29,7 +29,7 @@
     {% endif %}
     <div class="row g-4">
     <aside class="col-lg-4 col-xl-3">
-        {% if canEdit %}<form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
+        {% if canCreateFolder %}<form method="post" action="{{ path('admin_media_folder_create') }}" class="mb-4">
             <input type="hidden" name="_token" value="{{ csrf_token('media_folder_create_' ~ club.id) }}">
             <input type="hidden" name="parent" value="{{ folder ? folder.id : '' }}">
             <label for="media-folder-name" class="form-label">{{ 'Neuer Ordner in %folder%'|trans({'%folder%': folder ? folder.path : 'Hauptordner'|trans}) }}</label>

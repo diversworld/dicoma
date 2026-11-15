@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\ClubFunction;
+use App\Security\ModulePermission;
 use App\Service\AdminClubContext;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -54,7 +55,14 @@ final class ClubFunctionCrudController extends AbstractCrudController
     {
         yield TextField::new('name', 'Funktion');
         yield TextField::new('name', 'Berechtigungen')->setSortable(false)
-            ->formatValue(static fn (mixed $value, ClubFunction $function): string => htmlspecialchars(implode(', ', $function->getPermissions()), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+            ->formatValue(static function (mixed $value, ClubFunction $function): string {
+                $modules = array_map(ModulePermission::describe(...), $function->getModulePermissions());
+                $roles = $function->getPermissions();
+                if ($roles !== []) {
+                    $modules[] = 'Bisherige Rollen: '.implode(', ', $roles);
+                }
+                return htmlspecialchars(implode('; ', $modules), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            });
         yield BooleanField::new('successorRequired', 'Nachfolge erforderlich')->renderAsSwitch(false);
         yield DateField::new('startsAt', 'Gültig ab');
         yield DateField::new('endsAt', 'Gültig bis');
