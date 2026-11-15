@@ -40,7 +40,8 @@ final class WebsitePublicationType extends AbstractType
                 ]
             )
             ->add('image', MediaImageType::class, [
-                'club' => $options['club']
+                'club' => $options['club'],
+                'disabled' => $options['image_locked'],
                 ]
             )
             ->add('published', CheckboxType::class, [
@@ -108,7 +109,8 @@ final class WebsitePublicationType extends AbstractType
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => WebsitePublication::class]);
+        $resolver->setDefaults(['data_class' => WebsitePublication::class, 'image_locked' => false]);
+        $resolver->setAllowedTypes('image_locked', 'bool');
         $resolver->setRequired('club'); $resolver->setAllowedTypes('club', Club::class);
     }
 }

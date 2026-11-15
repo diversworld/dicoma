@@ -6,6 +6,8 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Security\LoginDestination;
+use App\Security\EditorialAccess;
+use App\Enum\PermissionAction;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final class PortalNavigation
@@ -14,6 +16,7 @@ final class PortalNavigation
         private readonly Security $security,
         private readonly PublicWebsite $website,
         private readonly LoginDestination $loginDestination,
+        private readonly EditorialAccess $editorialAccess,
     ) {}
 
     /** @return list<array{label: string, route: string}> */
@@ -58,6 +61,13 @@ final class PortalNavigation
         $isMember = $this->security->isGranted(User::ROLE_MEMBER);
         $roles = [];
 
+        if ($this->editorialAccess->functionModelEnabled()) {
+            if ($this->editorialAccess->can(PermissionAction::READ)) {
+                $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen', 'route' => 'admin_website_editorial']];
+            } elseif ($this->editorialAccess->can(PermissionAction::CREATE)) {
+                $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen erstellen', 'route' => 'admin_website_editorial_new']];
+            }
+        }
         if ($isMember) {
             $personal[] = ['label' => 'Mein Dashboard', 'route' => 'member_portal_dashboard'];
             $personal[] = ['label' => 'Meine Daten', 'route' => 'app_profile'];

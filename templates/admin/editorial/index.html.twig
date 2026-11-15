@@ -17,7 +17,7 @@
     </section>
     {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
     {% for message in app.flashes('danger') %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
-    <p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Artikel / Veranstaltung erstellen</a></p>
+    {% if canCreate %}<p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Artikel / Veranstaltung erstellen</a></p>{% endif %}
     <div class="table-responsive"><table class="table">
         <thead>
             <tr>
@@ -37,6 +37,7 @@
             <td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
             <td>{{ publication.image ? 'Ja' : 'Nein' }}</td>
             <td>
+                {% if canEdit %}
                 <form method="post" action="{{ path('admin_website_editorial_publication', {'_locale': app.request.locale, entityId: publication.id}) }}" data-editorial-publication-toggle>
                     <input type="hidden" name="_token" value="{{ csrf_token('website_publication_toggle_' ~ publication.id) }}">
                     <input type="hidden" name="version" value="{{ publication.version }}">
@@ -46,8 +47,9 @@
                     </div>
                     <button class="btn btn-sm btn-secondary" type="submit" data-editorial-toggle-submit>Freigabe speichern</button>
                 </form>
+                {% else %}{{ publication.published ? 'Ja' : 'Nein' }}{% endif %}
             </td>
-            <td><a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a></td>
+            <td>{% if canEdit %}<a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a>{% endif %}</td>
         </tr>{% else %}<tr>
             <td colspan="7">Noch keine Beiträge.</td>
         </tr>{% endfor %}</tbody>

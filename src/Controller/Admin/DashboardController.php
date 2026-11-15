@@ -24,7 +24,9 @@ use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
 use App\Entity\WebsitePublication;
+use App\Entity\FileAction;
 use App\Enum\CourseStatus;
+use App\Enum\PermissionAction;
 use App\Controller\Admin\MemberCrudController;
 use \App\Entity\TuvInvoiceSettings;
 use App\Controller\Admin\MemberQualificationCrudController;
@@ -33,7 +35,10 @@ use App\Controller\Admin\MemberTankCheckBookingCrudController;
 use App\Service\TankInspectionOverview;
 use App\Service\PublicWebsite;
 use App\Service\AdminClubContext;
+use App\Service\MembershipRoleContinuity;
 use App\Service\BarDutyAccess;
+use App\Security\EditorialAccess;
+use App\Security\FolderPermissions;
 use App\Repository\MemberQualificationRepository;
 use App\Form\WebsitePublicationType;
 use App\Form\TuvInvoiceSettingsType;
@@ -58,6 +63,7 @@ use Doctrine\DBAL\LockMode;
 use App\Service\TuvMessageRenderer;
 use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use \Doctrine\ORM\EntityManagerInterface;
 
 #[AdminDashboard(
@@ -103,7 +109,11 @@ class DashboardController extends AbstractDashboardController
         private readonly EntityManagerInterface $em,
         private readonly PublicWebsite $publicWebsite,
         private readonly AdminClubContext $clubContext,
-        private readonly BarDutyAccess $barAccess
+        private readonly BarDutyAccess $barAccess,
+        private readonly EditorialAccess $editorialAccess,
+        private readonly FolderPermissions $folderPermissions,
+        private readonly MembershipRoleContinuity $continuity,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
 	) {
 	}
 	
@@ -263,23 +273,32 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/editorial', name: 'website_editorial', options: ['methods' => ['GET']])]
     public function websiteEditorial(PublicWebsite $website): Response
     {
-        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
+        $club = $this->editorialClub($website, PermissionAction::READ);
 
         return $this->render('admin/editorial/index.html.twig', [
             'publications' => $this->em->getRepository(WebsitePublication::class)
-                ->findBy(['club' => $website->editorialClub()], ['id' => 'DESC']),
+                ->findBy(['club' => $club], ['id' => 'DESC']),
+            'canCreate' => $this->editorialAccess->can(PermissionAction::CREATE),
+            'canEdit' => $this->editorialAccess->can(PermissionAction::EDIT),
         ]);
     }
 
     #[AdminRoute(path: '/editorial/{entityId}/publication', name: 'website_editorial_publication', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
     public function changeWebsitePublication(int $entityId, Request $request, PublicWebsite $website, ValidatorInterface $validator): Response
     {
-        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
-        $club = $website->editorialClub();
+        return $this->withEditorialWriteLock($request, fn (): Response => $this->applyWebsitePublicationChange($entityId, $request, $website, $validator));
+    }
+
+    private function applyWebsitePublicationChange(int $entityId, Request $request, PublicWebsite $website, ValidatorInterface $validator): Response
+    {
+        $club = $this->editorialClub($website, PermissionAction::EDIT);
         $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy(['id' => $entityId, 'club' => $club]);
         if ($publication === null) { throw $this->createNotFoundException(); }
         if (!$this->isCsrfTokenValid('website_publication_toggle_'.$entityId, $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+        }
+        if ($this->functionModelEnabled) {
+            $this->continuity->refresh($publication);
         }
         $version = $request->request->getString('version');
         $value = $request->request->getString('published', '0');
@@ -297,7 +316,7 @@ class DashboardController extends AbstractDashboardController
                     $errors = $validator->validate($candidate);
                     if (count($errors) > 0) {
                         foreach ($errors as $error) { $this->addFlash('danger', (string) $error->getMessage()); }
-                        return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+                        return $this->editorialRedirect($request);
                     }
                 }
                 $publication->setPublished($published);
@@ -311,7 +330,7 @@ class DashboardController extends AbstractDashboardController
         } catch (OptimisticLockException) {
             $this->addFlash('danger', 'Der Beitrag wurde zwischenzeitlich geändert. Bitte den aktuellen Stand prüfen und erneut versuchen.');
         }
-        return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+        return $this->editorialRedirect($request);
     }
 
     #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET']])]
@@ -327,7 +346,7 @@ class DashboardController extends AbstractDashboardController
     #[AdminRoute(path: '/editorial/new', name: 'website_editorial_new', options: ['methods' => ['GET', 'POST']])]
     public function newWebsitePublication(Request $request, PublicWebsite $website): Response
     {
-        return $this->renderWebsitePublicationForm($request, $website);
+        return $this->withEditorialWriteLock($request, fn (): Response => $this->renderWebsitePublicationForm($request, $website));
     }
 
     #[AdminRoute(path: '/editorial/{entityId}/edit', name: 'website_editorial_edit', options: ['methods' => ['GET', 'POST'], 'requirements' => ['entityId' => '\d+']])]
@@ -336,7 +355,7 @@ class DashboardController extends AbstractDashboardController
         PublicWebsite $website,
         int $entityId
     ): Response {
-        return $this->renderWebsitePublicationForm($request, $website, $entityId);
+        return $this->withEditorialWriteLock($request, fn (): Response => $this->renderWebsitePublicationForm($request, $website, $entityId));
     }
 
     private function renderWebsitePublicationForm(
@@ -344,16 +363,26 @@ class DashboardController extends AbstractDashboardController
         PublicWebsite $website,
         ?int $entityId = null
     ): Response {
-        $this->denyAccessUnlessGranted(User::ROLE_PRESS_OFFICER);
-        $club = $website->editorialClub();
+        $club = $this->editorialClub($website, $entityId === null ? PermissionAction::CREATE : PermissionAction::EDIT);
         $publication = $entityId === null
             ? new WebsitePublication($club)
             : $this->em->getRepository(WebsitePublication::class)->findOneBy(['id' => $entityId, 'club' => $club]);
         if ($publication === null) {
             throw $this->createNotFoundException();
         }
+        if ($this->functionModelEnabled && $entityId !== null && $request->isMethod('POST')) {
+            $this->continuity->refresh($publication);
+        }
 
-        $form = $this->createForm(WebsitePublicationType::class, $publication, ['club' => $club]);
+        $image = $publication->getImage();
+        $user = $this->getUser();
+        $canReadImage = !$this->functionModelEnabled || $image === null
+            || ($user instanceof User && $image->getClub()->getId() === $club->getId()
+                && $this->folderPermissions->can($user, $club, $image->getFolder(), FileAction::READ));
+        $form = $this->createForm(WebsitePublicationType::class, $publication, [
+            'club' => $club,
+            'image_locked' => !$canReadImage,
+        ]);
         $form->handleRequest($request);
         $conflict = false;
         if ($form->isSubmitted() && $form->isValid()) {
@@ -368,7 +397,7 @@ class DashboardController extends AbstractDashboardController
                     ? 'Beitrag freigegeben. Sichtbar ab dem Veröffentlichungszeitpunkt, sofern die verknüpfte Veranstaltung freigegeben ist.'
                     : 'Entwurf gespeichert; nicht öffentlich sichtbar.');
 
-                return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+                return $this->editorialRedirect($request);
             } catch (OptimisticLockException|\DomainException) {
                 $form->addError(new FormError('Gleichzeitige Änderung: Bitte den Beitrag neu laden. Nicht gespeichert.'));
                 $conflict = true;
@@ -378,7 +407,38 @@ class DashboardController extends AbstractDashboardController
         return $this->render('admin/editorial/edit.html.twig', [
             'form' => $form,
             'publication' => $publication,
+            'canRead' => $this->editorialAccess->can(PermissionAction::READ),
+            'canReadImage' => $canReadImage,
         ], new Response(status: $conflict ? 409 : ($form->isSubmitted() ? 422 : 200)));
+    }
+
+    private function editorialClub(PublicWebsite $website, PermissionAction $action): Club
+    {
+        if (!$this->editorialAccess->can($action)) {
+            throw $this->createAccessDeniedException('Keine Berechtigung für diese Aktion der Website-Redaktion.');
+        }
+        return $website->club() ?? throw $this->createAccessDeniedException('Kein Website-Verein konfiguriert.');
+    }
+
+    private function withEditorialWriteLock(Request $request, callable $operation): Response
+    {
+        if (!$this->functionModelEnabled || !$request->isMethod('POST')) {
+            return $operation();
+        }
+        $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+        return $this->em->getConnection()->transactional(function () use ($club, $operation): Response {
+            $this->continuity->lockClub($club);
+            $this->em->clear();
+            return $operation();
+        });
+    }
+
+    private function editorialRedirect(Request $request): Response
+    {
+        if ($this->editorialAccess->can(PermissionAction::READ)) {
+            return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+        }
+        return $this->redirectToRoute('app_portal', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
     }
 
     // DICOMA invoice settings EasyAdmin integration v1
@@ -543,15 +603,19 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
+        $editorialRoute = $this->editorialAccess->can(PermissionAction::READ)
+            ? 'admin_website_editorial'
+            : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_website_editorial_new' : null);
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
                 ...($this->publicWebsite->canManageEditorial()
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
                     ? [MenuItem::linkToRoute('Thekendienst-Jahresregel', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
-                MenuItem::section('Website & Redaktion'),
-                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
-                    ->setPermission('ROLE_PRESS_OFFICER'),
+                ...($editorialRoute !== null ? [
+                    MenuItem::section('Website & Redaktion'),
+                    MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                ] : []),
                 MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')
                     ->setPermission('ROLE_PRESS_OFFICER'),
             ];
@@ -560,10 +624,9 @@ class DashboardController extends AbstractDashboardController
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
-            ...($this->publicWebsite->canManageEditorial() ? [
+            ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
-                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', 'admin_website_editorial')
-                    ->setPermission('ROLE_PRESS_OFFICER'),
+                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
                 ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),

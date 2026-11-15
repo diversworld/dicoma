@@ -13,8 +13,9 @@ Prüfungen.
   Funktionen und einstellbare Nachfolgepflicht sind vorbereitet. Die
   vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) können
   getrennt von den bisherigen Rollen gespeichert werden. Ihre serverseitige
-  Durchsetzung ist bislang nur für die Mediathek und die redaktionelle
-  Bildauswahl implementiert, nicht für die übrigen Module oder Kursbilder.
+  Durchsetzung ist bislang nur für die Mediathek, die redaktionelle
+  Bildauswahl und die redaktionellen Beiträge implementiert, nicht für die
+  übrigen Zugriffswege oder Kursbilder.
 - Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
   Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
   Gerätekasse, Thekendienst, Thekenkasse, Website und Veranstaltungen,
@@ -141,7 +142,11 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
   aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildpfade sind
-  noch nicht integriert; die übrigen Modulrechte sind noch nicht wirksam.
+  noch nicht integriert. Redaktionelle Beiträge verlangen bei eingeschaltetem
+  Modell das Website-Modulrecht Lesen, Anlegen beziehungsweise Bearbeiten;
+  die übrigen Website- und anderen Modulpfade sind noch nicht vollständig
+  umgestellt. Bestehende Pressefunktionen erhalten dadurch nicht automatisch
+  Website-Modulrechte und müssen vor einer Aktivierung geprüft werden.
   Altrollen bleiben während des Übergangs getrennt gespeichert. Die additive
   Migration `Version20261115140000` wurde nach Sicherung und Restore-Test auf
   der lokalen Anwendungsdatenbank ausgeführt. Auch `Version20261115150000`
@@ -154,9 +159,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
   Sie müssen vorab fachlich geklärt und ausdrücklich auf die erste Ebene
-  übertragen werden. Die Migration wurde nur in isolierten Testdatenbanken
-  geprüft, nicht auf der Anwendungsdatenbank ausgeführt. Vor dem Einsatz
-  sind Backup, Restore und eine Wartung ohne parallele Schreibzugriffe nötig.
+  übertragen werden. Die Migration wurde nach Sicherung und Restore-Test auf
+  der lokalen Anwendungsdatenbank ausgeführt. Für weitere Umgebungen sind
+  Backup, Restore-Test und eine Wartung ohne parallele Schreibzugriffe nötig.
 - `app:functions:migrate-roles --confirm` übernimmt direkte Funktionsrollen
   und ihre individuellen Zeiträume transaktional in Funktionszuordnungen.
   Bei aktiviertem Modell wirken direkte Funktionsrollen nicht mehr; die

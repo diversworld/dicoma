@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, Courses, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{Club, ClubFunction, ClubFunctionAssignment, Courses, MediaFile, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\{CourseStatus, MembershipStatus, TournamentStatus};
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -27,6 +27,7 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null'; putenv('MAILER_DSN=null://null');
         $_ENV['PUBLIC_SITE_CLUB_ID'] = $_SERVER['PUBLIC_SITE_CLUB_ID'] = '1'; putenv('PUBLIC_SITE_CLUB_ID=1');
         $_ENV['SITE_THEME'] = $_SERVER['SITE_THEME'] = 'airspace'; putenv('SITE_THEME=airspace');
+        $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = str_starts_with($this->name(), 'testFunctionModel') ? '1' : '0';
         $this->client = static::createClient(['environment' => 'test']); $this->client->disableReboot();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
         self::assertSame('pdo_sqlite', $this->em->getConnection()->getParams()['driver']);
@@ -106,6 +107,141 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(303);
         $this->client->request('GET', '/news/'.$publication->getId()); self::assertResponseStatusCodeSame(404);
         self::assertCount(3, $this->em->find(WebsitePublication::class, $publication->getId())->getHistory());
+    }
+
+    public function testFunctionModelEditorialReadIsSeparateFromWritesAndLegacyRoles(): void
+    {
+        $publication = $this->publication('Private draft', false);
+        $id = $publication->getId();
+        $function = new ClubFunction($this->club, 'Redaktion lesen');
+        $function->setModulePermissions(['website:read']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/portal/de');
+        self::assertSelectorExists('a[href="/admin/de/editorial"]');
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Private draft');
+        self::assertSelectorNotExists('a[href="/admin/de/editorial/new"]');
+        self::assertSelectorNotExists('a[href="/admin/de/editorial/'.$id.'/edit"]');
+        self::assertSelectorNotExists('form[action="/admin/de/editorial/'.$id.'/publication"]');
+        foreach (['/admin/de/editorial/new', '/admin/de/editorial/'.$id.'/edit'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(403);
+        }
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/admin/de/editorial/new');
+        self::assertResponseStatusCodeSame(403);
+
+        $legacy = new ClubFunction($this->em->find(Club::class, $this->club->getId()), 'Alte Pressefunktion');
+        $legacy->setPermissions([User::ROLE_PRESS_OFFICER]);
+        $this->em->persist($legacy);
+        $this->em->persist(new ClubFunctionAssignment($legacy, $this->em->find(User::class, $this->press->getId())));
+        $this->em->flush();
+        $this->client->loginUser($this->em->find(User::class, $this->press->getId()));
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionModelEditorialCreateAndEditRecheckCurrentPermission(): void
+    {
+        $function = new ClubFunction($this->club, 'Redaktion schreiben');
+        $function->setModulePermissions(['website:create']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/portal/de');
+        self::assertSelectorExists('a[href="/admin/de/editorial/new"]');
+        $this->client->request('GET', '/admin/de/editorial/new');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('a[href="/admin/de/editorial"]');
+        $this->client->submitForm('Beitrag speichern', $this->formData());
+        self::assertResponseRedirects('/portal', 303);
+        $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy(['title' => 'Club news']);
+        self::assertNotNull($publication);
+        $id = $publication->getId();
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        self::assertResponseStatusCodeSame(403);
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:edit']);
+        $this->em->flush();
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        self::assertResponseIsSuccessful();
+        $this->client->submitForm('Beitrag speichern', ['website_publication[title]' => 'Updated']);
+        self::assertResponseRedirects('/portal', 303);
+        self::assertSame('Updated', $this->em->find(WebsitePublication::class, $id)->getTitle());
+
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = (string) static::getContainer()->get('security.csrf.token_manager')->getToken('website_publication_toggle_'.$id);
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $version = $this->em->find(WebsitePublication::class, $id)->getVersion();
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', ['_token' => $token, 'version' => $version, 'published' => '1']);
+        self::assertResponseRedirects('/portal', 303);
+        self::assertTrue($this->em->find(WebsitePublication::class, $id)->isPublished());
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions([]);
+        $this->em->flush();
+        $this->client->request('POST', '/admin/de/editorial/'.$id.'/publication', ['_token' => $token, 'version' => $version + 1, 'published' => '0']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertTrue($this->em->find(WebsitePublication::class, $id)->isPublished());
+    }
+
+    public function testFunctionModelEditorialRejectsForeignPublicationsAndExpiredAssignments(): void
+    {
+        $other = (new Club())->setName('Other club');
+        $this->em->persist($other);
+        $this->em->flush();
+        $foreign = new WebsitePublication($other);
+        $foreign->setTitle('Foreign'); $foreign->setSummary('Summary'); $foreign->setBody('Body');
+        $foreign->setPublishAt(new \DateTimeImmutable('-1 hour'));
+        $this->em->persist($foreign);
+        $function = new ClubFunction($this->club, 'Redaktion');
+        $function->setModulePermissions(['website:read', 'website:edit']);
+        $assignment = new ClubFunctionAssignment($function, $this->member);
+        $this->em->persist($function); $this->em->persist($assignment); $this->em->flush();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial/'.$foreign->getId().'/edit');
+        self::assertResponseStatusCodeSame(404);
+        $assignment->setValidity(null, new \DateTimeImmutable('yesterday'));
+        $this->em->flush();
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionModelEditorialEditPreservesAnUnreadableImage(): void
+    {
+        $image = new MediaFile($this->club, str_repeat('a', 40).'.png', 'confidential.png', 'image/png', 1, 'Secret image description');
+        $publication = $this->publication('Draft with image', false);
+        $publication->setImage($image);
+        $function = new ClubFunction($this->club, 'Redaktion ohne Dateizugriff');
+        $function->setModulePermissions(['website:edit']);
+        $this->em->persist($image); $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $id = $publication->getId();
+        $imageId = $image->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('body', 'Secret image description');
+        self::assertSelectorNotExists('img[src="/admin/media/'.$imageId.'"]');
+        self::assertSelectorExists('select[name="website_publication[image]"][disabled]');
+        $this->client->submitForm('Beitrag speichern', ['website_publication[title]' => 'Updated without file access']);
+        self::assertResponseRedirects('/portal', 303);
+        self::assertSame($imageId, $this->em->find(WebsitePublication::class, $id)->getImage()?->getId());
     }
 
     public function testEditorialOverviewSwitchPublishesAndWithdrawsWithAuditAndScheduledVisibility(): void

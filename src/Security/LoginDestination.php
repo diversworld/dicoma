@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
+use App\Enum\PermissionAction;
 use App\Service\CompetitionAccess;
 use App\Service\PublicWebsite;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -15,6 +16,7 @@ final class LoginDestination
         private readonly Security $security,
         private readonly PublicWebsite $website,
         private readonly CompetitionAccess $competitions,
+        private readonly EditorialAccess $editorialAccess,
     ) {}
 
     public function route(): string
@@ -37,7 +39,13 @@ final class LoginDestination
             if ($this->security->isGranted(User::ROLE_BAR_MANAGER)) {
                 return 'admin_portal_bar_duty';
             }
-            if ($this->website->canManageEditorial()) {
+            if ($this->editorialAccess->functionModelEnabled() && $this->editorialAccess->can(PermissionAction::READ)) {
+                return 'admin_website_editorial';
+            }
+            if ($this->editorialAccess->functionModelEnabled() && $this->editorialAccess->can(PermissionAction::CREATE)) {
+                return 'admin_website_editorial_new';
+            }
+            if (!$this->editorialAccess->functionModelEnabled() && $this->website->canManageEditorial()) {
                 return 'admin_website_editorial';
             }
             if ($this->competitions->isStaff()) {

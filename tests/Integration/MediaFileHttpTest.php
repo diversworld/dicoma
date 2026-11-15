@@ -353,7 +353,7 @@ final class MediaFileHttpTest extends WebTestCase
     {
         $function = new ClubFunction($this->club, 'Redaktionsbilder');
         $function->setPermissions([User::ROLE_PRESS_OFFICER]);
-        $function->setModulePermissions(['files:read']);
+        $function->setModulePermissions(['files:read', 'website:create']);
         $allowedFolder = new MediaFolder($this->club, 'Bilder');
         $allowedRule = new MediaFolderPermission($function, $allowedFolder);
         $allowedRule->setPermission(FileAction::READ, true);
