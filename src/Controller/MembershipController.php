@@ -124,11 +124,16 @@ final class MembershipController extends AbstractController
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$barAccess->isManager()) {
             throw $this->createAccessDeniedException();
         }
-        return $this->adminPage('admin/settings.html.twig', [
-            'canWebsite' => $this->clubContext->getClub() !== null
-                && ($this->isGranted('ROLE_SUPER_ADMIN') || $website->canManageEditorial()),
-            'canBar' => $barAccess->isManager() && $barAccess->selectedClubIsMembershipClub(),
-        ]);
+        if ($this->isGranted('ROLE_ADMIN')) {
+            return $this->redirectToRoute('admin_settings_membership', [], Response::HTTP_SEE_OTHER);
+        }
+        if ($website->canManageEditorial()) {
+            return $this->redirectToRoute('admin_settings_website', [], Response::HTTP_SEE_OTHER);
+        }
+        if ($barAccess->isManager() && $barAccess->selectedClubIsMembershipClub()) {
+            return $this->redirectToRoute('admin_settings_bar_services', [], Response::HTTP_SEE_OTHER);
+        }
+        throw $this->createAccessDeniedException();
     }
 
     #[Route('/admin/settings/website', name: 'admin_settings_website', defaults: self::ADMIN_ROUTE_DEFAULTS + ['configuration_section' => 'website'], methods: ['GET', 'POST'])]
@@ -343,15 +348,25 @@ final class MembershipController extends AbstractController
         }
         
         return $this->adminPage('membership/club.html.twig', [
-            'club' => $club, 'policyForm' => $policyForm->createView(), 'classForm' => $classForm->createView(),
-            'classes' => $this->em->getRepository(ContributionClass::class)->findBy(['club' => $club]),
-            'applications' => $this->em->getRepository(MembershipApplication::class)->findBy(['club' => $club], ['id' => 'DESC']),
-            'members' => $this->em->getRepository(Member::class)->findBy(['club' => $club], ['id' => 'DESC']),
-            'roleEvents' => $this->em->getRepository(MembershipEvent::class)->createQueryBuilder('event')
-                ->join('event.member', 'membership')->where('membership.club = :club')
-                ->andWhere('event.kind IN (:kinds)')->setParameter('club', $club)
+            'club' => $club, 
+            'policyForm' => $policyForm->createView(), 
+            'classForm' => $classForm->createView(),
+            'classes' => $this->em->getRepository(ContributionClass::class)
+                ->findBy(['club' => $club]),
+            'applications' => $this->em->getRepository(MembershipApplication::class)
+                ->findBy(['club' => $club], ['id' => 'DESC']),
+            'members' => $this->em->getRepository(Member::class)
+                ->findBy(['club' => $club], ['id' => 'DESC']),
+            'roleEvents' => $this->em->getRepository(MembershipEvent::class)
+                ->createQueryBuilder('event')
+                ->join('event.member', 'membership')
+                ->where('membership.club = :club')
+                ->andWhere('event.kind IN (:kinds)')
+                ->setParameter('club', $club)
                 ->setParameter('kinds', ['role_continuity', 'role_vacancy'])
-                ->orderBy('event.id', 'DESC')->getQuery()->getResult(),
+                ->orderBy('event.id', 'DESC')
+                ->getQuery()
+                ->getResult(),
         ]);
     }
 
@@ -595,9 +610,12 @@ final class MembershipController extends AbstractController
             'member' => $member, 'admin' => $admin,
             'membership_layout' => $admin ? 'admin/membership/layout.html.twig' : 'membership/layout.html.twig',
             'forms' => array_map(static fn (FormInterface $form) => $form->createView(), $forms),
-            'events' => $this->em->getRepository(MembershipEvent::class)->findBy(['member' => $member], ['id' => 'DESC']),
-            'charges' => $this->em->getRepository(MembershipCharge::class)->findBy(['member' => $member], ['id' => 'DESC']),
-            'mandates' => $this->em->getRepository(SepaMandate::class)->findBy(['member' => $member], ['id' => 'DESC']),
+            'events' => $this->em->getRepository(MembershipEvent::class)
+                ->findBy(['member' => $member], ['id' => 'DESC']),
+            'charges' => $this->em->getRepository(MembershipCharge::class)
+                ->findBy(['member' => $member], ['id' => 'DESC']),
+            'mandates' => $this->em->getRepository(SepaMandate::class)
+                ->findBy(['member' => $member], ['id' => 'DESC']),
         ]);
     }
 
@@ -692,18 +710,41 @@ final class MembershipController extends AbstractController
 
     private function saveContribution(ContributionClass $class): void
     {
-        $duplicate = $this->em->getRepository(ContributionClass::class)->findOneBy(['club' => $class->getClub(), 'name' => $class->getName()]);
-        if ($duplicate !== null && $duplicate->getId() !== $class->getId()) { throw new \DomainException('Diese Beitragsklasse existiert bereits.'); }
+        $duplicate = $this->em->getRepository(ContributionClass::class)
+            ->findOneBy(['club' => $class->getClub(), 'name' => $class->getName()]);
+        
+        if ($duplicate !== null && $duplicate->getId() !== $class->getId()) { 
+            throw new \DomainException('Diese Beitragsklasse existiert bereits.'); 
+        }
+
         if ($class->getId() !== null) {
             if (!$class->isFamily()) {
-                $dependants = $this->em->getRepository(Member::class)->createQueryBuilder('m')->select('COUNT(m.id)')->join('m.familyPayer', 'p')
-                    ->where('p.contributionClass = :class')->setParameter('class', $class)->getQuery()->getSingleScalarResult();
-                if ((int) $dependants > 0) { throw new \DomainException('Familienbeitragsklasse mit abhängigen Mitgliedern nicht in einen Einzelbeitrag umwandeln.'); }
+                $dependants = $this->em->getRepository(Member::class)
+                    ->createQueryBuilder('m')
+                    ->select('COUNT(m.id)')
+                    ->join('m.familyPayer', 'p')
+                    ->where('p.contributionClass = :class')
+                    ->setParameter('class', $class)
+                    ->getQuery()
+                    ->getSingleScalarResult();
+                
+                if ((int) $dependants > 0) { 
+                    throw new \DomainException('Familienbeitragsklasse mit abhängigen Mitgliedern nicht in einen Einzelbeitrag umwandeln.'); 
+                }
             }
-            $excessDiscounts = $this->em->getRepository(Member::class)->createQueryBuilder('m')->select('COUNT(m.id)')
-                ->where('m.contributionClass = :class')->andWhere('m.contributionDiscountCents > :amount')
-                ->setParameter('class', $class)->setParameter('amount', $class->getAnnualCents())->getQuery()->getSingleScalarResult();
-            if ((int) $excessDiscounts > 0) { throw new \DomainException('Zuerst Ermäßigungen anpassen, die den neuen Jahresbeitrag übersteigen.'); }
+            $excessDiscounts = $this->em->getRepository(Member::class)
+                ->createQueryBuilder('m')
+                ->select('COUNT(m.id)')
+                ->where('m.contributionClass = :class')
+                ->andWhere('m.contributionDiscountCents > :amount')
+                ->setParameter('class', $class)
+                ->setParameter('amount', $class->getAnnualCents())
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            if ((int) $excessDiscounts > 0) { 
+                throw new \DomainException('Zuerst Ermäßigungen anpassen, die den neuen Jahresbeitrag übersteigen.'); 
+            }
         }
         $this->em->persist($class); $this->em->flush();
     }

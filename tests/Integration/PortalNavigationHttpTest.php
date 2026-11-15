@@ -844,13 +844,13 @@ final class PortalNavigationHttpTest extends WebTestCase
         foreach ([[$own, true], [$foreign, false]] as [$user, $allowed]) {
             $this->client->loginUser($user);
             $this->client->request('GET', '/admin/settings');
-            self::assertResponseIsSuccessful();
             if ($allowed) {
+                self::assertResponseRedirects('/admin/settings/membership', 303);
+                $this->client->followRedirect();
+                self::assertResponseIsSuccessful();
                 self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_settings_website"]');
-                self::assertSelectorExists('a[href="/admin/settings/website"]');
             } else {
-                self::assertSelectorNotExists('aside.sidebar a[href*="routeName=admin_settings_website"]');
-                self::assertSelectorNotExists('a[href="/admin/settings/website"]');
+                self::assertResponseStatusCodeSame(403);
             }
             $this->client->request('GET', '/admin/settings/website');
             self::assertResponseStatusCodeSame($allowed ? 200 : 403);

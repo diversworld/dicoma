@@ -123,9 +123,11 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   weil sie noch nicht in dieselbe Ordnerstruktur integriert sind.
   `CLUB_FUNCTION_MEMBERSHIP_ENABLED` ist standardmäßig ausgeschaltet und darf
   vor der vollständigen Umstellung und Abnahme nicht aktiviert werden.
-  Das neue Schema und die Rollenübernahme wurden auf der lokalen
-  Anwendungsdatenbank noch nicht angewendet; die bisherigen Rollenregeln
-  bleiben deshalb weiterhin maßgeblich.
+  Das neue Schema ist auf der lokalen Anwendungsdatenbank vorhanden; die
+  Rollenübernahme ist dort noch nicht durchgeführt. Die bisherigen Rollenregeln
+  bleiben deshalb weiterhin maßgeblich. Funktionen können bereits als
+  ausdrücklich gekennzeichnete Vorbereitung angelegt werden; ihre Rechte
+  und Inhaberzuordnungen wirken erst nach der vollständigen Umstellung.
 - `app:functions:migrate-roles --confirm` übernimmt direkte Funktionsrollen
   und ihre individuellen Zeiträume transaktional in Funktionszuordnungen.
   Bei aktiviertem Modell wirken direkte Funktionsrollen nicht mehr; die
@@ -134,7 +136,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   bricht bei unklaren oder widersprüchlichen Daten ab. Es wurde in isolierten
   SQLite- und MariaDB-Tests ausgeführt, nicht auf der Anwendungsdatenbank.
   Die Zuordnung der bisherigen Presse- und Administratorrechte zu
-  Hauptordnerrechten ist vor der Übernahme fachlich zu prüfen.
+  Hauptordnerrechten ist vor der Übernahme fachlich zu prüfen. Bereits
+  vorbereitete Funktionen mit widersprüchlichen Namen oder Rechten können
+  die Übernahme blockieren und müssen vorher geprüft werden.
 - Nach gesicherter und geprüfter Übertragung des einzigen fremd zugeordneten
   Turniers wurde der zentrale Vereinskontext auf einen Verein umgestellt. Die
   vollständige Prüfung und Anpassung der früheren Mehrvereinstests und aller
@@ -143,9 +147,10 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 - `app:functions:check-migration` prüft gespeicherte Rollenlisten und
   Gültigkeitszeiträume schreibgeschützt auf bekannte Rollen, doppelte
   Listeneinträge, ungültige Zuordnungen und Zeiträume. Die lokale
-  DDEV-Prüfung ergab 17 Konten, davon eines ohne Mitgliedschaft und zwei mit
-  Superadmin-Notfallrolle, 23 Funktionsrollenzuordnungen und keine
-  gespeicherten Gültigkeitszeiträume; sie meldete keine der geprüften Fehler.
+  DDEV-Prüfung vom 15. November 2026 ergab 17 Konten, davon eines ohne
+  Mitgliedschaft und zwei mit Superadmin-Notfallrolle, 23
+  Funktionsrollenzuordnungen und einen gespeicherten Gültigkeitszeitraum;
+  sie meldete keine der geprüften Fehler.
   Sie ist keine Migration oder Freigabe: doppelte JSON-Objektschlüssel und
   parallele Datenänderungen werden nicht geprüft; unbekannte Bestandsszenarien,
   Migrationssperre, Backup/Restore und Einzelvergleich bleiben nachzuweisen.

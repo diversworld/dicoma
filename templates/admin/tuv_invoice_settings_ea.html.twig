@@ -3,7 +3,6 @@
 {% block main %}
 <div class="dw-max-width-850px" >
     <p class="text-muted">Diese Einstellungen gelten nur für diesen Verein. Die steuerliche Einordnung bitte mit der Buchhaltung abstimmen.</p>
-    <p><a href="{{ path('admin_settings') }}">Zurück zu den Einstellungen</a></p>
     {% for message in app.flashes('success') %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
     {% for message in app.flashes('danger') %}<div class="alert alert-danger">{{ message }}</div>{% endfor %}
     {% form_theme form 'bootstrap_5_layout.html.twig' %}

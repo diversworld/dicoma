@@ -79,7 +79,7 @@ final class ClubFunctionController extends AbstractController
             $this->logger->notice('Club function deleted', ['actor_id' => $actor->getId(), 'club_id' => $club->getId(), 'function_id' => $id]);
             $this->addFlash('success', 'Funktion gelöscht.');
             return $this->redirectToRoute('admin_club_functions', [], Response::HTTP_SEE_OTHER);
-        });
+        }, true);
     }
 
     private function definition(Request $request, ?int $id): Response
@@ -159,8 +159,9 @@ final class ClubFunctionController extends AbstractController
             return $this->render('admin/roles/club_function.html.twig', [
                 'function' => $function, 'form' => $form, 'assignments' => $assignments, 'accounts' => $accounts,
                 'folders' => $function === null ? [] : $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club], ['name' => 'ASC']),
+                'functionModelEnabled' => $this->enabled,
             ], new Response(status: $conflict ? 409 : ($form->isSubmitted() ? 422 : 200)));
-        });
+        }, true);
     }
 
     #[Route('/{id}/folder/{folderId}', name: 'admin_club_function_folder', requirements: ['id' => '\d+', 'folderId' => '\d+'], methods: ['GET', 'POST'])]
@@ -289,9 +290,9 @@ final class ClubFunctionController extends AbstractController
         });
     }
 
-    private function inContext(Request $request, callable $operation): Response
+    private function inContext(Request $request, callable $operation, bool $allowDraft = false): Response
     {
-        if (!$this->enabled) {
+        if (!$this->enabled && !$allowDraft) {
             throw $this->createNotFoundException();
         }
         $clubId = $this->context->getClub()?->getId() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
@@ -365,7 +366,7 @@ final class ClubFunctionController extends AbstractController
     #[Route('', name: 'admin_club_functions', methods: ['GET'])]
     public function index(AdminUrlGenerator $urls): Response
     {
-        if (!$this->enabled || $this->context->getClub() === null) {
+        if ($this->context->getClub() === null) {
             throw $this->createAccessDeniedException();
         }
         return $this->redirect($urls->unsetAll()->setController(ClubFunctionCrudController::class)->setAction(Crud::PAGE_INDEX)->generateUrl());

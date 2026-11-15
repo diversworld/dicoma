@@ -2,6 +2,9 @@
 {% form_theme form 'bootstrap_5_layout.html.twig' %}
 {% block content_title %}{{ function ? 'Vereinsfunktion bearbeiten'|trans : 'Vereinsfunktion anlegen'|trans }}{% endblock %}
 {% block main %}
+{% if not functionModelEnabled %}
+<div class="alert alert-warning">{{ 'Vorbereitung: Diese Funktion und ihre Berechtigungen sind noch nicht aktiv. Die bisherige Rollenvergabe gilt weiterhin.'|trans }}</div>
+{% endif %}
 {{ form_start(form) }}
 {{ form_errors(form) }}
 {{ form_row(form.name) }}
@@ -19,6 +22,7 @@
 <button type="submit" class="btn btn-primary">{{ 'Funktion speichern'|trans }}</button>
 {{ form_end(form) }}
 {% if function %}
+    {% if functionModelEnabled %}
     <h2 class="mt-4">{{ 'Inhaber'|trans }}</h2>
     <table class="table">
         <thead><tr><th>{{ 'Konto'|trans }}</th><th>{{ 'Gültig ab'|trans }}</th><th>{{ 'Gültig bis'|trans }}</th><th></th></tr></thead>
@@ -52,6 +56,7 @@
             <li>{{ 'Keine Unterordner vorhanden.'|trans }}</li>
         {% endfor %}
     </ul>
+    {% endif %}
     <form method="post" action="{{ path('admin_function_definition_delete', {id: function.id}) }}" class="mt-4">
         <input type="hidden" name="_token" value="{{ csrf_token('club_function_delete_' ~ function.id) }}">
         <input type="hidden" name="version" value="{{ function.version }}">

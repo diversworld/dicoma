@@ -1,0 +1,8 @@
+{% extends '@EasyAdmin/crud/index.html.twig' %}
+
+{% block main %}
+    {% if not club_function_membership_enabled %}
+        <div class="alert alert-warning">{{ 'Vorbereitung: Diese Funktionen und Berechtigungen sind noch nicht aktiv. Die bisherige Rollenvergabe gilt weiterhin.'|trans }}</div>
+    {% endif %}
+    {{ parent() }}
+{% endblock %}

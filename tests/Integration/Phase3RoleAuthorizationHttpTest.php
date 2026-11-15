@@ -203,6 +203,62 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testDraftFunctionCanBeCreatedWithoutEnablingItsPermissions(): void
+    {
+        $admin = $this->account('draft-function-admin', [User::ROLE_ADMIN], $this->club);
+        $target = $this->account('draft-function-target', [], $this->club);
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/admin/club-functions');
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'noch nicht aktiv');
+        $crawler = $this->client->request('GET', '/admin/club-functions/new');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.alert-warning', 'noch nicht aktiv');
+        $this->client->submit($crawler->filter('form[name="form"]')->form(), [
+            'form[name]' => 'Vorbereitete Funktion', 'form[permissions]' => [User::ROLE_INSTRUCTOR],
+        ]);
+        self::assertResponseRedirects();
+        $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Vorbereitete Funktion']);
+        self::assertNotNull($function);
+        self::assertSame([User::ROLE_INSTRUCTOR], $function->getPermissions());
+        self::assertNotContains(User::ROLE_INSTRUCTOR, $target->getRoles());
+        $this->client->request('GET', '/admin/club-functions/'.$function->getId().'/holder/'.$target->getId());
+        self::assertResponseStatusCodeSame(404);
+        $crawler = $this->client->request('GET', '/admin/club-functions/new');
+        $values = $crawler->filter('form[name="form"]')->form()->getPhpValues();
+        $values['form']['name'] = 'Ungültiger Entwurf';
+        $values['form']['permissions'] = [User::ROLE_ADMIN];
+        $this->client->request('POST', '/admin/club-functions/new', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Ungültiger Entwurf']));
+    }
+
+    public function testSettingsRedirectToDirectPagesAndKeepRoleSpecificSidebarLinks(): void
+    {
+        $press = $this->account('settings-press', [User::ROLE_PRESS_OFFICER], $this->club);
+        $bar = $this->account('settings-bar', [User::ROLE_BAR_MANAGER], $this->club);
+        $member = $this->account('settings-member', [], $this->club);
+        $this->client->loginUser($press);
+        $this->client->request('GET', '/admin/settings');
+        self::assertResponseRedirects('/admin/settings/website', 303);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar a[href="/admin/settings/website"]');
+        self::assertSelectorNotExists('aside.sidebar a[href="/admin/settings/bar-services"]');
+        $this->client->loginUser($bar);
+        $this->client->request('GET', '/admin/settings');
+        self::assertResponseRedirects('/admin/settings/bar-services', 303);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar a[href="/admin/settings/bar-services"]');
+        self::assertSelectorNotExists('aside.sidebar a[href="/admin/settings/website"]');
+        $this->client->loginUser($member);
+        $this->client->request('GET', '/admin/settings');
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testDelegationIsClubScopedAndRejectsEscalationCsrfAndStaleForms(): void
     {
         $admin = $this->account('role-admin', [User::ROLE_ADMIN], $this->club);
@@ -222,7 +278,12 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->client->loginUser($admin);
 
         $this->client->request('GET', '/admin/settings');
-        self::assertSelectorExists('a[href="/admin/roles"]');
+        self::assertResponseRedirects('/admin/settings/membership', 303);
+        $this->client->followRedirect();
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_delegated_roles"]');
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_club_functions"]');
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_settings_membership"]');
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_settings_contributions"]');
         $this->client->request('GET', '/admin/roles');
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('aside.sidebar');

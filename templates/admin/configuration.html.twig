@@ -1,7 +1,6 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}{{ {website: 'Website-Anzeige', membership: 'Mitgliedschaftsregeln', contributions: 'Beitragsklassen', bar: 'Thekendiensteinstellungen'}[section]|trans }} – {{ (section in ['membership', 'contributions'] ? club : ownClub).name }}{% endblock %}
 {% block main %}
-    <p><a href="{{ path('admin_settings') }}">{{ 'Zurück zu den Einstellungen'|trans }}</a></p>
     {% if websiteForm %}
         {% form_theme websiteForm 'bootstrap_5_layout.html.twig' %}        
         <p>{{ 'Seitengröße für Startseite und Übersichten, jeweils zwischen 1 und 100 Karten.'|trans }}</p>

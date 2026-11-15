@@ -18,7 +18,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_ADMIN')]
@@ -26,18 +25,19 @@ final class ClubFunctionCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly AdminClubContext $clubContext,
-        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $enabled,
     ) {}
 
     public static function getEntityFqcn(): string { return ClubFunction::class; }
 
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud->setEntityLabelInSingular('Vereinsfunktion')
+        $crud = $crud->setEntityLabelInSingular('Vereinsfunktion')
             ->setEntityLabelInPlural('Vereinsfunktionen')
             ->setPageTitle(Crud::PAGE_INDEX, 'Vereinsfunktionen verwalten')
+            ->overrideTemplate('crud/index', 'admin/roles/function_index.html.twig')
             ->setDefaultSort(['name' => 'ASC'])
             ->setSearchFields(['name']);
+        return $crud;
     }
 
     public function configureActions(Actions $actions): Actions
@@ -62,9 +62,6 @@ final class ClubFunctionCrudController extends AbstractCrudController
 
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
-        if (!$this->enabled) {
-            throw $this->createNotFoundException();
-        }
         $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
         return parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters)
             ->andWhere('entity.club = :functionClub')->setParameter('functionClub', $club);
