@@ -265,30 +265,46 @@ final class MembershipController extends AbstractController
         if ($barOnly && !$canBar) {
             throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
         }
+
         if ($canBar) {
             $barAccess->configurationActor($ownClub);
             $barPolicy = $this->em->getRepository(BarDutyPolicy::class)->findOneBy(['club' => $ownClub, 'year' => $year]);
-            $yearForm = $this->forms->createNamed('', ConfigurationYearSelectionType::class, [
-                'club' => !$barOnly && $club ? (string) $club->getId() : null,
-                'year' => $year,
-            ], ['include_club' => !$barOnly && $club !== null]);
-            $barForm = $this->createForm(BarDutyPolicyType::class, [
-                'minutes' => $barPolicy?->getRequiredMinutes(),
-                'cash' => $barPolicy?->isCashEnabled() ?? false,
-                'reason' => '',
-            ], ['csrf_token_id' => 'bar_duty_policy_'.$ownClub->getId().'_'.$year])->handleRequest($request);
+
+            $yearForm = $this->forms->createNamed('', ConfigurationYearSelectionType::class, 
+                [
+                    'club' => !$barOnly && $club ? (string) $club->getId() : null,
+                    'year' => $year,
+                ], 
+                [
+                    'include_club' => !$barOnly && $club !== null
+                ]
+            );
+
+            $barForm = $this->createForm(BarDutyPolicyType::class, 
+                [
+                    'minutes' => $barPolicy?->getRequiredMinutes(),
+                    'cash' => $barPolicy?->isCashEnabled() ?? false,
+                    'reason' => '',
+                ], 
+                [
+                    'csrf_token_id' => 'bar_duty_policy_'.$ownClub->getId().'_'.$year
+                ])
+                ->handleRequest($request);
 
             if ($barForm->isSubmitted()) {
                 $submittedBarData = $request->request->all()['bar_duty_policy'] ?? null;
                 $token = is_array($submittedBarData) && is_string($submittedBarData['_token'] ?? null) ? $submittedBarData['_token'] : '';
+                
                 if (!$this->isCsrfTokenValid('bar_duty_policy_'.$ownClub->getId().'_'.$year, $token)) {
                     throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
                 }
             }
+
             if ($response = $this->process($barForm, function () use ($barForm, $barWorkflow, $year, $ownClub): void {
                 $data = $barForm->getData();
                 $barWorkflow->configureForClub($ownClub, $year, $data['minutes'], $data['cash'], $data['reason']);
-            }, 'admin_settings_bar_services', ['year' => $year], 'Jahresregel gespeichert.')) {
+            }, 
+            'admin_settings_bar_services', ['year' => $year], 'Jahresregel gespeichert.')) {
                 return $response;
             }
         }
@@ -441,9 +457,18 @@ final class MembershipController extends AbstractController
             $data = $form->getData();
         
             if ($data['decision'] === 'approve') {
-                $this->memberships->approve($application, $data['person'] ?? null, $this->account()->getUserIdentifier(), $data['note'], $data['separateIdentity'] ?? false);
+                $this->memberships->approve(
+                    $application, $data['person'] ?? null, 
+                    $this->account()->getUserIdentifier(), 
+                    $data['note'], 
+                    $data['separateIdentity'] ?? false
+                );
             } else {
-                $this->memberships->reject($application, $this->account()->getUserIdentifier(), $data['note']);
+                $this->memberships->reject(
+                    $application, 
+                    $this->account()->getUserIdentifier(), 
+                    $data['note']
+                );
             }
 
         }, 'membership_club', ['id' => $application->getClub()->getId()])) { 
@@ -466,11 +491,20 @@ final class MembershipController extends AbstractController
         
         if ($response = $this->process($form, function () use ($member): void {
             $this->em->wrapInTransaction(function () use ($member): void {
-                $this->memberships->record($member, 'contact_updated', $this->account()->getUserIdentifier(), 'Eigene Kontakt- und Notfalldaten geändert. Konto-E-Mail und Verwaltungsdaten bleiben unverändert.');
+                $this->memberships->record(
+                    $member, 
+                    'contact_updated', 
+                    $this->account()->getUserIdentifier(), 
+                    'Eigene Kontakt- und Notfalldaten geändert. Konto-E-Mail und Verwaltungsdaten bleiben unverändert.'
+                );
             });
         }, 'membership_self')) { return $response; }
         
-        return $this->privatePage('membership/form.html.twig', ['title' => 'Kontakt- und Notfalldaten bearbeiten', 'form' => $form->createView(), 'explanation' => 'Name, Geburtstag, Mitgliedsnummer, Status, Vereinsfunktionen, Beitragszuordnung und Konto-E-Mail werden ausschließlich durch die zuständige Verwaltung geändert. Änderungen der Kontaktadresse betreffen Ihre zentrale Person auch bei weiteren Vereinsmitgliedschaften.']);
+        return $this->privatePage('membership/form.html.twig', [
+            'title' => 'Kontakt- und Notfalldaten bearbeiten', 
+            'form' => $form->createView(), 
+            'explanation' => 'Name, Geburtstag, Mitgliedsnummer, Status, Vereinsfunktionen, Beitragszuordnung und Konto-E-Mail werden ausschließlich durch die zuständige Verwaltung geändert. Änderungen der Kontaktadresse betreffen Ihre zentrale Person auch bei weiteren Vereinsmitgliedschaften.'
+        ]);
     }
 
     #[IsGranted('ROLE_MEMBER')]
@@ -495,7 +529,9 @@ final class MembershipController extends AbstractController
         $parameters = $admin ? ['id' => $member->getId()] : [];
         $actor = $this->account()->getUserIdentifier();
         $forms = [];
-        $forms['termination'] = $this->forms->createNamedBuilder('membership_termination')->getForm()->handleRequest($request);
+        $forms['termination'] = $this->forms->createNamedBuilder('membership_termination')
+            ->getForm()
+            ->handleRequest($request);
 
         if ($response = $this->process($forms['termination'], fn () => $this->memberships->requestTermination($member, $actor, new \DateTimeImmutable('today')), $route, $parameters)) { 
             return $response; 
@@ -525,11 +561,48 @@ final class MembershipController extends AbstractController
                 'class' => $member->getContributionClass(), 'payer' => $member->getFamilyPayer(),
                 'discount' => $member->getContributionDiscountCents(), 'reason' => $member->getContributionDiscountReason(),
             ])
-                ->add('class', EntityType::class, ['label' => 'Beitragsklasse (beim Familienmitglied leer)', 'class' => ContributionClass::class, 'choices' => $this->em->getRepository(ContributionClass::class)->findBy(['club' => $club, 'active' => true]), 'required' => false])
-                ->add('payer', EntityType::class, ['label' => 'Familienzahler (sonst leer)', 'class' => Member::class, 'choices' => $this->em->getRepository(Member::class)->findBy(['club' => $club, 'archivedAt' => null]), 'required' => false])
-                ->add('discount', F\MoneyType::class, $this->money('Jährliche Ermäßigung EUR'))
-                ->add('reason', F\TextareaType::class, ['label' => 'Ermäßigungsgrund', 'required' => false, 'constraints' => [new Assert\Length(max: 500)]])
-                ->getForm()->handleRequest($request);
+                ->add(
+                    'class', 
+                    EntityType::class, [
+                        'label' => 'Beitragsklasse (beim Familienmitglied leer)', 
+                        'class' => ContributionClass::class, 
+                        'choices' => $this->em->getRepository(ContributionClass::class)->findBy(
+                            [
+                                'club' => $club, 
+                                'active' => true
+                            ]
+                        ), 
+                        'required' => false
+                    ]
+                )
+                ->add(
+                    'payer', 
+                    EntityType::class, [
+                        'label' => 'Familienzahler (sonst leer)', 
+                        'class' => Member::class, 
+                        'choices' => $this->em->getRepository(Member::class)
+                            ->findBy([
+                                'club' => $club, 
+                                'archivedAt' => null
+                            ]), 
+                        'required' => false
+                    ]
+                )
+                ->add(
+                    'discount', 
+                    F\MoneyType::class, 
+                    $this->money('Jährliche Ermäßigung EUR')
+                )
+                ->add(
+                    'reason', 
+                    F\TextareaType::class, [
+                        'label' => 'Ermäßigungsgrund', 
+                        'required' => false, 
+                        'constraints' => [new Assert\Length(max: 500)]
+                    ]
+                )
+                ->getForm()
+                ->handleRequest($request);
 
             if ($response = $this->process($forms['assignment'], function () use ($forms, $member, $actor): void {
                 $d = $forms['assignment']->getData();

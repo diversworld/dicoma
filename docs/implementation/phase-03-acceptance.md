@@ -9,11 +9,18 @@ Prüfungen.
 
 ## Vereinbarte Rollenregeln
 
-- Der zentrale Kontext ist auf einen Verein umgestellt. Noch nicht umgesetzt
-  sind frei anlegbare Funktionen mit ausdrücklicher Berechtigungszuordnung
-  und einstellbarer Nachfolgepflicht. Administratoren dürfen nur delegierbare
-  Rechte zuordnen, privilegierte Rechte bleiben Superadministratoren
-  vorbehalten.
+- Der zentrale Kontext ist auf einen Verein umgestellt. Frei anlegbare
+  Funktionen und einstellbare Nachfolgepflicht sind vorbereitet; ihre
+  Berechtigungen beziehen sich derzeit noch auf bisherige Rollen. Die
+  vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) einschließlich
+  ihrer serverseitigen Durchsetzung und Delegationsgrenzen fehlen.
+- Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
+  Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
+  Gerätekasse, Thekendienst, Thekenkasse, Website und Veranstaltungen,
+  Dateiverwaltung sowie System- und Rollenverwaltung. Vereinsadministratoren
+  dürfen Rechte für Mitglieder, Ausbildung, Sport, Ausrüstung, Website und
+  Dateiverwaltung vergeben; die übrigen Module sind bei der Rechtevergabe
+  Superadministratoren vorbehalten.
 - Die Verwaltung soll eine EasyAdmin-Standardliste der Funktionen und je
   Funktion eine Bearbeitungsseite für Name, Berechtigungen, Nachfolge,
   gemeinsamen Gültigkeitszeitraum sowie Inhaber mit individuellen Zeiträumen
@@ -82,11 +89,12 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 - [ ] Der gemeinsame private Speicher soll unter `files/` außerhalb des
       Webverzeichnisses liegen. Lesen, Hochladen, Bearbeiten und Löschen
       werden getrennt ausschließlich Vereinsfunktionen zugewiesen; auch
-      Administratoren dürfen diese vier Rechte zuordnen. Unterordner erben
-      die Regeln, können sie aber je Funktion überschreiben. Bei mehreren
-      Funktionen genügt eine erlaubende Funktion; eine Sperre einer Funktion
-      hebt die Erlaubnis einer anderen nicht auf. Direkte HTTP- und
-      Backend-Zugriffe müssen dieselben Regeln durchsetzen.
+      Administratoren dürfen diese vier Rechte zuordnen. Regeln gelten für
+      Ordner der ersten Ebene und alle ihre Unterordner ohne Ausnahmen;
+      Dateien und Verwaltungsaktionen direkt im Hauptordner sind
+      Administratoren vorbehalten. Bei mehreren Funktionen genügt eine
+      erlaubende Funktion. Direkte HTTP- und Backend-Zugriffe müssen
+      dieselben Regeln durchsetzen.
 - [ ] Vereinsadministrator vergibt und entzieht mehrere zulässige Funktionen;
       eigene, fremde, inaktive und privilegierte Konten bleiben ausgeschlossen.
 - [ ] Eine Funktion wird vor ihrem Beginn, am Beginn, am Enddatum und nach dem
@@ -117,7 +125,7 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 ## Technische Vorbereitung und offene Gates
 
 - Schema, Funktionsverwaltung, Nachfolgeprüfung, Rollenauflösung und
-  vererbte Ordnerregeln sind implementiert. Die Mediathek prüft diese Regeln
+  Ordnerregeln auf der ersten Ebene sind vorbereitet. Die Mediathek prüft diese Regeln
   für ihre Lese- und Schreibaktionen; bisherige Kursbild-Explorer und
   Kursbild-Uploads sind bei eingeschaltetem Modell vorsorglich gesperrt,
   weil sie noch nicht in dieselbe Ordnerstruktur integriert sind.
@@ -128,6 +136,13 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   bleiben deshalb weiterhin maßgeblich. Funktionen können bereits als
   ausdrücklich gekennzeichnete Vorbereitung angelegt werden; ihre Rechte
   und Inhaberzuordnungen wirken erst nach der vollständigen Umstellung.
+- Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
+  auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
+  Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
+  Sie müssen vorab fachlich geklärt und ausdrücklich auf die erste Ebene
+  übertragen werden. Die Migration wurde nur in isolierten Testdatenbanken
+  geprüft, nicht auf der Anwendungsdatenbank ausgeführt. Vor dem Einsatz
+  sind Backup, Restore und eine Wartung ohne parallele Schreibzugriffe nötig.
 - `app:functions:migrate-roles --confirm` übernimmt direkte Funktionsrollen
   und ihre individuellen Zeiträume transaktional in Funktionszuordnungen.
   Bei aktiviertem Modell wirken direkte Funktionsrollen nicht mehr; die
@@ -135,8 +150,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   setzt das aktivierte Funktionsmodell voraus, prüft den Bestand erneut und
   bricht bei unklaren oder widersprüchlichen Daten ab. Es wurde in isolierten
   SQLite- und MariaDB-Tests ausgeführt, nicht auf der Anwendungsdatenbank.
-  Die Zuordnung der bisherigen Presse- und Administratorrechte zu
-  Hauptordnerrechten ist vor der Übernahme fachlich zu prüfen. Bereits
+  Die Zuordnung der bisherigen Presse- und Administratorrechte zu allen
+  vorhandenen Ordnern der ersten Ebene ist vor der Übernahme fachlich zu prüfen;
+  Dateien im Hauptordner bleiben nach Aktivierung nur Administratoren zugänglich. Bereits
   vorbereitete Funktionen mit widersprüchlichen Namen oder Rechten können
   die Übernahme blockieren und müssen vorher geprüft werden.
 - Nach gesicherter und geprüfter Übertragung des einzigen fremd zugeordneten

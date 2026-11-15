@@ -132,7 +132,6 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $admin = $this->account('new-function-folder-admin', [User::ROLE_ADMIN], $this->club);
         $target = $this->account('new-function-folder-target', [], $this->club);
         $function = new ClubFunction($this->club, 'Ablage');
-        $function->setRootPermission(FileAction::READ, true);
         $folder = new MediaFolder($this->club, 'Intern');
         $child = new MediaFolder($this->club, 'Unterordner', $folder);
         foreach ([$function, $folder, $child, new ClubFunctionAssignment($function, $target)] as $entity) {
@@ -147,14 +146,18 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/folder/'.$folderId);
         self::assertResponseIsSuccessful();
-        $this->client->submit($crawler->filter('form[name="form"]')->form(), ['form[read]' => 'deny']);
+        $this->client->submit($crawler->filter('form[name="form"]')->form(), ['form[read]' => 'allow']);
         self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/club-functions/'.$id.'/folder/'.$childId);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', '/admin/club-functions/'.$id.'/folder/'.$childId);
+        self::assertResponseStatusCodeSame(404);
         $this->em->clear();
-        $access = new FolderPermissions($this->em);
+        $access = static::getContainer()->get(FolderPermissions::class);
         $target = $this->em->find(User::class, $userId);
         $club = $this->em->find(Club::class, $clubId);
-        self::assertTrue($access->can($target, $club, null, FileAction::READ));
-        self::assertFalse($access->can($target, $club, $this->em->find(MediaFolder::class, $childId), FileAction::READ));
+        self::assertFalse($access->can($target, $club, null, FileAction::READ));
+        self::assertTrue($access->can($target, $club, $this->em->find(MediaFolder::class, $childId), FileAction::READ));
     }
 
     public function testNewFunctionDeletionRequiresCsrfAndRejectsExistingHolders(): void

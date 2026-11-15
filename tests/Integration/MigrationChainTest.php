@@ -276,6 +276,8 @@ final class MigrationChainTest extends TestCase
     {
         $this->migrate('latest');
         $clubId = $this->createClub();
+        $this->connection->insert('media_folder', ['club_id' => $clubId, 'name' => 'First level']);
+        $folderId = (int) $this->connection->lastInsertId();
         $this->connection->insert('person', ['firstname' => 'Import', 'lastname' => 'Synthetic']);
         $personId = (int) $this->connection->lastInsertId();
         $this->connection->insert('user', [
@@ -303,7 +305,48 @@ final class MigrationChainTest extends TestCase
             "SELECT a.starts_at FROM club_function_assignment a JOIN club_function f ON f.id = a.club_function_id WHERE a.user_id = ? AND f.name = 'Ausbilder / Trainer'",
             [$userId],
         ));
-        self::assertSame(1, (int) $this->connection->fetchOne("SELECT root_read FROM club_function WHERE name = 'Pressewart'"));
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            "SELECT p.can_read FROM media_folder_permission p JOIN club_function f ON f.id = p.club_function_id WHERE f.name = 'Pressewart' AND p.folder_id = ?",
+            [$folderId],
+        ));
+        self::assertNull($this->connection->fetchOne("SELECT root_read FROM club_function WHERE name = 'Pressewart'"));
+    }
+
+    public function testFolderPermissionMigrationRejectsNestedOverridesAndPreservesFirstLevelDecisions(): void
+    {
+        $this->migrate('20261114120000');
+        $club = $this->createClub();
+        $this->connection->insert('club_function', [
+            'club_id' => $club, 'name' => 'Archiv', 'permissions' => '[]', 'successor_required' => 0,
+            'root_read' => 1, 'root_upload' => 1, 'root_delete' => 1,
+        ]);
+        $function = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_folder', ['club_id' => $club, 'name' => 'A']);
+        $first = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_folder', ['club_id' => $club, 'name' => 'B']);
+        $second = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_folder', ['club_id' => $club, 'parent_id' => $first, 'name' => 'Unterordner']);
+        $child = (int) $this->connection->lastInsertId();
+        $this->connection->insert('media_folder_permission', ['club_function_id' => $function, 'folder_id' => $first, 'can_read' => 0]);
+        $this->connection->insert('media_folder_permission', ['club_function_id' => $function, 'folder_id' => $child, 'can_read' => 1]);
+        try {
+            $this->migrate('latest');
+            self::fail('Nested exceptions must block the migration.');
+        } catch (AbortMigration $exception) {
+            self::assertStringContainsString('Unterordner enthalten eigene Berechtigungen', $exception->getMessage());
+        }
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT root_read FROM club_function WHERE id = ?', [$function]));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM media_folder_permission'));
+        $this->connection->delete('media_folder_permission', ['club_function_id' => $function, 'folder_id' => $child]);
+        $this->migrate('latest');
+        $firstRule = $this->connection->fetchAssociative('SELECT can_read, can_upload, can_edit, can_delete, version FROM media_folder_permission WHERE folder_id = ?', [$first]);
+        self::assertSame(0, (int) $firstRule['can_read']);
+        self::assertSame(1, (int) $firstRule['can_upload']);
+        self::assertNull($firstRule['can_edit']);
+        self::assertSame(1, (int) $firstRule['can_delete']);
+        self::assertSame(2, (int) $firstRule['version']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT can_read FROM media_folder_permission WHERE folder_id = ?', [$second]));
+        self::assertNull($this->connection->fetchOne('SELECT root_read FROM club_function WHERE id = ?', [$function]));
     }
 
     public function testEventBookingUpgradePreservesExistingPublicationsAndMembers(): void

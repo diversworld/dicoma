@@ -12,12 +12,6 @@
 {{ form_row(form.successorRequired) }}
 {{ form_row(form.startsAt) }}
 {{ form_row(form.endsAt) }}
-<h2>{{ 'Dateirechte im Hauptordner'|trans }}</h2>
-<p>{{ 'Unterordner erben diese Rechte, sofern dort keine abweichende Regel hinterlegt ist.'|trans }}</p>
-{{ form_row(form.read) }}
-{{ form_row(form.upload) }}
-{{ form_row(form.edit) }}
-{{ form_row(form.delete) }}
 {{ form_rest(form) }}
 <button type="submit" class="btn btn-primary">{{ 'Funktion speichern'|trans }}</button>
 {{ form_end(form) }}
@@ -48,7 +42,7 @@
         <button type="submit" class="btn btn-secondary mt-2">{{ 'Zuordnung bearbeiten'|trans }}</button>
     </form>
     <h2 class="mt-4">{{ 'Ordnerrechte'|trans }}</h2>
-    <p>{{ 'Für jeden Unterordner kann die geerbte Regel dieser Funktion überschrieben werden.'|trans }}</p>
+    <p>{{ 'Rechte werden für Ordner direkt unter dem Hauptordner vergeben und gelten unverändert für alle enthaltenen Unterordner.'|trans }}</p>
     <ul>
         {% for folder in folders %}
             <li><a href="{{ path('admin_club_function_folder', {id: function.id, folderId: folder.id}) }}">{{ folder.path }}</a></li>

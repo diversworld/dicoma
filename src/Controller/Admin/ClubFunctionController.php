@@ -99,18 +99,12 @@ final class ClubFunctionController extends AbstractController
                 'startsAt' => $function?->getStartsAt(),
                 'endsAt' => $function?->getEndsAt(),
             ];
-            foreach (FileAction::cases() as $action) {
-                $data[$action->value] = $function?->rootPermission($action) === true;
-            }
             $builder = $this->createFormBuilder($data, ['csrf_token_id' => 'club_function_'.($id ?? 'new')])
                 ->add('name', TextType::class, ['label' => 'Name', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 120)]])
                 ->add('permissions', ChoiceType::class, ['label' => 'Berechtigungen', 'choices' => $permissions, 'multiple' => true, 'expanded' => true, 'required' => false])
                 ->add('successorRequired', CheckboxType::class, ['label' => 'Nachfolge erforderlich', 'required' => false])
                 ->add('startsAt', DateType::class, ['label' => 'Gültig ab', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false])
                 ->add('endsAt', DateType::class, ['label' => 'Gültig bis einschließlich', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false]);
-            foreach (['read' => 'Lesen', 'upload' => 'Hochladen', 'edit' => 'Bearbeiten', 'delete' => 'Löschen'] as $action => $label) {
-                $builder->add($action, CheckboxType::class, ['label' => $label.' im Hauptordner erlauben', 'required' => false]);
-            }
             $form = $builder->add('version', HiddenType::class, ['mapped' => false, 'data' => $function === null ? 'new' : (string) $function->getVersion()])
                 ->getForm()->handleRequest($request);
             $conflict = false;
@@ -134,9 +128,6 @@ final class ClubFunctionController extends AbstractController
                         $function->setPermissions($values['permissions']);
                         $function->setValidity($values['startsAt'], $values['endsAt']);
                         $function->setSuccessorRequired($values['successorRequired']);
-                        foreach (FileAction::cases() as $action) {
-                            $function->setRootPermission($action, $values[$action->value]);
-                        }
                         $this->em->persist($function);
                         $this->em->flush();
                         $this->logger->notice('Club function changed', ['actor_id' => $actor->getId(), 'club_id' => $club->getId(), 'function_id' => $function->getId()]);
@@ -158,7 +149,7 @@ final class ClubFunctionController extends AbstractController
             }
             return $this->render('admin/roles/club_function.html.twig', [
                 'function' => $function, 'form' => $form, 'assignments' => $assignments, 'accounts' => $accounts,
-                'folders' => $function === null ? [] : $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club], ['name' => 'ASC']),
+                'folders' => $function === null ? [] : $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club, 'parent' => null], ['name' => 'ASC']),
                 'functionModelEnabled' => $this->enabled,
             ], new Response(status: $conflict ? 409 : ($form->isSubmitted() ? 422 : 200)));
         }, true);
@@ -171,19 +162,19 @@ final class ClubFunctionController extends AbstractController
             $function = $this->function($id, $club);
             $this->assertManageable($function, $actor, $super);
             $folder = $this->em->find(MediaFolder::class, $folderId);
-            if ($folder === null || $folder->getClub()->getId() !== $club->getId()) {
+            if ($folder === null || $folder->getClub()->getId() !== $club->getId() || $folder->getParent() !== null) {
                 throw $this->createNotFoundException('Ordner nicht gefunden.');
             }
             $rule = $this->em->getRepository(MediaFolderPermission::class)->findOneBy(['clubFunction' => $function, 'folder' => $folder]);
             $data = [];
             foreach (FileAction::cases() as $action) {
                 $value = $rule?->permission($action);
-                $data[$action->value] = $value === null ? 'inherit' : ($value ? 'allow' : 'deny');
+                $data[$action->value] = $value === true ? 'allow' : 'deny';
             }
             $builder = $this->createFormBuilder($data, ['csrf_token_id' => 'club_function_folder_'.$id.'_'.$folderId]);
             foreach (['read' => 'Lesen', 'upload' => 'Hochladen', 'edit' => 'Bearbeiten', 'delete' => 'Löschen'] as $action => $label) {
                 $builder->add($action, ChoiceType::class, [
-                    'label' => $label, 'choices' => ['Erben' => 'inherit', 'Erlauben' => 'allow', 'Sperren' => 'deny'],
+                    'label' => $label, 'choices' => ['Nicht erlaubt' => 'deny', 'Erlauben' => 'allow'],
                 ]);
             }
             $form = $builder->add('version', HiddenType::class, ['mapped' => false, 'data' => $rule === null ? 'new' : (string) $rule->getVersion()])
@@ -196,7 +187,7 @@ final class ClubFunctionController extends AbstractController
                     $conflict = true;
                 } else {
                     $values = $form->getData();
-                    if (count(array_unique(array_values($values))) === 1 && reset($values) === 'inherit') {
+                    if (count(array_unique(array_values($values))) === 1 && reset($values) === 'deny') {
                         if ($rule !== null) {
                             $this->em->remove($rule);
                         }
@@ -204,7 +195,7 @@ final class ClubFunctionController extends AbstractController
                         $rule ??= new MediaFolderPermission($function, $folder);
                         foreach (FileAction::cases() as $action) {
                             $rule->setPermission($action, match ($values[$action->value]) {
-                                'inherit' => null, 'allow' => true, 'deny' => false,
+                                'allow' => true, 'deny' => false,
                             });
                         }
                         $this->em->persist($rule);

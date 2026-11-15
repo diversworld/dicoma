@@ -11,17 +11,38 @@ use App\Entity\MediaFolder;
 use App\Entity\MediaFolderPermission;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 
 final class FolderPermissions
 {
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly RoleHierarchyInterface $hierarchy,
+    ) {}
 
     public function can(User $user, Club $club, ?MediaFolder $folder, FileAction $action, ?\DateTimeImmutable $date = null): bool
     {
+        if (!$this->em->contains($user)) {
+            $user = $user->getId() === null ? null : $this->em->find(User::class, $user->getId());
+            if ($user === null) {
+                return false;
+            }
+        }
         if ($folder !== null && !self::sameClub($folder->getClub(), $club)) {
             return false;
         }
-        $ancestors = [];
+        if ($folder === null) {
+            $roles = $this->hierarchy->getReachableRoleNames($user->getRoles());
+            if (!in_array(User::ROLE_ADMIN, $roles, true)) {
+                return false;
+            }
+            if (in_array(User::ROLE_SUPER_ADMIN, $roles, true)) {
+                return true;
+            }
+            $member = $user->getMember();
+            return $member !== null && $member->isActiveMember() && $member->getArchivedAt() === null
+                && $member->getClub() !== null && self::sameClub($member->getClub(), $club);
+        }
         $seen = [];
         for ($current = $folder; $current !== null; $current = $current->getParent()) {
             $id = $current->getId();
@@ -29,7 +50,7 @@ final class FolderPermissions
                 throw new \LogicException('Ungültige Ordnerhierarchie.');
             }
             $seen[$id] = true;
-            $ancestors[] = $id;
+            $firstLevel = $current;
         }
         $date ??= new \DateTimeImmutable('today');
         $assignments = $this->em->getRepository(ClubFunctionAssignment::class)->findBy(['user' => $user]);
@@ -38,25 +59,10 @@ final class FolderPermissions
             if (!self::sameClub($function->getClub(), $club) || !$assignment->isEffectiveOn($date)) {
                 continue;
             }
-            $rules = $this->em->getRepository(MediaFolderPermission::class)->findBy(['clubFunction' => $function]);
-            $ruleByFolder = [];
-            foreach ($rules as $rule) {
-                $id = $rule->getFolder()->getId();
-                if ($id === null || isset($ruleByFolder[$id])) {
-                    throw new \LogicException('Ungültige oder doppelte Ordnerregel.');
-                }
-                $ruleByFolder[$id] = $rule;
-            }
-            foreach ($ancestors as $id) {
-                $decision = isset($ruleByFolder[$id]) ? $ruleByFolder[$id]->permission($action) : null;
-                if ($decision === true) {
-                    return true;
-                }
-                if ($decision === false) {
-                    continue 2;
-                }
-            }
-            if ($function->rootPermission($action) === true) {
+            $rule = $this->em->getRepository(MediaFolderPermission::class)->findOneBy([
+                'clubFunction' => $function, 'folder' => $firstLevel,
+            ]);
+            if ($rule?->permission($action) === true) {
                 return true;
             }
         }

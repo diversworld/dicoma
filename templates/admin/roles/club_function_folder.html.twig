@@ -3,6 +3,7 @@
 {% block content_title %}{{ 'Ordnerrechte bearbeiten'|trans }}{% endblock %}
 {% block main %}
 <h2>{{ function.name }}: {{ folder.path }}</h2>
+<p>{{ 'Diese Rechte gelten auch für alle Unterordner.'|trans }}</p>
 <p>{{ 'Eine Sperre gilt nur für diese Funktion. Eine andere Funktion kann den Zugriff weiterhin erlauben.'|trans }}</p>
 {{ form_start(form) }}
 {{ form_errors(form) }}

@@ -42,8 +42,6 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         $member = (new Member())->setClub($club)->setPerson($person)->setMembershipStatus(MembershipStatus::ACTIVE);
         $user = (new User())->setUser('test')->setEmail('test@example.invalid')->setPassword('unused')->setMember($member);
         $first = new ClubFunction($club, 'Redaktion');
-        $first->setRootPermission(FileAction::READ, true);
-        $first->setRootPermission(FileAction::UPLOAD, true);
         $second = new ClubFunction($club, 'Archiv');
         $second->setValidity(new \DateTimeImmutable('2026-03-01'), new \DateTimeImmutable('2026-03-31'));
         $a = new ClubFunctionAssignment($first, $user);
@@ -54,12 +52,16 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         $foreign = new MediaFolder($otherClub, 'Fremd');
         $deny = new MediaFolderPermission($first, $parent);
         $deny->setPermission(FileAction::READ, false);
-        $allow = new MediaFolderPermission($second, $child);
+        $deny->setPermission(FileAction::UPLOAD, true);
+        $allow = new MediaFolderPermission($second, $parent);
         $allow->setPermission(FileAction::READ, true);
         foreach ([$club, $otherClub, $user, $first, $second, $a, $b, $parent, $child, $foreign, $deny, $allow] as $entity) {
             $em->persist($entity);
         }
         $em->flush();
+        $em->getConnection()->insert('media_folder_permission', [
+            'club_function_id' => $first->getId(), 'folder_id' => $child->getId(), 'can_read' => 1,
+        ]);
         $em->clear();
 
         $user = $em->getRepository(User::class)->findOneBy(['user' => 'test']);
@@ -67,22 +69,33 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         $parent = $em->getRepository(MediaFolder::class)->findOneBy(['name' => 'A']);
         $child = $em->getRepository(MediaFolder::class)->findOneBy(['name' => 'B']);
         $foreign = $em->getRepository(MediaFolder::class)->findOneBy(['name' => 'Fremd']);
-        $access = new FolderPermissions($em);
+        $access = self::getContainer()->get(FolderPermissions::class);
         $before = new \DateTimeImmutable('2026-03-09');
         $firstDay = new \DateTimeImmutable('2026-03-10');
         $lastDay = new \DateTimeImmutable('2026-03-31');
         $after = new \DateTimeImmutable('2026-04-01');
-        self::assertTrue($access->can($user, $club, null, FileAction::READ, $before));
+        self::assertFalse($access->can($user, $club, null, FileAction::READ, $before));
         self::assertFalse($access->can($user, $club, $child, FileAction::READ, $before));
         self::assertTrue($access->can($user, $club, $child, FileAction::READ, $firstDay));
         self::assertTrue($access->can($user, $club, $child, FileAction::READ, $lastDay));
         self::assertFalse($access->can($user, $club, $child, FileAction::READ, $after));
-        self::assertFalse($access->can($user, $club, $parent, FileAction::READ, $firstDay));
+        self::assertTrue($access->can($user, $club, $parent, FileAction::READ, $firstDay));
         self::assertTrue($access->can($user, $club, $child, FileAction::UPLOAD, $firstDay));
         self::assertFalse($access->can($user, $club, $child, FileAction::EDIT, $firstDay));
         self::assertFalse($access->can($user, $club, $foreign, FileAction::READ, $firstDay));
         $user->getMember()->setMembershipStatus(MembershipStatus::FORMER);
         self::assertFalse($access->can($user, $club, $child, FileAction::READ, $firstDay));
+        $user->setRoles([User::ROLE_ADMIN]);
+        self::assertFalse($access->can($user, $club, null, FileAction::READ, $firstDay));
+        $user->getMember()->setMembershipStatus(MembershipStatus::ACTIVE);
+        self::assertTrue($access->can($user, $club, null, FileAction::READ, $firstDay));
+        $user->setRoles([User::ROLE_BOARD]);
+        self::assertTrue($access->can($user, $club, null, FileAction::READ, $firstDay));
+        self::assertFalse($access->can($user, $foreign->getClub(), null, FileAction::READ, $firstDay));
+        $user->setRoles([User::ROLE_SUPER_ADMIN]);
+        self::assertTrue($access->can($user, $foreign->getClub(), null, FileAction::READ, $firstDay));
+        $this->expectException(\InvalidArgumentException::class);
+        new MediaFolderPermission($first, $child);
     }
 
     public function testInvalidDatesAndUnknownRolesAreRejected(): void

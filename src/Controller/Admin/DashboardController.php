@@ -671,9 +671,9 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(ClubCrudController::class, 'Vereinsdaten', 'fa fa-building')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Vereinsfunktionen verwalten', 'fa fa-user-shield', 'admin_club_functions')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
+//                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')
+//                        ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership'),

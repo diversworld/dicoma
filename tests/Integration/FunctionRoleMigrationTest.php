@@ -9,6 +9,8 @@ use App\Entity\Club;
 use App\Entity\ClubFunction;
 use App\Entity\ClubFunctionAssignment;
 use App\Entity\FileAction;
+use App\Entity\MediaFolder;
+use App\Entity\MediaFolderPermission;
 use App\Entity\Member;
 use App\Entity\Person;
 use App\Entity\User;
@@ -49,6 +51,8 @@ final class FunctionRoleMigrationTest extends KernelTestCase
             User::ROLE_PRESS_OFFICER => ['startsAt' => '2999-01-01', 'endsAt' => null],
         ]);
         $emergency = $this->account('emergency', [User::ROLE_SUPER_ADMIN]);
+        $folder = new MediaFolder($this->club, 'Intern');
+        $this->em->persist($folder);
         $this->em->flush();
         $userId = $user->getId();
         $emergencyId = $emergency->getId();
@@ -61,8 +65,11 @@ final class FunctionRoleMigrationTest extends KernelTestCase
         self::assertSame([], $user->getStoredRoles());
         self::assertEqualsCanonicalizing([User::ROLE_INSTRUCTOR, User::ROLE_MEMBER, User::ROLE_USER], $user->getRoles());
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['name' => 'Pressewart']);
-        self::assertTrue($function->rootPermission(FileAction::READ));
-        self::assertTrue($function->rootPermission(FileAction::DELETE));
+        $rule = $this->em->getRepository(MediaFolderPermission::class)->findOneBy(['clubFunction' => $function, 'folder' => $folder->getId()]);
+        self::assertNotNull($rule);
+        self::assertTrue($rule->permission(FileAction::READ));
+        self::assertTrue($rule->permission(FileAction::DELETE));
+        self::assertNull($function->rootPermission(FileAction::READ));
         $assignment = $this->em->getRepository(ClubFunctionAssignment::class)->findOneBy(['user' => $user, 'clubFunction' => $function]);
         self::assertSame('2999-01-01', $assignment->getStartsAt()->format('Y-m-d'));
         $emergency = $this->em->find(User::class, $emergencyId);

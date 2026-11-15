@@ -33,6 +33,9 @@ class MediaFolderPermission
 
     public function __construct(ClubFunction $clubFunction, MediaFolder $folder)
     {
+        if ($folder->getParent() !== null) {
+            throw new \InvalidArgumentException('Ordnerrechte können nur für die erste Ordnerebene vergeben werden.');
+        }
         $club = $clubFunction->getClub();
         $folderClub = $folder->getClub();
         if ($club !== $folderClub && ($club->getId() === null || $club->getId() !== $folderClub->getId())) {

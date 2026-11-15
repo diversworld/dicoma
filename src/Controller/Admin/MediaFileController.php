@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Entity\{Club, ClubEvent, FileAction, MediaFile, MediaFolder, User, WebsitePublication};
+use App\Entity\{Club, ClubEvent, FileAction, MediaFile, MediaFolder, MediaFolderPermission, User, WebsitePublication};
 use App\Security\FolderPermissions;
 use App\Service\{AdminClubContext, FileManager, MediaFileStorage, MembershipRoleContinuity, PublicWebsite};
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
@@ -108,6 +108,8 @@ final class MediaFileController extends AbstractController
             'activeFolderIds' => array_map(static fn (MediaFolder $ancestor): ?int => $ancestor->getId(), $breadcrumbs),
             'canRead' => $canRead, 'canUpload' => $this->can($club, $folder, FileAction::UPLOAD),
             'canEdit' => $this->can($club, $folder, FileAction::EDIT), 'canDelete' => $this->can($club, $folder, FileAction::DELETE),
+            'canEditFolder' => $folder !== null && $this->can($club, $folder->getParent() === null ? null : $folder, FileAction::EDIT),
+            'canDeleteFolder' => $folder !== null && $this->can($club, $folder->getParent() === null ? null : $folder, FileAction::DELETE),
             'canUploadRoot' => $this->can($club, null, FileAction::UPLOAD),
             'canEditRoot' => $this->can($club, null, FileAction::EDIT),
             'functionModelEnabled' => $this->functionModelEnabled,
@@ -157,7 +159,7 @@ final class MediaFileController extends AbstractController
                 $club = $em->find(Club::class, $clubId) ?? throw $this->createAccessDeniedException();
             }
             $folder = $this->folder((string) $id, $club, $em) ?? throw $this->createNotFoundException();
-            $this->requirePermission($club, $folder, FileAction::EDIT);
+            $this->requirePermission($club, $folder->getParent() === null ? null : $folder, FileAction::EDIT);
             $this->assertFolderFingerprint($request, $folder);
             $parent = $this->folder($request->request->getString('parent'), $club, $em);
             if ($folder->getParent()?->getId() !== $parent?->getId()) {
@@ -167,6 +169,10 @@ final class MediaFileController extends AbstractController
                     if ($actor === null || !in_array(User::ROLE_ADMIN, $this->hierarchy->getReachableRoleNames($actor->getRoles()), true)) {
                         throw $this->createAccessDeniedException('Nur Administratoren dürfen Ordner verschieben.');
                     }
+                }
+                if ($folder->getParent() === null
+                    && $em->getRepository(MediaFolderPermission::class)->count(['folder' => $folder]) > 0) {
+                    throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Ein Ordner mit eigenen Berechtigungen kann nicht unter einen anderen Ordner verschoben werden.');
                 }
             }
             try {
@@ -201,7 +207,7 @@ final class MediaFileController extends AbstractController
                     $club = $em->find(Club::class, $clubId) ?? throw $this->createAccessDeniedException();
                 }
                 $folder = $this->folder((string) $id, $club, $em) ?? throw $this->createNotFoundException();
-                $this->requirePermission($club, $folder, FileAction::DELETE);
+                $this->requirePermission($club, $folder->getParent() === null ? null : $folder, FileAction::DELETE);
                 $this->assertFolderFingerprint($request, $folder);
                 $parent = $folder->getParent();
                 if ($em->getRepository(MediaFolder::class)->count(['parent' => $folder]) > 0
@@ -417,6 +423,9 @@ final class MediaFileController extends AbstractController
 
     private function canAccessFolder(Club $club, MediaFolder $folder): bool
     {
+        if ($folder->getParent() === null && $this->can($club, null, FileAction::READ)) {
+            return true;
+        }
         foreach (FileAction::cases() as $action) {
             if ($this->can($club, $folder, $action)) {
                 return true;

@@ -49,11 +49,11 @@
             / <a href="{{ path('admin_media_index', {folder: ancestor.id}) }}">{{ ancestor.name }}</a>
         {% endfor %}
     </nav>
-    {% if folder and (canEdit or canDelete) %}
+    {% if folder and (canEditFolder or canDeleteFolder) %}
         <section class="card mb-4">
             <div class="card-body">
                 <h2>{{ 'Ordner bearbeiten'|trans }}</h2>
-                {% if canEdit %}<form method="post" action="{{ path('admin_media_folder_edit', {id: folder.id}) }}">
+                {% if canEditFolder %}<form method="post" action="{{ path('admin_media_folder_edit', {id: folder.id}) }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('media_folder_edit_' ~ folder.id) }}">
                     <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
                     <label class="form-label" for="media-current-folder-name">{{ 'Ordnername'|trans }}</label>
@@ -67,7 +67,7 @@
                     </select>
                     <button class="btn btn-secondary mt-2" type="submit">{{ 'Ordner speichern'|trans }}</button>
                 </form>{% endif %}
-                {% if canDelete %}<form method="post" action="{{ path('admin_media_folder_delete', {id: folder.id}) }}" class="mt-3">
+                {% if canDeleteFolder %}<form method="post" action="{{ path('admin_media_folder_delete', {id: folder.id}) }}" class="mt-3">
                     <input type="hidden" name="_token" value="{{ csrf_token('media_folder_delete_' ~ folder.id) }}">
                     <input type="hidden" name="snapshot" value="{{ folderFingerprint }}">
                     <button class="btn btn-outline-danger" type="submit" {{ children or rows ? 'disabled' : '' }}>{{ 'Leeren Ordner löschen'|trans }}</button>

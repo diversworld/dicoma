@@ -16,7 +16,7 @@ class ClubFunctionAssignment
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private ClubFunction $clubFunction;
 
-    #[ORM\ManyToOne, ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
+    #[ORM\ManyToOne(inversedBy: 'functionAssignments'), ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private User $user;
 
     #[ORM\Column(type: 'date_immutable', nullable: true)]

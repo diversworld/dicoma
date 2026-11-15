@@ -8,6 +8,7 @@ use App\Entity\Club;
 use App\Entity\ClubFunction;
 use App\Entity\ClubFunctionAssignment;
 use App\Entity\FileAction;
+use App\Entity\MediaFolder;
 use App\Entity\MediaFolderPermission;
 use App\Entity\User;
 use App\Service\MembershipRoleContinuity;
@@ -111,15 +112,24 @@ final class MigrateFunctionRolesCommand extends Command
     private function legacyFunction(Club $club, string $name, array $roles, bool $successorRequired, bool $folderAccess): ClubFunction
     {
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['club' => $club, 'name' => $name]);
+        $folders = $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club, 'parent' => null]);
         if ($function !== null) {
             if ($function->getPermissions() !== $roles || $function->isSuccessorRequired() !== $successorRequired
-                || $function->getStartsAt() !== null || $function->getEndsAt() !== null
-                || $this->em->getRepository(MediaFolderPermission::class)->count(['clubFunction' => $function]) > 0) {
+                || $function->getStartsAt() !== null || $function->getEndsAt() !== null) {
                 throw new \DomainException('Eine bestehende Funktion mit dem Namen „'.$name.'“ widerspricht der Rollenübernahme.');
             }
-            foreach (FileAction::cases() as $action) {
-                if (($function->rootPermission($action) === true) !== $folderAccess) {
-                    throw new \DomainException('Die Hauptordnerrechte der Funktion „'.$name.'“ widersprechen der Rollenübernahme.');
+            $rules = $this->em->getRepository(MediaFolderPermission::class)->findBy(['clubFunction' => $function]);
+            foreach ($rules as $rule) {
+                if ($rule->getFolder()->getParent() !== null || $rule->getFolder()->getClub()->getId() !== $club->getId()) {
+                    throw new \DomainException('Die Ordnerrechte der Funktion „'.$name.'“ widersprechen der Rollenübernahme.');
+                }
+            }
+            foreach ($folders as $folder) {
+                $rule = $this->em->getRepository(MediaFolderPermission::class)->findOneBy(['clubFunction' => $function, 'folder' => $folder]);
+                foreach (FileAction::cases() as $action) {
+                    if (($rule?->permission($action) === true) !== $folderAccess) {
+                        throw new \DomainException('Die Ordnerrechte der Funktion „'.$name.'“ widersprechen der Rollenübernahme.');
+                    }
                 }
             }
             return $function;
@@ -127,10 +137,16 @@ final class MigrateFunctionRolesCommand extends Command
         $function = new ClubFunction($club, $name);
         $function->setPermissions($roles);
         $function->setSuccessorRequired($successorRequired);
-        foreach (FileAction::cases() as $action) {
-            $function->setRootPermission($action, $folderAccess);
-        }
         $this->em->persist($function);
+        if ($folderAccess) {
+            foreach ($folders as $folder) {
+                $rule = new MediaFolderPermission($function, $folder);
+                foreach (FileAction::cases() as $action) {
+                    $rule->setPermission($action, true);
+                }
+                $this->em->persist($rule);
+            }
+        }
         $this->em->flush();
         return $function;
     }
