@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Entity\{Club, ClubEvent, FileAction, MediaFile, MediaFolder, MediaFolderPermission, User, WebsitePublication};
+use App\Entity\{Club, ClubEvent, Courses, FileAction, MediaFile, MediaFolder, MediaFolderPermission, Schedule, User, WebsitePublication};
 use App\Enum\PermissionAction;
 use App\Security\FolderPermissions;
 use App\Service\{AdminClubContext, FileManager, MediaFileStorage, MembershipRoleContinuity, PublicWebsite};
@@ -72,7 +72,9 @@ final class MediaFileController extends AbstractController
         $rows = [];
         foreach ($files as $file) {
             $rows[] = ['file' => $file, 'used' => $em->getRepository(WebsitePublication::class)->count(['image' => $file])
-                + $em->getRepository(ClubEvent::class)->count(['image' => $file])];
+                + $em->getRepository(ClubEvent::class)->count(['image' => $file])
+                + $em->getRepository(Courses::class)->count(['mediaImage' => $file])
+                + $em->getRepository(Schedule::class)->count(['mediaImage' => $file])];
         }
         $breadcrumbs = [];
         for ($ancestor = $folder; $ancestor !== null; $ancestor = $ancestor->getParent()) {
@@ -336,7 +338,10 @@ final class MediaFileController extends AbstractController
             $response = $this->withClubLock($club, $em, function (Club $lockedClub) use ($id, $em, $website, &$removed): Response {
                 $file = $this->owned($id, $em, $website);
                 $this->requirePermission($lockedClub, $file->getFolder(), FileAction::DELETE);
-                if ($em->getRepository(WebsitePublication::class)->count(['image' => $file]) > 0 || $em->getRepository(ClubEvent::class)->count(['image' => $file]) > 0) {
+                if ($em->getRepository(WebsitePublication::class)->count(['image' => $file]) > 0
+                    || $em->getRepository(ClubEvent::class)->count(['image' => $file]) > 0
+                    || $em->getRepository(Courses::class)->count(['mediaImage' => $file]) > 0
+                    || $em->getRepository(Schedule::class)->count(['mediaImage' => $file]) > 0) {
                     $this->addFlash('warning', 'Verwendete Dateien können nicht gelöscht werden.');
                 } else {
                     $em->remove($file);

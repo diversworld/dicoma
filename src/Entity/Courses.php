@@ -14,7 +14,9 @@ use App\Enum\CourseParticipantStatus;
 
 #[Assert\Callback('validateQualification')]
 #[Assert\Callback('validateDivisions')]
+#[Assert\Callback('validateMediaImage')]
 #[ORM\Entity(repositoryClass: CoursesRepository::class)]
+#[ORM\Index(name: 'idx_courses_media_image', columns: ['media_image_id'])]
 #[ORM\HasLifecycleCallbacks]
 class Courses
 {
@@ -40,6 +42,10 @@ class Courses
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'RESTRICT')]
+    private ?MediaFile $mediaImage = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
@@ -246,6 +252,18 @@ class Courses
         $this->image = $image;
 
         return $this;
+    }
+
+    public function getMediaImage(): ?MediaFile { return $this->mediaImage; }
+    public function setMediaImage(?MediaFile $image): static { $this->mediaImage = $image; return $this; }
+
+    public function validateMediaImage(ExecutionContextInterface $context): void
+    {
+        if ($this->mediaImage !== null && (!$this->mediaImage->isImage() || $this->club === null
+            || ($this->mediaImage->getClub() !== $this->club
+                && ($this->club->getId() === null || $this->mediaImage->getClub()->getId() !== $this->club->getId())))) {
+            $context->buildViolation('Nur Bilder des eigenen Vereins können ausgewählt werden.')->atPath('mediaImage')->addViolation();
+        }
     }
 
     public function getNotes(): ?string

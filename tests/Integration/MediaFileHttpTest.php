@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ClubFunction, ClubFunctionAssignment, ContributionClass, FileAction, MediaFile, MediaFolder, MediaFolderPermission, Member, MembershipPolicy, Person, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ClubFunction, ClubFunctionAssignment, ContributionClass, Courses, FileAction, MediaFile, MediaFolder, MediaFolderPermission, Member, MembershipPolicy, Person, Schedule, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\MembershipStatus;
 use App\Service\MediaFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
@@ -674,6 +674,26 @@ final class MediaFileHttpTest extends WebTestCase
         $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
         self::assertNull($this->em->find(MediaFile::class, $imageId));
         self::assertFileDoesNotExist($this->root.'/files/website_media/'.$image->getStorageName());
+    }
+
+    public function testCourseAndScheduleImageReferencesPreventMediaDeletion(): void
+    {
+        $this->client->loginUser($this->admin);
+        $image = $this->upload('course.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true));
+        $course = (new Courses())->setClub($this->em->find(Club::class, $this->club->getId()))->setTitle('Course')->setCategory('training')->setMediaImage($image);
+        $schedule = (new Schedule())->setCourses($course)->setTitle('Schedule')->setMediaImage($image);
+        $this->em->persist($course); $this->em->persist($schedule); $this->em->flush();
+        $imageId = $image->getId(); $courseId = $course->getId(); $scheduleId = $schedule->getId();
+        $this->client->request('GET', '/admin/media');
+        self::assertSelectorTextContains('body', 'In Verwendung');
+        $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
+        self::assertNotNull($this->em->find(MediaFile::class, $imageId));
+        $this->em->find(Courses::class, $courseId)->setMediaImage(null); $this->em->flush();
+        $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
+        self::assertNotNull($this->em->find(MediaFile::class, $imageId));
+        $this->em->find(Schedule::class, $scheduleId)->setMediaImage(null); $this->em->flush();
+        $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
+        self::assertNull($this->em->find(MediaFile::class, $imageId));
     }
 
     public function testBookedMemberEventImageCanChangeWithoutMakingItPublic(): void

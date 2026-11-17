@@ -176,9 +176,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   werden. Die additive Migration `Version20261117100000` wurde zuerst auf
   einer isolierten Sicherung und anschließend auf der lokalen
   Anwendungsdatenbank ausgeführt. In weiteren Umgebungen muss die additive
-  Migration vor der Bereitstellung des Codes ausgeführt werden. Da die lokale
-  Sicherung vor dieser Schemaänderung erstellt wurde, ist vor der späteren
-  Rollenübernahme ein erneuter aktueller Backup- und Restore-Nachweis nötig.
+  Migration vor der Bereitstellung des Codes ausgeführt werden. Nach dieser
+  Schemaänderung wurde erneut eine Sicherung mit Restore-Nachweis erstellt;
+  vor der späteren Rollenübernahme ist ihre Aktualität erneut zu prüfen.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
@@ -320,6 +320,14 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Dateiarchiv wurde separat wiederhergestellt und verglichen. Die Sicherung
   ist eine Momentaufnahme, keine Abnahme der weiterhin offenen Umstellung und
   enthält vertrauliche Daten; bei späteren Änderungen ist sie zu erneuern.
+- Nach der Sparten-Schemaänderung wurde am 17. November 2026 unter bestätigter
+  Schreibpause erneut gesichert. Die Wiederherstellung in einer netzwerkisolierten
+  MariaDB enthielt 111 Tabellen und die Spartenmigration; der normalisierte
+  Dump stimmt mit der Sicherung überein. Das Dateiarchiv wurde getrennt
+  einschließlich Dateimodi wiederhergestellt und verglichen. Datenbank und
+  Dateispeicher stimmten unmittelbar nach der Sicherung mit dem Livebestand
+  überein. Die vertrauliche Sicherung liegt geschützt im Sitzungsverzeichnis;
+  unmittelbar vor einem Cutover sind Aktualität und Schreibpause erneut zu prüfen.
 - Der alte TÜV-Buchungsweg und globale Altansichten wurden auf die
   vereinsbezogenen Arbeitsabläufe zurückgeführt. Zusätzliche Tests und ein
   vollständiges Regressionsergebnis sind vor der Abnahme auszuwerten.

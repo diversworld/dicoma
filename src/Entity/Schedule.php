@@ -8,9 +8,12 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Enum\BookingAttendanceStatus;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: ScheduleRepository::class)]
 #[ORM\Table(name: 'schedule')]
+#[ORM\Index(name: 'idx_schedule_media_image', columns: ['media_image_id'])]
 #[ORM\UniqueConstraint(name: 'uniq_schedule_course_training_sequence',columns: ['courses_id','training_unit_type_id','training_unit_sequence'])]
 class Schedule
 {
@@ -24,6 +27,10 @@ class Schedule
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'RESTRICT')]
+    private ?MediaFile $mediaImage = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $startDate = null;
@@ -309,6 +316,20 @@ class Schedule
         $this->image = $image;
 
         return $this;
+    }
+
+    public function getMediaImage(): ?MediaFile { return $this->mediaImage; }
+    public function setMediaImage(?MediaFile $image): static { $this->mediaImage = $image; return $this; }
+
+    #[Assert\Callback]
+    public function validateMediaImage(ExecutionContextInterface $context): void
+    {
+        $club = $this->courses?->getClub();
+        if ($this->mediaImage !== null && (!$this->mediaImage->isImage() || $club === null
+            || ($this->mediaImage->getClub() !== $club
+                && ($club->getId() === null || $this->mediaImage->getClub()->getId() !== $club->getId())))) {
+            $context->buildViolation('Nur Bilder des eigenen Vereins können ausgewählt werden.')->atPath('mediaImage')->addViolation();
+        }
     }
 	
 	public function getTrainingUnitSequence(): ?int
