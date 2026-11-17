@@ -13,7 +13,7 @@
                         <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">zurück</a>
                     </li>
                     <li class="list-inline-item">
-                        <a href="{{ path('frontend_course_registration_index') }}" class="btn btn-transparent btn-solid-border">Kursanmeldung</a>
+                        <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">Kursanmeldung</a>
                     </li>
                     <li class="list-inline-item">
                         
@@ -27,7 +27,7 @@
         <div class="card mb-12">
             <div class="row g-0">
                 <div class="col-md-3">
-                    {% if course.image %}<img class="img-fluid rounded-start" src="{{ path('app_courses_image', {id: course.id}) }}" alt="Brevetbild">{% endif %}
+                    {% if club_function_membership_enabled ? is_granted('COURSE_MEDIA_IMAGE_VIEW', course) : course.image %}<img class="img-fluid rounded-start" src="{{ path('app_courses_image', {id: course.id}) }}" alt="{{ club_function_membership_enabled ? course.mediaImage.altText : 'Brevetbild' }}">{% endif %}
                 </div>
                 <div class="col-md-9">
                     <div class="card-header">{{ course.title }}</div>

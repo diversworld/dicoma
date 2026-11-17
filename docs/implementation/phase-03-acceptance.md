@@ -14,9 +14,10 @@ Prüfungen.
   vereinbarten Modulrechte (Lesen, Anlegen, Bearbeiten, Löschen) können
   getrennt von den bisherigen Rollen gespeichert werden. Ihre serverseitige
   Durchsetzung ist bislang nur für die Mediathek, die redaktionelle
-  Bildauswahl, die redaktionellen Beiträge, die Website-Anzeigeeinstellungen
-  und Teile der Veranstaltungsverwaltung implementiert, nicht für die übrigen
-  Zugriffswege oder Kursbilder.
+  Bildauswahl, die redaktionellen Beiträge, die Website-Anzeigeeinstellungen,
+  Teile der Veranstaltungsverwaltung und die neue Kursbildanzeige
+  implementiert, nicht für die übrigen Zugriffswege oder die vollständige
+  Kursbildverwaltung.
 - Die vorgesehenen Module sind Mitglieder und Mitgliedschaft, Finanzen und
   Beiträge, Ausbildung und Kurse, Sport und Wettkampf, Ausrüstung und TÜV,
   Gerätekasse, Thekendienst, Thekenkasse, Website und Veranstaltungen,
@@ -142,8 +143,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
 - Die Mediathek verlangt bei aktiviertem Funktionsmodell sowohl die jeweilige
   Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
-  aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildpfade sind
-  noch nicht integriert. Redaktionelle Beiträge und Seiten verlangen bei
+  aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildverwaltung
+  ist noch nicht vollständig integriert. Redaktionelle Beiträge und Seiten verlangen bei
   eingeschaltetem Modell das Website-Modulrecht Lesen, Anlegen, Bearbeiten
   beziehungsweise Löschen. Das Löschen ist bei ausgeschaltetem Modell
   nicht verfügbar; bei eingeschaltetem Modell werden Berechtigung und Version
@@ -179,6 +180,15 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Migration vor der Bereitstellung des Codes ausgeführt werden. Nach dieser
   Schemaänderung wurde erneut eine Sicherung mit Restore-Nachweis erstellt;
   vor der späteren Rollenübernahme ist ihre Aktualität erneut zu prüfen.
+- `Version20261117110000` ergänzt nullable, löschgeschützte
+  Mediathek-Referenzen an Kursen und Terminen. Die Migration wurde auf einer
+  isolierten Sicherung getestet und anschließend lokal angewendet. Zugeordnete
+  Mediendateien zählen als verwendet und können nicht gelöscht werden. Bei
+  aktiviertem Funktionsmodell prüft die Kursbildanzeige Dateimodul- und
+  Ordnerleserecht; ohne diese Rechte wird das Bild weder angezeigt noch über
+  seine direkte URL ausgeliefert. Die bisherigen Pfade bleiben bei
+  deaktiviertem Modell unverändert. Bestandsübernahme, Bildauswahl und weitere
+  Kursbildzugriffe sind noch nicht umgestellt; das Modell bleibt deaktiviert.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
@@ -328,6 +338,15 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Dateispeicher stimmten unmittelbar nach der Sicherung mit dem Livebestand
   überein. Die vertrauliche Sicherung liegt geschützt im Sitzungsverzeichnis;
   unmittelbar vor einem Cutover sind Aktualität und Schreibpause erneut zu prüfen.
+- Nach der Kursbild-Schemaänderung wurde am 17. November 2026 eine weitere
+  Datenbank- und Dateisicherung erstellt. Die isolierte Wiederherstellung
+  umfasst 111 Tabellen und beide neuen Kursbildreferenzen; der Datenbankinhalt
+  stimmt nach Normalisierung von Dump-Metadaten und CR-Zeichen überein.
+  Dateiinhalt, Inventar und Modi wurden verglichen; unmittelbar nach der
+  Sicherung stimmten Datenbank und Dateibestand mit dem Livebestand überein.
+  Ein isolierter Rollen-Probelauf mit `--merge-training-manager` prüfte 23
+  Zuordnungen und rollte sie zurück. Vor einer tatsächlichen Rollenübernahme
+  müssen Aktualität und Schreibpause erneut sichergestellt werden.
 - Der alte TÜV-Buchungsweg und globale Altansichten wurden auf die
   vereinsbezogenen Arbeitsabläufe zurückgeführt. Zusätzliche Tests und ein
   vollständiges Regressionsergebnis sind vor der Abnahme auszuwerten.

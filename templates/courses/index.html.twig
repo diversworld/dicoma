@@ -8,7 +8,7 @@
         <h1>Kursliste</h1>
         <div class="col-md-3">
             <div class="block">
-                <a href="{{ path('frontend_course_registration_index') }}" class="btn btn-transparent btn-solid-border">Zur Kursanmeldung</a>
+                <a href="{{ path('app_courses_index') }}" class="btn btn-transparent btn-solid-border">Zur Kursanmeldung</a>
             </div>
         </div>
         <div class="row">
@@ -39,7 +39,7 @@
                     <div class="row shuffle-wrapper">
                         {% for course in courses %}
                         <div class="col-lg-4 col-sm-6 portfolio-item shuffle-item" data-groups="[&quot;{{  course.category }}&quot;]">
-                            {% if course.image %}<img src="{{ path('app_courses_image', {id: course.id}) }}" alt="">{% endif %}
+                            {% if club_function_membership_enabled ? is_granted('COURSE_MEDIA_IMAGE_VIEW', course) : course.image %}<img src="{{ path('app_courses_image', {id: course.id}) }}" alt="{{ club_function_membership_enabled ? course.mediaImage.altText : '' }}">{% endif %}
                             <div class="portfolio-hover">
                                 <div class="portfolio-content">
                                     <a class="h3" href="{{ path('app_courses_show', {'id': course.id}) }}">{{ course.title }}</a>

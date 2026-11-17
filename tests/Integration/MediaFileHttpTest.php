@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ClubFunction, ClubFunctionAssignment, ContributionClass, Courses, FileAction, MediaFile, MediaFolder, MediaFolderPermission, Member, MembershipPolicy, Person, Schedule, User, WebsiteDisplaySettings, WebsitePublication};
-use App\Enum\MembershipStatus;
+use App\Enum\{CourseStatus, MembershipStatus};
 use App\Service\MediaFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -694,6 +694,89 @@ final class MediaFileHttpTest extends WebTestCase
         $this->em->find(Schedule::class, $scheduleId)->setMediaImage(null); $this->em->flush();
         $this->post('/admin/media/'.$imageId.'/delete', 'media_delete_'.$imageId);
         self::assertNull($this->em->find(MediaFile::class, $imageId));
+    }
+
+    public function testCourseAndScheduleImageValidationRejectsForeignFilesAndDocuments(): void
+    {
+        $other = (new Club())->setName('Other club');
+        $ownImage = new MediaFile($this->club, str_repeat('a', 40).'.png', 'own.png', 'image/png', 1, '');
+        $foreignImage = new MediaFile($other, str_repeat('b', 40).'.png', 'foreign.png', 'image/png', 1, '');
+        $document = new MediaFile($this->club, str_repeat('c', 40).'.pdf', 'document.pdf', 'application/pdf', 1, '');
+        $course = (new Courses())->setClub($this->club)->setTitle('Course')->setCategory('training');
+        $schedule = (new Schedule())->setCourses($course)->setTitle('Schedule');
+        $validator = static::getContainer()->get('validator');
+        foreach ([$course, $schedule] as $entity) {
+            $entity->setMediaImage($ownImage);
+            self::assertCount(0, $validator->validate($entity));
+            foreach ([$foreignImage, $document] as $invalid) {
+                $entity->setMediaImage($invalid);
+                $errors = $validator->validate($entity);
+                self::assertCount(1, $errors);
+                self::assertSame('mediaImage', $errors[0]->getPropertyPath());
+            }
+        }
+    }
+
+    public function testFunctionFolderCourseImageRequiresFileAndFolderReadPermission(): void
+    {
+        $function = new ClubFunction($this->club, 'Kursbilder lesen');
+        $function->setModulePermissions(['files:read']);
+        $folder = new MediaFolder($this->club, 'Kursbilder');
+        $rule = new MediaFolderPermission($function, $folder);
+        $rule->setPermission(FileAction::READ, true);
+        $image = new MediaFile($this->club, str_repeat('d', 40).'.png', 'course.png', 'image/png', 68, 'Kursbild');
+        $image->setFolder($folder);
+        $course = (new Courses())->setClub($this->club)->setTitle('Readable course')->setCategory('training')
+            ->setStatus(CourseStatus::OPEN)->setImage('legacy.png')->setMediaImage($image);
+        foreach ([$function, $folder, $rule, $image, $course, new ClubFunctionAssignment($function, $this->member)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $path = static::getContainer()->get(MediaFileStorage::class)->path($image);
+        file_put_contents($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true));
+        $this->paths[] = $path;
+        $courseId = $course->getId(); $ruleId = $rule->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/courses/');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('img[src="/courses/'.$courseId.'/image"][alt="Kursbild"]');
+        self::assertSelectorExists('a[href="/courses/'.$courseId.'"]');
+        $this->client->request('GET', '/courses/'.$courseId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('img[src="/courses/'.$courseId.'/image"][alt="Kursbild"]');
+        $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseIsSuccessful();
+        self::assertSame('image/png', $this->client->getResponse()->headers->get('Content-Type'));
+        $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, false);
+        $this->em->flush();
+        $this->client->request('GET', '/courses/');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('img[src="/courses/'.$courseId.'/image"]');
+        $this->client->request('GET', '/courses/'.$courseId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('img[src="/courses/'.$courseId.'/image"]');
+        $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseStatusCodeSame(404);
+        $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, true);
+        $this->em->find(ClubFunction::class, $functionId)->setModulePermissions([]);
+        $this->em->flush();
+        $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseStatusCodeSame(404);
+
+        $this->em->find(ClubFunction::class, $functionId)->setModulePermissions(['files:read']);
+        $this->em->find(Courses::class, $courseId)->setStatus(CourseStatus::DRAFT);
+        $this->em->flush();
+        $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseStatusCodeSame(404);
+
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreignImage = new MediaFile($foreignClub, str_repeat('e', 40).'.png', 'foreign.png', 'image/png', 68, '');
+        $this->em->persist($foreignClub);
+        $this->em->persist($foreignImage);
+        $this->em->find(Courses::class, $courseId)->setStatus(CourseStatus::OPEN)->setMediaImage($foreignImage);
+        $this->em->flush();
+        $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testBookedMemberEventImageCanChangeWithoutMakingItPublic(): void

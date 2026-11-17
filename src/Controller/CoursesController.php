@@ -5,15 +5,17 @@ namespace App\Controller;
 use App\Entity\Courses;
 use App\Entity\User;
 use App\Security\Voter\CourseManagementVoter;
+use App\Security\Voter\CourseMediaImageVoter;
 use App\Enum\CourseStatus;
 use App\Form\CoursesType;
-use App\Repository\CoursesRepository;
 use App\Repository\ScheduleRepository;
 use App\Service\AdminClubContext;
 use App\Service\CourseImageStorage;
 use App\Service\FileManager;
+use App\Service\MediaFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +23,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 #[Route('/courses')]
 class CoursesController extends AbstractController
@@ -30,17 +35,6 @@ class CoursesController extends AbstractController
     public function __construct(LoggerInterface $logger)
     {
         $this->logger = $logger;
-    }
-
-    #[Route('/', name: 'app_courses_index', methods: ['GET'])]
-    public function index(CoursesRepository $coursesRepository): Response
-    {
-        if (!$this->isGranted('ROLE_MEMBER')) {
-            return $this->redirectToRoute('frontend_course_registration_index');
-        }
-        return $this->render('courses/index.html.twig', [
-            'courses' => $coursesRepository->findBy(['club' => $this->currentClub(), 'status' => CourseStatus::OPEN], ['id' => 'DESC']),
-        ]);
     }
 
     #[Route('/new', name: 'app_courses_new', methods: ['GET', 'POST'])]
@@ -127,11 +121,25 @@ class CoursesController extends AbstractController
 
     #[Route('/{id}/image', name: 'app_courses_image', requirements: ['id' => '\d+'], methods: ['GET'])]
     #[IsGranted('ROLE_MEMBER')]
-    public function image(Courses $course, FileManager $files): Response
+    public function image(Courses $course, MediaFileStorage $media, #[AutowireLocator([FileManager::class])] ContainerInterface $fileManagers, #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] bool $functionModelEnabled): Response
     {
         if ($course->getClub()?->getId() !== $this->currentClub()->getId()
-            || $course->getStatus() !== CourseStatus::OPEN || $course->getImage() === null) {
+            || $course->getStatus() !== CourseStatus::OPEN) {
             throw $this->createNotFoundException('Kursbild nicht verfügbar.');
+        }
+        if ($functionModelEnabled) {
+            $image = $course->getMediaImage();
+            if ($image === null || !$this->isGranted(CourseMediaImageVoter::VIEW, $course)) {
+                throw $this->createNotFoundException('Kursbild nicht verfügbar.');
+            }
+            return $media->response($image, ResponseHeaderBag::DISPOSITION_INLINE);
+        }
+        if ($course->getImage() === null) {
+            throw $this->createNotFoundException('Kursbild nicht verfügbar.');
+        }
+        $files = $fileManagers->get(FileManager::class);
+        if (!$files instanceof FileManager) {
+            throw new \LogicException('Der bisherige Kursbildspeicher ist nicht verfügbar.');
         }
         return $files->imageResponse($course->getImage());
     }
