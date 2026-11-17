@@ -187,8 +187,13 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   aktiviertem Funktionsmodell prüft die Kursbildanzeige Dateimodul- und
   Ordnerleserecht; ohne diese Rechte wird das Bild weder angezeigt noch über
   seine direkte URL ausgeliefert. Die bisherigen Pfade bleiben bei
-  deaktiviertem Modell unverändert. Bestandsübernahme, Bildauswahl und weitere
-  Kursbildzugriffe sind noch nicht umgestellt; das Modell bleibt deaktiviert.
+  deaktiviertem Modell unverändert. Für bestehende Kurse und Termine ist bei
+  aktiviertem Modell eine Auswahl aus der Dateiverwaltung vorbereitet:
+  erforderlich sind Ausbildungs-Bearbeitungsrecht sowie Dateimodul- und
+  Ordnerleserecht für das bisherige und das gewählte Bild. Schreibzugriffe
+  prüfen die Rechte nach Erwerb der Vereinssperre erneut. Die Übernahme des
+  bisherigen Bildbestands und weitere Kursbildzugriffe fehlen weiterhin; das
+  Modell bleibt deaktiviert.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:

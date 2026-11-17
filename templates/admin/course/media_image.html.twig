@@ -1,0 +1,8 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+{% block content_title %}{{ isSchedule ? 'Terminbild' : 'Kursbild' }}: {{ entity.title }}{% endblock %}
+{% block main %}
+    <p>Bilder zunächst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen.</p>
+    {{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Bild speichern</button>{{ form_end(form) }}
+    <p><a href="{{ path(isSchedule ? 'admin_schedule_detail' : 'admin_courses_detail', {_locale: app.request.locale, entityId: entity.id}) }}">Zurück</a></p>
+{% endblock %}

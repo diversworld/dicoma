@@ -325,6 +325,12 @@ class ScheduleCrudController extends AbstractCrudController
     public function configureActions(
 		Actions $actions
 	): Actions {
+        if (!$this->courseImages->legacyEditingEnabled()) {
+            $image = Action::new('scheduleMediaImage', 'Terminbild auswählen', 'fa fa-image')
+                ->linkToRoute('admin_schedule_media_image', static fn (Schedule $schedule): array => ['id' => $schedule->getId()])
+                ->displayIf(fn (Schedule $schedule): bool => $this->isGranted('COURSE_MEDIA_IMAGE_EDIT', $schedule));
+            $actions->add(Crud::PAGE_INDEX, $image)->add(Crud::PAGE_DETAIL, $image);
+        }
 		$syncParticipants = Action::new(
 			'syncParticipants',
 			'Teilnehmer übernehmen',

@@ -779,6 +779,133 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testFunctionFolderCourseAndScheduleMediaSelectionChecksCurrentPermissions(): void
+    {
+        $function = new ClubFunction($this->club, 'Kursbilder bearbeiten');
+        $function->setModulePermissions(['training:edit', 'files:read']);
+        $folder = new MediaFolder($this->club, 'Lesbar');
+        $hiddenFolder = new MediaFolder($this->club, 'Nicht lesbar');
+        $rule = new MediaFolderPermission($function, $folder);
+        $rule->setPermission(FileAction::READ, true);
+        $allowed = new MediaFile($this->club, str_repeat('a', 40).'.png', 'allowed.png', 'image/png', 1, '');
+        $allowed->setFolder($folder);
+        $hidden = new MediaFile($this->club, str_repeat('b', 40).'.png', 'hidden.png', 'image/png', 1, '');
+        $hidden->setFolder($hiddenFolder);
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreign = new MediaFile($foreignClub, str_repeat('c', 40).'.png', 'foreign.png', 'image/png', 1, '');
+        $foreignCourse = (new Courses())->setClub($foreignClub)->setTitle('Foreign course')->setCategory('training');
+        $course = (new Courses())->setClub($this->club)->setTitle('Course')->setCategory('training');
+        $schedule = (new Schedule())->setCourses($course)->setTitle('Schedule');
+        foreach ([$function, $folder, $hiddenFolder, $rule, $allowed, $hidden, $foreignClub, $foreign, $foreignCourse, $course, $schedule, new ClubFunctionAssignment($function, $this->member)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $courseId = $course->getId(); $scheduleId = $schedule->getId();
+        $allowedId = $allowed->getId(); $hiddenId = $hidden->getId(); $foreignId = $foreign->getId();
+        $foreignCourseId = $foreignCourse->getId(); $ruleId = $rule->getId(); $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+
+        $this->client->request('GET', '/admin/course-images/course/'.$foreignCourseId);
+        self::assertResponseStatusCodeSame(404);
+        $crawler = $this->client->request('GET', '/admin/course-images/course/'.$courseId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="form[image]"] option[value="'.$allowedId.'"]');
+        self::assertSelectorNotExists('select[name="form[image]"] option[value="'.$hiddenId.'"]');
+        self::assertSelectorNotExists('select[name="form[image]"] option[value="'.$foreignId.'"]');
+        $token = $crawler->filter('input[name="form[_token]"]')->attr('value');
+        $this->client->request('POST', '/admin/course-images/course/'.$courseId, ['form' => ['image' => $allowedId, '_token' => 'invalid']]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', '/admin/course-images/course/'.$courseId, ['form' => ['image' => $foreignId, '_token' => $token]]);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->request('POST', '/admin/course-images/course/'.$courseId, ['form' => ['image' => $hiddenId, '_token' => $token]]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->find(Courses::class, $courseId)->getMediaImage());
+
+        $crawler = $this->client->request('GET', '/admin/course-images/course/'.$courseId);
+        $this->client->submit($crawler->selectButton('Bild speichern')->form(['form[image]' => $allowedId]));
+        self::assertResponseRedirects('/admin/course-images/course/'.$courseId, 303);
+        self::assertSame($allowedId, $this->em->find(Courses::class, $courseId)->getMediaImage()?->getId());
+
+        $crawler = $this->client->request('GET', '/admin/course-images/course/'.$courseId);
+        $staleForm = $crawler->selectButton('Bild speichern')->form();
+        $this->em->find(Courses::class, $courseId)->setMediaImage($this->em->find(MediaFile::class, $hiddenId));
+        $this->em->flush();
+        $this->client->submit($staleForm);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame($hiddenId, $this->em->find(Courses::class, $courseId)->getMediaImage()?->getId());
+        $this->em->find(Courses::class, $courseId)->setMediaImage($this->em->find(MediaFile::class, $allowedId));
+        $this->em->flush();
+
+        $crawler = $this->client->request('GET', '/admin/course-images/schedule/'.$scheduleId);
+        self::assertResponseIsSuccessful();
+        $form = $crawler->selectButton('Bild speichern')->form(['form[image]' => $allowedId]);
+        $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, false);
+        $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->find(Schedule::class, $scheduleId)->getMediaImage());
+        $this->client->request('GET', '/admin/course-images/course/'.$courseId);
+        self::assertResponseStatusCodeSame(403);
+
+        $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, true);
+        $this->em->flush();
+        $crawler = $this->client->request('GET', '/admin/course-images/schedule/'.$scheduleId);
+        $this->client->submit($crawler->selectButton('Bild speichern')->form(['form[image]' => $allowedId]));
+        self::assertResponseRedirects('/admin/course-images/schedule/'.$scheduleId, 303);
+        self::assertSame($allowedId, $this->em->find(Schedule::class, $scheduleId)->getMediaImage()?->getId());
+
+        $crawler = $this->client->request('GET', '/admin/course-images/schedule/'.$scheduleId);
+        $form = $crawler->selectButton('Bild speichern')->form();
+        $this->em->find(ClubFunction::class, $functionId)->setModulePermissions(['files:read']);
+        $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testCourseMediaSelectionIsUnavailableBeforeFunctionActivation(): void
+    {
+        $this->client->loginUser($this->admin);
+        $this->client->request('GET', '/admin/course-images/course/1');
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testFunctionFolderCourseMediaActionIsShownOnlyWithEditPermission(): void
+    {
+        $function = new ClubFunction($this->club, 'Kursverwaltung');
+        $function->setPermissions([User::ROLE_ADMIN]);
+        $function->setModulePermissions(['files:read']);
+        $course = (new Courses())->setClub($this->club)->setTitle('Course')->setCategory('training');
+        foreach ([$function, $course, new ClubFunctionAssignment($function, $this->member)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $courseId = $course->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/courses/'.$courseId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('a[href="/admin/course-images/course/'.$courseId.'"]');
+
+        $function->setModulePermissions(['training:edit', 'files:read']);
+        $this->em->flush();
+        $this->client->request('GET', '/admin/de/courses/'.$courseId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('a[href="/admin/course-images/course/'.$courseId.'"]');
+    }
+
+    public function testFunctionFolderScheduleMediaActionLinksToSelector(): void
+    {
+        $this->member->setRoles([User::ROLE_SUPER_ADMIN]);
+        $course = (new Courses())->setClub($this->club)->setTitle('Course')->setCategory('training');
+        $schedule = (new Schedule())->setCourses($course)->setTitle('Schedule');
+        $this->em->persist($course); $this->em->persist($schedule); $this->em->flush();
+        $this->client->loginUser($this->member);
+        $crawler = $this->client->request('GET', '/admin/de/schedule/'.$schedule->getId());
+        self::assertResponseIsSuccessful();
+        $this->client->click($crawler->selectLink('Terminbild auswählen')->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Terminbild: Schedule');
+    }
+
     public function testBookedMemberEventImageCanChangeWithoutMakingItPublic(): void
     {
         $this->client->loginUser($this->admin);
