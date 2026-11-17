@@ -20,7 +20,7 @@
                             <li>{{ 'Keine persönlichen Funktionen verfügbar. Bitte die Kontozuordnung mit der Vereinsverwaltung klären.'|trans }}</li>
                         {% endfor %}
                     </ul>
-                    <a href="{{ path('frontend_course_registration_index') }}">{{ 'Kursangebot'|trans }}</a>
+                    <a href="{{ path('app_courses_index') }}">{{ 'Kursangebot'|trans }}</a>
                 </div>
             </section>
             {% for label, links in portals.roles %}

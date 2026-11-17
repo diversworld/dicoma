@@ -15,7 +15,7 @@
     <nav aria-label="{{ 'Ausbildungsportal'|trans }}">
         <a href="{{ path(training_route_prefix ~ 'training_portal') }}">{{ 'Ausbildungsportal'|trans }}</a> ·
         {% if not training_route_prefix %}
-            <a href="{{ path('frontend_course_registration_index') }}">{{ 'Kursangebot'|trans }}</a> ·
+            <a href="{{ path('app_courses_index') }}">{{ 'Kursangebot'|trans }}</a> ·
             <a href="{{ path('app_my_training_progress') }}">{{ 'Mein Fortschritt'|trans }}</a> ·
             <a href="{{ path('app_my_training_attendance') }}">{{ 'Meine Anwesenheit'|trans }}</a>
         {% endif %}

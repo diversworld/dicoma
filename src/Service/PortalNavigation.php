@@ -35,7 +35,7 @@ final class PortalNavigation
         $activityLinks = [
             ['label' => 'Aktuelles', 'route' => 'website_articles'],
             ['label' => 'Veranstaltungen', 'route' => 'website_events'],
-            ['label' => 'Kursangebot', 'route' => 'frontend_course_registration_index'],
+            ['label' => 'Kursangebot', 'route' => 'app_courses_index'],
             ['label' => 'Sparten', 'route' => 'website_divisions'],
         ];
         $pages = [];
@@ -102,10 +102,10 @@ final class PortalNavigation
             $personal[] = ['label' => 'Ausrüstung reservieren', 'route' => 'member_reservations'];
         }
         if ($user->getPerson()?->getId() !== null) {
-            $personal[] = ['label' => 'Meine Kurse', 'route' => 'training_portal'];
+            $personal[] = ['label' => 'Ausbildungsportal', 'route' => 'training_portal'];
             $personal[] = ['label' => 'Mein Fortschritt', 'route' => 'app_my_training_progress'];
             $personal[] = ['label' => 'Meine Anwesenheit', 'route' => 'app_my_training_attendance'];
-            $personal[] = ['label' => 'Meine Kursanmeldungen', 'route' => 'frontend_course_registrations'];
+            $personal[] = ['label' => 'Meine Kurse', 'route' => 'frontend_course_registration_index'];
             $personal[] = ['label' => 'Meine Veranstaltungsanmeldungen', 'route' => 'club_event_registrations'];
         }
         if ($hasClub && $isMember) {

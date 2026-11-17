@@ -13,6 +13,7 @@ use App\Enum\CourseStatus;
 use App\Service\FrontendCourseRegistrationService;
 use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,8 +23,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class CourseRegistrationController extends AbstractController
 {
-    #[Route('/my-training/courses', name: 'frontend_course_registration_index', methods: ['GET'])]
-    public function index(EntityManagerInterface $em, SingleClubMode $singleClub): Response
+    #[Route('/courses/', name: 'app_courses_index', methods: ['GET'])]
+    public function catalog(EntityManagerInterface $em, SingleClubMode $singleClub, LoggerInterface $logger): Response
     {
         $user = $this->getUser();
         $person = $user instanceof User ? $user->getPerson() : null;
@@ -38,12 +39,35 @@ final class CourseRegistrationController extends AbstractController
                 $registered[$id] = true;
             }
         }
+        $instructors = [];
+        if ($club !== null) {
+            $rows = $em->createQueryBuilder()
+                ->select('c.id AS courseId', 'IDENTITY(c.leadInstructor) AS instructorId', 'instructor.id AS memberId', 'person.id AS personId', 'person.firstname AS firstname', 'person.lastname AS lastname')
+                ->from(Courses::class, 'c')
+                ->leftJoin('c.leadInstructor', 'instructor')
+                ->leftJoin('instructor.person', 'person')
+                ->where('c.club = :club AND c.status = :status')
+                ->setParameter('club', $club)
+                ->setParameter('status', CourseStatus::OPEN)
+                ->getQuery()->getArrayResult();
+            foreach ($rows as $row) {
+                if ($row['instructorId'] !== null && ($row['memberId'] === null || $row['personId'] === null)) {
+                    $logger->warning('Kurs hat eine ungültige Ausbilderzuordnung.', ['course_id' => $row['courseId'], 'member_id' => $row['instructorId']]);
+                    continue;
+                }
+                if ($row['personId'] !== null) {
+                    $instructors[$row['courseId']] = trim(($row['firstname'] ?? '').' '.($row['lastname'] ?? ''));
+                }
+            }
+        }
         return $this->render('student/course_registration.html.twig', [
             'courses' => $courses,
             'registered' => $registered,
+            'instructors' => $instructors,
         ]);
     }
 
+    #[Route('/my-training/courses', name: 'frontend_course_registration_index', methods: ['GET'])]
     #[Route('/my-training/courses/registrations', name: 'frontend_course_registrations', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
     public function registrations(EntityManagerInterface $em): Response
@@ -100,7 +124,7 @@ final class CourseRegistrationController extends AbstractController
             ]);
         } catch (\DomainException $e) {
             $this->addFlash('warning', $e->getMessage());
-            return $this->redirectToRoute('frontend_course_registration_index');
+            return $this->redirectToRoute('app_courses_index');
         }
     }
 

@@ -65,13 +65,13 @@ final class Phase4TrainingHttpTest extends WebTestCase
         $course = $this->course()->setRequiredEquipment('Maske und Flossen')->setDescription('Guest course description');
         $guest = $this->user('guest');
         $this->em->flush();
-        $this->client->request('GET', '/my-training/courses');
+        $this->client->request('GET', '/courses/');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Guest course description');
         self::assertSelectorTextContains('body', 'Maske und Flossen');
         self::assertSelectorExists('a[href="/register"]');
         $this->client->loginUser($guest);
-        $crawler = $this->client->request('GET', '/my-training/courses');
+        $crawler = $this->client->request('GET', '/courses/');
         $this->client->submit($crawler->selectButton('Verbindlich anmelden')->form());
         self::assertResponseRedirects();
         $participant = $this->em->getRepository(CourseParticipant::class)->findOneBy(['person' => $guest->getPerson()]);
@@ -82,6 +82,13 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertSame($course->getId(), $participant->getCourse()->getId());
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
+        $this->club = $this->em->find(Club::class, $this->club->getId());
+        $this->course()->setTitle('Another available course');
+        $this->em->flush();
+        $this->client->request('GET', '/my-training/courses');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Phase 4 Dive Course');
+        self::assertSelectorTextNotContains('body', 'Another available course');
         $this->client->request('GET', '/training/participant/' . $participant->getId());
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', '125,50');
@@ -89,6 +96,32 @@ final class Phase4TrainingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         self::assertSame(1, $this->em->getRepository(CourseParticipant::class)->count([]));
         self::assertSame([], (new SchemaValidator($this->em))->validateMapping());
+    }
+
+    public function testCourseCatalogHandlesMissingInstructorReferences(): void
+    {
+        $instructor = $this->staff('available-instructor', User::ROLE_INSTRUCTOR);
+        $valid = $this->course()->setTitle('Valid instructor course')->setLeadInstructor($instructor->getMember());
+        $missing = $this->course()->setTitle('Missing instructor course');
+        $this->em->flush();
+        $missingId = $missing->getId();
+        $this->em->getConnection()->executeStatement('PRAGMA foreign_keys = OFF');
+        $this->em->getConnection()->executeStatement('UPDATE courses SET lead_instructor_id = ? WHERE id = ?', [999999, $missingId]);
+        $this->em->getConnection()->executeStatement('PRAGMA foreign_keys = ON');
+        $this->em->clear();
+
+        $this->client->request('GET', '/courses/');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Valid instructor course');
+        self::assertSelectorTextContains('body', 'available-instructor Diver');
+        self::assertSelectorTextContains('body', 'Missing instructor course');
+        self::assertSelectorTextContains('body', 'Noch nicht zugeordnet');
+    }
+
+    public function testPersonalCoursesRequireLogin(): void
+    {
+        $this->client->request('GET', '/my-training/courses');
+        self::assertResponseRedirects('/login');
     }
 
     public function testTrainingModuleRequiresOneEnabledDivisionAndKeepsExistingRegistrations(): void

@@ -4,7 +4,7 @@
 {% block body %}
 <main class="container py-4">
   <h1>Für einen Kurs anmelden</h1>
-  <p><a class="btn btn-outline-primary" href="{{ path('frontend_course_registrations') }}">Meine Kursanmeldungen ansehen</a></p>
+  {% if app.user %}<p><a class="btn btn-outline-primary" href="{{ path('frontend_course_registration_index') }}">Meine Kursanmeldungen ansehen</a></p>{% endif %}
   <p>Hier findest du offene Tauchkurse für Mitglieder und Gäste. Eine Vereinsmitgliedschaft ist nicht erforderlich.</p>
   {% if not app.user %}<p><a href="{{ path('app_register') }}">Gastkonto registrieren</a> und E-Mail bestätigen oder <a href="{{ path('app_login') }}">mit vorhandenem Konto anmelden</a>.</p>{% endif %}
   {% for type, messages in app.flashes %}
@@ -14,12 +14,16 @@
   <div class="row g-3">
   {% for course in courses %}
     <div class="col-md-6"><article class="card h-100"><div class="card-body">
+      {% if is_granted('ROLE_MEMBER') and (club_function_membership_enabled ? is_granted('COURSE_MEDIA_IMAGE_VIEW', course) : course.image) %}
+        <img class="img-fluid" src="{{ path('app_courses_image', {id: course.id}) }}" alt="{{ club_function_membership_enabled ? course.mediaImage.altText : '' }}">
+      {% endif %}
       <h2 class="h5">{{ course.title }}</h2>
+      {% if is_granted('ROLE_MEMBER') %}<p><a href="{{ path('app_courses_show', {id: course.id}) }}">Kursdetails und Termine</a></p>{% endif %}
       <p>{{ course.club }} · Kursart: {{ course.category }}</p>
       <p>{{ course.description|striptags }}</p>
       <p>Voraussetzungen: {{ course.requirements|striptags }}</p>
       <p>Benötigte Ausrüstung: {{ course.requiredEquipment }}</p>
-      <p>Kursgebühr: {{ course.courseFee|number_format(2, ',', '.') }} EUR · Ausbilder: {{ course.leadInstructor|default('Noch nicht zugeordnet') }}</p>
+      <p>Kursgebühr: {{ course.courseFee|number_format(2, ',', '.') }} EUR · Ausbilder: {{ instructors[course.id]|default('Noch nicht zugeordnet') }}</p>
       <ul>{% for session in course.schedule %}<li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }} – {{ session.location }}</li>{% endfor %}</ul>
       {% if course.registrationDeadline %}<p>Anmeldeschluss: {{ course.registrationDeadline|date('d.m.Y') }}</p>{% endif %}
       {% if course.maxParticipants is not null %}<p>Maximale Teilnehmerzahl: {{ course.maxParticipants }}</p>{% endif %}

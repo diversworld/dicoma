@@ -991,7 +991,7 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $own = $this->source('course', $this->club); $own->setTitle('Website course');
         $other = (new Club())->setName('Other club'); $this->em->persist($other); $this->em->flush();
         $foreign = $this->source('course', $other); $foreign->setTitle('Foreign course'); $this->em->flush();
-        $this->client->request('GET', '/my-training/courses'); self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/courses/'); self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Website course'); self::assertSelectorTextNotContains('body', 'Foreign course');
     }
 
@@ -1003,13 +1003,13 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->em->persist($other); $this->em->flush();
         $foreign = $this->source('course', $other);
         $foreign->setTitle('Inactive club course'); $this->em->flush();
-        $this->client->request('GET', '/my-training/courses');
+        $this->client->request('GET', '/courses/');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Only active club course');
         self::assertSelectorTextNotContains('body', 'Inactive club course');
 
         $other->setActive(true); $this->em->flush();
-        $this->client->request('GET', '/my-training/courses');
+        $this->client->request('GET', '/courses/');
         self::assertResponseStatusCodeSame(500);
         self::assertSelectorTextNotContains('body', 'Inactive club course');
     }

@@ -171,6 +171,7 @@ final class PortalNavigationHttpTest extends WebTestCase
         self::assertSelectorExists('#frontendPublicMenu1 + ul a[href="/club"]');
         self::assertSelectorExists('#frontendPublicMenu1 + ul a[href="/contact"]');
         self::assertSelectorExists('#frontendPublicMenu2 + ul a[href="/events"]');
+        self::assertSelectorExists('#frontendPublicMenu2 + ul a[href="/courses/"]');
         self::assertSelectorExists('#frontendAccountMenu + ul a[href="/login"]');
         self::assertSelectorExists('#frontendAccountMenu + ul a[href="/register"]');
 
@@ -178,6 +179,8 @@ final class PortalNavigationHttpTest extends WebTestCase
         $this->client->loginUser($user);
         $this->client->request('GET', '/');
         self::assertSelectorExists('#frontendPersonalMenu + ul a[href="/profile"]');
+        self::assertSelectorExists('#frontendPersonalMenu + ul a[href="/my-training/courses"]');
+        self::assertSelectorExists('#frontendPublicMenu2 + ul a[href="/courses/"]');
         self::assertSelectorExists('#frontendPersonalMenu + ul form[action="/logout"] input[name="_csrf_token"]');
         self::assertSelectorExists('#frontendRoleMenu + ul a[href="/instructor-portal/courses"]');
         self::assertSelectorExists('#frontendRoleMenu + ul a[href="/equipment-manager"]');
