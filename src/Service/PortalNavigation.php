@@ -19,25 +19,44 @@ final class PortalNavigation
         private readonly EditorialAccess $editorialAccess,
     ) {}
 
-    /** @return list<array{label: string, route: string}> */
-    public function getPublicLinks(): array
+    /**
+     * @return array{home: array{label: string, route: string}, groups: array<string, list<array{label: string, route: string}>>, pages: list<array{label: string, route: string, parameters: array{id: int}}>}
+     */
+    public function getPublicMenu(): array
     {
-        $links = [['label' => 'Startseite', 'route' => 'app_home']];
-        if ($this->website->club()?->isActive() === true) {
-            $links[] = ['label' => 'Unser Verein', 'route' => 'website_club'];
-            $links[] = ['label' => 'Kontakt', 'route' => 'website_contact'];
+        $clubLinks = [];
+        if ($this->website->publicClub() !== null) {
+            $clubLinks[] = ['label' => 'Unser Verein', 'route' => 'website_club'];
+            $clubLinks[] = ['label' => 'Kontakt', 'route' => 'website_contact'];
         }
-
-        $links = [
-            ...$links,
+        if (!$this->security->isGranted(User::ROLE_MEMBER)) {
+            $clubLinks[] = ['label' => 'Mitglied werden', 'route' => 'membership_application_clubs'];
+        }
+        $activityLinks = [
             ['label' => 'Aktuelles', 'route' => 'website_articles'],
             ['label' => 'Veranstaltungen', 'route' => 'website_events'],
             ['label' => 'Kursangebot', 'route' => 'frontend_course_registration_index'],
         ];
-        if (!$this->security->isGranted(User::ROLE_MEMBER)) {
-            $links[] = ['label' => 'Mitglied werden', 'route' => 'membership_application_clubs'];
+        $pages = [];
+        foreach ($this->website->publications('page') as $page) {
+            $pages[] = ['label' => $page->getTitle(), 'route' => 'website_page', 'parameters' => ['id' => $page->getId()]];
         }
 
+        return [
+            'home' => ['label' => 'Startseite', 'route' => 'app_home'],
+            'groups' => array_filter(['Verein' => $clubLinks, 'Angebote' => $activityLinks]),
+            'pages' => $pages,
+        ];
+    }
+
+    /** @return list<array{label: string, route: string}> */
+    public function getPublicLinks(): array
+    {
+        $menu = $this->getPublicMenu();
+        $links = [$menu['home']];
+        foreach ($menu['groups'] as $group) {
+            array_push($links, ...$group);
+        }
         return $links;
     }
 
@@ -63,10 +82,10 @@ final class PortalNavigation
 
         if ($this->editorialAccess->functionModelEnabled()) {
             if ($this->editorialAccess->can(PermissionAction::READ)) {
-                $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen', 'route' => 'admin_website_editorial']];
+                $roles['Website-Redaktion'] = [['label' => 'Seiten, Artikel und Veranstaltungen', 'route' => 'admin_website_editorial']];
                 $roles['Website-Redaktion'][] = ['label' => 'Veranstaltungsbuchungen', 'route' => 'admin_club_events'];
             } elseif ($this->editorialAccess->can(PermissionAction::CREATE)) {
-                $roles['Website-Redaktion'] = [['label' => 'Artikel und Veranstaltungen erstellen', 'route' => 'admin_website_editorial_new']];
+                $roles['Website-Redaktion'] = [['label' => 'Seiten, Artikel und Veranstaltungen erstellen', 'route' => 'admin_website_editorial_new']];
                 $roles['Website-Redaktion'][] = ['label' => 'Veranstaltung anlegen', 'route' => 'admin_club_event_new'];
             }
             if ($this->editorialAccess->canViewSettings()) {

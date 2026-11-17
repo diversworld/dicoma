@@ -73,6 +73,7 @@ security:
         - { path: ^/event-registrations(?:/|$), roles: ROLE_USER }
         - { path: ^/(?:club|contact)$, roles: PUBLIC_ACCESS }
         - { path: ^/news/\d+(?:/image)?$, roles: PUBLIC_ACCESS }
+        - { path: ^/pages(?:/\d+)?$, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }

@@ -3,21 +3,21 @@
 {% block content_title %}Website-Redaktion{% endblock %}
 
 {% block main %}
-    <p>Hier werden öffentliche Artikel und Veranstaltungsankündigungen des konfigurierten Website-Vereins verwaltet. Interne Notizen, Teilnehmerlisten und Diensteinteilungen werden nicht veröffentlicht.</p>
+    <p>Hier werden öffentliche Seiten, Artikel und Veranstaltungsankündigungen des konfigurierten Website-Vereins verwaltet. Interne Notizen, Teilnehmerlisten und Diensteinteilungen werden nicht veröffentlicht.</p>
     <section class="card mb-4" aria-labelledby="editorial-steps">
         <div class="card-body">
             <h2 id="editorial-steps" class="h5">So veröffentlichen Sie Inhalte</h2>
             <ol class="mb-2">
-                <li>„Artikel / Veranstaltung erstellen“ wählen und Typ, Titel, Kurzbeschreibung und öffentlichen Text ausfüllen.</li>
+                <li>„Seite / Artikel / Veranstaltung erstellen“ wählen und Typ, Titel, Kurzbeschreibung und öffentlichen Text ausfüllen.</li>
                 <li>Bei Veranstaltungen Beginn, Ende und öffentlichen Ort ergänzen. Veröffentlichungszeitpunkt festlegen; optional einen freigegebenen Kurs oder ein Turnier verknüpfen.</li>
                 <li>„Zur Veröffentlichung freigeben“ aktivieren und speichern. Ohne Freigabe bleibt der Beitrag ein Entwurf. Eine Freigabe zu einem späteren Zeitpunkt wird automatisch dann sichtbar.</li>
             </ol>
-            <p class="mb-0">Freigegebene Artikel erscheinen unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Die Freigabe kann auch direkt in der Übersicht geändert werden.</p>
+            <p class="mb-0">Freigegebene Seiten erscheinen unter Seiten, Artikel unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Die Freigabe kann auch direkt in der Übersicht geändert werden.</p>
         </div>
     </section>
     {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
     {% for message in app.flashes('danger') %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
-    {% if canCreate %}<p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Artikel / Veranstaltung erstellen</a></p>{% endif %}
+    {% if canCreate %}<p><a class="btn btn-primary" href="{{ path('admin_website_editorial_new', {'_locale': app.request.locale}) }}">Seite / Artikel / Veranstaltung erstellen</a></p>{% endif %}
     <div class="table-responsive"><table class="table">
         <thead>
             <tr>
@@ -32,7 +32,7 @@
         </thead>
         <tbody>{% for publication in publications %}<tr>
             <td>{{ publication.title }}</td>
-            <td>{{ publication.kind == 'article' ? 'Artikel' : 'Veranstaltung' }}</td>
+            <td>{{ publication.kind == 'article' ? 'Artikel' : (publication.kind == 'page' ? 'Seite' : 'Veranstaltung') }}</td>
             <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td>
             <td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
             <td>{{ publication.image ? 'Ja' : 'Nein' }}</td>
@@ -49,7 +49,14 @@
                 </form>
                 {% else %}{{ publication.published ? 'Ja' : 'Nein' }}{% endif %}
             </td>
-            <td>{% if canEdit %}<a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a>{% endif %}</td>
+            <td>
+                {% if canEdit %}<a href="{{ path('admin_website_editorial_edit', {'_locale': app.request.locale, entityId: publication.id}) }}">Bearbeiten / Freigabe ändern</a>{% endif %}
+                {% if canDelete %}<form method="post" action="{{ path('admin_website_editorial_delete', {'_locale': app.request.locale, entityId: publication.id}) }}" onsubmit="return confirm('{{ 'Beitrag dauerhaft löschen?'|trans|escape('js') }}')">
+                    <input type="hidden" name="_token" value="{{ csrf_token('website_publication_delete_' ~ publication.id) }}">
+                    <input type="hidden" name="version" value="{{ publication.version }}">
+                    <button class="btn btn-sm btn-danger" type="submit">{{ 'Beitrag löschen'|trans }}</button>
+                </form>{% endif %}
+            </td>
         </tr>{% else %}<tr>
             <td colspan="7">Noch keine Beiträge.</td>
         </tr>{% endfor %}</tbody>

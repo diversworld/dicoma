@@ -280,7 +280,49 @@ class DashboardController extends AbstractDashboardController
                 ->findBy(['club' => $club], ['id' => 'DESC']),
             'canCreate' => $this->editorialAccess->can(PermissionAction::CREATE),
             'canEdit' => $this->editorialAccess->can(PermissionAction::EDIT),
+            'canDelete' => $this->functionModelEnabled && $this->editorialAccess->can(PermissionAction::DELETE),
         ]);
+    }
+
+    #[AdminRoute(path: '/editorial/{entityId}/delete', name: 'website_editorial_delete', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
+    public function deleteWebsitePublication(int $entityId, Request $request, PublicWebsite $website, \Psr\Log\LoggerInterface $logger): Response
+    {
+        if (!$this->functionModelEnabled) {
+            throw $this->createAccessDeniedException('Das Löschen ist erst mit dem Funktionsmodell verfügbar.');
+        }
+        $clubId = null;
+        $response = $this->withEditorialWriteLock($request, function () use ($entityId, $request, $website, &$clubId): Response {
+            $club = $this->editorialClub($website, PermissionAction::DELETE);
+            $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy(['id' => $entityId, 'club' => $club]);
+            if ($publication === null) { throw $this->createNotFoundException(); }
+            if (!$this->isCsrfTokenValid('website_publication_delete_'.$entityId, $request->request->getString('_token'))) {
+                throw $this->createAccessDeniedException('Ungültiger CSRF-Token.');
+            }
+            $version = $request->request->getString('version');
+            if (!preg_match('/^[1-9][0-9]{0,9}$/D', $version)) {
+                throw new BadRequestHttpException('Ungültiger Versionswert.');
+            }
+            $this->continuity->refresh($publication);
+            try {
+                $this->em->lock($publication, LockMode::OPTIMISTIC, (int) $version);
+            } catch (OptimisticLockException) {
+                $this->addFlash('danger', 'Der Beitrag wurde zwischenzeitlich geändert. Bitte den aktuellen Stand prüfen und erneut versuchen.');
+                return $this->editorialRedirect($request);
+            }
+            $this->em->remove($publication);
+            $this->em->flush();
+            $clubId = $club->getId();
+            return $this->editorialRedirect($request);
+        });
+        if ($clubId !== null) {
+            $logger->notice('Website publication deleted.', [
+                'publication_id' => $entityId,
+                'club_id' => $clubId,
+                'actor' => $this->getUser()?->getUserIdentifier(),
+            ]);
+            $this->addFlash('success', 'Beitrag gelöscht.');
+        }
+        return $response;
     }
 
     #[AdminRoute(path: '/editorial/{entityId}/publication', name: 'website_editorial_publication', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
@@ -626,7 +668,7 @@ class DashboardController extends AbstractDashboardController
                     ? [MenuItem::linkToRoute('Thekendienst-Jahresregel', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
                 ...($editorialRoute !== null ? [
                     MenuItem::section('Website & Redaktion'),
-                    MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                    MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
                 ] : []),
                 ...($this->functionModelEnabled && $eventRoute !== null
                     ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
@@ -640,7 +682,7 @@ class DashboardController extends AbstractDashboardController
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
-                MenuItem::linkToRoute('Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
                 ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),

@@ -6,6 +6,14 @@ declare(strict_types=1);
 return static function (string $domain, string $locale): array {
     $columns = ['de' => 0, 'en' => 1, 'fr' => 2, 'es' => 3];
     $messages = [
+        'Seiten' => ['Pages', 'Pages', 'Páginas'],
+        'Seite' => ['Page', 'Page', 'Página'],
+        'Derzeit keine veröffentlichten Seiten.' => ['There are currently no published pages.', 'Aucune page publiée pour le moment.', 'Actualmente no hay páginas publicadas.'],
+        'Seiten, Artikel und Veranstaltungen' => ['Pages, articles and events', 'Pages, articles et événements', 'Páginas, artículos y eventos'],
+        'Seiten, Artikel und Veranstaltungen erstellen' => ['Create pages, articles and events', 'Créer des pages, articles et événements', 'Crear páginas, artículos y eventos'],
+        'Öffentlicher Text (reiner Text)' => ['Public text (plain text)', 'Texte public (texte brut)', 'Texto público (texto sin formato)'],
+        'Beitrag löschen' => ['Delete content', 'Supprimer le contenu', 'Eliminar contenido'],
+        'Beitrag dauerhaft löschen?' => ['Delete this content permanently?', 'Supprimer définitivement ce contenu ?', '¿Eliminar este contenido permanentemente?'],
         'Ausbildung für neue Vorgänge aktivieren' => ['Enable training for new activities', 'Activer la formation pour les nouvelles activités', 'Activar la formación para nuevas actividades'],
         'Mannschaften und Wettkampf für neue Vorgänge aktivieren' => ['Enable teams and competition for new activities', 'Activer les équipes et la compétition pour les nouvelles activités', 'Activar equipos y competición para nuevas actividades'],
         'Sparte zuordnen' => ['Assign division', 'Associer une section', 'Asignar sección'],
@@ -1296,6 +1304,8 @@ return static function (string $domain, string $locale): array {
         'Kategorie-Merkmale' => ['Category attributes', 'Caractéristiques de catégorie', 'Atributos de categoría'],
         'Größen werden pro Verein, Ausrüstungsart und Hersteller definiert.' => ['Sizes are defined per club, equipment type and manufacturer.', 'Les tailles sont définies par club, type de matériel et fabricant.', 'Las tallas se definen por club, tipo de equipo y fabricante.'],
         'Unser Verein' => ['Our club', 'Notre club', 'Nuestro club'],
+        'Angebote' => ['Activities', 'Activités', 'Actividades'],
+        'Funktionen' => ['Functions', 'Fonctions', 'Funciones'],
         'Kontakt' => ['Contact', 'Contact', 'Contacto'],
         'Für diesen Verein sind noch keine öffentlichen Kontaktdaten hinterlegt.' => ['No public contact details have been provided for this club yet.', 'Aucune coordonnée publique n’a encore été renseignée pour ce club.', 'Todavía no se han indicado datos de contacto públicos para este club.'],
         'Portalübersicht' => ['Portal overview', 'Vue des portails', 'Vista de portales'],

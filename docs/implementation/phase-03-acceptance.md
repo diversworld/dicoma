@@ -143,8 +143,11 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
   aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildpfade sind
-  noch nicht integriert. Redaktionelle Beiträge verlangen bei eingeschaltetem
-  Modell das Website-Modulrecht Lesen, Anlegen beziehungsweise Bearbeiten.
+  noch nicht integriert. Redaktionelle Beiträge und Seiten verlangen bei
+  eingeschaltetem Modell das Website-Modulrecht Lesen, Anlegen, Bearbeiten
+  beziehungsweise Löschen. Das Löschen ist bei ausgeschaltetem Modell
+  nicht verfügbar; bei eingeschaltetem Modell werden Berechtigung und Version
+  unter der Vereinssperre geprüft und erfolgreiche Löschungen protokolliert.
   Website-Anzeigeeinstellungen sind mit Lesen sichtbar und mit Bearbeiten
   änderbar; Schreibzugriffe prüfen die Berechtigung unter der Vereinssperre erneut;
   die Veranstaltungsverwaltung prüft Website-Rechte getrennt nach Aktion.
@@ -223,6 +226,11 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   bestand isoliert in DDEV mit 11 Tests und 371 Assertions. Sie prüft die
   bestehende Mediathek, nicht den noch fehlenden gemeinsamen Speicher oder
   Ordnerrechte.
+- Die Veranstaltungs-HTTP-Suite prüft im Einzelvereinsbetrieb auch die
+  Vereinsgrenze für Superadministratoren und bestand in DDEV mit 16 Tests
+  und 162 Assertions. Bestehende Gastanmeldungen bleiben nach Deaktivierung
+  des Website-Vereins einsehbar und stornierbar. Der Lauf ist kein Nachweis
+  für die übrigen Module oder die Aktivierung des Funktionsmodells.
 - Die bestehende Dateiverwaltung und der schreibgeschützte Kursbild-Explorer
   sind über eine gemeinsame Seite erreichbar. Beide Bestände werden dort
   hierarchisch mit ihren Dateien dargestellt; Kursbilder sind dort weiterhin

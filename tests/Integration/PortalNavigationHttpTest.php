@@ -166,6 +166,25 @@ final class PortalNavigationHttpTest extends WebTestCase
         yield 'active member with function' => ['staff-member', false];
     }
 
+    public function testFrontendGroupsPublicAndAccountLinksWithoutLosingRoleLinks(): void
+    {
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('#frontendPublicMenu1 + ul a[href="/club"]');
+        self::assertSelectorExists('#frontendPublicMenu1 + ul a[href="/contact"]');
+        self::assertSelectorExists('#frontendPublicMenu2 + ul a[href="/events"]');
+        self::assertSelectorExists('#frontendAccountMenu + ul a[href="/login"]');
+        self::assertSelectorExists('#frontendAccountMenu + ul a[href="/register"]');
+
+        $user = $this->account('navigation-staff', [User::ROLE_INSTRUCTOR, User::ROLE_EQUIPMENT_MANAGER]);
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('#frontendPersonalMenu + ul a[href="/profile"]');
+        self::assertSelectorExists('#frontendPersonalMenu + ul form[action="/logout"] input[name="_csrf_token"]');
+        self::assertSelectorExists('#frontendRoleMenu + ul a[href="/instructor-portal/courses"]');
+        self::assertSelectorExists('#frontendRoleMenu + ul a[href="/equipment-manager"]');
+        self::assertSelectorNotExists('#frontendAccountMenu');
+    }
+
     #[DataProvider('credentialLogins')]
     public function testCredentialLoginUsesRoleDestinationAndPreservesSavedTarget(array $roles, ?string $savedTarget, string $expected): void
     {

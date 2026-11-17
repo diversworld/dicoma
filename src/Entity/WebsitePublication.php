@@ -17,7 +17,7 @@ class WebsitePublication
     #[ORM\Id, ORM\GeneratedValue, ORM\Column] private ?int $id = null;
     #[ORM\Version, ORM\Column(type: 'integer')] private int $version = 1;
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')] private Club $club;
-    #[ORM\Column(length: 20), Assert\Choice(choices: ['article', 'event'])] private string $kind = 'article';
+    #[ORM\Column(length: 20), Assert\Choice(choices: ['article', 'event', 'page'])] private string $kind = 'article';
     #[ORM\Column(length: 180), Assert\NotBlank, Assert\Length(max: 180)] private string $title = '';
     #[ORM\Column(length: 500), Assert\NotBlank, Assert\Length(max: 500)] private string $summary = '';
     #[ORM\Column(type: 'text'), Assert\NotBlank, Assert\Length(max: 50000)] private string $body = '';

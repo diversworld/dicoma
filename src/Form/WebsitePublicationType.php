@@ -21,7 +21,7 @@ final class WebsitePublicationType extends AbstractType
                 'label' => 'Inhaltstyp', 
                 'attr' => [
                     'class' => 'form-control'],
-                'choices' => ['Artikel' => 'article', 'Veranstaltung' => 'event']
+                'choices' => ['Artikel' => 'article', 'Veranstaltung' => 'event', 'Seite' => 'page']
                 ]
             )
             ->add('title', TextType::class, [
@@ -35,7 +35,7 @@ final class WebsitePublicationType extends AbstractType
                 ]
             )
             ->add('body', TextareaType::class, [
-                'label' => 'Artikel / öffentliche Beschreibung (reiner Text)', 
+                'label' => 'Öffentlicher Text (reiner Text)',
                 'attr' => ['class' => 'form-control', 'data-plain-text' => 'true', 'rows' => 12]
                 ]
             )

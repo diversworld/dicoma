@@ -33,15 +33,20 @@ final class PublicWebsiteController extends AbstractController
 
     #[Route('/articles', name: 'website_articles', methods: ['GET'])]
     #[Route('/events', name: 'website_events', methods: ['GET'])]
+    #[Route('/pages', name: 'website_pages', methods: ['GET'])]
     public function index(\Symfony\Component\HttpFoundation\Request $request, PublicWebsite $website, \App\Service\ClubEventBooking $booking, \App\Service\WebsitePagination $pagination): Response
     {
-        $kind = $request->attributes->get('_route') === 'website_events' ? 'event' : 'article';
+        $kind = match ($request->attributes->get('_route')) {
+            'website_events' => 'event',
+            'website_pages' => 'page',
+            default => 'article',
+        };
         $user = $this->getUser();
         $limits = $pagination->limits();
-        $items = $kind === 'article' ? $website->publications('article') : $website->upcomingEvents($booking, $user instanceof \App\Entity\User ? $user : null);
+        $items = $kind === 'event' ? $website->upcomingEvents($booking, $user instanceof \App\Entity\User ? $user : null) : $website->publications($kind);
         $response = $this->render('website/index.html.twig', [
             'kind' => $kind,
-            'contentPage' => $pagination->page($items, $limits[$kind === 'article' ? 'articles' : 'events'], $request, 'seite'),
+            'contentPage' => $pagination->page($items, $limits[$kind === 'event' ? 'events' : 'articles'], $request, 'seite'),
         ]);
         if ($kind === 'event' && $this->getUser() !== null) {
             $response->setPrivate()->headers->addCacheControlDirective('no-store');
@@ -50,10 +55,14 @@ final class PublicWebsiteController extends AbstractController
     }
 
     #[Route('/news/{id}', name: 'website_publication', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function detail(int $id, PublicWebsite $website, EntityManagerInterface $em): Response
+    #[Route('/pages/{id}', name: 'website_page', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function detail(int $id, \Symfony\Component\HttpFoundation\Request $request, PublicWebsite $website, EntityManagerInterface $em): Response
     {
         $publication = $em->find(WebsitePublication::class, $id);
-        if ($publication === null || !$website->visible($publication)) { throw $this->createNotFoundException(); }
+        $pageRoute = $request->attributes->get('_route') === 'website_page';
+        if ($publication === null || ($publication->getKind() === 'page') !== $pageRoute || !$website->visible($publication)) {
+            throw $this->createNotFoundException();
+        }
         return $this->render('website/detail.html.twig', ['publication' => $publication]);
     }
 

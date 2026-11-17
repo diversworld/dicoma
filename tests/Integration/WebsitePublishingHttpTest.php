@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, ClubFunction, ClubFunctionAssignment, Courses, MediaFile, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{Club, ClubEvent, ClubFunction, ClubFunctionAssignment, Courses, MediaFile, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\{CourseStatus, MembershipStatus, TournamentStatus};
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -25,7 +25,8 @@ final class WebsitePublishingHttpTest extends WebTestCase
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
         $_ENV['DATABASE_URL'] = $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:'; putenv('DATABASE_URL=sqlite:///:memory:');
         $_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null'; putenv('MAILER_DSN=null://null');
-        $_ENV['PUBLIC_SITE_CLUB_ID'] = $_SERVER['PUBLIC_SITE_CLUB_ID'] = '1'; putenv('PUBLIC_SITE_CLUB_ID=1');
+        $clubId = str_starts_with($this->name(), 'testUnconfiguredWebsiteCourseCatalog') ? '0' : '1';
+        $_ENV['PUBLIC_SITE_CLUB_ID'] = $_SERVER['PUBLIC_SITE_CLUB_ID'] = $clubId; putenv('PUBLIC_SITE_CLUB_ID='.$clubId);
         $_ENV['SITE_THEME'] = $_SERVER['SITE_THEME'] = 'airspace'; putenv('SITE_THEME=airspace');
         $_ENV['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = $_SERVER['CLUB_FUNCTION_MEMBERSHIP_ENABLED'] = str_starts_with($this->name(), 'testFunctionModel') ? '1' : '0';
         $this->client = static::createClient(['environment' => 'test']); $this->client->disableReboot();
@@ -86,6 +87,52 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testInactiveWebsiteClubDoesNotExposeContentOrAcceptEventRegistrations(): void
+    {
+        $article = $this->publication('Inactive club article', true);
+        $page = $this->publication('Inactive club page', true);
+        $page->setKind('page');
+        $image = new MediaFile($this->club, str_repeat('d', 40).'.png', 'page.png', 'image/png', 1, '');
+        $page->setImage($image);
+        $event = new ClubEvent($this->club);
+        $event->setTitle('Inactive club event'); $event->setDescription('Event'); $event->setLocation('Club');
+        $event->setPricing('paid'); $event->setStartsAt(new \DateTimeImmutable('+1 day'));
+        $event->setEndsAt(new \DateTimeImmutable('+2 days')); $event->setPublished(true); $event->setImage($image);
+        $this->em->persist($image); $this->em->persist($event); $this->em->flush();
+        $articleId = $article->getId(); $pageId = $page->getId(); $eventId = $event->getId();
+        foreach (['/news/'.$articleId, '/pages/'.$pageId, '/events/'.$eventId] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+        }
+        $this->em->find(Club::class, $this->club->getId())->setActive(false); $this->em->flush();
+        foreach (['/', '/articles', '/pages', '/events'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextNotContains('body', 'Inactive club article');
+            self::assertSelectorTextNotContains('body', 'Inactive club page');
+            self::assertSelectorTextNotContains('body', 'Inactive club event');
+        }
+        foreach (['/news/'.$articleId, '/pages/'.$pageId, '/news/'.$pageId.'/image', '/events/'.$eventId, '/events/'.$eventId.'/image'] as $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(404);
+        }
+        $person = (new Person())->setFirstname('Guest')->setLastname('Test')->setEmail('guest@example.invalid');
+        $guest = (new User())->setUser('guest')->setEmail('guest@example.invalid')->setPassword('unused')->setIsVerified(true)->setPerson($person);
+        $this->em->persist($guest); $this->em->flush();
+        $this->client->loginUser($guest);
+        $this->client->request('GET', '/events');
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = (string) static::getContainer()->get('security.csrf.token_manager')->getToken('event_register_'.$eventId);
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', '/events/'.$eventId.'/register', ['_token' => $token]);
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testPressCanDraftPublishEditAndWithdrawArticleWithoutAdminRights(): void
     {
         $this->client->loginUser($this->press);
@@ -97,6 +144,8 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(303);
         $publication = $this->em->getRepository(WebsitePublication::class)->findOneBy([]);
         self::assertFalse($publication->isPublished());
+        $this->client->request('POST', '/admin/de/editorial/'.$publication->getId().'/delete');
+        self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/news/'.$publication->getId()); self::assertResponseStatusCodeSame(404);
         $this->client->request('GET', '/admin/de/editorial/'.$publication->getId().'/edit');
         $this->client->submitForm('Beitrag speichern', ['website_publication[published]' => true]);
@@ -107,6 +156,72 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(303);
         $this->client->request('GET', '/news/'.$publication->getId()); self::assertResponseStatusCodeSame(404);
         self::assertCount(3, $this->em->find(WebsitePublication::class, $publication->getId())->getHistory());
+    }
+
+    public function testEditorsCanPublishAndWithdrawPagesWithoutExposingDraftsOrOtherClubs(): void
+    {
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial/new');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->loginUser($this->press);
+        $this->client->request('GET', '/admin/de/editorial/new');
+        $data = $this->formData();
+        $data['website_publication[kind]'] = 'page';
+        $data['website_publication[title]'] = 'Club information';
+        $data['website_publication[body]'] = 'Page text <script>alert(1)</script>';
+        $this->client->submitForm('Beitrag speichern', $data);
+        self::assertResponseStatusCodeSame(303);
+        $page = $this->em->getRepository(WebsitePublication::class)->findOneBy(['title' => 'Club information']);
+        self::assertNotNull($page);
+        $id = $page->getId();
+        $this->client->request('GET', '/pages/'.$id);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages/'.$id.'"]');
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        $this->client->submitForm('Beitrag speichern', ['website_publication[published]' => true]);
+        self::assertResponseStatusCodeSame(303);
+
+        $future = new WebsitePublication($this->em->find(Club::class, $this->club->getId()));
+        $future->setTitle('Future page'); $future->setSummary('Summary'); $future->setBody('Scheduled content');
+        $future->setKind('page'); $future->setPublished(true); $future->setPublishAt(new \DateTimeImmutable('+1 day'));
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreign = new WebsitePublication($foreignClub);
+        $foreign->setTitle('Foreign page'); $foreign->setSummary('Summary'); $foreign->setBody('Foreign page content');
+        $foreign->setKind('page'); $foreign->setPublished(true); $foreign->setPublishAt(new \DateTimeImmutable('-1 hour'));
+        $this->em->persist($future); $this->em->persist($foreignClub); $this->em->persist($foreign); $this->em->flush();
+        $this->client->getCookieJar()->clear();
+        $this->client->request('GET', '/pages');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages"]');
+        self::assertSelectorExists('#frontendNavbar > ul > li > a[href="/pages/'.$id.'"]');
+        self::assertSelectorExists('footer a[href="/pages/'.$id.'"]');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages/'.$future->getId().'"]');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages/'.$foreign->getId().'"]');
+        self::assertSelectorExists('a[href="/pages/'.$id.'"]');
+        self::assertSelectorTextNotContains('body', 'Future page');
+        self::assertSelectorTextNotContains('body', 'Foreign page');
+        $this->client->request('GET', '/pages/'.$id);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Club information');
+        self::assertSelectorExists('#frontendNavbar a[href="/pages/'.$id.'"][aria-current="page"]');
+        self::assertSelectorNotExists('main script');
+        $this->client->request('GET', '/news/'.$id);
+        self::assertResponseStatusCodeSame(404);
+        foreach ([$future->getId(), $foreign->getId()] as $hiddenId) {
+            $this->client->request('GET', '/pages/'.$hiddenId);
+            self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->loginUser($this->press);
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        $this->client->submitForm('Beitrag speichern', ['website_publication[published]' => false]);
+        self::assertResponseStatusCodeSame(303);
+        $this->client->request('GET', '/pages/'.$id);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/pages');
+        self::assertSelectorTextNotContains('body', 'Club information');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages/'.$id.'"]');
+        self::assertSelectorNotExists('footer a[href="/pages/'.$id.'"]');
     }
 
     public function testFunctionModelEditorialReadIsSeparateFromWritesAndLegacyRoles(): void
@@ -144,6 +259,94 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $this->client->loginUser($this->em->find(User::class, $this->press->getId()));
         $this->client->request('GET', '/admin/de/editorial');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testFunctionModelPagePublishingRechecksWebsitePermissions(): void
+    {
+        $function = new ClubFunction($this->club, 'Pages');
+        $function->setModulePermissions(['website:create']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $functionId = $function->getId();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial/new');
+        $data = $this->formData();
+        $data['website_publication[kind]'] = 'page';
+        $data['website_publication[title]'] = 'Function page';
+        $this->client->submitForm('Beitrag speichern', $data);
+        self::assertResponseRedirects('/portal', 303);
+        $page = $this->em->getRepository(WebsitePublication::class)->findOneBy(['title' => 'Function page']);
+        self::assertNotNull($page);
+        $id = $page->getId();
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        self::assertResponseStatusCodeSame(403);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:edit']); $this->em->flush();
+        $this->client->request('GET', '/admin/de/editorial/'.$id.'/edit');
+        self::assertResponseIsSuccessful();
+        $form = $this->client->getCrawler()->selectButton('Beitrag speichern')->form(['website_publication[published]' => true]);
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions([]); $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/pages/'.$id);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testFunctionModelEditorialDeleteRequiresPermissionCsrfAndCurrentVersion(): void
+    {
+        $page = $this->publication('Deletable page', true);
+        $page->setKind('page');
+        $function = new ClubFunction($this->club, 'Delete pages');
+        $function->setModulePermissions(['website:read']);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $this->member));
+        $this->em->flush();
+        $id = $page->getId(); $functionId = $function->getId();
+        $url = '/admin/de/editorial/'.$id.'/delete';
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertSelectorNotExists('form[action="'.$url.'"]');
+        $this->client->request('POST', $url, ['_token' => 'bad', 'version' => 1]);
+        self::assertResponseStatusCodeSame(403);
+
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'website:delete']); $this->em->flush();
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        $form = $crawler->filter('form[action="'.$url.'"]')->form();
+        $foreignClub = (new Club())->setName('Foreign club');
+        $foreign = new WebsitePublication($foreignClub);
+        $foreign->setTitle('Foreign page'); $foreign->setSummary('Summary'); $foreign->setBody('Foreign page content');
+        $foreign->setKind('page');
+        $this->em->persist($foreignClub); $this->em->persist($foreign); $this->em->flush();
+        $this->client->request('POST', '/admin/de/editorial/'.$foreign->getId().'/delete', ['_token' => 'bad', 'version' => 1]);
+        self::assertResponseStatusCodeSame(404);
+        self::assertNotNull($this->em->find(WebsitePublication::class, $foreign->getId()));
+        $this->client->request('POST', $url, ['_token' => 'bad', 'version' => 1]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNotNull($this->em->find(WebsitePublication::class, $id));
+        $this->em->getConnection()->executeStatement('UPDATE website_publication SET version = version + 1 WHERE id = ?', [$id]);
+        $this->em->clear();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(303);
+        self::assertNotNull($this->em->find(WebsitePublication::class, $id));
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        self::assertSelectorTextContains('body', 'zwischenzeitlich geändert');
+        $form = $crawler->filter('form[action="'.$url.'"]')->form();
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read']); $this->em->flush();
+        $this->client->submit($form);
+        self::assertResponseStatusCodeSame(403);
+        self::assertNotNull($this->em->find(WebsitePublication::class, $id));
+        $function = $this->em->find(ClubFunction::class, $functionId);
+        $function->setModulePermissions(['website:read', 'website:delete']); $this->em->flush();
+        $crawler = $this->client->request('GET', '/admin/de/editorial');
+        $this->client->submit($crawler->filter('form[action="'.$url.'"]')->form());
+        self::assertResponseRedirects('/admin/de/editorial', 303);
+        self::assertNull($this->em->find(WebsitePublication::class, $id));
+        $this->client->request('GET', '/pages/'.$id);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testFunctionModelEditorialCreateAndEditRecheckCurrentPermission(): void
@@ -679,6 +882,25 @@ final class WebsitePublishingHttpTest extends WebTestCase
         $foreign = $this->source('course', $other); $foreign->setTitle('Foreign course'); $this->em->flush();
         $this->client->request('GET', '/my-training/courses'); self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Website course'); self::assertSelectorTextNotContains('body', 'Foreign course');
+    }
+
+    public function testUnconfiguredWebsiteCourseCatalogRequiresAnUnambiguousActiveClub(): void
+    {
+        $course = $this->source('course', $this->club);
+        $course->setTitle('Only active club course');
+        $other = (new Club())->setName('Inactive club')->setActive(false);
+        $this->em->persist($other); $this->em->flush();
+        $foreign = $this->source('course', $other);
+        $foreign->setTitle('Inactive club course'); $this->em->flush();
+        $this->client->request('GET', '/my-training/courses');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Only active club course');
+        self::assertSelectorTextNotContains('body', 'Inactive club course');
+
+        $other->setActive(true); $this->em->flush();
+        $this->client->request('GET', '/my-training/courses');
+        self::assertResponseStatusCodeSame(500);
+        self::assertSelectorTextNotContains('body', 'Inactive club course');
     }
 
     private function publication(string $title, bool $published): WebsitePublication

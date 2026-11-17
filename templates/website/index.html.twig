@@ -1,16 +1,16 @@
 {% extends 'base.html.twig' %}
 {% block hero %}{% endblock %}
-{% block title %}{{ kind == 'event' ? 'Veranstaltungen' : 'Aktuelles' }} | DICOMA{% endblock %}
+{% block title %}{{ (kind == 'event' ? 'Veranstaltungen' : (kind == 'page' ? 'Seiten' : 'Aktuelles'))|trans }} | DICOMA{% endblock %}
 {% block body %}
 <main class="section">
   <div class="container">
-    <h1>{{ kind == 'event' ? 'Kommende Veranstaltungen' : 'Aktuelles aus dem Verein' }}</h1>
+    <h1>{{ (kind == 'event' ? 'Kommende Veranstaltungen' : (kind == 'page' ? 'Seiten' : 'Aktuelles aus dem Verein'))|trans }}</h1>
     {% if kind == 'event' %}
         {% include 'website/_event_cards.html.twig' with {entries: contentPage.items} %}
     {% else %}
         {% include 'website/_cards.html.twig' with {publications: contentPage.items} %}
     {% endif %}
-    {% include 'website/_pagination.html.twig' with {pagination: contentPage, parameter: 'seite', label: kind == 'event' ? 'Veranstaltungen' : 'Artikel', anchor: ''} %}
+    {% include 'website/_pagination.html.twig' with {pagination: contentPage, parameter: 'seite', label: kind == 'event' ? 'Veranstaltungen' : (kind == 'page' ? 'Seiten' : 'Artikel'), anchor: ''} %}
   </div>
 </main>
 {% endblock %}

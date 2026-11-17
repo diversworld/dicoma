@@ -6,8 +6,14 @@
             <div class="col-md-12">
                 <div class="footer-manu">
                     <ul>
-                        {% for item in portal_navigation.publicLinks %}
-                            <li><a href="{{ path(item.route) }}">{{ item.label|trans }}</a></li>
+                        <li><a href="{{ path(publicMenu.home.route) }}">{{ publicMenu.home.label|trans }}</a></li>
+                        {% for links in publicMenu.groups %}
+                            {% for item in links %}
+                                <li><a href="{{ path(item.route) }}">{{ item.label|trans }}</a></li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for page in publicMenu.pages %}
+                            <li><a href="{{ path(page.route, page.parameters) }}">{{ page.label }}</a></li>
                         {% endfor %}
                     </ul>
                 </div>

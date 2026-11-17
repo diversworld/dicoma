@@ -21,6 +21,12 @@ final class PublicWebsite
         return $club;
     }
 
+    public function publicClub(): ?Club
+    {
+        $club = $this->club();
+        return $club?->isActive() ? $club : null;
+    }
+
     public function editorialClub(): Club
     {
         $club = $this->club();
@@ -44,7 +50,7 @@ final class PublicWebsite
 
     public function visible(WebsitePublication $publication): bool
     {
-        if ($publication->getClub()->getId() !== $this->club()?->getId() || !$publication->isPublished() || $publication->getPublishAt() === null || $publication->getPublishAt() > new \DateTimeImmutable()) { return false; }
+        if ($publication->getClub()->getId() !== $this->publicClub()?->getId() || !$publication->isPublished() || $publication->getPublishAt() === null || $publication->getPublishAt() > new \DateTimeImmutable()) { return false; }
         foreach ([$publication->getCourse(), $publication->getTournament()] as $source) {
             if ($source !== null && ($source->getClub()?->getId() !== $publication->getClub()->getId() || in_array($source->getStatus()->value, ['draft', 'cancelled'], true))) { return false; }
         }
@@ -53,7 +59,7 @@ final class PublicWebsite
 
     public function publications(string $kind, bool $upcoming = false): array
     {
-        $club = $this->club();
+        $club = $this->publicClub();
         if ($club === null) { return []; }
         $qb = $this->em->getRepository(WebsitePublication::class)->createQueryBuilder('p')
             ->leftJoin('p.course', 'c')->addSelect('c')->leftJoin('p.tournament', 't')->addSelect('t')
@@ -71,7 +77,7 @@ final class PublicWebsite
         foreach ($this->publications('event', true) as $publication) {
             $entries[] = ['publication' => $publication, 'event' => null, 'startsAt' => $publication->getStartsAt()];
         }
-        $club = $this->club();
+        $club = $this->publicClub();
         if ($club !== null) {
             foreach ($booking->visibleUpcoming($club, $user) as $event) {
                 $entries[] = ['publication' => null, 'event' => $event, 'startsAt' => $event->getStartsAt()];

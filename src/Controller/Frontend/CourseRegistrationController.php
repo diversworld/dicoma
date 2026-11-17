@@ -11,6 +11,7 @@ use App\Entity\Person;
 use App\Entity\User;
 use App\Enum\CourseStatus;
 use App\Service\FrontendCourseRegistrationService;
+use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,13 +23,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class CourseRegistrationController extends AbstractController
 {
     #[Route('/my-training/courses', name: 'frontend_course_registration_index', methods: ['GET'])]
-    public function index(EntityManagerInterface $em, \App\Service\PublicWebsite $website): Response
+    public function index(EntityManagerInterface $em, SingleClubMode $singleClub): Response
     {
         $user = $this->getUser();
         $person = $user instanceof User ? $user->getPerson() : null;
-        $criteria = ['status' => CourseStatus::OPEN];
-        if (($websiteClub = $website->club()) !== null) { $criteria['club'] = $websiteClub; }
-        $courses = $em->getRepository(Courses::class)->findBy($criteria, ['id' => 'DESC']);
+        $club = $singleClub->optionalClub();
+        $courses = $club === null ? [] : $em->getRepository(Courses::class)
+            ->findBy(['status' => CourseStatus::OPEN, 'club' => $club], ['id' => 'DESC']);
         $registrations = $person === null ? [] : $em->getRepository(CourseParticipant::class)->findBy(['person' => $person]);
         $registered = [];
         foreach ($registrations as $registration) {
@@ -37,15 +38,8 @@ final class CourseRegistrationController extends AbstractController
                 $registered[$id] = true;
             }
         }
-        $available = [];
-        foreach ($courses as $course) {
-            if ($course->getClub() === null) {
-                continue;
-            }
-            $available[] = $course;
-        }
         return $this->render('student/course_registration.html.twig', [
-            'courses' => $available,
+            'courses' => $courses,
             'registered' => $registered,
         ]);
     }

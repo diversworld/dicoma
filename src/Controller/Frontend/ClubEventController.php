@@ -19,7 +19,7 @@ final class ClubEventController extends AbstractController
     {
         $event = $em->find(ClubEvent::class, $id);
         $user = $this->getUser();
-        if (!$event || $event->getClub()->getId() !== $website->club()?->getId()
+        if (!$event || $event->getClub()->getId() !== $website->publicClub()?->getId()
             || !$booking->canSee($event, $user instanceof User ? $user : null)) { throw $this->createNotFoundException(); }
         $registration = $user instanceof User && $user->getPerson() !== null
             ? $em->getRepository(ClubEventRegistration::class)->findOneBy(['event' => $event, 'person' => $user->getPerson()]) : null;
@@ -34,7 +34,7 @@ final class ClubEventController extends AbstractController
         $event = $em->find(ClubEvent::class, $id);
         $user = $this->getUser();
         $image = $event?->getImage();
-        if (!$event || $event->getClub()->getId() !== $website->club()?->getId()
+        if (!$event || $event->getClub()->getId() !== $website->publicClub()?->getId()
             || !$booking->canSee($event, $user instanceof User ? $user : null)
             || $image === null || !$image->isImage() || $image->getClub()->getId() !== $event->getClub()->getId()) { throw $this->createNotFoundException(); }
         return $storage->response($image, \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_INLINE);
@@ -46,7 +46,7 @@ final class ClubEventController extends AbstractController
     {
         if (!$this->isCsrfTokenValid('event_register_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
         $event = $em->find(ClubEvent::class, $id);
-        if (!$event || $event->getClub()->getId() !== $website->club()?->getId()) { throw $this->createNotFoundException(); }
+        if (!$event || $event->getClub()->getId() !== $website->publicClub()?->getId()) { throw $this->createNotFoundException(); }
         $user = $this->getUser();
         if (!$user instanceof User) { throw $this->createAccessDeniedException(); }
         try {

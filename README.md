@@ -85,11 +85,13 @@ APP_ENV=test php vendor/bin/phpunit --no-progress --filter 'MigrationChain' --di
 
 The administrative file explorer at `/admin/files` is a read-only view of the
 configured course image directory (`bilder_ordner`, normally
-`public/images/kurse`). Administrators can navigate its subdirectories and
+`files/kurse`). Administrators can navigate its subdirectories and
 download files. Symbolic links and paths outside this directory are rejected.
 This is separate from `/admin/media`, which manages media uploads and folders.
 The planned consolidation into one managed storage has not yet been carried
-out; neither existing course images nor media have been migrated.
+out. Course images and media use separate private directories; the current
+installation's earlier move from public storage is described in
+[Phase 3 acceptance](docs/implementation/phase-03-acceptance.md).
 
 #### Diving training (Phase 4)
 
@@ -98,6 +100,18 @@ The role-aware training portal at `/training` includes waitlists, attendance,
 assessment, manual payment/refund records and archived certificates without
 creating artificial memberships. See [Phase 4 training](docs/phase4-training.md)
 for roles, workflows, payment scope and deployment of the additive migration.
+
+#### Public website pages
+
+Editors can create and publish informational pages alongside articles and
+event announcements. Published pages appear under `/pages`; drafts, scheduled
+pages and pages from other clubs are not publicly visible. Division-specific
+content areas and a contact form are not yet implemented. When the configured
+website club is inactive, its publications and public events are not shown.
+Permanent deletion requires the website
+delete permission and is available only when the function model is enabled.
+The public course catalog uses the configured club, or the sole active club
+when no website club is configured; ambiguous configurations fail closed.
 
 #### Form and dialog translations
 

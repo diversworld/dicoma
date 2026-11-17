@@ -1,7 +1,7 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 {% form_theme form 'bootstrap_5_layout.html.twig' %}
 
-{% block content_title %}{{ publication.id ? 'Beitrag bearbeiten' : 'Artikel / Veranstaltung erstellen' }}{% endblock %}
+{% block content_title %}{{ publication.id ? 'Beitrag bearbeiten' : 'Seite / Artikel / Veranstaltung erstellen' }}{% endblock %}
 
 {% block main %}
     {% if canRead %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Übersicht und Veröffentlichungshilfe</a></p>{% endif %}

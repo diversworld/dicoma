@@ -35,6 +35,7 @@
     {% block stylesheets %}{% endblock %}
 </head>
     <body data-site-theme="{{ site_theme.name }}">
+    {% set publicMenu = portal_navigation.publicMenu %}
         {% include 'includes/_header.html.twig' %}
         {% block hero %}
             {% include 'includes/_slider.html.twig' %}
