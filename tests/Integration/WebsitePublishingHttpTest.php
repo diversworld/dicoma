@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Tests\Integration;
 
-use App\Entity\{Club, ClubEvent, ClubFunction, ClubFunctionAssignment, Courses, MediaFile, Member, Person, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
+use App\Entity\{Club, ClubEvent, ClubFunction, ClubFunctionAssignment, Courses, MediaFile, Member, Person, Sport, Tournament, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\{CourseStatus, MembershipStatus, TournamentStatus};
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -156,6 +156,117 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(303);
         $this->client->request('GET', '/news/'.$publication->getId()); self::assertResponseStatusCodeSame(404);
         self::assertCount(3, $this->em->find(WebsitePublication::class, $publication->getId())->getHistory());
+    }
+
+    public function testDivisionAreasShowOnlyExplicitlyPublishedContentAndHideInactiveDivisions(): void
+    {
+        $division = (new Sport())->setClub($this->club)->setName('Public division')->setDescription('Internal division secret');
+        $inactive = (new Sport())->setClub($this->club)->setName('Inactive division')->setActive(false);
+        $otherClub = (new Club())->setName('Foreign club');
+        $foreign = (new Sport())->setClub($otherClub)->setName('Foreign division');
+        foreach ([$division, $inactive, $otherClub, $foreign] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $page = $this->publication('Division page', true); $page->setKind('page'); $page->setDivision($division);
+        $draft = $this->publication('Division draft', false); $draft->setDivision($division);
+        $future = $this->publication('Division future', true); $future->setDivision($division); $future->setPublishAt(new \DateTimeImmutable('+1 day'));
+        $inactiveArticle = $this->publication('Inactive division article', true); $inactiveArticle->setDivision($inactive);
+        $crossClub = $this->publication('Foreign division article', true); $crossClub->setDivision($foreign);
+        $image = new MediaFile($this->club, str_repeat('e', 40).'.png', 'division.png', 'image/png', 1, '');
+        $page->setImage($image); $this->em->persist($image); $this->em->flush();
+        $divisionId = $division->getId(); $inactiveId = $inactive->getId(); $foreignId = $foreign->getId(); $pageId = $page->getId();
+        $this->client->request('GET', '/divisions');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#frontendNavbar a[href="/divisions"]');
+        self::assertSelectorExists('main a[href="/divisions/'.$divisionId.'"]');
+        self::assertSelectorTextNotContains('body', 'Internal division secret');
+        self::assertSelectorTextNotContains('main', 'Inactive division');
+        self::assertSelectorTextNotContains('main', 'Foreign division');
+        $this->client->request('GET', '/divisions/'.$divisionId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('main a[href="/pages/'.$pageId.'"]');
+        foreach (['Internal division secret', 'Division draft', 'Division future', 'Inactive division article', 'Foreign division article'] as $hidden) {
+            self::assertSelectorTextNotContains('main', $hidden);
+        }
+        foreach (['/divisions/'.$inactiveId, '/divisions/'.$foreignId, '/news/'.$inactiveArticle->getId(), '/news/'.$crossClub->getId(), '/news/'.$future->getId()] as $url) {
+            $this->client->request('GET', $url); self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->request('GET', '/pages/'.$pageId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('main a[href="/divisions/'.$divisionId.'"]');
+        $this->em->find(Sport::class, $divisionId)->setActive(false); $this->em->flush();
+        foreach (['/divisions/'.$divisionId, '/pages/'.$pageId, '/news/'.$pageId.'/image'] as $url) {
+            $this->client->request('GET', $url); self::assertResponseStatusCodeSame(404);
+        }
+        $this->client->request('GET', '/');
+        self::assertSelectorNotExists('#frontendNavbar a[href="/pages/'.$pageId.'"]');
+        $this->client->loginUser($this->press);
+        $this->client->request('GET', '/admin/de/editorial');
+        self::assertSelectorTextContains('body', 'Public division (inaktiv)');
+        $this->client->request('GET', '/admin/de/editorial/'.$pageId.'/edit');
+        self::assertSelectorExists('select[name="website_publication[division]"] option[value="'.$divisionId.'"]');
+        $this->client->submitForm('Beitrag speichern', ['website_publication[division]' => '']);
+        self::assertResponseStatusCodeSame(303);
+        $this->client->request('GET', '/pages/'.$pageId);
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testEditorialDivisionChoiceIsRestrictedToActiveOwnClub(): void
+    {
+        $own = (new Sport())->setClub($this->club)->setName('Own division');
+        $inactive = (new Sport())->setClub($this->club)->setName('Inactive division')->setActive(false);
+        $other = (new Club())->setName('Other club');
+        $foreign = (new Sport())->setClub($other)->setName('Foreign division');
+        foreach ([$own, $inactive, $other, $foreign] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $this->client->loginUser($this->press);
+        $crawler = $this->client->request('GET', '/admin/de/editorial/new');
+        self::assertSelectorExists('select[name="website_publication[division]"] option[value="'.$own->getId().'"]');
+        self::assertSelectorNotExists('select[name="website_publication[division]"] option[value="'.$inactive->getId().'"]');
+        self::assertSelectorNotExists('select[name="website_publication[division]"] option[value="'.$foreign->getId().'"]');
+        $form = $crawler->selectButton('Beitrag speichern')->form();
+        foreach ($this->formData() as $name => $value) { $form[$name] = $value; }
+        $values = $form->getPhpValues();
+        foreach ([$inactive->getId(), $foreign->getId()] as $id) {
+            $values['website_publication']['division'] = (string) $id;
+            $this->client->request('POST', '/admin/de/editorial/new', $values);
+            self::assertResponseStatusCodeSame(422);
+            self::assertSame(0, $this->em->getRepository(WebsitePublication::class)->count([]));
+        }
+        $this->client->request('GET', '/admin/de/editorial/new');
+        $this->client->submitForm('Beitrag speichern', $this->formData() + ['website_publication[division]' => (string) $own->getId()]);
+        self::assertResponseStatusCodeSame(303);
+        self::assertSame($own->getId(), $this->em->getRepository(WebsitePublication::class)->findOneBy([])->getDivision()->getId());
+    }
+
+    public function testDivisionWithEditorialContentCannotBeDeletedIndividuallyOrInBatch(): void
+    {
+        $used = (new Sport())->setClub($this->club)->setName('Used division');
+        $unused = (new Sport())->setClub($this->club)->setName('Unused division');
+        $this->em->persist($used); $this->em->persist($unused); $this->em->flush();
+        $page = $this->publication('Draft assigned to division', false);
+        $page->setDivision($used); $this->em->flush();
+        $usedId = $used->getId(); $unusedId = $unused->getId();
+        $this->client->loginUser($this->account('division-super', [User::ROLE_SUPER_ADMIN]));
+        $this->client->request('GET', '/admin/de/sport');
+        self::assertResponseIsSuccessful();
+        $stack = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        $stack->push($this->client->getRequest());
+        try {
+            $token = static::getContainer()->get('security.csrf.token_manager')->getToken('ea-batch-action-batchDelete-'.Sport::class)->getValue();
+            $this->client->getRequest()->getSession()->save();
+        } finally {
+            $stack->pop();
+        }
+        $this->client->request('POST', '/admin/de/sport/'.$usedId.'/delete');
+        self::assertResponseStatusCodeSame(409);
+        $this->client->request('POST', '/admin/de/sport/batch-delete', [
+            'batchActionName' => 'batchDelete', 'entityFqcn' => Sport::class,
+            'batchActionCsrfToken' => $token, 'batchActionEntityIds' => [(string) $unusedId, (string) $usedId],
+        ]);
+        self::assertResponseStatusCodeSame(409);
+        $this->em->clear();
+        self::assertNotNull($this->em->find(Sport::class, $usedId));
+        self::assertNotNull($this->em->find(Sport::class, $unusedId));
     }
 
     public function testEditorsCanPublishAndWithdrawPagesWithoutExposingDraftsOrOtherClubs(): void

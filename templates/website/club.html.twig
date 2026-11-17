@@ -27,6 +27,17 @@
         {% if not club.street and not club.city and not club.email and not club.phone and not club.website %}
             <p>{{ 'Für diesen Verein sind noch keine öffentlichen Kontaktdaten hinterlegt.'|trans }}</p>
         {% endif %}
+        <h2>{{ 'Kontaktformular'|trans }}</h2>
+        {% for message in app.flashes('success') %}<p role="status">{{ message|trans }}</p>{% endfor %}
+        {% if contactAvailable %}
+            <p>{{ 'Ihre Angaben werden zur Bearbeitung Ihrer Anfrage verwendet.'|trans }}</p>
+            {{ form_start(contactForm) }}
+                {{ form_widget(contactForm) }}
+                <button type="submit">{{ 'Nachricht senden'|trans }}</button>
+            {{ form_end(contactForm) }}
+        {% else %}
+            <p>{{ 'Das Kontaktformular ist derzeit nicht konfiguriert.'|trans }}</p>
+        {% endif %}
         <a href="{{ path('website_club') }}">{{ 'Unser Verein'|trans }}</a>
     {% endif %}
 </main>

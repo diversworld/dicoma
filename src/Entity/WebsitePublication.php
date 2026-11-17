@@ -12,6 +12,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 #[ORM\Index(name: 'idx_website_publication_visibility', columns: ['club_id', 'published', 'publish_at'])]
 #[ORM\Index(name: 'idx_website_publication_course', columns: ['course_id'])]
 #[ORM\Index(name: 'idx_website_publication_tournament', columns: ['tournament_id'])]
+#[ORM\Index(name: 'idx_website_publication_division', columns: ['division_id'])]
 class WebsitePublication
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column] private ?int $id = null;
@@ -29,6 +30,7 @@ class WebsitePublication
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Courses $course = null;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Tournament $tournament = null;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
+    #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Sport $division = null;
     #[ORM\Column(type: 'json')] private array $history = [];
 
     public function __construct(Club $club) { $this->club = $club; $this->publishAt = new \DateTimeImmutable(); }
@@ -59,6 +61,8 @@ class WebsitePublication
     public function setTournament(?Tournament $value): void { $this->tournament = $value; }
     public function getImage(): ?MediaFile { return $this->image; }
     public function setImage(?MediaFile $value): void { $this->image = $value; }
+    public function getDivision(): ?Sport { return $this->division; }
+    public function setDivision(?Sport $value): void { $this->division = $value; }
     public function getHistory(): array { return $this->history; }
     public function record(string $actor): void
     {
@@ -68,6 +72,11 @@ class WebsitePublication
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
+        if ($this->division !== null && (!$this->division->isActive() || $this->division->getClub() === null
+            || ($this->division->getClub() !== $this->club
+                && ($this->club->getId() === null || $this->division->getClub()?->getId() !== $this->club->getId())))) {
+            $context->buildViolation('Nur aktive Sparten des eigenen Vereins können ausgewählt werden.')->atPath('division')->addViolation();
+        }
         if ($this->image !== null && (!$this->image->isImage() || $this->image->getClub()->getId() !== $this->club->getId())) {
             $context->buildViolation('Nur Bilder des eigenen Vereins können ausgewählt werden.')->atPath('image')->addViolation();
         }

@@ -101,7 +101,7 @@ final class PortalNavigationHttpTest extends WebTestCase
         self::assertResponseRedirects('/training');
     }
 
-    public function testDivisionLeadershipAndForeignEditorialRoleKeepTheirLoginDestinations(): void
+    public function testDivisionLeadershipAndForeignEditorialRoleRespectSingleClub(): void
     {
         $leader = $this->account('division-leader');
         $sport = (new Sport())->setClub($this->club)->setName('Synthetic sport');
@@ -125,8 +125,7 @@ final class PortalNavigationHttpTest extends WebTestCase
 
         $this->client->loginUser($press);
         $this->client->request('GET', '/login');
-        self::assertResponseRedirects('/my');
-        self::assertSame('member_portal_dashboard', static::getContainer()->get(PortalNavigation::class)->getLoginRoute());
+        self::assertResponseStatusCodeSame(403);
     }
 
     #[DataProvider('membershipNavigationCases')]

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Form;
 
-use App\Entity\{Club, Courses, Tournament, WebsitePublication};
+use App\Entity\{Club, Courses, Sport, Tournament, WebsitePublication};
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -39,6 +39,19 @@ final class WebsitePublicationType extends AbstractType
                 'attr' => ['class' => 'form-control', 'data-plain-text' => 'true', 'rows' => 12]
                 ]
             )
+            ->add('division', EntityType::class, [
+                'class' => Sport::class,
+                'label' => 'Sparte',
+                'required' => false,
+                'placeholder' => 'Keine Sparte',
+                'attr' => ['class' => 'form-control'],
+                'choice_label' => static fn (Sport $sport): string => (string) $sport.($sport->isActive() ? '' : ' (inaktiv)'),
+                'query_builder' => static fn (EntityRepository $r) => $r->createQueryBuilder('s')
+                    ->where('s.club = :club AND (s.active = true OR s = :current)')
+                    ->setParameter('club', $options['club'])
+                    ->setParameter('current', $builder->getData()->getDivision())
+                    ->orderBy('s.sortOrder')->addOrderBy('s.name'),
+            ])
             ->add('image', MediaImageType::class, [
                 'club' => $options['club'],
                 'disabled' => $options['image_locked'],

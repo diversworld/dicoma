@@ -26,6 +26,10 @@
     border: 0;
     background: transparent;
 }
+.navigation .navbar .dropdown-menu {
+    max-height: 70vh;
+    overflow-y: auto;
+}
 .navigation .navbar .navbar-nav > li > .nav-link:hover,
 .navigation .navbar .navbar-nav > li > .nav-link:focus {
     color: var(--dw-neutral-400);

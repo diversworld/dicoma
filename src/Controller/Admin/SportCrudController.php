@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Sport;
+use App\Entity\WebsitePublication;
 use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -25,6 +26,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 #[IsGranted('ROLE_ADMIN')]
 class SportCrudController extends AbstractCrudController
@@ -71,7 +73,9 @@ class SportCrudController extends AbstractCrudController
     public function delete(AdminContext $context)
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
-        $this->assertSportContext($context->getEntity()->getInstance());
+        $sport = $context->getEntity()->getInstance();
+        $this->assertSportContext($sport);
+        $this->assertNoWebsiteContent($sport);
         return parent::delete($context);
     }
 
@@ -88,6 +92,7 @@ class SportCrudController extends AbstractCrudController
             $sport = $this->em->find(Sport::class, (int) $id);
             if ($sport !== null) {
                 $this->assertSportContext($sport);
+                $this->assertNoWebsiteContent($sport);
             }
         }
         return parent::batchDelete($context, $batchActionDto);
@@ -109,6 +114,7 @@ class SportCrudController extends AbstractCrudController
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
         $this->assertSportContext($entityInstance);
+        $this->assertNoWebsiteContent($entityInstance);
         parent::deleteEntity($entityManager, $entityInstance);
     }
 
@@ -129,6 +135,13 @@ class SportCrudController extends AbstractCrudController
         $selectedId = $this->clubContext->getClub()?->getId();
         if (!$sport instanceof Sport || $selectedId === null || $sport->getClub()?->getId() !== $selectedId) {
             throw $this->createAccessDeniedException('Sportart gehört nicht zum ausgewählten Verein.');
+        }
+    }
+
+    private function assertNoWebsiteContent(Sport $sport): void
+    {
+        if ($this->em->getRepository(WebsitePublication::class)->count(['division' => $sport]) > 0) {
+            throw new ConflictHttpException('Diese Sparte ist noch redaktionellen Beiträgen zugeordnet. Bitte zuerst die Zuordnungen entfernen.');
         }
     }
 

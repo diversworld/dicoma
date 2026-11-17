@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}{{ 'Sparten'|trans }} | DICOMA{% endblock %}
+{% block body %}
+<main class="section"><div class="container">
+    <h1>{{ 'Sparten'|trans }}</h1>
+    {% for item in divisions %}
+        <h2><a href="{{ path('website_division', {id: item.division.id}) }}">{{ item.division.name }}</a></h2>
+    {% else %}
+        <p>{{ 'Derzeit keine veröffentlichten Spartenbereiche.'|trans }}</p>
+    {% endfor %}
+</div></main>
+{% endblock %}

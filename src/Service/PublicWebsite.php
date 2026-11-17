@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\{Club, User, WebsitePublication};
+use App\Entity\{Club, Sport, User, WebsitePublication};
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
@@ -51,6 +51,8 @@ final class PublicWebsite
     public function visible(WebsitePublication $publication): bool
     {
         if ($publication->getClub()->getId() !== $this->publicClub()?->getId() || !$publication->isPublished() || $publication->getPublishAt() === null || $publication->getPublishAt() > new \DateTimeImmutable()) { return false; }
+        $division = $publication->getDivision();
+        if ($division !== null && (!$division->isActive() || $division->getClub()?->getId() !== $publication->getClub()->getId())) { return false; }
         foreach ([$publication->getCourse(), $publication->getTournament()] as $source) {
             if ($source !== null && ($source->getClub()?->getId() !== $publication->getClub()->getId() || in_array($source->getStatus()->value, ['draft', 'cancelled'], true))) { return false; }
         }
@@ -63,11 +65,32 @@ final class PublicWebsite
         if ($club === null) { return []; }
         $qb = $this->em->getRepository(WebsitePublication::class)->createQueryBuilder('p')
             ->leftJoin('p.course', 'c')->addSelect('c')->leftJoin('p.tournament', 't')->addSelect('t')
+            ->leftJoin('p.division', 'd')->addSelect('d')
             ->where('p.club = :club AND p.kind = :kind AND p.published = true AND p.publishAt <= :now')
             ->setParameter('club', $club)->setParameter('kind', $kind)->setParameter('now', new \DateTimeImmutable());
         if ($upcoming) { $qb->andWhere('p.endsAt >= :now'); }
         $qb->orderBy($kind === 'event' ? 'p.startsAt' : 'p.publishAt', $kind === 'event' ? 'ASC' : 'DESC')->addOrderBy('p.id', 'DESC');
         return array_values(array_filter($qb->getQuery()->getResult(), $this->visible(...)));
+    }
+
+    /** @return array<int, array{division: Sport, publications: list<WebsitePublication>}> */
+    public function divisions(): array
+    {
+        $divisions = [];
+        foreach (['page', 'article', 'event'] as $kind) {
+            foreach ($this->publications($kind) as $publication) {
+                $division = $publication->getDivision();
+                if ($division === null) { continue; }
+                $id = $division->getId();
+                $divisions[$id] ??= ['division' => $division, 'publications' => []];
+                $divisions[$id]['publications'][] = $publication;
+            }
+        }
+        uasort($divisions, static fn (array $a, array $b): int =>
+            [$a['division']->getSortOrder(), $a['division']->getName(), $a['division']->getId()]
+            <=> [$b['division']->getSortOrder(), $b['division']->getName(), $b['division']->getId()]
+        );
+        return $divisions;
     }
 
     /** @return list<array{publication: ?WebsitePublication, event: ?\App\Entity\ClubEvent, startsAt: \DateTimeImmutable}> */

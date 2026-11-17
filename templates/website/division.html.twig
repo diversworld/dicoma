@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+{% block hero %}{% endblock %}
+{% block title %}{{ division.name }} | DICOMA{% endblock %}
+{% block body %}
+<main class="section"><div class="container">
+    <h1>{{ division.name }}</h1>
+    {% include 'website/_cards.html.twig' with {publications: publications, kind: 'division'} %}
+    <p><a href="{{ path('website_divisions') }}">{{ 'Zurück zu den Sparten'|trans }}</a></p>
+</div></main>
+{% endblock %}

@@ -12,7 +12,7 @@
                 <li>Bei Veranstaltungen Beginn, Ende und öffentlichen Ort ergänzen. Veröffentlichungszeitpunkt festlegen; optional einen freigegebenen Kurs oder ein Turnier verknüpfen.</li>
                 <li>„Zur Veröffentlichung freigeben“ aktivieren und speichern. Ohne Freigabe bleibt der Beitrag ein Entwurf. Eine Freigabe zu einem späteren Zeitpunkt wird automatisch dann sichtbar.</li>
             </ol>
-            <p class="mb-0">Freigegebene Seiten erscheinen unter Seiten, Artikel unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Die Freigabe kann auch direkt in der Übersicht geändert werden.</p>
+            <p class="mb-0">Freigegebene Seiten erscheinen unter Seiten, Artikel unter Aktuelles und auf der Startseite; Veranstaltungen unter Veranstaltungen. Zugeordnete Inhalte erscheinen zusätzlich im Bereich ihrer aktiven Sparte. Bei inaktiven Sparten sind die zugeordneten Inhalte nicht öffentlich sichtbar. Die Freigabe kann auch direkt in der Übersicht geändert werden.</p>
         </div>
     </section>
     {% for message in app.flashes('success') %}<div class="alert alert-success" role="status">{{ message }}</div>{% endfor %}
@@ -23,6 +23,7 @@
             <tr>
                 <th>Titel</th>
                 <th>Typ</th>
+                <th>Sparte</th>
                 <th>Freigabe</th>
                 <th>Öffentlich ab</th>
                 <th>Bild</th>
@@ -33,6 +34,7 @@
         <tbody>{% for publication in publications %}<tr>
             <td>{{ publication.title }}</td>
             <td>{{ publication.kind == 'article' ? 'Artikel' : (publication.kind == 'page' ? 'Seite' : 'Veranstaltung') }}</td>
+            <td>{{ publication.division ? publication.division.name ~ (publication.division.active ? '' : ' (inaktiv)') : '–' }}</td>
             <td>{{ publication.published ? 'Freigegeben' : 'Entwurf' }}</td>
             <td>{{ publication.publishAt|date('d.m.Y H:i') }}</td>
             <td>{{ publication.image ? 'Ja' : 'Nein' }}</td>
@@ -58,7 +60,7 @@
                 </form>{% endif %}
             </td>
         </tr>{% else %}<tr>
-            <td colspan="7">Noch keine Beiträge.</td>
+            <td colspan="8">Noch keine Beiträge.</td>
         </tr>{% endfor %}</tbody>
     </table></div>
 {% endblock %}

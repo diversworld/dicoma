@@ -36,6 +36,7 @@ final class PortalNavigation
             ['label' => 'Aktuelles', 'route' => 'website_articles'],
             ['label' => 'Veranstaltungen', 'route' => 'website_events'],
             ['label' => 'Kursangebot', 'route' => 'frontend_course_registration_index'],
+            ['label' => 'Sparten', 'route' => 'website_divisions'],
         ];
         $pages = [];
         foreach ($this->website->publications('page') as $page) {

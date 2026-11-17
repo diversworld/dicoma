@@ -167,6 +167,18 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   funktionen, ohne ausdrücklich gespeicherte Modulrechte zu überschreiben.
   Zum Ausführungszeitpunkt waren lokal keine Funktionen oder Ordnerregeln
   vorhanden.
+- Redaktionelle Seiten, Artikel und Veranstaltungsankündigungen können einer
+  aktiven Sparte des Website-Vereins zugeordnet werden. Öffentliche
+  Spartenbereiche zeigen ausschließlich freigegebene, fällige Inhalte;
+  interne Spartenbeschreibungen bleiben unveröffentlicht. Bei Deaktivierung
+  einer Sparte verschwinden ihre zugeordneten Inhalte einschließlich
+  Direktzugriff und Bildern, bis sie wieder aktiviert oder anders zugeordnet
+  werden. Die additive Migration `Version20261117100000` wurde zuerst auf
+  einer isolierten Sicherung und anschließend auf der lokalen
+  Anwendungsdatenbank ausgeführt. In weiteren Umgebungen muss die additive
+  Migration vor der Bereitstellung des Codes ausgeführt werden. Da die lokale
+  Sicherung vor dieser Schemaänderung erstellt wurde, ist vor der späteren
+  Rollenübernahme ein erneuter aktueller Backup- und Restore-Nachweis nötig.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
@@ -301,6 +313,13 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   anschließend in der lokalen DDEV-Datenbank ausgeführt. Vorher wurde ein
   Backup erstellt und in einer privaten MariaDB restauriert; die Prüfsummen
   aller 108 Tabellen stimmten überein.
+- Am 17. November 2026 wurden während der bestätigten Schreibpause die
+  Anwendungsdatenbank sowie `files/` und `var/private/` erneut geschützt
+  gesichert. Eine netzwerkisolierte MariaDB stellte 111 Tabellen wieder her;
+  die Datenbank-Dumps stimmen nach Entfernung von CR-Zeichen überein. Das
+  Dateiarchiv wurde separat wiederhergestellt und verglichen. Die Sicherung
+  ist eine Momentaufnahme, keine Abnahme der weiterhin offenen Umstellung und
+  enthält vertrauliche Daten; bei späteren Änderungen ist sie zu erneuern.
 - Der alte TÜV-Buchungsweg und globale Altansichten wurden auf die
   vereinsbezogenen Arbeitsabläufe zurückgeführt. Zusätzliche Tests und ein
   vollständiges Regressionsergebnis sind vor der Abnahme auszuwerten.

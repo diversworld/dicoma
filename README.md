@@ -104,14 +104,30 @@ for roles, workflows, payment scope and deployment of the additive migration.
 #### Public website pages
 
 Editors can create and publish informational pages alongside articles and
-event announcements. Published pages appear under `/pages`; drafts, scheduled
-pages and pages from other clubs are not publicly visible. Division-specific
-content areas and a contact form are not yet implemented. When the configured
+event announcements. Each published page appears as its own navigation item;
+the overview remains available under `/pages`. Drafts, scheduled pages and
+pages from other clubs are not publicly visible. The navigation does not yet
+provide a hierarchical page tree or per-page navigation settings. Division-specific
+content areas are not yet implemented. When the configured
 website club is inactive, its publications and public events are not shown.
 Permanent deletion requires the website
 delete permission and is available only when the function model is enabled.
 The public course catalog uses the configured club, or the sole active club
 when no website club is configured; ambiguous configurations fail closed.
+
+#### Public contact form
+
+The contact form sends to the configured website club's email address. Configure
+a valid `CONTACT_MAIL_FROM` sender and a working `MAILER_DSN`; without these
+or a valid club email, the form is unavailable and POST requests return 503.
+A `null://` transport is not accepted. The form uses CSRF protection and a
+limit of five attempts per client IP per hour. The default filesystem cache
+and `flock` lock are local to one instance; multi-instance deployments need
+shared rate-limiter storage and locks. SMTP acceptance does not guarantee
+delivery. A local Mailpit transport captures mail rather than delivering it.
+The local DDEV installation currently uses Mailpit and reuses the configured
+bar-duty sender for contact-form testing; it does not deliver contact messages
+to the club.
 
 #### Form and dialog translations
 
