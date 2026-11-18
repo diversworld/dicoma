@@ -728,14 +728,15 @@ final class MediaFileHttpTest extends WebTestCase
         $image->setFolder($folder);
         $course = (new Courses())->setClub($this->club)->setTitle('Readable course')->setCategory('training')
             ->setStatus(CourseStatus::OPEN)->setImage('legacy.png')->setMediaImage($image);
-        foreach ([$function, $folder, $rule, $image, $course, new ClubFunctionAssignment($function, $this->member)] as $entity) {
+        $schedule = (new Schedule())->setCourses($course)->setTitle('Readable schedule')->setMediaImage($image);
+        foreach ([$function, $folder, $rule, $image, $course, $schedule, new ClubFunctionAssignment($function, $this->member)] as $entity) {
             $this->em->persist($entity);
         }
         $this->em->flush();
         $path = static::getContainer()->get(MediaFileStorage::class)->path($image);
         file_put_contents($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true));
         $this->paths[] = $path;
-        $courseId = $course->getId(); $ruleId = $rule->getId(); $functionId = $function->getId();
+        $courseId = $course->getId(); $scheduleId = $schedule->getId(); $ruleId = $rule->getId(); $functionId = $function->getId();
         $this->client->loginUser($this->member);
         $this->client->request('GET', '/courses/');
         self::assertResponseIsSuccessful();
@@ -747,6 +748,12 @@ final class MediaFileHttpTest extends WebTestCase
         $this->client->request('GET', '/courses/'.$courseId.'/image');
         self::assertResponseIsSuccessful();
         self::assertSame('image/png', $this->client->getResponse()->headers->get('Content-Type'));
+        $this->client->request('GET', '/schedule/'.$scheduleId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('img[src="/schedule/'.$scheduleId.'/image"]');
+        $this->client->request('GET', '/schedule/'.$scheduleId.'/image');
+        self::assertResponseIsSuccessful();
+        self::assertSame('image/png', $this->client->getResponse()->headers->get('Content-Type'));
         $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, false);
         $this->em->flush();
         $this->client->request('GET', '/courses/');
@@ -756,6 +763,8 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('img[src="/courses/'.$courseId.'/image"]');
         $this->client->request('GET', '/courses/'.$courseId.'/image');
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/schedule/'.$scheduleId.'/image');
         self::assertResponseStatusCodeSame(404);
         $this->em->find(MediaFolderPermission::class, $ruleId)->setPermission(FileAction::READ, true);
         $this->em->find(ClubFunction::class, $functionId)->setModulePermissions([]);

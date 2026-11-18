@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Enum\PermissionAction;
 use App\Enum\PermissionModule;
 use App\Security\ModulePermission;
+use App\Security\LegacyFunctionPermissions;
 use App\Service\MembershipRoleContinuity;
 use App\Service\SingleClubMode;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
@@ -36,6 +37,7 @@ final class MigrateFunctionRolesCommand extends Command
         private readonly SingleClubMode $singleClub,
         private readonly MembershipRoleContinuity $continuity,
         private readonly RoleHierarchyInterface $hierarchy,
+        private readonly LegacyFunctionPermissions $legacyPermissions,
         private readonly CheckFunctionMigrationCommand $check,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $enabled,
     ) {
@@ -161,9 +163,7 @@ final class MigrateFunctionRolesCommand extends Command
     {
         $function = $this->em->getRepository(ClubFunction::class)->findOneBy(['club' => $club, 'name' => $name]);
         $folders = $this->em->getRepository(MediaFolder::class)->findBy(['club' => $club, 'parent' => null]);
-        $modulePermissions = $folderAccess
-            ? array_map(static fn (PermissionAction $action): string => ModulePermission::key(PermissionModule::FILES, $action), PermissionAction::cases())
-            : [];
+        $modulePermissions = $this->legacyPermissions->forRoles($roles);
         if ($mergeTrainingManager) {
             if ($function === null || $roles !== [User::ROLE_TRAINING_MANAGER] || $folderAccess) {
                 throw new \DomainException('Die geprüfte Funktion „Ausbildungsleiter“ ist nicht vorhanden oder widerspricht der Übernahme.');

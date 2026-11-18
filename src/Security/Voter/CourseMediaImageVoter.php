@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security\Voter;
 
 use App\Entity\Courses;
+use App\Entity\Schedule;
 use App\Entity\FileAction;
 use App\Entity\User;
 use App\Enum\CourseStatus;
@@ -20,18 +21,20 @@ final class CourseMediaImageVoter extends Voter
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return $attribute === self::VIEW && $subject instanceof Courses;
+        return $attribute === self::VIEW && ($subject instanceof Courses || $subject instanceof Schedule);
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
     {
         $user = $token->getUser();
-        if (!$subject instanceof Courses || !$user instanceof User) {
+        if ((!$subject instanceof Courses && !$subject instanceof Schedule) || !$user instanceof User) {
             return false;
         }
-        $club = $subject->getClub();
+        $course = $subject instanceof Schedule ? $subject->getCourses() : $subject;
+        $club = $course?->getClub();
         $image = $subject->getMediaImage();
-        if ($club?->getId() === null || $subject->getStatus() !== CourseStatus::OPEN
+        if ($club?->getId() === null || $course === null || $course->getStatus() === CourseStatus::DRAFT
+            || $course->getStatus() === CourseStatus::CANCELLED
             || $user->getMember()?->getClub()?->getId() !== $club->getId()
             || $image === null || !$image->isImage() || $image->getClub()->getId() !== $club->getId()) {
             return false;

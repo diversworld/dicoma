@@ -6,6 +6,9 @@
 <section class="about section">
     <div class="container">
         <h1>Kurstermindetails</h1>
+        {% if club_function_membership_enabled ? is_granted('COURSE_MEDIA_IMAGE_VIEW', schedule) : schedule.image %}
+            <img class="img-fluid rounded mb-3" src="{{ path('app_schedule_image', {id: schedule.id}) }}" alt="{{ club_function_membership_enabled ? schedule.mediaImage.altText : 'Terminbild' }}">
+        {% endif %}
         <p><a href="{{ path('app_schedule_index') }}">Zurück zur Übersicht</a></p>
         <table class="table">
             <tbody>

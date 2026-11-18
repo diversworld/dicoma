@@ -61,7 +61,7 @@ final class CourseImageStorage
     public function store(UploadedFile $file): string
     {
         if ($this->functionModelEnabled) {
-            throw new AccessDeniedException('Kursbild-Uploads sind bis zur vollständigen Ordnerrechte-Umstellung gesperrt.');
+            throw new AccessDeniedException('Kursbild-Uploads über den Altpfad sind deaktiviert. Bitte ein Bild aus der Dateiverwaltung auswählen.');
         }
         $size = $file->getSize();
         if (!$file->isValid() || $size === false || $size < 1 || $size > ImageUploadValidator::MAX_BYTES) {

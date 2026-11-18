@@ -42,7 +42,12 @@
                     <tbody>
                     {% for schedule in schedules %}
                         <tr>
-                            <td><a href="{{ path('app_schedule_show', {'id': schedule.id}) }}">{{ schedule.title }}</a></td>
+                            <td>
+                                <a href="{{ path('app_schedule_show', {'id': schedule.id}) }}">{{ schedule.title }}</a>
+                                {% if club_function_membership_enabled ? is_granted('COURSE_MEDIA_IMAGE_VIEW', schedule) : schedule.image %}
+                                    <img class="img-thumbnail d-block mt-1" src="{{ path('app_schedule_image', {id: schedule.id}) }}" width="120" alt="{{ club_function_membership_enabled ? schedule.mediaImage.altText : 'Terminbild' }}">
+                                {% endif %}
+                            </td>
                             <td>{{ schedule.startDate ? schedule.startDate|date('d.m.Y') : '' }}</td>
                             <td>{{ schedule.startTime ? schedule.startTime|date('H:i') : '' }}</td>
                             <td>{{ schedule.duration }} Tage</td>

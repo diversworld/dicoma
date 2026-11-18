@@ -7,13 +7,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Entity\Schedule;
 use App\Entity\Club;
 use App\Entity\User;
+use App\Security\Voter\CourseMediaImageVoter;
 use App\Form\ScheduleType;
 use App\Repository\ScheduleRepository;
 use App\Service\CourseImageStorage;
+use App\Service\FileManager;
+use App\Service\MediaFileStorage;
+use Psr\Container\ContainerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/schedule')]
@@ -96,6 +103,34 @@ class ScheduleController extends AbstractController
         return $this->render('schedule/show.html.twig', [
             'schedule' => $schedule,
         ]);
+    }
+
+    #[Route('/{id}/image', name: 'app_schedule_image', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[IsGranted('ROLE_MEMBER')]
+    public function image(
+        Schedule $schedule,
+        MediaFileStorage $media,
+        #[AutowireLocator([FileManager::class])] ContainerInterface $fileManagers,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] bool $functionModelEnabled,
+    ): Response {
+        $courseClub = $schedule->getCourses()?->getClub();
+        if ($courseClub?->getId() === null || $courseClub->getId() !== $this->memberClub()->getId()) {
+            throw $this->createNotFoundException('Terminbild nicht verfügbar.');
+        }
+        if ($functionModelEnabled) {
+            if ($schedule->getMediaImage() === null || !$this->isGranted(CourseMediaImageVoter::VIEW, $schedule)) {
+                throw $this->createNotFoundException('Terminbild nicht verfügbar.');
+            }
+            return $media->response($schedule->getMediaImage(), ResponseHeaderBag::DISPOSITION_INLINE);
+        }
+        if ($schedule->getImage() === null) {
+            throw $this->createNotFoundException('Terminbild nicht verfügbar.');
+        }
+        $files = $fileManagers->get(FileManager::class);
+        if (!$files instanceof FileManager) {
+            throw new \LogicException('Der bisherige Kursbildspeicher ist nicht verfügbar.');
+        }
+        return $files->imageResponse($schedule->getImage());
     }
 
     private function memberClub(): Club

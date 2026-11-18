@@ -250,7 +250,7 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $id = $function->getId();
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin/club-functions/'.$id.'/edit');
-        self::assertSelectorTextContains('body', 'Andere Zugriffswege, einschließlich Kursbilder und Veranstaltungen, sind noch nicht vollständig umgestellt');
+        self::assertSelectorNotExists('.alert-warning');
         self::assertSelectorExists('input[name="form[modulePermissions][]"][value="training:read"]');
         $trainingId = $crawler->filter('input[name="form[modulePermissions][]"][value="training:read"]')->attr('id');
         $filesId = $crawler->filter('input[name="form[modulePermissions][]"][value="files:delete"]')->attr('id');
