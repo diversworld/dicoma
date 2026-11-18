@@ -135,9 +135,55 @@ final class ImportCourseImagesCommandTest extends KernelTestCase
         self::assertSame('different', file_get_contents($target));
         self::assertSame(0, $this->em->getRepository(MediaFile::class)->count([]));
         file_put_contents($target, $this->png);
+        chmod($target, 0644);
+        clearstatcache(true, $target);
+        try {
+            $this->tester()->execute(['--confirm' => true]);
+            self::fail('A target that is not private must not be reused.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('nicht privat', $exception->getMessage());
+        }
+        self::assertSame(0, $this->em->getRepository(MediaFile::class)->count([]));
+        chmod($target, 0600);
+        clearstatcache(true, $target);
         self::assertSame(Command::SUCCESS, $this->tester()->execute(['--confirm' => true]));
         self::assertSame($this->png, file_get_contents($target));
         self::assertSame(1, $this->em->getRepository(MediaFile::class)->count([]));
+    }
+
+    public function testRejectsExecutionAsAnotherStorageOwner(): void
+    {
+        if (!function_exists('posix_geteuid') || posix_geteuid() !== 0) {
+            self::markTestSkipped('Changing a directory owner requires root.');
+        }
+        $directory = $this->root.'/files/website_media';
+        self::assertTrue(chown($directory, 65534));
+        clearstatcache(true, $directory);
+        try {
+            $this->tester()->execute(['--dry-run' => true]);
+            self::fail('A different storage owner must block the import.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('Eigentümer des gemeinsamen Dateispeichers', $exception->getMessage());
+        }
+        self::assertSame(0, $this->em->getRepository(MediaFile::class)->count([]));
+
+        self::assertTrue(chown($directory, 0));
+        clearstatcache(true, $directory);
+        $relative = 'orphan.png';
+        file_put_contents($this->root.'/files/kurse/'.$relative, $this->png);
+        $name = substr(hash('sha256', "course-image-import\0".$this->club->getId()."\0".$relative."\0".hash('sha256', $this->png)), 0, 40).'.png';
+        $target = $directory.'/'.$name;
+        file_put_contents($target, $this->png);
+        chmod($target, 0600);
+        self::assertTrue(chown($target, 65534));
+        clearstatcache(true, $target);
+        try {
+            $this->tester()->execute(['--confirm' => true]);
+            self::fail('A target owned by another user must not be reused.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('falschen Eigentümer', $exception->getMessage());
+        }
+        self::assertSame(0, $this->em->getRepository(MediaFile::class)->count([]));
     }
 
     private function tester(): CommandTester

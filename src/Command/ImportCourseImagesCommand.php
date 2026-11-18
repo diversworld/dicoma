@@ -168,6 +168,10 @@ final class ImportCourseImagesCommand extends Command
                 throw new \RuntimeException('Der gemeinsame Dateispeicher ist nicht privat oder nicht schreibbar.');
             }
         }
+        $storageOwner = fileowner($files.'/website_media');
+        if (!function_exists('posix_geteuid') || $storageOwner === false || posix_geteuid() !== $storageOwner) {
+            throw new \RuntimeException('Die Bildübernahme muss als Eigentümer des gemeinsamen Dateispeichers ausgeführt werden; dieser muss auch der Webprozess sein.');
+        }
         foreach (['.course-images-active', '.website-media-active'] as $marker) {
             if (is_link($files.'/'.$marker) || !is_file($files.'/'.$marker)) {
                 throw new \RuntimeException('Die private Dateiablage muss vor der Bildübernahme aktiviert sein.');
@@ -220,8 +224,14 @@ final class ImportCourseImagesCommand extends Command
             throw new \RuntimeException('Ein Zielspeichername wird bereits verwendet.');
         }
         $path = $this->root.'/files/website_media/'.$name;
-        if (is_link($path) || (file_exists($path) && (!is_file($path) || hash_file('sha256', $path) !== $hash))) {
+        if (is_link($path) || (file_exists($path) && (!is_file($path) || !is_readable($path) || hash_file('sha256', $path) !== $hash))) {
             throw new \RuntimeException('Eine Zieldatei existiert mit abweichendem Inhalt oder ist ein symbolischer Link.');
+        }
+        if (is_file($path)) {
+            $permissions = fileperms($path);
+            if (fileowner($path) !== posix_geteuid() || $permissions === false || ($permissions & 0077) !== 0) {
+                throw new \RuntimeException('Eine bereits vorhandene Zieldatei hat einen falschen Eigentümer oder ist nicht privat.');
+            }
         }
     }
 

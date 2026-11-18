@@ -191,9 +191,26 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   aktiviertem Modell eine Auswahl aus der Dateiverwaltung vorbereitet:
   erforderlich sind Ausbildungs-Bearbeitungsrecht sowie Dateimodul- und
   Ordnerleserecht für das bisherige und das gewählte Bild. Schreibzugriffe
-  prüfen die Rechte nach Erwerb der Vereinssperre erneut. Die Übernahme des
-  bisherigen Bildbestands und weitere Kursbildzugriffe fehlen weiterhin; das
-  Modell bleibt deaktiviert.
+  prüfen die Rechte nach Erwerb der Vereinssperre erneut. Der Bildimport ist
+  vorbereitet und isoliert erprobt, aber noch nicht auf der Anwendungsdatenbank
+  ausgeführt. Weitere Kursbildzugriffe und Modulrechte fehlen; das Modell
+  bleibt deaktiviert.
+- `app:files:import-course-images --dry-run` prüft den bisherigen Bestand
+  und seine Referenzen ohne Änderungen. `--confirm` übernimmt nach Backup,
+  Restore-Nachweis und durchgehender Schreibpause alle Bilder und Ordner in
+  die Dateiverwaltung; alte Dateien und Pfade bleiben erhalten. PHP benötigt
+  die POSIX-Erweiterung. Der Befehl muss als Eigentümer des privaten
+  Mediendateiordners ausgeführt werden; vorab ist sicherzustellen, dass dies
+  zugleich der Webprozess ist. Vorhandene Zieldateien werden nur bei gleichem
+  Inhalt, korrektem Eigentümer und privaten Rechten wiederverwendet.
+  Bei einem Abbruch können nicht zugeordnete Dateien verbleiben; deren
+  Eigentümer, Rechte und Inhalt müssen für einen erneuten Versuch stimmen.
+  Der Zielordner und seine Zugriffsrechte sind vor Aktivierung zu prüfen.
+- Ein isolierter MariaDB-Import mit dem lokalen Webbenutzer übernahm 20
+  Bilder und zwei Kursreferenzen. Sämtliche Dateien waren bytegleich, für den
+  Webbenutzer lesbar und hatten Modus `0600`; beide Referenzen stimmten.
+  Ein Versuch als anderer Eigentümer wurde abgewiesen. Dieser Nachweis ersetzt
+  weder eine aktuelle Sicherung noch die produktive Übernahme oder Freigabe.
 - Die Migration `Version20261115130000` überträgt bisherige Hauptordnerrechte
   auf vorhandene Ordner der ersten Ebene und erhält dortige explizite
   Entscheidungen. Eigene Regeln tieferer Ordner blockieren die Migration:
