@@ -22,7 +22,7 @@
 </form>
 </div>
 {% endif %}
-<div class="panel"><form method="post">
+<div class="panel dw-form-card"><form class="dw-form" method="post">
 <input type="hidden" name="_token" value="{{ csrf_token('training_batch_' ~ schedule.id) }}">
 <table><thead><tr><th>Kursteilnehmer</th><th>Anwesenheit</th><th>Bewertung</th><th>Nachweis</th></tr></thead><tbody>
 {% for participant in attendees %}

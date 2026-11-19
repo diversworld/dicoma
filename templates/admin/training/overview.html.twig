@@ -1,11 +1,27 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}Ausbildungsleitung – Übersicht{% endblock %}
 {% block main %}
+<div class="d-flex justify-content-end mb-3">
+  <a class="btn btn-outline-primary" href="{{ path('member_message_new') }}">Kommunikation</a>
+</div>
 <div class="row mb-3">
   <div class="col-md-4"><div class="card p-3"><strong>{{ total }}</strong> Kurse insgesamt</div></div>
   <div class="col-md-4"><div class="card p-3"><strong>{{ active }}</strong> Kurse mit kommenden Terminen</div></div>
   <div class="col-md-4"><div class="card p-3"><strong>{{ instructors|length }}</strong> eingesetzte Ausbilder</div></div>
 </div>
+{% if approvalQueue %}
+<div class="alert alert-warning" role="status">
+  <h2 class="h5">Terminpläne zur Freigabe</h2>
+  <ul class="mb-0">{% for item in approvalQueue %}
+    <li><a href="{{ path('admin_training_timetable', {id: item.id}) }}">{{ item.title }}</a> – {{ item.appointments }} datierte Termine, noch nicht freigegeben</li>
+  {% endfor %}</ul>
+</div>
+{% endif %}
+<h2 class="h5 mt-4">Prüfungen und Ergebnisse</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Datum</th><th>Kurs</th><th>Prüfung</th><th>Ergebnisse</th><th>Aktion</th></tr></thead><tbody>
+{% for exam in exams %}<tr><td>{{ exam.date }}</td><td>{{ exam.course }}</td><td>{{ exam.title }}</td><td>{{ exam.results }} / {{ exam.participants }}</td><td><a href="{{ path('admin_portal_training_assess', {id: exam.id}) }}">Ergebnisse erfassen</a></td></tr>
+{% else %}<tr><td colspan="5">Keine kommenden Prüfungstermine.</td></tr>{% endfor %}
+</tbody></table></div>
 <h2 class="h5">Kursstatus</h2>
 <table class="table"><thead><tr><th>Status</th><th>Kurse</th></tr></thead><tbody>
 {% for status, count in statuses %}<tr><td>{{ status }}</td><td>{{ count }}</td></tr>{% endfor %}
@@ -20,5 +36,11 @@
 {% for person in instructors %}<tr><td>{{ person.name }}</td><td>{{ person.appointments }}</td><td>{{ person.hours|number_format(1, ',', '.') }} h</td></tr>
 {% else %}<tr><td colspan="3">Keine Ausbilderzuweisungen vorhanden.</td></tr>{% endfor %}
 </tbody></table>
+{% if qualificationAlerts %}
+<h2 class="h5 mt-4">Qualifikationen mit Prüfbedarf</h2>
+<table class="table"><thead><tr><th>Teilnehmer</th><th>Qualifikation</th><th>Gültig bis</th><th>Status</th></tr></thead><tbody>
+{% for alert in qualificationAlerts %}<tr><td>{{ alert.participant }}</td><td>{{ alert.qualification }}</td><td>{{ alert.validUntil ?? 'unbefristet' }}</td><td>{{ alert.expired ? 'Abgelaufen' : 'Läuft innerhalb von 90 Tagen ab' }}</td></tr>{% endfor %}
+</tbody></table>
+{% endif %}
 <p class="text-muted small">Die Auslastung zählt alle erfassten Termine. Zeitüberschneidungen werden hier noch nicht geprüft.</p>
 {% endblock %}

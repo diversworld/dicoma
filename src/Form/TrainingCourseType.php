@@ -28,7 +28,15 @@ final class TrainingCourseType extends AbstractType
     {
         $club = $options['club'];
         $builder
-            ->add('title', TextType::class, ['label' => 'Kursname', 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 255)]])
+            ->add('title', TextType::class, [
+                'label' => 'Kursname',
+                'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 255)],
+                'setter' => static function (Courses $course, ?string $title): void {
+                    if ($title !== null) {
+                        $course->setTitle($title);
+                    }
+                },
+            ])
             ->add('category', ChoiceType::class, ['label' => 'Kursart', 'choices' => [
                 'Beginner' => 'beginner', 'Aufbaukurse' => 'aufbau', 'Sonderkurse' => 'sonder',
                 'Mischgas-Kurse' => 'mischgas', 'Technische Kurse' => 'technisch',

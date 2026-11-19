@@ -4,11 +4,11 @@
 <p>Die Termine werden beim ersten Kurstermin mit den Schülern vereinbart und danach freigegeben.</p>
 <p><strong>Freigabe:</strong> {{ course.schedulePublishedAt ? course.schedulePublishedAt|date('d.m.Y H:i') : 'noch nicht freigegeben' }}</p>
 <div class="d-flex gap-2 mb-3">
-<form method="post" action="{{ path('admin_training_timetable_publish',{id:course.id}) }}">
+<form class="dw-form d-inline-block" method="post" action="{{ path('admin_training_timetable_publish',{id:course.id}) }}">
 <input type="hidden" name="_token" value="{{ csrf_token('publish_timetable_' ~ course.id) }}">
 <button class="btn btn-primary" {% if appointments is empty %}disabled{% endif %}>Terminplan freigeben / aktualisieren</button>
 </form>
-<form method="post" action="{{ path('admin_training_timetable_send',{id:course.id}) }}" onsubmit="return confirm('Aktuellen Terminplan per E-Mail an alle angemeldeten Teilnehmer senden?')">
+<form class="dw-form d-inline-block" method="post" action="{{ path('admin_training_timetable_send',{id:course.id}) }}" onsubmit="return confirm('Aktuellen Terminplan per E-Mail an alle angemeldeten Teilnehmer senden?')">
 <input type="hidden" name="_token" value="{{ csrf_token('send_timetable_' ~ course.id) }}">
 <button class="btn btn-outline-primary" {% if not course.schedulePublishedAt %}disabled{% endif %}>Terminplan per E-Mail senden</button>
 </form>

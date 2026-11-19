@@ -1,4 +1,6 @@
 twig:
+    form_themes:
+        - 'bootstrap_5_layout.html.twig'
     globals:
         site_theme: '@App\Service\SiteTheme'
         portal_navigation: '@App\Service\PortalNavigation'

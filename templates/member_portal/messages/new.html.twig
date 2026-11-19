@@ -7,7 +7,7 @@
         <h1>Nachricht schreiben</h1>
         <a class="btn btn-outline-secondary" href="{{ path('member_messages') }}">Zum Posteingang</a>
     </div>
-    {{ form_start(form) }}
+    {{ form_start(form, {attr: {class: 'dw-form dw-form-card', novalidate: 'novalidate'}}) }}
         {{ form_errors(form) }}
         {{ form_row(form.audience) }}
         {{ form_row(form.recipient) }}
@@ -15,7 +15,7 @@
         {{ form_row(form.role) }}
         {{ form_row(form.subject) }}
         {{ form_row(form.body) }}
-        {{ form_row(form.send) }}
+        <div class="dw-form-actions">{{ form_row(form.send) }}</div>
     {{ form_end(form) }}
 </main>
 {% endblock %}

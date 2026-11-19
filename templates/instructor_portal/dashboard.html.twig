@@ -1,6 +1,7 @@
 {% extends 'instructor_portal/layout.html.twig' %}
 {% block instructor_body %}
 <h1>Mein Ausbilder-Dashboard</h1><p>Deine zugewiesenen Ausbildungstermine und offenen Aufgaben.</p>
+<p><a class="btn btn-outline-primary" href="{{ path('member_message_new') }}">Teilnehmer oder Rollen anschreiben</a></p>
 <div class="row">
 {% for title, number in {'Anstehende Termine':totals.upcoming,'Offene Anwesenheiten':totals.attendance,'Offene Bewertungen':totals.assessments,'Nachholbedarf':totals.makeup} %}
 <div class="col-md-3"><div class="ip-card"><h2>{{ number }}</h2><p>{{ title }}</p></div></div>{% endfor %}

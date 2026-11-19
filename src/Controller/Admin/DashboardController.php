@@ -267,7 +267,8 @@ class DashboardController extends AbstractDashboardController
            ->addCssFile('css/admin-theme.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
-            ->addCssFile('css/utilities.css');
+            ->addCssFile('css/utilities.css')
+            ->addCssFile('css/forms.css');
 	}
 
     #[AdminRoute(path: '/editorial', name: 'website_editorial', options: ['methods' => ['GET']])]
@@ -600,6 +601,9 @@ class DashboardController extends AbstractDashboardController
         $rows = [];
         $statuses = [];
         $instructorLoad = [];
+        $approvalQueue = [];
+        $exams = [];
+        $qualificationAlerts = [];
         $now = new \DateTimeImmutable('today');
         $active = 0;
         
@@ -614,6 +618,17 @@ class DashboardController extends AbstractDashboardController
         
                 if ($appointment->getStartDate() && $appointment->getStartDate()->format('Y-m-d') >= $now->format('Y-m-d')) {
                     ++$appointments;
+                    if ($appointment->getTrainingUnitType()?->isExamination()) {
+                        $results = $em->getRepository(\App\Entity\TrainingUnitResult::class)->findBy(['schedule' => $appointment]);
+                        $exams[] = [
+                            'id' => $appointment->getId(),
+                            'course' => (string) $course,
+                            'title' => (string) $appointment,
+                            'date' => $appointment->getStartDate()->format('d.m.Y'),
+                            'results' => count($results),
+                            'participants' => $participants,
+                        ];
+                    }
                 }
             
                 $instructor = $appointment->getInstructor();
@@ -632,6 +647,26 @@ class DashboardController extends AbstractDashboardController
             }
 
             if ($appointments > 0) ++$active;
+            if ($appointments > 0 && $course->getSchedulePublishedAt() === null) {
+                $approvalQueue[] = ['id' => $course->getId(), 'title' => (string) $course, 'appointments' => $appointments];
+            }
+            foreach ($course->getParticipants() as $participant) {
+                $member = $participant->getMember();
+                if ($member === null) {
+                    continue;
+                }
+                $qualifications = $em->getRepository(\App\Entity\MemberQualification::class)->findBy(['member' => $member]);
+                foreach ($qualifications as $qualification) {
+                    if ($qualification->isExpired() || $qualification->expiresWithinDays(90)) {
+                        $qualificationAlerts[$participant->getId().':'.$qualification->getId()] = [
+                            'participant' => $participant->getFullName(),
+                            'qualification' => (string) $qualification->getQualification(),
+                            'validUntil' => $qualification->getValidUntil()?->format('d.m.Y'),
+                            'expired' => $qualification->isExpired(),
+                        ];
+                    }
+                }
+            }
             
             $rows[] = ['id' => $course->getId(), 'title' => (string) $course,
                 'status' => $status, 'participants' => $participants,
@@ -641,11 +676,15 @@ class DashboardController extends AbstractDashboardController
 
         usort($rows, static fn (array $a, array $b): int => $b['upcoming'] <=> $a['upcoming']);
         uasort($instructorLoad, static fn (array $a, array $b): int => $b['hours'] <=> $a['hours']);
+        usort($exams, static fn (array $first, array $second): int => strcmp($first['date'], $second['date']));
         
         return $this->render('admin/training/overview.html.twig', [
             'courses' => $rows, 'statuses' => $statuses,
             'instructors' => $instructorLoad, 'active' => $active,
             'total' => count($rows),
+            'approvalQueue' => $approvalQueue,
+            'exams' => $exams,
+            'qualificationAlerts' => array_values($qualificationAlerts),
         ]);
     }
 
@@ -791,31 +830,37 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(ClubCrudController::class, 'Vereinsdaten', 'fa fa-building')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Vereinsfunktionen verwalten', 'fa fa-user-shield', 'admin_club_functions')
-                        ->setPermission('ROLE_ADMIN'),
+                        ->setPermission('ROLE_SUPER_ADMIN'),
 //                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')
 //                        ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
                         ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership'),
-                    MenuItem::linkToRoute('Beitragsklassen', 'fa fa-coins', 'admin_settings_contributions'),
-                    MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
-                    MenuItem::linkToRoute('Sportkonfiguration', 'fa fa-futbol', 'admin_settings_sports_configuration'),
+                    MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
+                    MenuItem::linkToRoute('Beitragsklassen', 'fa fa-coins', 'admin_settings_contributions')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
+                    MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
+                    MenuItem::linkToRoute('Sportkonfiguration', 'fa fa-futbol', 'admin_settings_sports_configuration')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('TÜV-Benachrichtigungen', 'fa fa-bell', 'admin_settings_tuv_notifications')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     ...($this->clubContext->getClub() !== null
                         && ($websiteSettings || (!$this->functionModelEnabled && $this->isGranted('ROLE_SUPER_ADMIN')))
-                        ? [MenuItem::linkToRoute('Website', 'fa fa-globe', 'admin_settings_website')] : []),
+                        ? [MenuItem::linkToRoute('Website', 'fa fa-globe', 'admin_settings_website')
+                            ->setPermission('ROLE_SUPER_ADMIN')] : []),
                     ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
-                        ? [MenuItem::linkToRoute('Thekendienst', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
+                        ? [MenuItem::linkToRoute('Thekendienst', 'fa fa-mug-hot', 'admin_settings_bar_services')
+                            ->setPermission('ROLE_SUPER_ADMIN')] : []),
                     MenuItem::linkToRoute('TÜV-Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview')
                         ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkToRoute('Kurs-Spartenzuordnungen prüfen', 'fa fa-list-check', 'admin_course_division_review'),
-                    MenuItem::linkTo(MemberCrudController::class, 'Mitglieder ohne Vereinszuordnung prüfen', 'fa fa-user-check')
-                        ->setQueryParameter('unassigned', '1')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkTo(CoursesCrudController::class, 'Kurse ohne Vereinszuordnung prüfen', 'fa fa-book-open')
-                        ->setQueryParameter('unassigned', '1')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+//                    MenuItem::linkToRoute('Kurs-Spartenzuordnungen prüfen', 'fa fa-list-check', 'admin_course_division_review'),
+//                    MenuItem::linkTo(MemberCrudController::class, 'Mitglieder ohne Vereinszuordnung prüfen', 'fa fa-user-check')
+//                        ->setQueryParameter('unassigned', '1')
+//                        ->setPermission('ROLE_SUPER_ADMIN'),
+//                    MenuItem::linkTo(CoursesCrudController::class, 'Kurse ohne Vereinszuordnung prüfen', 'fa fa-book-open')
+//                        ->setQueryParameter('unassigned', '1')
+//                        ->setPermission('ROLE_SUPER_ADMIN'),
                 ]),
         ];
     }
