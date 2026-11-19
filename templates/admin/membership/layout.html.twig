@@ -5,7 +5,7 @@
 {% block main %}
 <div data-membership-area="backend">
     <nav class="mb-3" aria-label="Mitgliederverwaltung">
-        <a class="btn btn-outline-secondary" href="{{ path('membership_admin') }}">Vereine und Beitragskonfiguration</a>
+        <a class="btn btn-outline-secondary" href="{{ ea_url().unsetAll().setController('App\\Controller\\Admin\\MemberCrudController').setAction('index') }}">Mitgliederzentrale</a>
     </nav>
     {% if form is defined %}{% form_theme form 'bootstrap_5_layout.html.twig' %}{% endif %}
     {% if policyForm is defined %}{% form_theme policyForm 'bootstrap_5_layout.html.twig' %}{% endif %}

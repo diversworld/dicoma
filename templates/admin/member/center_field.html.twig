@@ -32,11 +32,13 @@
             'Qualifikationen': memberCenterQualifications|length,
             'Kursanmeldungen': memberCenterCourses|length,
             'Gruppen': memberCenterTeams|length,
-            'Dokumente': memberCenterDocuments|length
+            'Dokumente': memberCenterDocuments|length,
+            'Forderungen': memberCenterCharges|length,
+            'Vorgänge': memberCenterEvents|length
         } %}
 
         {% for label, count in statistics %}
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-2">
                 <div class="card h-100">
                     <div class="card-body">
                         <strong class="fs-4">{{ count }}</strong>
@@ -68,6 +70,122 @@
                     {{ member.email|default('—') }}
                 </dd>
             </dl>
+        </div>
+    </section>
+
+    <section class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <h3 class="h5 mb-0">Mitgliedschaft und Beitrag</h3>
+                {% if memberCenterLinks.memberEdit is defined %}
+                    <a href="{{ memberCenterLinks.memberEdit }}" class="btn btn-primary btn-sm">
+                        Beitragsart und Stammdaten bearbeiten
+                    </a>
+                {% endif %}
+            </div>
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Eintritt / Austritt</dt>
+                <dd class="col-sm-9">{{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }} / {{ member.leftAt ? member.leftAt|date('d.m.Y') : '—' }}</dd>
+                <dt class="col-sm-3">Kündigung</dt>
+                <dd class="col-sm-9">{{ member.terminationDate ? member.terminationDate|date('d.m.Y') : 'Nicht erfasst' }}</dd>
+                <dt class="col-sm-3">Beitragsklasse</dt>
+                <dd class="col-sm-9">{{ member.contributionClass.name|default('Keine eigene Beitragsklasse') }}</dd>
+                <dt class="col-sm-3">Familienzahler</dt>
+                <dd class="col-sm-9">{{ member.familyPayer.fullName|default('—') }}</dd>
+                <dt class="col-sm-3">Jährliche Ermäßigung</dt>
+                <dd class="col-sm-9">{{ (member.contributionDiscountCents / 100)|number_format(2, ',', '.') }} EUR{% if member.contributionDiscountReason %} · {{ member.contributionDiscountReason }}{% endif %}</dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="card mb-3">
+        <div class="card-body">
+            <h3 class="h5">Forderungen und Zahlungen</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Forderung</th><th>Fällig</th><th>Betrag</th><th>Offen</th><th>Aktion</th></tr></thead>
+                    <tbody>
+                    {% for charge in memberCenterCharges %}
+                        <tr>
+                            <td>{{ charge.invoiceNumber ? charge.invoiceNumber ~ ' · ' : '' }}{{ charge.description }}</td>
+                            <td>{{ charge.dueAt|date('d.m.Y') }}</td>
+                            <td>{{ (charge.amountCents / 100)|number_format(2, ',', '.') }} EUR</td>
+                            <td>{{ (charge.outstandingCents / 100)|number_format(2, ',', '.') }} EUR</td>
+                            <td><a class="btn btn-outline-primary btn-sm" href="{{ path('membership_payment', {id: charge.id}) }}">Zahlung erfassen</a></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">Keine Forderungen vorhanden.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {% if memberCenterForms is not empty %}
+    <section class="card mb-3">
+        <div class="card-body">
+            <h3 class="h5">Mitgliedschaftliche Vorgänge</h3>
+            <div class="row g-3">
+                <div class="col-xl-4">
+                    {% if member.terminationDate %}
+                        <div class="alert alert-warning mb-0">Kündigung zum {{ member.terminationDate|date('d.m.Y') }} erfasst.</div>
+                    {% elseif not member.leftAt and not member.archivedAt %}
+                        {{ form_start(memberCenterForms.termination, {action: path('membership_member', {id: member.id})}) }}
+                        {{ form_widget(memberCenterForms.termination) }}
+                        <button class="btn btn-outline-warning" type="submit">Mitgliedschaft kündigen</button>
+                        {{ form_end(memberCenterForms.termination) }}
+                    {% endif %}
+                </div>
+                <div class="col-xl-4">
+                    {{ form_start(memberCenterForms.status, {action: path('membership_member', {id: member.id})}) }}
+                    {{ form_widget(memberCenterForms.status) }}
+                    <button class="btn btn-primary mt-2" type="submit">Status ändern</button>
+                    {{ form_end(memberCenterForms.status) }}
+                </div>
+                <div class="col-xl-4">
+                    {% if member.terminationDate or member.leftAt %}
+                        {{ form_start(memberCenterForms.archive, {action: path('membership_member', {id: member.id})}) }}
+                        {{ form_widget(memberCenterForms.archive) }}
+                        <button class="btn btn-outline-danger" type="submit">Mitgliedschaft archivieren</button>
+                        {{ form_end(memberCenterForms.archive) }}
+                    {% endif %}
+                </div>
+            </div>
+            <hr>
+            <div class="row g-3">
+                <div class="col-xl-6">
+                    <h4 class="h6">Jahresbeitrag erfassen</h4>
+                    {{ form_start(memberCenterForms.annual, {action: path('membership_member', {id: member.id})}) }}
+                    {{ form_widget(memberCenterForms.annual) }}
+                    <button class="btn btn-primary mt-2" type="submit">Jahresbeitrag erfassen</button>
+                    {{ form_end(memberCenterForms.annual) }}
+                </div>
+                <div class="col-xl-6">
+                    <h4 class="h6">Sonderbeitrag erfassen</h4>
+                    {{ form_start(memberCenterForms.special, {action: path('membership_member', {id: member.id})}) }}
+                    {{ form_widget(memberCenterForms.special) }}
+                    <button class="btn btn-primary mt-2" type="submit">Sonderbeitrag erfassen</button>
+                    {{ form_end(memberCenterForms.special) }}
+                </div>
+            </div>
+            {% if memberCenterLinks.membershipActions is defined %}
+                <p class="mt-3 mb-0"><a href="{{ memberCenterLinks.membershipActions }}?view=actions">SEPA-Mandate und erweiterte Finanzvorgänge</a></p>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="card mb-3">
+        <div class="card-body">
+            <h3 class="h5">Vorgangshistorie</h3>
+            <ul class="mb-0">
+                {% for event in memberCenterEvents %}
+                    <li>{{ event.occurredAt|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.description }}</li>
+                {% else %}
+                    <li>Keine Vorgänge vorhanden.</li>
+                {% endfor %}
+            </ul>
         </div>
     </section>
 

@@ -18,6 +18,10 @@ use App\Entity\MemberDocument;
 use App\Entity\MemberQualification;
 use App\Entity\CourseParticipant;
 use App\Entity\TeamMember;
+use App\Entity\ContributionClass;
+use App\Entity\MembershipCharge;
+use App\Entity\MembershipEvent;
+use App\Service\MembershipFinanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
@@ -37,23 +41,42 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Form\Extension\Core\Type as F;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 use App\Form\MemberQualificationType;
 
 #[IsGranted('ROLE_ADMIN')]
 class MemberCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UrlGeneratorInterface $router, private readonly AdminUrlGenerator $adminUrlGenerator, private readonly \App\Service\MembershipService $memberships, private readonly AdminClubContext $clubContext, private readonly MembershipRoleContinuity $continuity, #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled) {}
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly UrlGeneratorInterface $router,
+        private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly \App\Service\MembershipService $memberships,
+        private readonly AdminClubContext $clubContext,
+        private readonly MembershipRoleContinuity $continuity,
+        private readonly MembershipFinanceService $finance,
+        private readonly FormFactoryInterface $forms,
+        #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
+    ) {}
 
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        $qb->leftJoin('entity.person', 'memberPerson')->addSelect('memberPerson');
+        if ($searchDto->getSort() === []) {
+            $qb->orderBy('memberPerson.lastname', 'ASC')->addOrderBy('memberPerson.firstname', 'ASC');
+        }
         if ($this->getContext()?->getRequest()->query->get('unassigned') === '1' && $this->isGranted('ROLE_SUPER_ADMIN')) {
             return $qb->andWhere('entity.club IS NULL');
         }
@@ -141,6 +164,19 @@ class MemberCrudController extends AbstractCrudController
                 $this->continuity->lockClub($entityInstance->getClub());
                 $this->assertAccountAssignment($entityManager, $entityInstance, null);
                 $entityManager->persist($entityInstance);
+                if ($entityInstance->getContributionClass() !== null
+                    || $entityInstance->getFamilyPayer() !== null
+                    || $entityInstance->getContributionDiscountCents() !== 0
+                    || $entityInstance->getContributionDiscountReason() !== null) {
+                    $this->finance->assign(
+                        $entityInstance,
+                        $entityInstance->getContributionClass(),
+                        $entityInstance->getFamilyPayer(),
+                        $entityInstance->getContributionDiscountCents(),
+                        $entityInstance->getContributionDiscountReason(),
+                        $this->getUser()->getUserIdentifier(),
+                    );
+                }
                 $this->memberships->record($entityInstance, 'created', $this->getUser()->getUserIdentifier(), 'Mitgliedschaft durch die Verwaltung angelegt.');
                 parent::persistEntity($entityManager, $entityInstance);
             });
@@ -161,6 +197,20 @@ class MemberCrudController extends AbstractCrudController
                 if ($stored === false) { throw new ConflictHttpException('Mitgliedschaft nicht mehr vorhanden.'); }
                 $this->assertMemberAccess($entityInstance);
                 $this->assertAccountAssignment($entityManager, $entityInstance, $stored['user_id'] === null ? null : (int) $stored['user_id']);
+                $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+                if (($original['contributionClass'] ?? null) !== $entityInstance->getContributionClass()
+                    || ($original['familyPayer'] ?? null) !== $entityInstance->getFamilyPayer()
+                    || ($original['contributionDiscountCents'] ?? 0) !== $entityInstance->getContributionDiscountCents()
+                    || ($original['contributionDiscountReason'] ?? null) !== $entityInstance->getContributionDiscountReason()) {
+                    $this->finance->assign(
+                        $entityInstance,
+                        $entityInstance->getContributionClass(),
+                        $entityInstance->getFamilyPayer(),
+                        $entityInstance->getContributionDiscountCents(),
+                        $entityInstance->getContributionDiscountReason(),
+                        $this->getUser()->getUserIdentifier(),
+                    );
+                }
                 $this->memberships->record($entityInstance, 'administrative_update', $this->getUser()->getUserIdentifier(), 'Verwaltungspflichtige Mitglieds- oder Stammdaten geändert.');
                 parent::updateEntity($entityManager, $entityInstance);
             });
@@ -227,6 +277,12 @@ class MemberCrudController extends AbstractCrudController
         $responseParameters->set('memberCenterCourses', $em->getRepository(CourseParticipant::class)->findBy(['member' => $member], ['id' => 'DESC']));
         $responseParameters->set('memberCenterTeams', $em->getRepository(TeamMember::class)->findBy(['member' => $member], ['id' => 'DESC']));
         $responseParameters->set('memberCenterDocuments', $em->getRepository(MemberDocument::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        $responseParameters->set('memberCenterCharges', $em->getRepository(MembershipCharge::class)->findBy(['member' => $member], ['id' => 'DESC']));
+        $responseParameters->set('memberCenterEvents', $em->getRepository(MembershipEvent::class)->findBy(['member' => $member], ['id' => 'DESC'], 20));
+        $responseParameters->set('memberCenterForms', array_map(
+            static fn (FormInterface $form) => $form->createView(),
+            $this->memberActionForms($member),
+        ));
         // Die URLs werden serverseitig von EasyAdmin erzeugt. Keine CRUD-Parameter
         // im Twig-Template zusammenbauen (insbesondere bei lokalisierten Dashboards).
         $url = fn (string $controller, string $action, ?int $id = null): string =>
@@ -238,11 +294,60 @@ class MemberCrudController extends AbstractCrudController
             'coursesIndex' => $url(CourseParticipantCrudController::class, Crud::PAGE_INDEX),
             'teamsNew' => $this->memberPrefillUrl(TeamMemberCrudController::class, $member->getId()),
             'teamsIndex' => $url(TeamMemberCrudController::class, Crud::PAGE_INDEX),
+            'membershipActions' => $this->router->generate('membership_member', ['id' => $member->getId()]),
         ]);
         $responseParameters->set('memberCenterQualificationEditUrls', $this->editLinks(MemberQualificationCrudController::class, $responseParameters->get('memberCenterQualifications')));
         $responseParameters->set('memberCenterCourseEditUrls', $this->editLinks(CourseParticipantCrudController::class, $responseParameters->get('memberCenterCourses')));
         $responseParameters->set('memberCenterTeamEditUrls', $this->editLinks(TeamMemberCrudController::class, $responseParameters->get('memberCenterTeams')));
         return $responseParameters;
+    }
+
+    private function memberActionForms(Member $member): array
+    {
+        return [
+            'termination' => $this->forms->createNamedBuilder('membership_termination')->getForm(),
+            'status' => $this->forms->createNamedBuilder('membership_status', F\FormType::class, [
+                    'status' => $member->getMembershipStatus(),
+                ])
+                ->add('status', F\ChoiceType::class, [
+                    'label' => 'Mitgliedschaftsstatus',
+                    'choices' => array_filter(MembershipStatus::choices(), static fn ($status) => $status !== MembershipStatus::FORMER),
+                ])
+                ->getForm(),
+            'annual' => $this->forms->createNamedBuilder('annual_charge', F\FormType::class, [
+                    'year' => (int) date('Y'),
+                    'due' => new \DateTimeImmutable('today'),
+                ])
+                ->add('year', F\IntegerType::class, [
+                    'label' => 'Beitragsjahr',
+                    'constraints' => [new Assert\Range(min: 2000, max: 2200)],
+                ])
+                ->add('due', F\DateType::class, [
+                    'label' => 'Fälligkeit',
+                    'widget' => 'single_text',
+                    'input' => 'datetime_immutable',
+                ])
+                ->getForm(),
+            'special' => $this->forms->createNamedBuilder('special_charge')
+                ->add('description', F\TextType::class, [
+                    'label' => 'Bezeichnung',
+                    'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 180)],
+                ])
+                ->add('amount', F\MoneyType::class, [
+                    'label' => 'Sonderbeitrag',
+                    'currency' => 'EUR',
+                    'divisor' => 100,
+                    'input' => 'integer',
+                    'constraints' => [new Assert\Range(min: 1, max: 100000000)],
+                ])
+                ->add('due', F\DateType::class, [
+                    'label' => 'Fälligkeit',
+                    'widget' => 'single_text',
+                    'input' => 'datetime_immutable',
+                ])
+                ->getForm(),
+            'archive' => $this->forms->createNamedBuilder('membership_archive')->getForm(),
+        ];
     }
 
     private function adminLink(string $controller, string $action, ?int $id = null): string
@@ -328,10 +433,6 @@ class MemberCrudController extends AbstractCrudController
 			->setPageTitle(Crud::PAGE_NEW, 'Mitglied anlegen')
 			->setPageTitle(Crud::PAGE_EDIT, 'Mitglied bearbeiten')
 			->setPageTitle(Crud::PAGE_DETAIL, 'Mitglied')
-			->setDefaultSort([
-				'person.lastname' => 'ASC',
-				'person.firstname' => 'ASC',
-			])
 			->setSearchFields([
 				'memberNumber',
 				'person.firstname',
@@ -411,22 +512,37 @@ class MemberCrudController extends AbstractCrudController
             ->setColumns(3)
             ->onlyOnDetail();
 
-        /*
-        yield AssociationField::new('membershipType','Mitgliedschaftsart')
-            ->setRequired(false)
-            ->setColumns(4)
-            ->setHelp(
-                'Art des Mitgliedsbeitrags, der für dieses Mitglied gilt.'
-            );
-        */
-
-        yield TextField::new('membershipType', 'Mitgliedschaftsart')
-            ->setColumns(3)
-            ->hideOnIndex();
-            
         yield TextField::new('clubFunctions', 'Vereinsfunktionen (keine Berechtigungsvergabe)')
             ->setColumns(3)
             ->hideOnIndex();
+
+        if ($pageName === Crud::PAGE_NEW || $pageName === Crud::PAGE_EDIT) {
+            yield FormField::addFieldset('Beiträge und Abrechnung')->collapsible();
+
+            yield AssociationField::new('contributionClass', 'Beitragsklasse')
+                ->setFormTypeOption('choices', $this->contributionChoices())
+                ->setRequired(false)
+                ->setColumns(4)
+                ->setHelp('Direkte Beitragszuordnung des Mitglieds; Familienmitglieder bleiben hier ohne eigene Klasse.')
+                ->onlyOnForms();
+
+            yield AssociationField::new('familyPayer', 'Familienzahler')
+                ->setFormTypeOption('choices', $this->memberChoices())
+                ->setRequired(false)
+                ->setColumns(4)
+                ->setHelp('Nur für ein Familienmitglied ohne eigene Beitragsklasse und Ermäßigung.')
+                ->onlyOnForms();
+
+            yield MoneyField::new('contributionDiscountCents', 'Jährliche Ermäßigung')
+                ->setStoredAsCents()
+                ->setCurrency('EUR')
+                ->setColumns(2)
+                ->onlyOnForms();
+
+            yield TextareaField::new('contributionDiscountReason', 'Ermäßigungsgrund')
+                ->setColumns(6)
+                ->onlyOnForms();
+        }
 
         /*
          * Person
@@ -583,5 +699,42 @@ class MemberCrudController extends AbstractCrudController
 
         yield BooleanField::new('published', 'Veröffentlicht')
             ->setColumns(2);
+    }
+
+    private function memberChoices(): array
+    {
+        $club = $this->clubContext->getClub();
+        if ($club === null) {
+            return [];
+        }
+
+        return $this->entityManager->getRepository(Member::class)->createQueryBuilder('m')
+            ->join('m.person', 'p')
+            ->where('m.club = :club')
+            ->andWhere('m.archivedAt IS NULL')
+            ->setParameter('club', $club)
+            ->orderBy('p.lastname', 'ASC')
+            ->addOrderBy('p.firstname', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    private function contributionChoices(): array
+    {
+        $club = $this->clubContext->getClub();
+        if ($club === null) {
+            return [];
+        }
+
+        $currentId = $this->getContext()?->getEntity()?->getInstance()?->getContributionClass()?->getId();
+        $query = $this->entityManager->getRepository(ContributionClass::class)->createQueryBuilder('contribution')
+            ->where('contribution.club = :club')
+            ->andWhere('contribution.active = :active OR contribution.id = :currentId')
+            ->setParameter('club', $club)
+            ->setParameter('active', true)
+            ->setParameter('currentId', $currentId ?? 0)
+            ->orderBy('contribution.name', 'ASC');
+
+        return $query->getQuery()->getResult();
     }
 }

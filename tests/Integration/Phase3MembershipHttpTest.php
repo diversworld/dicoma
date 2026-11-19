@@ -728,7 +728,32 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $this->client->loginUser($admin);
         $crawler = $this->client->request('GET', '/admin');
         self::assertResponseIsSuccessful();
-        $crawler = $this->client->click($crawler->selectLink('Mitgliedschaften und Beiträge')->link());
+        $crawler = $this->client->click($crawler->selectLink('Mitgliederzentrale')->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        $detailUrl = (clone static::getContainer()->get(\EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator::class))
+            ->unsetAll()
+            ->setController(\App\Controller\Admin\MemberCrudController::class)
+            ->setAction('detail')
+            ->setEntityId($admin->getMember()->getId())
+            ->generateUrl();
+        $crawler = $this->client->request('GET', $detailUrl);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('form[name="membership_status"]');
+        self::assertSelectorExists('form[name="annual_charge"]');
+        self::assertSelectorTextContains('body', 'Mitgliedschaft und Beitrag');
+        $editUrl = (clone static::getContainer()->get(\EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator::class))
+            ->unsetAll()
+            ->setController(\App\Controller\Admin\MemberCrudController::class)
+            ->setAction('edit')
+            ->setEntityId($admin->getMember()->getId())
+            ->generateUrl();
+        $this->client->request('GET', $editUrl);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name$="[contributionClass]"]');
+        self::assertSelectorExists('select[name$="[familyPayer]"]');
+        self::assertSelectorExists('input[name$="[contributionDiscountCents]"]');
+        $crawler = $this->client->request('GET', '/admin/membership');
         $this->assertBackendPage();
         $crawler = $this->client->request('GET', '/admin/settings/membership');
         $this->assertConfigurationBackend();

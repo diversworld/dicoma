@@ -20,6 +20,20 @@ Die Übersicht priorisiert nach effektiver Rolle:
 
 Direkte URL-Aufrufe ersetzen die serverseitige Rechteprüfung nicht.
 
+## Mitgliederverwaltung
+
+1. „Mitgliederzentrale“ ist der operative Einstieg für Mitgliederdaten.
+2. Beitragsart, Familienzahler, Ermäßigung und Ermäßigungsgrund werden direkt
+   im Mitgliedsdatensatz gepflegt.
+3. Die Detailseite bündelt Mitgliedschaft, Forderungen, Zahlungen, Kündigung,
+   Statuswechsel und Vorgangshistorie.
+4. Aufnahmeverfahren bleiben unter „Mitgliedsanträge“ getrennt, weil hier noch
+   keine bestehende Mitgliedschaft vorliegt.
+5. „Beitragsarten“ und Mitgliedschaftsregeln sind Stammdaten; sie gehören
+   nicht in den täglichen Workflow des einzelnen Mitglieds.
+6. Technische Personen-, Rollen- und Systemlisten sind Superadministratoren
+   vorbehalten.
+
 ## Mitgliederfinanzen
 
 1. Spartenzuschläge je Jahr anlegen.

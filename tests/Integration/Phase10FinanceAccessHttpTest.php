@@ -8,6 +8,7 @@ use App\Entity\Club;
 use App\Entity\ClubFunction;
 use App\Entity\ClubFunctionAssignment;
 use App\Entity\Member;
+use App\Entity\MembershipCharge;
 use App\Entity\Person;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -46,6 +47,15 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         $em->persist($member);
         $em->persist($function);
         $em->persist(new ClubFunctionAssignment($function, $treasurer));
+        for ($index = 1; $index <= 51; ++$index) {
+            $em->persist(new MembershipCharge(
+                $treasurer->getMember(),
+                'pagination:'.$index,
+                'Forderung '.$index,
+                1000,
+                new \DateTimeImmutable('2030-01-01'),
+            ));
+        }
         $em->flush();
 
         $client->loginUser($treasurer);
@@ -56,6 +66,11 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('[data-dashboard-finance]', 'Offene Forderungen');
         self::assertSelectorExists('a[href="/admin/membership-finance"]');
+        $client->request('GET', '/admin/membership-finance');
+        self::assertSelectorExists('a[href="/admin/membership-finance?page=2"]');
+        $client->request('GET', '/admin/membership-finance?page=99');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('tbody', 'Forderung 51');
         $client->loginUser($member);
         $client->request('GET', '/admin/membership-finance');
         self::assertResponseStatusCodeSame(403);

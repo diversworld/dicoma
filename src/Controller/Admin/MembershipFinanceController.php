@@ -52,6 +52,8 @@ final class MembershipFinanceController extends AbstractController
             ->andWhere('charge.dueAt < :today AND charge.amountCents > charge.paidCents')
             ->setParameter('today', new \DateTimeImmutable('today'))->getQuery()->getSingleResult();
         $total = (int) (clone $query)->select('COUNT(charge.id)')->getQuery()->getSingleScalarResult();
+        $pages = max(1, (int) ceil($total / $limit));
+        $page = min($page, $pages);
         $charges = $query->setFirstResult(($page - 1) * $limit)->setMaxResults($limit)->getQuery()->getResult();
         $openCents = 0; $overdueCents = 0; $paidCents = 0;
         $payments = [];
@@ -75,7 +77,7 @@ final class MembershipFinanceController extends AbstractController
             'overdueCents' => (int) ($overdue['cents'] ?? 0),
             'paidCents' => (int) ($summary['paidCents'] ?? 0),
             'page' => $page,
-            'pages' => max(1, (int) ceil($total / $limit)),
+            'pages' => $pages,
         ]);
     }
 }

@@ -1,3 +1,6 @@
+![Dynamic JSON Badge](https://img.shields.io/github/downloads/diversworld/dicoma/latest/total)
+
+
 # Diversworld - dicoma
 ## Dive Course Manager
 ### Managing of Dive Courses für Clubs and Shops 

@@ -43,17 +43,18 @@
         </div>
     </section>
     {% endif %}
+    {% if canMembership %}
     <section aria-labelledby="dashboard-attention" class="mb-4">
         <h2 id="dashboard-attention" class="h5">{{ 'Aktuell im Blick'|trans }}</h2>
         <div class="row g-3">
             {% set metrics = [
                 {label: 'Offene und laufende Kurse', count: activeCourseCount, url: path('admin_portal_training_portal'), key: 'courses'},
-                {label: 'Offene Mitgliedsanträge', count: pendingApplicationCount, url: path('membership_admin'), key: 'applications'},
+                {label: 'Offene Mitgliedsanträge', count: pendingApplicationCount, url: path('membership_admin'), key: 'applications', show: canMembership},
                 {label: 'Qualifikationen abgelaufen', count: expiredQualificationCount, url: expiredQualificationsUrl, key: 'expired'},
                 {label: 'Ablauf innerhalb 30 Tagen', count: expiringQualificationCount, url: expiringQualificationsUrl, key: 'expiring'}
             ] %}
             {% for metric in metrics %}
-                <div class="col-sm-6 col-xl-3" data-dashboard-metric="{{ metric.key }}">
+                <div class="col-sm-6 col-xl-3"                 data-dashboard-metric="{{ metric.key }}">
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="text-muted">{{ metric.label|trans }}</div>
@@ -149,5 +150,6 @@
             {% endfor %}
         </div>
     </section>
+    {% endif %}
     {% endif %}
 {% endblock %}

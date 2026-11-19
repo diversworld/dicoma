@@ -141,10 +141,9 @@ final class MembershipController extends AbstractController
     #[Route('/admin/membership', name: 'membership_admin', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function administration(): Response
     {
-        $this->account();
-        $clubs = array_filter([$this->clubContext->getClub()]);
-
-        return $this->adminPage('membership/admin_clubs.html.twig', ['clubs' => $clubs]);
+        $club = $this->clubContext->getClub()
+            ?? throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
+        return $this->club($club);
     }
 
     #[Route('/admin/configuration', name: 'admin_configuration', methods: ['GET'])]
@@ -421,42 +420,14 @@ final class MembershipController extends AbstractController
     }
 
     #[IsGranted('ROLE_ADMIN')]
-    #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
-    public function club(Club $club, Request $request): Response
+    #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
+    public function club(Club $club): Response
     {
         $this->assertClub($club);
         
-        $policy = $this->memberships->policy($club) ?? new MembershipPolicy($club);
-        $policyForm = $this->policyForm($policy)->handleRequest($request);
-
-        if ($response = $this->process($policyForm, function () use ($policy): void {
-            $policy->validateRules();
-            $this->em->persist($policy);
-            $this->em->flush();
-        }, 
-        'membership_club', ['id' => $club->getId()])) { 
-            return $response; 
-        }
-
-        $class = new ContributionClass($club);
-        $classForm = $this->contributionForm($class)->handleRequest($request);
-
-        if ($response = $this->process($classForm, function () use ($class, $club): void {
-            $this->saveContribution($class);
-        }, 
-        'membership_club', ['id' => $club->getId()])) { 
-            return $response; 
-        }
-        
         return $this->adminPage('membership/club.html.twig', [
             'club' => $club, 
-            'policyForm' => $policyForm->createView(), 
-            'classForm' => $classForm->createView(),
-            'classes' => $this->em->getRepository(ContributionClass::class)
-                ->findBy(['club' => $club]),
             'applications' => $this->em->getRepository(MembershipApplication::class)
-                ->findBy(['club' => $club], ['id' => 'DESC']),
-            'members' => $this->em->getRepository(Member::class)
                 ->findBy(['club' => $club], ['id' => 'DESC']),
             'roleEvents' => $this->em->getRepository(MembershipEvent::class)
                 ->createQueryBuilder('event')

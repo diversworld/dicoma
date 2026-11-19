@@ -218,11 +218,11 @@ class DashboardController extends AbstractDashboardController
                     'icon' => 'fa-users',
                     'url' => $membersUrl
                 ] : null,
-                [
-                    'label' => 'Mitgliedschaften und Beiträge', 
-                    'icon' => 'fa-address-card', 
+                $canMembership ? [
+                    'label' => 'Mitgliedsanträge prüfen',
+                    'icon' => 'fa-user-plus',
                     'url' => $this->generateUrl('membership_admin')
-                ],
+                ] : null,
                 [
                     'label' => 'Ausbildungsportal', 
                     'icon' => 'fa-graduation-cap', 
@@ -766,7 +766,8 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 MenuItem::section('Kassenwart'),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
-                MenuItem::linkToRoute('Beiträge und Mitgliedschaften', 'fa fa-address-card', 'membership_admin'),
+                MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users')
+                    ->setPermission('ROLE_ADMIN'),
                 ...($this->isGranted(User::ROLE_EQUIPMENT_CASH) ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
                 ...($this->isGranted(User::ROLE_BAR_MANAGER) ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
                 ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
@@ -776,8 +777,8 @@ class DashboardController extends AbstractDashboardController
             return [
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 MenuItem::section('Vorstand'),
-                MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
-                MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
+                MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
+                MenuItem::linkToRoute('Mitgliedsanträge', 'fa fa-user-plus', 'membership_admin'),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 MenuItem::linkToRoute('Ausbildungsübersicht', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
@@ -808,7 +809,6 @@ class DashboardController extends AbstractDashboardController
             ...($financeRoute ? [
                 MenuItem::section($this->isGranted(User::ROLE_TREASURER) ? 'Kassenwart' : 'Vorstand & Finanzen'),
                 MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance'),
-                MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
             ] : []),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
@@ -824,7 +824,8 @@ class DashboardController extends AbstractDashboardController
 
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')
                 ->setSubItems([
-                    MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
+                    MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
+                    MenuItem::linkToRoute('Mitgliedsanträge', 'fa fa-user-plus', 'membership_admin'),
                     MenuItem::linkToRoute('Rollenvergabe', 'fa fa-users-gear', 'admin_delegated_roles'),
                     MenuItem::linkTo(PersonCrudController::class, 'Nichtmitglieder und Gäste', 'fa fa-address-book')
                         ->setPermission('ROLE_SUPER_ADMIN'),
@@ -929,11 +930,9 @@ class DashboardController extends AbstractDashboardController
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership')
                         ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkToRoute('Beitragsklassen', 'fa fa-coins', 'admin_settings_contributions')
+                    MenuItem::linkToRoute('Beitragsarten', 'fa fa-coins', 'admin_settings_contributions')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(DivisionContributionCrudController::class, 'Spartenzuschläge', 'fa fa-plus')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
-                    MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Sportkonfiguration', 'fa fa-futbol', 'admin_settings_sports_configuration')
                         ->setPermission('ROLE_SUPER_ADMIN'),

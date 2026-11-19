@@ -1,7 +1,7 @@
 {% extends 'admin/membership/layout.html.twig' %}
-{% block title %}Mitgliedschaften – {{ club.name }}{% endblock %}
+{% block title %}Mitgliedsanträge – {{ club.name }}{% endblock %}
 {% block membership_body %}
-<h1>Mitgliedschaften – {{ club.name }}</h1>
+<h1>Mitgliedsanträge – {{ club.name }}</h1>
 {% if roleEvents is not empty %}
 <section class="alert alert-warning" aria-label="Nachfolgehinweise">
 <h2>Nachfolgehinweise und frühere Rollenlücken</h2>
@@ -12,9 +12,5 @@
 <h2>Aufnahmeverfahren</h2>
 <div class="table-responsive"><table class="table"><thead><tr><th>Antragsteller</th><th>Eingang</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
 {% for application in applications %}<tr><td>{{ application.firstname }} {{ application.lastname }}</td><td>{{ application.submittedAt|date('d.m.Y') }}</td><td>{{ application.status }}</td><td><a href="{{ path('membership_application_decide', {id: application.id}) }}">Prüfen / Entscheidung ansehen</a></td></tr>{% else %}<tr><td colspan="4">Keine Anträge.</td></tr>{% endfor %}
-</tbody></table></div>
-<h2>Mitgliedschaften einschließlich Archiv</h2>
-<div class="table-responsive"><table class="table"><thead><tr><th>Nummer / Name</th><th>Status</th><th>Archiv</th><th>Aktion</th></tr></thead><tbody>
-{% for member in members %}<tr><td>{{ member.memberNumber }} · {{ member.fullName }}</td><td>{{ member.membershipStatus.label }}</td><td>{{ member.archivedAt ? member.archivedAt|date('d.m.Y') : '—' }}</td><td><a href="{{ path('membership_member', {id: member.id}) }}">Vorgänge und Beiträge</a></td></tr>{% else %}<tr><td colspan="4">Keine Mitgliedschaften.</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}

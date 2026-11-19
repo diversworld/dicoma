@@ -2,14 +2,15 @@
 
 {% block main %}
     {% set member = entity.instance %}
-    <p><a class="btn btn-primary" href="{{ path('membership_member', {id: member.id}) }}">Mitgliedschaft, Vorgänge und Beiträge</a></p>
-
     {% include 'admin/member/center_field.html.twig' with {
         member: member,
         memberCenterQualifications: memberCenterQualifications|default([]),
         memberCenterCourses: memberCenterCourses|default([]),
         memberCenterTeams: memberCenterTeams|default([]),
         memberCenterDocuments: memberCenterDocuments|default([]),
+        memberCenterCharges: memberCenterCharges|default([]),
+        memberCenterEvents: memberCenterEvents|default([]),
+        memberCenterForms: memberCenterForms|default({}),
         memberCenterLinks: memberCenterLinks|default({}),
         memberCenterQualificationEditUrls: memberCenterQualificationEditUrls|default({}),
         memberCenterCourseEditUrls: memberCenterCourseEditUrls|default({}),
