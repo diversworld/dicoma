@@ -3,8 +3,24 @@
 {% block membership_body %}
 <h1>Aufnahmeverfahren</h1>
 <dl><dt>Name</dt><dd>{{ application.firstname }} {{ application.lastname }}</dd><dt>Geburtsdatum</dt><dd>{{ application.birthday|date('d.m.Y') }}</dd><dt>Kontakt</dt><dd>{{ application.email }}</dd><dt>Anschrift</dt><dd>{{ application.street }}, {{ application.postalCode }} {{ application.city }}</dd><dt>Status</dt><dd>{{ application.status }}</dd></dl>
+<section class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5">Freigabequorum</h2>
+        <p class="mb-2">{{ approvals|length }} von {{ requiredApprovals }} erforderlichen Bestätigungen.</p>
+        <div class="progress" role="progressbar" aria-label="Aufnahmebestätigungen" aria-valuemin="0" aria-valuemax="{{ requiredApprovals }}" aria-valuenow="{{ min(approvals|length, requiredApprovals) }}">
+            <div class="progress-bar" style="width: {{ min(100, (approvals|length / requiredApprovals) * 100) }}%"></div>
+        </div>
+        <ul class="mb-0 mt-3">
+        {% for approval in approvals %}
+            <li>{{ approval.approvedAt|date('d.m.Y H:i') }} · {{ approval.reviewerName }} · {{ approval.note }}</li>
+        {% else %}
+            <li>Noch keine Freigabe bestätigt.</li>
+        {% endfor %}
+        </ul>
+    </div>
+</section>
 {% if application.status == 'pending' %}
-<p>Keine automatische Identitätszusammenführung anhand von Namen oder E-Mail. Eine vorhandene zentrale Person darf nur nach tatsächlicher Identitätsprüfung durch einen Superadmin zugeordnet werden. Öffentliche Angaben werden nicht ungeprüft in vorhandene Stammdaten übernommen.</p>
-{{ form_start(form) }}{{ form_widget(form) }}<button type="submit" class="btn btn-primary">Entscheidung dokumentieren</button>{{ form_end(form) }}
+<p>Jede berechtigte Person prüft selbstständig Identität und Unterlagen und dokumentiert dies. Eine Person zählt nur einmal. Mit der letzten erforderlichen Bestätigung werden die konfigurierten Onboarding-Schritte in einem Vorgang ausgeführt.</p>
+{{ form_start(form) }}{{ form_widget(form) }}<button type="submit" class="btn btn-primary">{{ approvals|length + 1 >= requiredApprovals ? 'Freigeben und Onboarding ausführen' : 'Freigabe bestätigen' }}</button>{{ form_end(form) }}
 {% else %}<p>{{ application.decidedAt|date('d.m.Y H:i') }} · {{ application.decidedBy }} · {{ application.decisionNote }}</p>{% endif %}
 {% endblock %}

@@ -13,6 +13,7 @@
     {% if policyForm %}
         {% form_theme policyForm 'bootstrap_5_layout.html.twig' %}
         <p>{{ 'Ohne beide Stichtage findet keine automatische Kündigungsberechnung statt. Beiträge sind Jahresbeträge ohne automatische anteilige Berechnung.'|trans }}</p>
+        <div class="alert alert-info">Beim Aufnahme-Onboarding werden immer Person, Mitgliedschaft, Mitgliedsnummer und Vorgangshistorie angelegt. Optional werden Beitragsart, erste Jahresforderung und Begrüßungsnachricht gemäß dieser Konfiguration ergänzt.</div>
         {{ form_start(policyForm) }}
         {{ form_errors(policyForm) }}
         {{ form_widget(policyForm) }}

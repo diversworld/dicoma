@@ -75,6 +75,27 @@ class MembershipApplication
     public function getDecidedBy(): ?string { return $this->decidedBy; }
     public function getDecisionNote(): ?string { return $this->decisionNote; }
     public function getMember(): ?Member { return $this->member; }
+    public function markReady(string $actor, string $note): void
+    {
+        if ($this->status !== 'pending') {
+            throw new \DomainException('Dieser Antrag befindet sich bereits in einem abschließenden Bearbeitungsstand.');
+        }
+        $this->status = 'ready';
+        $this->decidedAt = new \DateTimeImmutable();
+        $this->decidedBy = $actor;
+        $this->decisionNote = trim($note);
+    }
+    public function onboard(Member $member, string $actor): void
+    {
+        if ($this->status !== 'ready' && $this->status !== 'pending') {
+            throw new \DomainException('Dieser Antrag ist nicht zur Aufnahme bereit oder wurde bereits onboarded.');
+        }
+        $this->member = $member;
+        $this->status = 'approved';
+        $this->decidedAt = new \DateTimeImmutable();
+        $this->decidedBy = $actor;
+        $this->decisionNote = trim($this->decisionNote.' Onboarding ausgeführt.');
+    }
     public function decide(?Member $member, string $actor, string $note): void
     {
         if ($this->status !== 'pending') {

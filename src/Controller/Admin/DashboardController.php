@@ -219,7 +219,7 @@ class DashboardController extends AbstractDashboardController
                     'url' => $membersUrl
                 ] : null,
                 $canMembership ? [
-                    'label' => 'Mitgliedsanträge prüfen',
+                    'label' => 'Aufnahmeverfahren öffnen',
                     'icon' => 'fa-user-plus',
                     'url' => $this->generateUrl('membership_admin')
                 ] : null,
@@ -778,7 +778,7 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 MenuItem::section('Vorstand'),
                 MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
-                MenuItem::linkToRoute('Mitgliedsanträge', 'fa fa-user-plus', 'membership_admin'),
+                MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 MenuItem::linkToRoute('Ausbildungsübersicht', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
@@ -825,7 +825,7 @@ class DashboardController extends AbstractDashboardController
             MenuItem::subMenu('Mitglieder & Verein', 'fa fa-building')
                 ->setSubItems([
                     MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
-                    MenuItem::linkToRoute('Mitgliedsanträge', 'fa fa-user-plus', 'membership_admin'),
+                    MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
                     MenuItem::linkToRoute('Rollenvergabe', 'fa fa-users-gear', 'admin_delegated_roles'),
                     MenuItem::linkTo(PersonCrudController::class, 'Nichtmitglieder und Gäste', 'fa fa-address-book')
                         ->setPermission('ROLE_SUPER_ADMIN'),

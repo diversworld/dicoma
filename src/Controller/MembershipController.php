@@ -10,6 +10,7 @@ use App\Entity\ContributionClass;
 use App\Entity\Member;
 use App\Entity\MemberDocument;
 use App\Entity\MembershipApplication;
+use App\Entity\MembershipApplicationApproval;
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipEvent;
 use App\Entity\MembershipPayment;
@@ -513,12 +514,42 @@ final class MembershipController extends AbstractController
             $data = $form->getData();
         
             if ($data['decision'] === 'approve') {
-                $this->memberships->approve(
-                    $application, $data['person'] ?? null, 
-                    $this->account()->getUserIdentifier(), 
-                    $data['note'], 
-                    $data['separateIdentity'] ?? false
-                );
+                $this->em->wrapInTransaction(function () use ($application, $data): void {
+                    $actor = $this->account();
+                    if (!$this->memberships->review($application, $actor, $data['note'])) {
+                        return;
+                    }
+                    $member = $this->memberships->approve(
+                        $application,
+                        $data['person'] ?? null,
+                        $actor->getUserIdentifier(),
+                        $data['note'],
+                        $data['separateIdentity'] ?? false
+                    );
+                    $policy = $this->memberships->policy($application->getClub());
+                    if ($policy?->getOnboardingContributionClass() !== null) {
+                        $this->finance->assign(
+                            $member,
+                            $policy->getOnboardingContributionClass(),
+                            null,
+                            0,
+                            null,
+                            $actor->getUserIdentifier(),
+                        );
+                    }
+                    if ($policy?->isOnboardingIssueAnnualCharge()) {
+                        $year = (int) date('Y');
+                        $monthDay = $policy->getOnboardingChargeDue() ?? '12-31';
+                        $due = new \DateTimeImmutable($year.'-'.$monthDay);
+                        $this->finance->annual($member, $year, $due, $actor->getUserIdentifier());
+                    }
+                    $this->memberships->queue(
+                        'application-onboarded:'.$application->getId(),
+                        $application->getEmail(),
+                        'Mitgliedschaft eingerichtet',
+                        'Ihre Mitgliedschaft wurde nach den bestätigten Vereinsregeln eingerichtet. Beitragsinformationen finden Sie in Ihrem Mitgliederbereich oder wenden Sie sich an die Verwaltung.',
+                    );
+                });
             } else {
                 $this->memberships->reject(
                     $application, 
@@ -533,7 +564,10 @@ final class MembershipController extends AbstractController
         
         return $this->adminPage('membership/application.html.twig', [
             'application' => $application, 
-            'form' => $form->createView()
+            'form' => $form->createView(),
+            'approvals' => $this->em->getRepository(MembershipApplicationApproval::class)
+                ->findBy(['application' => $application], ['approvedAt' => 'ASC']),
+            'requiredApprovals' => $this->memberships->policy($application->getClub())?->getRequiredApprovalCount() ?? 1,
             ]
         );
     }
@@ -902,6 +936,7 @@ final class MembershipController extends AbstractController
     {
         return $this->forms->createNamed('membership_policy', MembershipPolicyType::class, $policy, [
             'csrf_token_id' => 'membership_policy_'.$policy->getClub()->getId(),
+            'club' => $policy->getClub(),
         ]);
     }
 

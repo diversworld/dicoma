@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\Club;
 use App\Entity\Member;
 use App\Entity\MembershipApplication;
+use App\Entity\MembershipApplicationApproval;
 use App\Entity\MembershipEvent;
 use App\Entity\MembershipMessage;
 use App\Entity\MembershipPolicy;
@@ -47,8 +48,8 @@ final class MembershipService
 
     public function approve(MembershipApplication $application, ?Person $existing, string $actor, string $note, bool $separateIdentityConfirmed = false): Member
     {
-        if ($application->getStatus() !== 'pending') {
-            throw new \DomainException('Dieser Antrag wurde bereits entschieden.');
+        if (!in_array($application->getStatus(), ['pending', 'ready'], true)) {
+            throw new \DomainException('Dieser Antrag wurde bereits entschieden oder ist nicht freigegeben.');
         }
         if ($application->getBirthday() === null) {
             throw new \DomainException('Ein vollständiger Antrag mit Geburtsdatum ist erforderlich.');
@@ -76,10 +77,51 @@ final class MembershipService
                 $member->setUser($account);
             }
             $this->em->persist($member);
-            $application->decide($member, $actor, $note);
-            $this->record($member, 'approved', $actor, 'Aufnahme nach manueller Identitätsprüfung.');
+            if ($application->getStatus() === 'ready') {
+                $application->onboard($member, $actor);
+            } else {
+                $application->decide($member, $actor, $note);
+            }
+            $this->record($member, 'approved', $actor, 'Aufnahme nach dokumentierter Identitätsprüfung und Freigabe.');
             $this->queue('application-approved:' . $application->getId(), $application->getEmail(), 'Mitgliedsantrag genehmigt', 'Ihr Mitgliedsantrag wurde genehmigt. Bitte wenden Sie sich für die Kontozuordnung an die Vereinsverwaltung.');
             return $member;
+        });
+    }
+
+    public function review(MembershipApplication $application, User $reviewer, string $note): bool
+    {
+        if ($application->getStatus() !== 'pending') {
+            throw new \DomainException('Für diesen Antrag können keine weiteren Bestätigungen erfasst werden.');
+        }
+        if (trim($note) === '' || mb_strlen($note) > 1000) {
+            throw new \DomainException('Jede Freigabe benötigt eine nachvollziehbare Prüfnotiz (maximal 1.000 Zeichen).');
+        }
+        $policy = $this->policy($application->getClub());
+        if ($policy === null) {
+            throw new \DomainException('Für diesen Verein ist noch kein Aufnahmeverfahren konfiguriert.');
+        }
+        $policy->validateRules();
+        return $this->em->wrapInTransaction(function () use ($application, $reviewer, $note, $policy): bool {
+            $repository = $this->em->getRepository(MembershipApplicationApproval::class);
+            if ($repository->findOneBy(['application' => $application, 'reviewer' => $reviewer]) !== null) {
+                throw new \DomainException('Sie haben diesen Antrag bereits bestätigt. Eine Person zählt nur einmal.');
+            }
+            $this->em->persist(new MembershipApplicationApproval($application, $reviewer, $note));
+            $this->em->flush();
+            $count = $repository->count(['application' => $application]);
+            if ($count < $policy->getRequiredApprovalCount()) {
+                return false;
+            }
+            $application->markReady(
+                $reviewer->getUserIdentifier(),
+                sprintf(
+                    'Quorum erreicht: %d von %d erforderlichen Bestätigungen. Letzte Prüfnotiz: %s',
+                    $count,
+                    $policy->getRequiredApprovalCount(),
+                    trim($note),
+                ),
+            );
+            return true;
         });
     }
 

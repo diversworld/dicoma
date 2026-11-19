@@ -29,6 +29,16 @@ class MembershipPolicy
     #[ORM\Column(length: 35, nullable: true)]
     #[Assert\Length(max: 35)]
     private ?string $creditorIdentifier = null;
+    #[ORM\Column(options: ['default' => 1])]
+    #[Assert\Range(min: 1, max: 10)]
+    private int $requiredApprovalCount = 1;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?ContributionClass $onboardingContributionClass = null;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $onboardingIssueAnnualCharge = false;
+    #[ORM\Column(length: 5, nullable: true)]
+    private ?string $onboardingChargeDue = null;
 
     public function __construct(Club $club) { $this->club = $club; }
     public function getId(): ?int { return $this->id; }
@@ -45,6 +55,14 @@ class MembershipPolicy
     public function setRequiredDocuments(array $value): void { $this->requiredDocuments = $value; }
     public function getCreditorIdentifier(): ?string { return $this->creditorIdentifier; }
     public function setCreditorIdentifier(?string $value): void { $this->creditorIdentifier = $value; }
+    public function getRequiredApprovalCount(): int { return $this->requiredApprovalCount; }
+    public function setRequiredApprovalCount(int $value): void { $this->requiredApprovalCount = $value; }
+    public function getOnboardingContributionClass(): ?ContributionClass { return $this->onboardingContributionClass; }
+    public function setOnboardingContributionClass(?ContributionClass $value): void { $this->onboardingContributionClass = $value; }
+    public function isOnboardingIssueAnnualCharge(): bool { return $this->onboardingIssueAnnualCharge; }
+    public function setOnboardingIssueAnnualCharge(bool $value): void { $this->onboardingIssueAnnualCharge = $value; }
+    public function getOnboardingChargeDue(): ?string { return $this->onboardingChargeDue; }
+    public function setOnboardingChargeDue(?string $value): void { $this->onboardingChargeDue = $value; }
 
     public function validateRules(): void
     {
@@ -67,6 +85,18 @@ class MembershipPolicy
             if (!in_array($kind, array_values(MemberDocument::kinds()), true)) {
                 throw new \DomainException('Unbekannte Dokumentanforderung.');
             }
+        }
+        if ($this->onboardingContributionClass !== null
+            && $this->onboardingContributionClass->getClub()->getId() !== $this->club->getId()) {
+            throw new \DomainException('Die Onboarding-Beitragsart muss zum Verein gehören.');
+        }
+        if ($this->onboardingIssueAnnualCharge && $this->onboardingContributionClass === null) {
+            throw new \DomainException('Für die automatische Jahresforderung ist eine Onboarding-Beitragsart erforderlich.');
+        }
+        if ($this->onboardingChargeDue !== null
+            && (!preg_match('/^(\d{2})-(\d{2})$/D', $this->onboardingChargeDue, $parts)
+                || !checkdate((int) $parts[1], (int) $parts[2], 2001))) {
+            throw new \DomainException('Das Fälligkeitsdatum muss als gültiges MM-TT angegeben werden.');
         }
     }
 

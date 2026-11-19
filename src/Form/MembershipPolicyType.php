@@ -6,13 +6,18 @@ namespace App\Form;
 
 use App\Entity\MemberDocument;
 use App\Entity\MembershipPolicy;
+use App\Entity\ContributionClass;
+use Doctrine\ORM\EntityRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use App\Entity\Club;
 
 final class MembershipPolicyType extends AbstractType
 {
@@ -27,6 +32,31 @@ final class MembershipPolicyType extends AbstractType
             ->add('contactEmail', EmailType::class, [
                 'label' => 'Kontaktadresse der Verwaltung',
                 'attr' => ['class' => 'form-control'],
+                'required' => false,
+            ])
+            ->add('requiredApprovalCount', IntegerType::class, [
+                'label' => 'Erforderliche Vorstandsbestätigungen',
+                'attr' => ['min' => 1, 'max' => 10],
+                'help' => 'Jede berechtigte Person kann genau eine Freigabe geben. Die letzte erforderliche Freigabe startet das konfigurierte Onboarding.',
+            ])
+            ->add('onboardingContributionClass', EntityType::class, [
+                'label' => 'Beitragsart beim Onboarding',
+                'class' => ContributionClass::class,
+                'required' => false,
+                'query_builder' => fn (EntityRepository $repository) => $repository
+                    ->createQueryBuilder('contribution')
+                    ->andWhere('contribution.active = true')
+                    ->andWhere('contribution.club = :club')
+                    ->setParameter('club', $options['club'])
+                    ->orderBy('contribution.name', 'ASC'),
+            ])
+            ->add('onboardingIssueAnnualCharge', CheckboxType::class, [
+                'label' => 'Jahresbeitrag beim Onboarding automatisch anlegen',
+                'label_attr' => ['class' => 'checkbox-switch'],
+                'required' => false,
+            ])
+            ->add('onboardingChargeDue', TextType::class, [
+                'label' => 'Fälligkeit der ersten Jahresforderung (MM-TT)',
                 'required' => false,
             ])
             ->add('cancellationCutoff', TextType::class, [
@@ -57,5 +87,7 @@ final class MembershipPolicyType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults(['data_class' => MembershipPolicy::class]);
+        $resolver->setRequired('club');
+        $resolver->setAllowedTypes('club', Club::class);
     }
 }
