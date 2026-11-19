@@ -4,12 +4,13 @@
 <main class="container py-4">
     <a href="{{ path('equipment_manager_inventory', {type:type}) }}">{{ 'Zurück zum Inventar'|trans }}</a>
     <h1>{{ 'Inventarakte'|trans }}: {{ asset }}</h1>
+    <p><a class="btn btn-outline-secondary" href="{{ path('equipment_manager_inventory_qr', {type:type, id:asset.id}) }}" target="_blank">QR-Code für Inventarakte</a></p>
     {% for category in ['success', 'danger'] %}{% for message in app.flashes(category) %}<div class="alert alert-{{ category }}">{{ message|trans }}</div>{% endfor %}{% endfor %}
     <p>{{ 'Zustand'|trans }}: <strong>{{ ({'ready':'Einsatzbereit','maintenance':'Wartung erforderlich','damaged':'Beschädigt','retired':'Ausgemustert'}[asset.conditionStatus] ?? asset.conditionStatus)|trans }}</strong> · {{ 'Verleihfreigabe'|trans }}: {{ (asset.lendable ? 'Ja' : 'Nein')|trans }} · {{ 'Nächste Prüfung'|trans }}: {{ due ? due|date('d.m.Y') : 'Nicht hinterlegt'|trans }}</p>
     {% if type == 'tank' %}<p><a href="{{ path('equipment_manager_tank_detail', {id:asset.id}) }}">{{ 'Flaschenprüfungen, TÜV und bisherige Flaschenhistorie'|trans }}</a></p>{% endif %}
-    <section class="card card-body mb-3">
+    <section class="mb-3">
         <h2>{{ 'Stammdaten und Prüfplanung'|trans }}</h2>
-        {{ form_start(form) }}{{ form_widget(form) }}<button class="btn btn-primary">{{ 'Inventarakte speichern'|trans }}</button>{{ form_end(form) }}
+        {{ form_start(form, {attr: {class: 'equipment-native-form'}}) }}{{ form_errors(form) }}{{ form_widget(form) }}<button class="btn btn-primary">{{ 'Inventarakte speichern'|trans }}</button>{{ form_end(form) }}
     </section>
     <section class="card card-body mb-3">
         <h2>{{ 'Wartung, Reparatur und Defektmeldung'|trans }}</h2>

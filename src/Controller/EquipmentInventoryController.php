@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\EquipmentAssetRecord;
+use App\Entity\EquipmentLocation;
 use App\Entity\EquipmentDocument;
 use App\Entity\EquipmentItem;
 use App\Entity\Regulator;
@@ -22,6 +23,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,7 +66,16 @@ final class EquipmentInventoryController extends AbstractController
         $form = $this->createFormBuilder($record, ['data_class' => EquipmentAssetRecord::class])
             ->add('ownership', ChoiceType::class, ['label' => 'Eigentumsverhältnis', 'choices' => ['Vereinseigentum' => 'club', 'Privateigentum' => 'private', 'Leihgabe' => 'borrowed']])
             ->add('ownerName', TextType::class, ['label' => 'Eigentümer / Leihgeber', 'required' => false])
-            ->add('location', TextType::class, ['label' => 'Lagerort', 'required' => false])
+            ->add('location', TextType::class, ['label' => 'Freitext-Lagerort / Altbestand', 'required' => false])
+            ->add('structuredLocation', EntityType::class, [
+                'class' => EquipmentLocation::class,
+                'label' => 'Verwalteter Lagerort',
+                'required' => false,
+                'placeholder' => 'Freitext-Lagerort behalten',
+                'choices' => $em->getRepository(EquipmentLocation::class)->findBy(
+                    ['club' => $this->clubId(), 'active' => true], ['name' => 'ASC']
+                ),
+            ])
             ->add('purchasedAt', DateType::class, ['label' => 'Anschaffungsdatum', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false])
             ->add('purchasePriceCents', MoneyType::class, ['label' => 'Anschaffungspreis', 'divisor' => 100, 'required' => false])
             ->add('inspectionIntervalMonths', IntegerType::class, ['label' => 'Prüfintervall in Monaten', 'required' => false])
@@ -79,7 +90,9 @@ final class EquipmentInventoryController extends AbstractController
                 $record = $inventory->record($asset);
                 if ($record->getId() !== null) { $em->refresh($record, \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE); }
                 $record->setOwnership($submitted->getOwnership())->setOwnerName($submitted->getOwnerName())
-                    ->setLocation($submitted->getLocation())->setPurchasedAt($submitted->getPurchasedAt())
+                    ->setLocation($submitted->getLocation() ?: $record->getLocation())
+                    ->setStructuredLocation($submitted->getStructuredLocation())
+                    ->setPurchasedAt($submitted->getPurchasedAt())
                     ->setPurchasePriceCents($submitted->getPurchasePriceCents())->setInspectionIntervalMonths($submitted->getInspectionIntervalMonths())
                     ->setNextInspectionAt($submitted->getNextInspectionAt())->setApprovalRequired($submitted->isApprovalRequired());
                 $record->record('inventory_updated', $this->getUser()->getUserIdentifier(), 'Stammdaten, Lagerort oder Prüfplanung aktualisiert.');
@@ -90,12 +103,28 @@ final class EquipmentInventoryController extends AbstractController
             $this->addFlash('success', 'Inventarakte gespeichert.');
             return $this->redirectToRoute('equipment_manager_inventory_detail', compact('type', 'id'), Response::HTTP_SEE_OTHER);
         }
+
         $orders = $em->getRepository(TankMaintenanceOrder::class)->findBy([EquipmentInventory::field($asset) => $asset], ['id' => 'DESC']);
         $documents = $record->getId() ? $em->getRepository(EquipmentDocument::class)->findBy(['record' => $record], ['id' => 'DESC']) : [];
         return $this->render('equipment_manager/inventory_detail.html.twig', [
             'asset' => $asset, 'record' => $record, 'form' => $form, 'orders' => $orders,
             'documents' => $documents, 'type' => $type, 'due' => $inventory->dueAt($asset),
         ]);
+    }
+
+    #[Route('/equipment-manager/inventory/{type}/{id}/qr', name: 'equipment_manager_inventory_qr', requirements: ['type' => 'equipment|regulator|tank', 'id' => '\d+'], methods: ['GET'])]
+    public function qr(string $type, int $id, EquipmentInventory $inventory, \Symfony\Component\Routing\Generator\UrlGeneratorInterface $urls): Response
+    {
+        try { $inventory->asset($type, $id, $this->clubId()); }
+        catch (\DomainException) { throw $this->createNotFoundException(); }
+        $url = $urls->generate('equipment_manager_inventory_detail', compact('type', 'id'), \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        $result = (new \Endroid\QrCode\Builder\Builder(writer: new \Endroid\QrCode\Writer\SvgWriter()))
+            ->build(data: $url, size: 320, margin: 16);
+        $response = new Response($result->getString());
+        $response->headers->set('Content-Type', 'image/svg+xml');
+        $response->headers->set('Content-Disposition', 'inline; filename="inventar-'.$type.'-'.$id.'.svg"');
+        $response->headers->set('Cache-Control', 'private, no-store');
+        return $response;
     }
 
     #[Route('/equipment-manager/inventory/{type}/{id}/maintenance', name: 'equipment_manager_inventory_maintenance', requirements: ['type' => 'equipment|regulator|tank', 'id' => '\d+'], methods: ['POST'])]

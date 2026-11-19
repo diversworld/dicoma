@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Tank;
+use App\Entity\EquipmentItem;
+use App\Entity\Regulator;
 use App\Entity\TankMaintenanceOrder;
 use App\Entity\User;
+use App\Service\EquipmentInventory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,7 +21,7 @@ final class EquipmentDashboardController extends AbstractController
 {
     use EquipmentManagerClubTrait;
     #[Route('/equipment-manager', name: 'equipment_manager_dashboard', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): Response
+    public function index(EntityManagerInterface $em, EquipmentInventory $inventory): Response
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
@@ -29,56 +32,43 @@ final class EquipmentDashboardController extends AbstractController
         $today = new \DateTimeImmutable('today');
         $until = $today->modify('+30 days');
 
-        $base = $em->createQueryBuilder()
-            ->from(Tank::class, 't')
-            ->where('IDENTITY(t.club) = :clubId')
-            ->setParameter('clubId', $clubId);
-
-        $count = static function (\Doctrine\ORM\QueryBuilder $query): int {
-            return (int) $query->select('COUNT(t.id)')->getQuery()->getSingleScalarResult();
-        };
-
-        $total = $count(clone $base);
-        $ready = $count((clone $base)
-            ->andWhere('t.conditionStatus = :ready')
-            ->andWhere('t.lendable = :yes')
-            ->setParameter('ready', 'ready')
-            ->setParameter('yes', true));
-        $blocked = $count((clone $base)
-            ->andWhere('t.lendable = :no')
-            ->setParameter('no', false));
-        $damaged = $count((clone $base)
-            ->andWhere('t.conditionStatus = :damaged')
-            ->setParameter('damaged', 'damaged'));
-        $expired = $count((clone $base)
-            ->andWhere('t.nextCheckDate < :today')
-            ->setParameter('today', $today));
-        $dueSoon = $count((clone $base)
-            ->andWhere('t.nextCheckDate >= :today')
-            ->andWhere('t.nextCheckDate <= :until')
-            ->setParameter('today', $today)
-            ->setParameter('until', $until));
-        $missingDate = $count((clone $base)->andWhere('t.nextCheckDate IS NULL'));
+        $assets = [];
+        foreach ([EquipmentItem::class, Regulator::class, Tank::class] as $class) {
+            array_push($assets, ...$em->getRepository($class)->findBy(['club' => $club], ['id' => 'ASC']));
+        }
+        $total = count($assets);
+        $ready = 0; $blocked = 0; $damaged = 0; $expired = 0; $dueSoon = 0; $missingDate = 0;
+        $upcoming = [];
+        foreach ($assets as $asset) {
+            if ($asset->getConditionStatus() === 'ready' && $asset->isLendable()) { ++$ready; }
+            if (!$asset->isLendable()) { ++$blocked; }
+            if ($asset->getConditionStatus() === 'damaged') { ++$damaged; }
+            $due = $inventory->dueAt($asset);
+            if ($due === null) {
+                ++$missingDate;
+                continue;
+            }
+            if ($due->format('Y-m-d') < $today->format('Y-m-d')) {
+                ++$expired;
+            } elseif ($due->format('Y-m-d') <= $until->format('Y-m-d')) {
+                ++$dueSoon;
+            }
+            if ($due->format('Y-m-d') <= $until->format('Y-m-d')) {
+                $upcoming[] = ['asset' => $asset, 'due' => $due, 'type' => $asset instanceof EquipmentItem ? 'equipment' : ($asset instanceof Regulator ? 'regulator' : 'tank')];
+            }
+        }
+        usort($upcoming, static fn (array $a, array $b): int => ($a['due'] <=> $b['due']) ?: ($a['asset']->getId() <=> $b['asset']->getId()));
+        $upcoming = array_slice($upcoming, 0, 10);
 
         $openOrders = (int) $em->createQueryBuilder()
             ->select('COUNT(o.id)')
             ->from(TankMaintenanceOrder::class, 'o')
-            ->join('o.tank', 't')
-            ->where('IDENTITY(t.club) = :clubId')
+            ->leftJoin('o.tank', 't')->leftJoin('o.regulator', 'r')->leftJoin('o.equipmentItem', 'e')
+            ->where('(t.club = :club OR r.club = :club OR e.club = :club)')
             ->andWhere('o.status = :status')
-            ->setParameter('clubId', $clubId)
+            ->setParameter('club', $club)
             ->setParameter('status', 'open')
             ->getQuery()->getSingleScalarResult();
-
-        $upcoming = (clone $base)
-            ->select('t')
-            ->andWhere('t.nextCheckDate IS NOT NULL')
-            ->andWhere('t.nextCheckDate <= :until')
-            ->setParameter('until', $until)
-            ->orderBy('t.nextCheckDate', 'ASC')
-            ->addOrderBy('t.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()->getResult();
 
         return $this->render('equipment_manager/dashboard.html.twig', [
             'clubName' => $club->getName(),

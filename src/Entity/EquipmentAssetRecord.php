@@ -9,6 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'equipment_asset_record')]
+#[ORM\Index(name: 'IDX_D672E713F70E658C', columns: ['structured_location_id'])]
 class EquipmentAssetRecord
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
@@ -37,6 +38,10 @@ class EquipmentAssetRecord
     #[ORM\Column(length: 180, nullable: true)]
     #[Assert\Length(max: 180)]
     private ?string $location = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?EquipmentLocation $structuredLocation = null;
 
     #[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $purchasedAt = null;
@@ -81,6 +86,18 @@ class EquipmentAssetRecord
     public function setOwnerName(?string $value): static { $this->ownerName = $value; return $this; }
     public function getLocation(): ?string { return $this->location; }
     public function setLocation(?string $value): static { $this->location = $value; return $this; }
+    public function getStructuredLocation(): ?EquipmentLocation { return $this->structuredLocation; }
+    public function setStructuredLocation(?EquipmentLocation $value): static
+    {
+        $assetClub = $this->getAsset()->getClub()?->getId();
+        if ($value !== null && ($assetClub === null || $value->getClub()->getId() !== $assetClub)) {
+            throw new \DomainException('Lagerort gehört zu einem anderen Verein.');
+        }
+        $this->structuredLocation = $value;
+        $this->location = $value?->getName() ?? $this->location;
+        return $this;
+    }
+    public function getLocationLabel(): ?string { return $this->structuredLocation?->getName() ?? $this->location; }
     public function getPurchasedAt(): ?\DateTimeImmutable { return $this->purchasedAt; }
     public function setPurchasedAt(?\DateTimeImmutable $value): static { $this->purchasedAt = $value; return $this; }
     public function getPurchasePriceCents(): ?int { return $this->purchasePriceCents; }

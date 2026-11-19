@@ -809,6 +809,7 @@ class DashboardController extends AbstractDashboardController
             MenuItem::subMenu('Stammdaten Ausrüstung', 'fa fa-boxes-stacked')
                 ->setPermission('ROLE_SUPER_ADMIN')
                 ->setSubItems([
+                    MenuItem::linkTo(EquipmentLocationCrudController::class, 'Lagerorte', 'fa fa-location-dot'),
                     MenuItem::linkTo(EquipmentCategoryCrudController::class, 'Ausrüstungsarten', 'fa fa-list')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(EquipmentSubTypeCrudController::class, 'Ausrüstungsunterarten', 'fa fa-sitemap')
