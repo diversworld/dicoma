@@ -10,6 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Index(name: 'idx_internal_message_club_sent', columns: ['club_id', 'sent_at'])]
+#[ORM\Index(name: 'IDX_internal_message_sender', columns: ['sender_id'])]
+#[ORM\Index(name: 'IDX_internal_message_division', columns: ['division_id'])]
 class InternalMessage
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]

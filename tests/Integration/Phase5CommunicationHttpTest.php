@@ -89,6 +89,23 @@ final class Phase5CommunicationHttpTest extends WebTestCase
         $this->client->request('GET', '/my/messages');
         self::assertSelectorTextNotContains('body', 'Private Einladung');
 
+        $foreignClub = (new Club())->setName('Fremder Verein');
+        $foreignMember = (new Member())->setClub($foreignClub)
+            ->setPerson((new Person())->setFirstname('Fremd')->setLastname('Empfänger')->setEmail('foreign@example.invalid'));
+        $this->em->persist($foreignClub);
+        $this->em->persist($foreignMember);
+        $this->em->flush();
+        $this->client->loginUser($this->sender);
+        $crawler = $this->client->request('GET', '/my/messages/new');
+        $values = $crawler->selectButton('Nachricht senden')->form()->getPhpValues();
+        $values['form']['audience'] = 'member';
+        $values['form']['recipient'] = (string) $foreignMember->getId();
+        $values['form']['subject'] = 'Vereinsfremd';
+        $values['form']['body'] = 'Nicht senden';
+        $this->client->request('POST', '/my/messages/new', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(InternalMessage::class)->findOneBy(['subject' => 'Vereinsfremd']));
+
         $this->client->loginUser($this->recipient);
         $this->client->request('GET', '/my/messages');
         self::assertSelectorTextContains('body', 'Private Einladung');

@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'uniq_internal_message_recipient', columns: ['message_id', 'member_id'])]
 #[ORM\Index(name: 'idx_internal_message_recipient_member_read', columns: ['member_id', 'read_at'])]
+#[ORM\Index(name: 'IDX_internal_message_recipient_message', columns: ['message_id'])]
 class InternalMessageRecipient
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
