@@ -18,6 +18,7 @@ use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use App\Entity\Club;
+use App\Entity\User;
 
 final class MembershipPolicyType extends AbstractType
 {
@@ -35,9 +36,17 @@ final class MembershipPolicyType extends AbstractType
                 'required' => false,
             ])
             ->add('requiredApprovalCount', IntegerType::class, [
-                'label' => 'Erforderliche Vorstandsbestätigungen',
+                'label' => 'Erforderliche Freigaben',
                 'attr' => ['min' => 1, 'max' => 10],
                 'help' => 'Jede berechtigte Person kann genau eine Freigabe geben. Die letzte erforderliche Freigabe startet das konfigurierte Onboarding.',
+            ])
+            ->add('approvalRole', ChoiceType::class, [
+                'label' => 'Berechtigte Freigabegruppe',
+                'choices' => [
+                    'Vorstand' => User::ROLE_BOARD,
+                    'Mitgliederverwaltung' => User::ROLE_ADMIN,
+                    'Superadministration' => User::ROLE_SUPER_ADMIN,
+                ],
             ])
             ->add('onboardingContributionClass', EntityType::class, [
                 'label' => 'Beitragsart beim Onboarding',

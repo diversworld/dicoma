@@ -572,6 +572,8 @@ final class MembershipController extends AbstractController
                 array_flip(MemberDocument::kinds()),
                 array_flip($this->memberships->policy($application->getClub())?->getRequiredDocuments() ?? []),
             ),
+            'canReviewApplication' => $this->memberships->policy($application->getClub()) !== null
+                && $this->isGranted($this->memberships->policy($application->getClub())->getApprovalRole()),
             ]
         );
     }

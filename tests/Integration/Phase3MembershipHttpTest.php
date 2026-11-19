@@ -629,6 +629,7 @@ final class Phase3MembershipHttpTest extends WebTestCase
     {
         $policy = $this->policy();
         $policy->setRequiredApprovalCount(2);
+        $policy->setApprovalRole(User::ROLE_BOARD);
         $class = new ContributionClass($this->club);
         $class->setName('Onboarding Standard');
         $class->setAnnualCents(12000);
@@ -637,8 +638,8 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $policy->setOnboardingContributionClass($class);
         $policy->setOnboardingIssueAnnualCharge(true);
         $policy->setOnboardingChargeDue('12-15');
-        $first = $this->memberUser('reviewer-one', ['ROLE_ADMIN']);
-        $second = $this->memberUser('reviewer-two', ['ROLE_ADMIN']);
+        $first = $this->memberUser('reviewer-one', [User::ROLE_BOARD]);
+        $second = $this->memberUser('reviewer-two', [User::ROLE_BOARD]);
         $application = $this->application();
         static::getContainer()->get(MembershipService::class)->submit($application);
         $this->em->flush();

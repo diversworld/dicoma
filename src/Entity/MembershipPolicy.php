@@ -32,6 +32,8 @@ class MembershipPolicy
     #[ORM\Column(options: ['default' => 1])]
     #[Assert\Range(min: 1, max: 10)]
     private int $requiredApprovalCount = 1;
+    #[ORM\Column(length: 40, options: ['default' => User::ROLE_ADMIN])]
+    private string $approvalRole = User::ROLE_ADMIN;
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?ContributionClass $onboardingContributionClass = null;
@@ -57,6 +59,8 @@ class MembershipPolicy
     public function setCreditorIdentifier(?string $value): void { $this->creditorIdentifier = $value; }
     public function getRequiredApprovalCount(): int { return $this->requiredApprovalCount; }
     public function setRequiredApprovalCount(int $value): void { $this->requiredApprovalCount = $value; }
+    public function getApprovalRole(): string { return $this->approvalRole; }
+    public function setApprovalRole(string $value): void { $this->approvalRole = $value; }
     public function getOnboardingContributionClass(): ?ContributionClass { return $this->onboardingContributionClass; }
     public function setOnboardingContributionClass(?ContributionClass $value): void { $this->onboardingContributionClass = $value; }
     public function isOnboardingIssueAnnualCharge(): bool { return $this->onboardingIssueAnnualCharge; }
@@ -66,6 +70,12 @@ class MembershipPolicy
 
     public function validateRules(): void
     {
+        if ($this->requiredApprovalCount < 1 || $this->requiredApprovalCount > 10) {
+            throw new \DomainException('Die erforderliche Anzahl der Freigaben muss zwischen 1 und 10 liegen.');
+        }
+        if (!in_array($this->approvalRole, [User::ROLE_ADMIN, User::ROLE_BOARD, User::ROLE_SUPER_ADMIN], true)) {
+            throw new \DomainException('Ungültige Freigaberolle für das Aufnahmeverfahren.');
+        }
         if (($this->cancellationCutoff === null) !== ($this->membershipYearEnd === null)) {
             throw new \DomainException('Kündigungsstichtag und Jahresende müssen gemeinsam konfiguriert werden.');
         }

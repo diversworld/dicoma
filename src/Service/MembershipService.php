@@ -101,6 +101,13 @@ final class MembershipService
             throw new \DomainException('Für diesen Verein ist noch kein Aufnahmeverfahren konfiguriert.');
         }
         $policy->validateRules();
+        $roles = $reviewer->getRoles();
+        $canReview = in_array($policy->getApprovalRole(), $roles, true)
+            || in_array(User::ROLE_SUPER_ADMIN, $roles, true)
+            || ($policy->getApprovalRole() === User::ROLE_ADMIN && in_array(User::ROLE_BOARD, $roles, true));
+        if (!$canReview) {
+            throw new \DomainException('Ihr Konto gehört nicht zur konfigurierten Freigabegruppe für dieses Aufnahmeverfahren.');
+        }
         return $this->em->wrapInTransaction(function () use ($application, $reviewer, $note, $policy): bool {
             $repository = $this->em->getRepository(MembershipApplicationApproval::class);
             if ($repository->findOneBy(['application' => $application, 'reviewer' => $reviewer]) !== null) {

@@ -1,17 +1,16 @@
 {% extends 'admin/membership/layout.html.twig' %}
 {% block title %}Aufnahmeverfahren – {{ club.name }}{% endblock %}
 {% block membership_body %}
-<h1>Aufnahmeverfahren – {{ club.name }}</h1>
-{% if roleEvents is not empty %}
-<section class="alert alert-warning" aria-label="Nachfolgehinweise">
-<h2>Nachfolgehinweise und frühere Rollenlücken</h2>
-<p>Historischer Stand zum jeweiligen Vorgang; die aktuelle Nachbesetzung bitte in der Rollenverwaltung prüfen.</p>
-<ul>{% for event in roleEvents %}<li>{{ event.occurredAt|date('d.m.Y H:i') }} · <a href="{{ path('membership_member', {id: event.member.id}) }}">{{ event.member.memberNumber }} · {{ event.member.fullName }}</a>: {{ event.description }}</li>{% endfor %}</ul>
-</section>
-{% endif %}
 <p>Neue Online-Aufnahmen werden nach dem konfigurierten Freigabequorum geprüft. Die letzte erforderliche Bestätigung führt die definierten Onboarding-Schritte automatisch aus.</p>
 <h2>Anträge in Bearbeitung und Historie</h2>
 <div class="table-responsive"><table class="table"><thead><tr><th>Antragsteller</th><th>Eingang</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
-{% for application in applications %}<tr><td>{{ application.firstname }} {{ application.lastname }}</td><td>{{ application.submittedAt|date('d.m.Y') }}</td><td>{{ application.status }}</td><td><a href="{{ path('membership_application_decide', {id: application.id}) }}">Prüfen / Entscheidung ansehen</a></td></tr>{% else %}<tr><td colspan="4">Keine Anträge.</td></tr>{% endfor %}
+{% set statuses = {pending: 'Prüfung offen', ready: 'Zur Aufnahme bereit', approved: 'Aufgenommen', rejected: 'Abgelehnt'} %}
+{% for application in applications %}<tr><td>{{ application.firstname }} {{ application.lastname }}</td><td>{{ application.submittedAt|date('d.m.Y') }}</td><td>{{ statuses[application.status]|default(application.status) }}</td><td><a href="{{ path('membership_application_decide', {id: application.id}) }}">{{ application.status == 'pending' ? 'Prüfen und bestätigen' : 'Vorgang ansehen' }}</a></td></tr>{% else %}<tr><td colspan="4">Keine Aufnahmeverfahren vorhanden.</td></tr>{% endfor %}
 </tbody></table></div>
+{% if roleEvents is not empty %}
+<details class="alert alert-warning mt-4" aria-label="Nachfolgehinweise">
+<summary>Offene oder historische Rollen-Nachfolgehinweise</summary>
+<ul class="mt-2 mb-0">{% for event in roleEvents %}<li>{{ event.occurredAt|date('d.m.Y H:i') }} · <a href="{{ path('membership_member', {id: event.member.id}) }}">{{ event.member.memberNumber }} · {{ event.member.fullName }}</a>: {{ event.description }}</li>{% endfor %}</ul>
+</details>
+{% endif %}
 {% endblock %}

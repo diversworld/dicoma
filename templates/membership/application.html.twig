@@ -1,8 +1,8 @@
 {% extends 'admin/membership/layout.html.twig' %}
 {% block title %}Aufnahmeverfahren{% endblock %}
 {% block membership_body %}
-<h1>Aufnahmeverfahren</h1>
-<dl><dt>Name</dt><dd>{{ application.firstname }} {{ application.lastname }}</dd><dt>Geburtsdatum</dt><dd>{{ application.birthday|date('d.m.Y') }}</dd><dt>Kontakt</dt><dd>{{ application.email }}</dd><dt>Anschrift</dt><dd>{{ application.street }}, {{ application.postalCode }} {{ application.city }}</dd><dt>Status</dt><dd>{{ application.status }}</dd></dl>
+{% set statuses = {pending: 'Prüfung offen', ready: 'Zur Aufnahme bereit', approved: 'Aufgenommen', rejected: 'Abgelehnt'} %}
+<dl><dt>Name</dt><dd>{{ application.firstname }} {{ application.lastname }}</dd><dt>Geburtsdatum</dt><dd>{{ application.birthday|date('d.m.Y') }}</dd><dt>Kontakt</dt><dd>{{ application.email }}</dd><dt>Anschrift</dt><dd>{{ application.street }}, {{ application.postalCode }} {{ application.city }}</dd><dt>Status</dt><dd>{{ statuses[application.status]|default(application.status) }}</dd></dl>
 <section class="card mb-3">
     <div class="card-body">
         <h2 class="h5">Freigabequorum</h2>
@@ -31,6 +31,10 @@
 {% endif %}
 {% if application.status == 'pending' %}
 <p>Jede berechtigte Person prüft selbstständig Identität und Unterlagen und dokumentiert dies. Eine Person zählt nur einmal. Mit der letzten erforderlichen Bestätigung werden die konfigurierten Onboarding-Schritte in einem Vorgang ausgeführt.</p>
+{% if canReviewApplication %}
 {{ form_start(form) }}{{ form_widget(form) }}<button type="submit" class="btn btn-primary">{{ approvals|length + 1 >= requiredApprovals ? 'Freigeben und Onboarding ausführen' : 'Freigabe bestätigen' }}</button>{{ form_end(form) }}
+{% else %}
+<div class="alert alert-warning">Ihr Konto gehört nicht zur konfigurierten Freigabegruppe. Der Antrag kann eingesehen, aber nicht bestätigt werden.</div>
+{% endif %}
 {% else %}<p>{{ application.decidedAt|date('d.m.Y H:i') }} · {{ application.decidedBy }} · {{ application.decisionNote }}</p>{% endif %}
 {% endblock %}
