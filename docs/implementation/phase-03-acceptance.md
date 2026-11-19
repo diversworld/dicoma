@@ -132,19 +132,17 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Ordnerregeln auf der ersten Ebene sind vorbereitet. Die Mediathek prüft diese Regeln
   für ihre Lese- und Schreibaktionen; bisherige Kursbild-Explorer und
   Kursbild-Uploads sind bei eingeschaltetem Modell vorsorglich gesperrt,
-  weil sie noch nicht in dieselbe Ordnerstruktur integriert sind.
-  `CLUB_FUNCTION_MEMBERSHIP_ENABLED` ist standardmäßig ausgeschaltet und darf
-  vor der vollständigen Umstellung und Abnahme nicht aktiviert werden.
-  Das neue Schema ist auf der lokalen Anwendungsdatenbank vorhanden; die
-  Rollenübernahme ist dort noch nicht durchgeführt. Die bisherigen Rollenregeln
-  bleiben deshalb weiterhin maßgeblich. Funktionen können bereits als
-  ausdrücklich gekennzeichnete Vorbereitung angelegt werden; ihre Rechte
-  und Inhaberzuordnungen wirken erst nach der vollständigen Umstellung.
+  weil Altpfade keine Ordnerberechtigung abbilden können.
+  `CLUB_FUNCTION_MEMBERSHIP_ENABLED` ist für die lokale DDEV-Produktionsumgebung
+  aktiviert. Das Schema, der Kursbildimport und die Rollenübernahme wurden
+  dort ausgeführt. Direkte Alt-Funktionsrollen sind nicht mehr gespeichert;
+  wirksam sind Funktionszuordnungen, Modul- und Ordnerrechte.
 - Die Mediathek verlangt bei aktiviertem Funktionsmodell sowohl die jeweilige
   Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
   aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildverwaltung
-  ist noch nicht vollständig integriert. Redaktionelle Beiträge und Seiten verlangen bei
+  ist in Mediathek, EasyAdmin-Auswahl und geschützte Bildendpunkte integriert.
+  Redaktionelle Beiträge und Seiten verlangen bei
   eingeschaltetem Modell das Website-Modulrecht Lesen, Anlegen, Bearbeiten
   beziehungsweise Löschen. Das Löschen ist bei ausgeschaltetem Modell
   nicht verfügbar; bei eingeschaltetem Modell werden Berechtigung und Version
@@ -191,10 +189,10 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   aktiviertem Modell eine Auswahl aus der Dateiverwaltung vorbereitet:
   erforderlich sind Ausbildungs-Bearbeitungsrecht sowie Dateimodul- und
   Ordnerleserecht für das bisherige und das gewählte Bild. Schreibzugriffe
-  prüfen die Rechte nach Erwerb der Vereinssperre erneut. Der Bildimport ist
-  vorbereitet und isoliert erprobt, aber noch nicht auf der Anwendungsdatenbank
-  ausgeführt. Weitere Kursbildzugriffe und Modulrechte fehlen; das Modell
-  bleibt deaktiviert.
+  prüfen die Rechte nach Erwerb der Vereinssperre erneut. Am 19. November 2026
+  wurden lokal 20 Kursbilder und zwei Referenzen übernommen. Kurs- und
+  Terminbilder sind danach über mediathekberechtigte EasyAdmin- und
+  Mitgliedswege verfügbar; das Modell ist lokal aktiv.
 - `app:files:import-course-images --dry-run` prüft den bisherigen Bestand
   und seine Referenzen ohne Änderungen. `--confirm` übernimmt nach Backup,
   Restore-Nachweis und durchgehender Schreibpause alle Bilder und Ordner in
@@ -225,7 +223,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   setzt das aktivierte Funktionsmodell voraus, prüft den Bestand erneut und
   bricht bei unklaren oder widersprüchlichen Daten ab. Es wurde in isolierten
   SQLite- und MariaDB-Tests sowie auf der wiederhergestellten lokalen
-  Sicherung ausgeführt, nicht auf der Anwendungsdatenbank. Auf der
+  Sicherung ausgeführt. Am 19. November 2026 wurde es nach aktuellem
+  Restore-Nachweis auch auf der lokalen DDEV-Anwendungsdatenbank ausgeführt. Auf der
   Sicherung wurden alle 23 direkten Funktionsrollen einschließlich ihrer
   gespeicherten Zeiträume sowie die beiden Superadmin-Notfallrollen verglichen.
   Die Zuordnung der bisherigen Presse- und Administratorrechte zu allen
@@ -240,8 +239,9 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   wenn die geprüfte Funktion zwischenzeitlich geändert oder bereits jemand
   zugeordnet wurde. Auf einer am 15. November 2026 wiederhergestellten
   Datenbankkopie wurden mit dieser Option alle 23 Rollenzuordnungen und
-  Zeiträume sowie beide Superadminrollen verglichen. Die Anwendungsdatenbank
-  wurde dabei nicht geändert. Diese Option ersetzt nicht die übrigen Freigaben.
+  Zeiträume sowie beide Superadminrollen verglichen. Beim lokalen Cutover
+  wurden 23 Funktionszuordnungen übernommen; beide Superadmin-Notfallrollen
+  blieben erhalten und ein anschließender Probelauf meldete null Altzuordnungen.
 - `app:functions:migrate-roles --dry-run` führt denselben Übernahmeablauf
   auch bei deaktiviertem Modell aus und rollt Datenänderungen zurück.
   Der Probelauf ersetzt weder die Übernahme noch den Vergleich nach der
@@ -253,7 +253,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   Turniers wurde der zentrale Vereinskontext auf einen Verein umgestellt. Die
   vollständige Prüfung und Anpassung der früheren Mehrvereinstests und aller
   betroffenen Oberflächen steht aus. Die Umstellung des Funktionsmodells ist
-  noch offen; die bisherigen Nachfolgeregeln gelten bis dahin unverändert.
+  lokal durchgeführt; fachliche und produktive Abnahme anderer Installationen
+  bleiben gesondert erforderlich.
 - `app:functions:check-migration` prüft gespeicherte Rollenlisten und
   Gültigkeitszeiträume schreibgeschützt auf bekannte Rollen, doppelte
   Listeneinträge, ungültige Zuordnungen und Zeiträume. Die lokale

@@ -212,12 +212,40 @@ Detailaktionen der Kontenliste sind gesperrt. Die erste Vereinsanlage wurde
 zusätzlich mit zwei privaten MariaDB-Verbindungen auf konkurrierende Zugriffe
 geprüft.
 
-Vereinsfunktionen sollen frei angelegt und vorhandenen Berechtigungen
-ausdrücklich zugeordnet werden können. Administratoren sollen nur bisher
-delegierbare Rechte zuordnen können; privilegierte Rechte bleiben
-Superadministratoren vorbehalten. Ob eine Nachfolge erforderlich ist, soll
-pro Funktion konfigurierbar sein. Dieses Funktionsmodell, die Übernahme der
-bestehenden Rollen und Zeiträume und die passende Nachfolgeprüfung sind noch
-nicht implementiert. Geeignete Verwaltungsseiten sollen bevorzugt auf
-EasyAdmin-Standardoberflächen umgestellt werden; eine vollständige Prüfung
-und Umstellung steht ebenfalls aus.
+Vereinsfunktionen können frei angelegt und vorhandenen Berechtigungen
+ausdrücklich zugeordnet werden. Administratoren können nur delegierbare
+Rechte vergeben; privilegierte Rechte bleiben Superadministratoren vorbehalten.
+Nachfolgepflicht, Modulrechte und Ordnerrechte werden pro Funktion gespeichert.
+
+## 12. Lokaler Cutover des Funktionsmodells
+
+Am 19. November 2026 wurde der lokale DDEV-Cutover nach einem aktuellen
+Backup durchgeführt. Der MariaDB-Stand wurde isoliert wiederhergestellt und
+binär als normalisierter Dump verglichen; 91 private Dateien wurden getrennt
+wiederhergestellt und über SHA-256-Prüfsummen sowie Dateimodi verglichen.
+
+Vor der Aktivierung wurden 20 Kursbilder einschließlich 18 nicht referenzierter
+Dateien in die gemeinsame Mediathek übernommen. Die zwei vorhandenen
+Kursbildreferenzen zeigen anschließend auf `MediaFile`; alle übernommenen
+Dateien und Referenzen waren im Inventar vollständig.
+
+Die Rollenübernahme lief mit der geprüften Zusammenführung der bestehenden
+Funktion „Ausbildungsleiter“. Es wurden 23 direkte Funktionsrollenzuordnungen
+einschließlich gespeicherter Gültigkeiten übernommen. Die zwei
+Superadministrator-Notfallrollen blieben unverändert erhalten. Ein erneuter
+Probelauf meldete danach null verbleibende Altzuordnungen. Die importierte
+Rollenfunktion „Pressewart“ erhält Website- und Dateirechte; weitere
+Altrollen erhalten die zugehörigen Modulrechte für Mitglieder, Ausbildung,
+Sport, Geräte, Gerätekasse, Theke, Thekenkasse, Finanzen und Systemverwaltung.
+
+Kurs- und Terminbilder können nach der Aktivierung direkt in den EasyAdmin-
+Formularen aus der berechtigten Mediathek ausgewählt werden. Die Auswahl wird
+beim Speichern gegen Ausbildungs-, Dateimodul- und Ordnerleserecht geprüft;
+der frühere direkte Uploadpfad bleibt deaktiviert. Terminbilder besitzen
+zusätzlich einen mitglieds-, vereins-, status- und ordnergebundenen
+Auslieferungsendpunkt.
+
+Die lokale Aktivierung ist in `.env.prod.local` vorgenommen; diese
+unversionierte Konfigurationsdatei enthält gegebenenfalls weitere vertrauliche
+Werte und wird nicht im Repository dokumentiert oder veröffentlicht. Der
+Produktiveinsatz auf einem anderen System ist damit nicht erfolgt.
