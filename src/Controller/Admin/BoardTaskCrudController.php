@@ -45,7 +45,7 @@ final class BoardTaskCrudController extends AbstractCrudController
         if (!$user instanceof User) {
             throw $this->createAccessDeniedException();
         }
-        return new BoardTask($club, $user, '');
+        return new BoardTask($club, $user, 'Neue Aufgabe');
     }
 
     public function configureFields(string $pageName): iterable

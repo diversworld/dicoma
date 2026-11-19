@@ -113,6 +113,7 @@ security:
         - { path: ^/admin/settings/website$, roles: ROLE_USER }
         - { path: ^/admin/settings/bar-services$, roles: ROLE_BAR_MANAGER }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/(?:de|en|fr|es)/?$, roles: ROLE_USER }
         - { path: ^/admin/media(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/course-images(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/club-events(?:/|$), roles: ROLE_USER }
