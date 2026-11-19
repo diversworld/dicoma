@@ -116,6 +116,7 @@ security:
         - { path: ^/admin/media(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/course-images(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/club-events(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/membership-finance(?:/|$), roles: ROLE_USER }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/settings, roles: ROLE_ADMIN }
 

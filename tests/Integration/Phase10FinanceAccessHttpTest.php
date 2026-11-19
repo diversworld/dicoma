@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Integration;
+
+use App\Entity\Club;
+use App\Entity\ClubFunction;
+use App\Entity\ClubFunctionAssignment;
+use App\Entity\Member;
+use App\Entity\Person;
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
+final class Phase10FinanceAccessHttpTest extends WebTestCase
+{
+    public function testFinanceReadIsAvailableToTreasurerButNotOrdinaryMember(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
+        foreach ([
+            'DATABASE_URL' => 'sqlite:///:memory:',
+            'MAILER_DSN' => 'null://null',
+            'PUBLIC_SITE_CLUB_ID' => '1',
+            'CLUB_FUNCTION_MEMBERSHIP_ENABLED' => '1',
+        ] as $name => $value) {
+            $_ENV[$name] = $_SERVER[$name] = $value;
+            putenv($name.'='.$value);
+        }
+        $client = static::createClient(['environment' => 'test']);
+        $client->disableReboot();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $club = (new Club())->setName('Finanzzugriff');
+        $treasurer = $this->account($club, 'treasurer');
+        $member = $this->account($club, 'member');
+        $function = new ClubFunction($club, 'Kassenwart');
+        $function->setModulePermissions(['finance:read']);
+        $em->persist($club);
+        $em->persist($treasurer);
+        $em->persist($member);
+        $em->persist($function);
+        $em->persist(new ClubFunctionAssignment($function, $treasurer));
+        $em->flush();
+
+        $client->loginUser($treasurer);
+        $client->request('GET', '/admin/membership-finance');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'IBAN, Mandatsnachweise, Kontaktdaten');
+        $client->loginUser($member);
+        $client->request('GET', '/admin/membership-finance');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    private function account(Club $club, string $name): User
+    {
+        $person = (new Person())->setFirstname($name)->setLastname('Test')->setEmail($name.'@example.invalid');
+        $member = (new Member())->setClub($club)->setPerson($person);
+        return (new User())->setUser($name)->setEmail($name.'@example.invalid')->setPassword('unused')->setMember($member);
+    }
+}

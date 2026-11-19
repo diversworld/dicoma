@@ -38,6 +38,7 @@ use App\Service\AdminClubContext;
 use App\Service\MembershipRoleContinuity;
 use App\Service\BarDutyAccess;
 use App\Security\EditorialAccess;
+use App\Security\ModuleAccess;
 use App\Security\FolderPermissions;
 use App\Repository\MemberQualificationRepository;
 use App\Form\WebsitePublicationType;
@@ -111,6 +112,7 @@ class DashboardController extends AbstractDashboardController
         private readonly AdminClubContext $clubContext,
         private readonly BarDutyAccess $barAccess,
         private readonly EditorialAccess $editorialAccess,
+        private readonly ModuleAccess $moduleAccess,
         private readonly FolderPermissions $folderPermissions,
         private readonly MembershipRoleContinuity $continuity,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
@@ -692,6 +694,11 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
+        $financeRoute = $this->functionModelEnabled && $this->getUser() instanceof \App\Entity\User
+            && $this->clubContext->getClub() instanceof \App\Entity\Club
+            && $this->moduleAccess->can(
+                $this->getUser(), $this->clubContext->getClub(), \App\Enum\PermissionModule::FINANCE, \App\Enum\PermissionAction::READ
+            );
         $editorialRoute = $this->editorialAccess->can(PermissionAction::READ)
             ? 'admin_website_editorial'
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_website_editorial_new' : null);
@@ -703,6 +710,7 @@ class DashboardController extends AbstractDashboardController
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_club_event_new' : null);
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
+                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 ...($websiteSettings
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
@@ -841,6 +849,8 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Beitragsklassen', 'fa fa-coins', 'admin_settings_contributions')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
+                    MenuItem::linkTo(DivisionContributionCrudController::class, 'Spartenzuschläge', 'fa fa-plus')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin')
                         ->setPermission('ROLE_SUPER_ADMIN'),

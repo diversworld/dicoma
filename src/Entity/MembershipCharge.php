@@ -27,6 +27,14 @@ class MembershipCharge
     private \DateTimeImmutable $dueAt;
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $invoiceNumber = null;
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $invoiceIssuedAt = null;
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $lastReminderAt = null;
+    #[ORM\Column(options: ['default' => 0])]
+    private int $reminderCount = 0;
 
     public function __construct(Member $member, string $key, string $description, int $cents, \DateTimeImmutable $due)
     {
@@ -47,4 +55,23 @@ class MembershipCharge
     public function getPaidCents(): int { return $this->paidCents; }
     public function getOutstandingCents(): int { return $this->amountCents - $this->paidCents; }
     public function getDueAt(): \DateTimeImmutable { return $this->dueAt; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getInvoiceNumber(): ?string { return $this->invoiceNumber; }
+    public function getInvoiceIssuedAt(): ?\DateTimeImmutable { return $this->invoiceIssuedAt; }
+    public function getLastReminderAt(): ?\DateTimeImmutable { return $this->lastReminderAt; }
+    public function getReminderCount(): int { return $this->reminderCount; }
+    public function issueInvoice(string $number): void
+    {
+        if ($this->invoiceNumber !== null) { throw new \DomainException('Rechnung wurde bereits erstellt.'); }
+        $number = trim($number);
+        if ($number === '' || mb_strlen($number) > 40) { throw new \DomainException('Ungültige Rechnungsnummer.'); }
+        $this->invoiceNumber = $number; $this->invoiceIssuedAt = new \DateTimeImmutable();
+    }
+    public function markReminder(): void { $this->lastReminderAt = new \DateTimeImmutable(); ++$this->reminderCount; }
+    public function getStatus(\DateTimeImmutable $today = new \DateTimeImmutable('today')): string
+    {
+        if ($this->getOutstandingCents() <= 0) { return 'paid'; }
+        if ($this->dueAt->format('Y-m-d') < $today->format('Y-m-d')) { return 'overdue'; }
+        return 'open';
+    }
 }
