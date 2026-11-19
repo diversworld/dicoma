@@ -34,7 +34,7 @@ class WebsitePublication
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Sport $division = null;
     #[ORM\ManyToOne(targetEntity: self::class), ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?self $parent = null;
-    #[ORM\Column]
+    #[ORM\Column(options: ['default' => 0])]
     private int $sortOrder = 0;
     #[ORM\Column(options: ['default' => true])]
     private bool $menuVisible = true;
@@ -73,7 +73,7 @@ class WebsitePublication
     public function getParent(): ?self { return $this->parent; }
     public function setParent(?self $value): void { $this->parent = $value; }
     public function getSortOrder(): int { return $this->sortOrder; }
-    public function setSortOrder(int $value): void { $this->sortOrder = $value; }
+    public function setSortOrder(?int $value): void { $this->sortOrder = $value ?? 0; }
     public function isMenuVisible(): bool { return $this->menuVisible; }
     public function setMenuVisible(bool $value): void { $this->menuVisible = $value; }
     public function getEffectiveDivision(): ?Sport

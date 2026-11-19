@@ -436,6 +436,9 @@ class DashboardController extends AbstractDashboardController
         $conflict = false;
         if ($form->isSubmitted() && $form->isValid()) {
             try {
+                if ($publication->getKind() === 'event' && $publication->getId() === null) {
+                    throw new \DomainException('Neue Veranstaltungen werden zentral unter „Veranstaltungsbuchungen“ angelegt. Hier bleiben nur bestehende Legacy-Veranstaltungen bearbeitbar.');
+                }
                 if ($entityId !== null && (string) $form->get('version')->getData() !== (string) $publication->getVersion()) {
                     throw new \DomainException('Der Beitrag wurde inzwischen geändert. Bitte neu laden.');
                 }

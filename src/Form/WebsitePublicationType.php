@@ -21,9 +21,9 @@ final class WebsitePublicationType extends AbstractType
                 'label' => 'Inhaltstyp', 
                 'attr' => [
                     'class' => 'form-control'],
-                'choices' => $builder->getData()->getKind() === 'event'
-                    ? ['Legacy-Veranstaltung' => 'event', 'Artikel' => 'article', 'Seite' => 'page']
-                    : ['Artikel' => 'article', 'Seite' => 'page']
+                'choices' => $builder->getData()->getId() === null
+                    ? ['Artikel' => 'article', 'Seite' => 'page']
+                    : ['Artikel' => 'article', 'Seite' => 'page', 'Bestehende Legacy-Veranstaltung' => 'event'],
                 ]
             )
             ->add('title', TextType::class, [
@@ -34,6 +34,7 @@ final class WebsitePublicationType extends AbstractType
             ->add('parent', EntityType::class, [
                 'class' => WebsitePublication::class,
                 'label' => 'Übergeordnete Seite',
+                'choice_label' => 'title',
                 'required' => false,
                 'placeholder' => 'Hauptebene',
                 'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('parent')

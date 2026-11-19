@@ -51,7 +51,8 @@
             {% do form.tournament.setRendered %}
         {% endif %}
         {{ form_row(form.version) }}
-        <div class="dw-form-actions"><button class="btn btn-primary" type="submit">Inhalt speichern</button></div>
+        {{ form_row(form._token) }}
+        <div class="dw-form-actions"><button class="btn btn-primary" type="submit">Beitrag speichern</button></div>
     {{ form_end(form, {render_rest: false}) }}
     {% if publication.id %}
         <details class="mt-4"><summary>Änderungsnachweis</summary><ul>{% for entry in publication.history %}
