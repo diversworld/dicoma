@@ -267,8 +267,7 @@ class DashboardController extends AbstractDashboardController
            ->addCssFile('css/admin-theme.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
-            ->addCssFile('css/utilities.css')
-            ->addCssFile('css/forms.css');
+            ->addCssFile('css/utilities.css');
 	}
 
     #[AdminRoute(path: '/editorial', name: 'website_editorial', options: ['methods' => ['GET']])]
