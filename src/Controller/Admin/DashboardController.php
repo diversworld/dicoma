@@ -23,10 +23,13 @@ use App\Entity\TrainingUnitType;
 use App\Entity\ScheduleTemplate;
 use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
+use App\Entity\MembershipCharge;
+use App\Entity\MembershipPayment;
 use App\Entity\WebsitePublication;
 use App\Entity\FileAction;
 use App\Enum\CourseStatus;
 use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Controller\Admin\MemberCrudController;
 use \App\Entity\TuvInvoiceSettings;
 use App\Controller\Admin\MemberQualificationCrudController;
@@ -153,6 +156,42 @@ class DashboardController extends AbstractDashboardController
             $schedules->andWhere('1 = 0');
         }
         $applications = $this->em->getRepository(MembershipApplication::class);
+        $user = $this->getUser();
+        $canFinance = $user instanceof User && $club !== null
+            && $this->moduleAccess->can($user, $club, PermissionModule::FINANCE, PermissionAction::READ);
+        $canMembership = $user instanceof User && $club !== null
+            && $this->moduleAccess->can($user, $club, PermissionModule::MEMBERSHIP, PermissionAction::READ);
+        $isBoard = $this->isGranted(User::ROLE_BOARD);
+        $isTreasurer = $this->isGranted(User::ROLE_TREASURER);
+        $finance = ['openCents' => 0, 'overdueCents' => 0, 'paidCents' => 0, 'overdueCount' => 0, 'recentPayments' => []];
+        if ($canFinance) {
+            $chargeRepository = $this->em->getRepository(MembershipCharge::class);
+            $totals = $chargeRepository->createQueryBuilder('charge')
+                ->select('SUM(charge.amountCents - charge.paidCents) AS openCents', 'SUM(charge.paidCents) AS paidCents')
+                ->join('charge.member', 'm')
+                ->where('m.club = :club')
+                ->setParameter('club', $club)
+                ->getQuery()->getSingleResult();
+            $overdue = $chargeRepository->createQueryBuilder('charge')
+                ->select('COUNT(charge.id) AS count', 'SUM(charge.amountCents - charge.paidCents) AS cents')
+                ->join('charge.member', 'm')
+                ->where('m.club = :club AND charge.dueAt < :today AND charge.amountCents > charge.paidCents')
+                ->setParameter('club', $club)->setParameter('today', new \DateTimeImmutable('today'))
+                ->getQuery()->getSingleResult();
+            $finance = [
+                'openCents' => (int) ($totals['openCents'] ?? 0),
+                'paidCents' => (int) ($totals['paidCents'] ?? 0),
+                'overdueCents' => (int) ($overdue['cents'] ?? 0),
+                'overdueCount' => (int) ($overdue['count'] ?? 0),
+                'recentPayments' => $this->em->getRepository(MembershipPayment::class)->createQueryBuilder('payment')
+                    ->join('payment.charge', 'charge')->addSelect('charge')
+                    ->join('charge.member', 'm')->addSelect('m')
+                    ->where('m.club = :club')
+                    ->setParameter('club', $club)
+                    ->orderBy('payment.receivedAt', 'DESC')->addOrderBy('payment.id', 'DESC')
+                    ->setMaxResults(5)->getQuery()->getResult(),
+            ];
+        }
 
         $membersUrl = (clone $this->adminUrlGenerator)->unsetAll()
             ->setController(MemberCrudController::class)->setAction(Crud::PAGE_INDEX)->generateUrl();
@@ -163,12 +202,22 @@ class DashboardController extends AbstractDashboardController
             'upcomingSchedules' => $schedules->getQuery()->getResult(),
             'pendingApplicationCount' => $club === null ? 0 : $applications->count($applicationCriteria),
             'pendingApplications' => $club === null ? [] : $applications->findBy($applicationCriteria, ['submittedAt' => 'ASC', 'id' => 'ASC'], 5),
-            'quickLinks' => [
-                [
+            'quickLinks' => array_values(array_filter([
+                $canFinance ? [
+                    'label' => 'Mitgliedsfinanzen öffnen',
+                    'icon' => 'fa-coins',
+                    'url' => $this->generateUrl('admin_membership_finance'),
+                ] : null,
+                $isTreasurer && $canFinance ? [
+                    'label' => 'Offene Forderungen prüfen',
+                    'icon' => 'fa-file-invoice-dollar',
+                    'url' => $this->generateUrl('admin_membership_finance').'#overdue',
+                ] : null,
+                $canMembership ? [
                     'label' => 'Mitglieder verwalten', 
                     'icon' => 'fa-users',
                     'url' => $membersUrl
-                ],
+                ] : null,
                 [
                     'label' => 'Mitgliedschaften und Beiträge', 
                     'icon' => 'fa-address-card', 
@@ -184,7 +233,11 @@ class DashboardController extends AbstractDashboardController
                     'icon' => 'fa-calendar', 
                     'url' => $this->generateUrl('admin_course_calendar')
                 ],
-            ],
+            ])),
+            'finance' => $finance,
+            'canFinance' => $canFinance,
+            'canMembership' => $canMembership,
+            'dashboardRole' => $isTreasurer ? 'Kassenwart' : ($isBoard ? 'Vorstand' : 'Verwaltung'),
 			'expiredQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpired($club, 5),
@@ -708,6 +761,29 @@ class DashboardController extends AbstractDashboardController
         $eventRoute = $this->editorialAccess->can(PermissionAction::READ)
             ? 'admin_club_events'
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_club_event_new' : null);
+        if ($this->isGranted(User::ROLE_TREASURER) && !$this->isGranted(User::ROLE_SUPER_ADMIN)) {
+            return [
+                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
+                MenuItem::section('Kassenwart'),
+                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                MenuItem::linkToRoute('Beiträge und Mitgliedschaften', 'fa fa-address-card', 'membership_admin'),
+                ...($this->isGranted(User::ROLE_EQUIPMENT_CASH) ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
+                ...($this->isGranted(User::ROLE_BAR_MANAGER) ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
+                ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
+            ];
+        }
+        if ($this->isGranted(User::ROLE_BOARD) && !$this->isGranted(User::ROLE_SUPER_ADMIN)) {
+            return [
+                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
+                MenuItem::section('Vorstand'),
+                MenuItem::linkTo(MemberCrudController::class, 'Mitglieder', 'fa fa-users'),
+                MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
+                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                MenuItem::linkToRoute('Ausbildungsübersicht', 'fa fa-chart-line', 'admin_training_overview'),
+                MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
+                ...($editorialRoute !== null ? [MenuItem::linkToRoute('Website & Redaktion', 'fa fa-newspaper', $editorialRoute)] : []),
+            ];
+        }
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
@@ -729,6 +805,11 @@ class DashboardController extends AbstractDashboardController
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
+            ...($financeRoute ? [
+                MenuItem::section($this->isGranted(User::ROLE_TREASURER) ? 'Kassenwart' : 'Vorstand & Finanzen'),
+                MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance'),
+                MenuItem::linkToRoute('Mitgliedschaften und Beiträge', 'fa fa-address-card', 'membership_admin'),
+            ] : []),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
                 MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),

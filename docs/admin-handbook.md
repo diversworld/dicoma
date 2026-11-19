@@ -1,0 +1,67 @@
+# DICOMA – Administratorenhandbuch
+
+## Rollenprinzip
+
+- Berechtigungen werden über effektive Vereinsfunktionen und Modulrechte
+  bewertet.
+- Finanz-, Mitglieder-, Website-, Ausbildungs- und Geräterecht sind getrennte
+  Module.
+- Ein Superadministrator ist die technische Notfallrolle; operative Funktionen
+  sollen trotzdem fachlich zugeordnet bleiben.
+
+## Arbeitsübersicht
+
+Die Übersicht priorisiert nach effektiver Rolle:
+
+- Kassenwart: Mitgliedsfinanzen, offene Forderungen, Zahlungseingänge.
+- Vorstand: Mitglieder, Beiträge, Ausbildung und Vereinsereignisse.
+- Fachrollen: ihre bestehenden operativen Portale.
+- Superadministrator: zusätzlich alle System- und Stammdatenbereiche.
+
+Direkte URL-Aufrufe ersetzen die serverseitige Rechteprüfung nicht.
+
+## Mitgliederfinanzen
+
+1. Spartenzuschläge je Jahr anlegen.
+2. Beitragslauf zuerst mit `--dry-run` prüfen.
+3. Nur nach fachlicher Freigabe `--confirm` verwenden.
+4. Mahnungen ausschließlich über den Vorbereitungsbefehl erzeugen.
+5. Export mit neuer Datei, `--confirm` und geschütztem Speicherziel erzeugen.
+6. SEPA-Mandate verwalten keine automatische Lastschrift aus.
+
+## Veranstaltung und CMS
+
+- Neue Veranstaltungen ausschließlich im Bereich „Veranstaltungsbuchungen“
+  anlegen.
+- Redaktionelle CMS-Events sind Legacy und nicht für neue Ereignisse verwenden.
+- Seiten bilden Navigation und Hierarchie.
+- Artikel einer Seite erben deren Sparte, sofern keine eigene Sparte gewählt ist.
+
+## Geräte und Theke
+
+- Gerätewart öffnet und schließt Wartungsaufträge; technische Freigabe erfolgt
+  getrennt vom Bearbeitungsabschluss.
+- QR-Codes verweisen auf geschützte Inventarakten.
+- Prüferinnerungen über den vorhandenen Outboxprozess versenden.
+- Thekendienst-Checkliste und Verbrauch sind von der Kassenführung getrennt.
+
+## Betrieb und Datenschutz
+
+- Vor Migrationen und Cutover Datenbank sowie private Dateien sichern und
+  isoliert wiederherstellen.
+- Exportdateien enthalten personenbezogene Daten; nur in `var/private` oder
+  einem gleichwertig geschützten Ziel ablegen und nach Zweckablauf entfernen.
+- Finanz-, Mandats-, Dokumenten- und Nachrichtenbestände nur entsprechend
+  dokumentierter Aufbewahrungsdauer verwalten.
+- Keine Geheimnisse in Git, Logs oder Exportdateien außerhalb geschützter
+  Speicherorte veröffentlichen.
+
+## Wiederherstellung
+
+1. Schreibzugriffe und Hintergrundjobs stoppen.
+2. Anwendung, Konfiguration, Migrationstand und private Dateien sichern.
+3. Datenbank in isolierter Instanz wiederherstellen.
+4. Dateiinventar und Prüfsummen vergleichen.
+5. `doctrine:migrations:status`, Syntax-, Container-, Schema- und Smoke-Checks
+   ausführen.
+6. Dienst erst nach dokumentierter Prüfung wieder freigeben.

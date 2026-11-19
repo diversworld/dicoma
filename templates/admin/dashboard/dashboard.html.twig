@@ -1,6 +1,6 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block content_title %}{{ 'Verwaltungsübersicht'|trans }}{% endblock %}
+{% block content_title %}{{ dashboardRole }} – {{ 'Arbeitsübersicht'|trans }}{% endblock %}
 
 {% block main %}
     {% if dashboardScope %}
@@ -25,6 +25,24 @@
     </section>
 
     {% if dashboardScope %}
+    {% if canFinance %}
+    <section aria-labelledby="dashboard-finance" class="mb-4">
+        <h2 id="dashboard-finance" class="h5">{{ dashboardRole == 'Kassenwart' ? 'Kassenwart: Finanzstatus' : 'Finanzstatus'|trans }}</h2>
+        <div class="row g-3" data-dashboard-finance>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Offene Forderungen</div><div class="fs-2 fw-bold">{{ (finance.openCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Davon überfällig</div><div class="fs-2 fw-bold text-danger">{{ (finance.overdueCents / 100)|number_format(2, ',', '.') }} EUR</div><small>{{ finance.overdueCount }} Forderungen</small></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Eingegangene Zahlungen</div><div class="fs-2 fw-bold">{{ (finance.paidCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ path('admin_membership_finance') }}"><div class="card-body"><i class="fa fa-coins me-2"></i>Forderungen und Zahlungen öffnen</div></a></div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="h6 mb-0">Letzte Zahlungseingänge</h3></div>
+            <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Datum</th><th>Mitglied</th><th>Rechnung</th><th>Betrag</th></tr></thead><tbody>
+            {% for payment in finance.recentPayments %}<tr><td>{{ payment.receivedAt|date('d.m.Y') }}</td><td>{{ payment.charge.member.fullName }}</td><td>{{ payment.charge.invoiceNumber ?? payment.charge.description }}</td><td>{{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR</td></tr>
+            {% else %}<tr><td colspan="4" class="text-muted">Keine Zahlungseingänge.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </div>
+    </section>
+    {% endif %}
     <section aria-labelledby="dashboard-attention" class="mb-4">
         <h2 id="dashboard-attention" class="h5">{{ 'Aktuell im Blick'|trans }}</h2>
         <div class="row g-3">

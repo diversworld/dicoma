@@ -14,6 +14,7 @@ use App\Service\AdminClubContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -28,7 +29,7 @@ final class MembershipFinanceController extends AbstractController
     ) {}
 
     #[Route('', name: 'admin_membership_finance', methods: ['GET'])]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $club = $this->clubs->getClub();
         $user = $this->getUser();
@@ -36,28 +37,45 @@ final class MembershipFinanceController extends AbstractController
             || !$this->access->can($user, $club, PermissionModule::FINANCE, PermissionAction::READ)) {
             throw $this->createAccessDeniedException();
         }
-        $charges = $this->em->getRepository(MembershipCharge::class)->createQueryBuilder('charge')
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = 50;
+        $query = $this->em->getRepository(MembershipCharge::class)->createQueryBuilder('charge')
             ->join('charge.member', 'm')->addSelect('m')
             ->where('m.club = :club')
             ->setParameter('club', $club)
-            ->orderBy('charge.dueAt', 'ASC')->addOrderBy('charge.id', 'ASC')
-            ->getQuery()->getResult();
+            ->orderBy('charge.dueAt', 'ASC')->addOrderBy('charge.id', 'ASC');
+        $summary = (clone $query)->select(
+            'SUM(charge.amountCents - charge.paidCents) AS openCents',
+            'SUM(charge.paidCents) AS paidCents',
+        )->getQuery()->getSingleResult();
+        $overdue = (clone $query)->select('SUM(charge.amountCents - charge.paidCents) AS cents')
+            ->andWhere('charge.dueAt < :today AND charge.amountCents > charge.paidCents')
+            ->setParameter('today', new \DateTimeImmutable('today'))->getQuery()->getSingleResult();
+        $total = (int) (clone $query)->select('COUNT(charge.id)')->getQuery()->getSingleScalarResult();
+        $charges = $query->setFirstResult(($page - 1) * $limit)->setMaxResults($limit)->getQuery()->getResult();
         $openCents = 0; $overdueCents = 0; $paidCents = 0;
+        $payments = [];
+        if ($charges !== []) {
+            foreach ($this->em->getRepository(MembershipPayment::class)->createQueryBuilder('payment')
+                ->where('payment.charge IN (:charges)')->setParameter('charges', $charges)
+                ->orderBy('payment.receivedAt', 'ASC')->getQuery()->getResult() as $payment) {
+                $payments[$payment->getCharge()->getId()][] = $payment;
+            }
+        }
         $rows = [];
         foreach ($charges as $charge) {
-            $openCents += $charge->getOutstandingCents();
-            $paidCents += $charge->getPaidCents();
-            if ($charge->getStatus() === 'overdue') { $overdueCents += $charge->getOutstandingCents(); }
             $rows[] = [
                 'charge' => $charge,
-                'payments' => $this->em->getRepository(MembershipPayment::class)->findBy(['charge' => $charge], ['id' => 'ASC']),
+                'payments' => $payments[$charge->getId()] ?? [],
             ];
         }
         return $this->render('admin/membership/finance.html.twig', [
             'rows' => $rows,
-            'openCents' => $openCents,
-            'overdueCents' => $overdueCents,
-            'paidCents' => $paidCents,
+            'openCents' => (int) ($summary['openCents'] ?? 0),
+            'overdueCents' => (int) ($overdue['cents'] ?? 0),
+            'paidCents' => (int) ($summary['paidCents'] ?? 0),
+            'page' => $page,
+            'pages' => max(1, (int) ceil($total / $limit)),
         ]);
     }
 }

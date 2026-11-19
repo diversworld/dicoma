@@ -35,4 +35,5 @@ class MembershipPayment
     public function getReference(): string { return $this->reference; }
     public function getActor(): string { return $this->actor; }
     public function getReceivedAt(): \DateTimeImmutable { return $this->receivedAt; }
+    public function getCharge(): MembershipCharge { return $this->charge; }
 }

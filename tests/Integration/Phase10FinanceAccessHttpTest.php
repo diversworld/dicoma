@@ -52,9 +52,15 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         $client->request('GET', '/admin/membership-finance');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'IBAN, Mandatsnachweise, Kontaktdaten');
+        $client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-dashboard-finance]', 'Offene Forderungen');
+        self::assertSelectorExists('a[href="/admin/membership-finance"]');
         $client->loginUser($member);
         $client->request('GET', '/admin/membership-finance');
         self::assertResponseStatusCodeSame(403);
+        $client->request('GET', '/admin');
+        self::assertSelectorNotExists('[data-dashboard-finance]');
     }
 
     private function account(Club $club, string $name): User
