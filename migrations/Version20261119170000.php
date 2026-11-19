@@ -21,7 +21,7 @@ final class Version20261119170000 extends AbstractMigration
         $this->addSql('CREATE INDEX IDX_POLICY_ONBOARDING_CONTRIBUTION ON membership_policy (onboarding_contribution_class_id)');
         $this->addSql('CREATE TABLE membership_application_approval (id INT AUTO_INCREMENT NOT NULL, application_id INT NOT NULL, reviewer_id INT NOT NULL, reviewer_name VARCHAR(180) NOT NULL, note LONGTEXT NOT NULL, approved_at DATETIME NOT NULL, UNIQUE INDEX uniq_application_reviewer (application_id, reviewer_id), INDEX IDX_APPLICATION_APPROVAL_APPLICATION (application_id), INDEX IDX_APPLICATION_APPROVAL_REVIEWER (reviewer_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
         $this->addSql('ALTER TABLE membership_application_approval ADD CONSTRAINT FK_APPLICATION_APPROVAL_APPLICATION FOREIGN KEY (application_id) REFERENCES membership_application (id) ON DELETE CASCADE');
-        $this->addSql('ALTER TABLE membership_application_approval ADD CONSTRAINT FK_APPLICATION_APPROVAL_REVIEWER FOREIGN KEY (reviewer_id) REFERENCES user (id) ON DELETE RESTRICT');
+        $this->addSql('ALTER TABLE membership_application_approval ADD CONSTRAINT FK_APPLICATION_APPROVAL_REVIEWER FOREIGN KEY (reviewer_id) REFERENCES `user` (id) ON DELETE RESTRICT');
     }
 
     public function down(Schema $schema): void

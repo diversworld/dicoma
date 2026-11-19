@@ -1,4 +1,6 @@
-![Dynamic JSON Badge](https://img.shields.io/github/downloads/diversworld/dicoma/latest/total)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/diversworld/dicoma/total)
+![GitHub Tag](https://img.shields.io/github/v/tag/diversworld/dicoma)
+
 
 
 # Diversworld - dicoma

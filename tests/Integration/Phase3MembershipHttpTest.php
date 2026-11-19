@@ -12,6 +12,7 @@ use App\Entity\Member;
 use App\Entity\MemberDocument;
 use App\Entity\MemberQualification;
 use App\Entity\MembershipApplication;
+use App\Entity\MembershipApplicationApproval;
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipMessage;
 use App\Entity\MembershipEvent;
@@ -622,6 +623,53 @@ final class Phase3MembershipHttpTest extends WebTestCase
         $member = $service->approve($application, null, 'superadmin', 'Andere Person im selben Haushalt anhand Ausweis bestätigt.', true);
         self::assertNotSame($person->getId(), $member->getPerson()->getId());
         self::assertSame(2, $this->em->getRepository(Person::class)->count([]));
+    }
+
+    public function testConfiguredQuorumOnboardsMembershipContributionAndChargeWithFinalApproval(): void
+    {
+        $policy = $this->policy();
+        $policy->setRequiredApprovalCount(2);
+        $class = new ContributionClass($this->club);
+        $class->setName('Onboarding Standard');
+        $class->setAnnualCents(12000);
+        $this->em->persist($class);
+        $this->em->flush();
+        $policy->setOnboardingContributionClass($class);
+        $policy->setOnboardingIssueAnnualCharge(true);
+        $policy->setOnboardingChargeDue('12-15');
+        $first = $this->memberUser('reviewer-one', ['ROLE_ADMIN']);
+        $second = $this->memberUser('reviewer-two', ['ROLE_ADMIN']);
+        $application = $this->application();
+        static::getContainer()->get(MembershipService::class)->submit($application);
+        $this->em->flush();
+
+        $this->client->loginUser($first);
+        $crawler = $this->client->request('GET', '/admin/membership/application/'.$application->getId());
+        $this->client->submit($crawler->filter('form[name="membership_decision"]')->form(), [
+            'membership_decision[decision]' => 'approve',
+            'membership_decision[note]' => 'Identität und Antrag geprüft.',
+            'membership_decision[confirmed]' => '1',
+        ]);
+        self::assertSame(1, $this->em->getRepository(MembershipApplicationApproval::class)->count(['application' => $application]));
+        self::assertSame('pending', $this->em->find(MembershipApplication::class, $application->getId())->getStatus());
+        self::assertNull($this->em->find(MembershipApplication::class, $application->getId())->getMember());
+
+        $this->client->loginUser($second);
+        $crawler = $this->client->request('GET', '/admin/membership/application/'.$application->getId());
+        $this->client->submit($crawler->filter('form[name="membership_decision"]')->form(), [
+            'membership_decision[decision]' => 'approve',
+            'membership_decision[note]' => 'Unterlagen und Quorum bestätigt.',
+            'membership_decision[confirmed]' => '1',
+        ]);
+        $this->em->clear();
+        $stored = $this->em->find(MembershipApplication::class, $application->getId());
+        self::assertSame('approved', $stored->getStatus());
+        self::assertSame(2, $this->em->getRepository(MembershipApplicationApproval::class)->count(['application' => $stored]));
+        self::assertNotNull($stored->getMember());
+        self::assertSame('Onboarding Standard', $stored->getMember()->getContributionClass()->getName());
+        $charge = $this->em->getRepository(MembershipCharge::class)->findOneBy(['member' => $stored->getMember()]);
+        self::assertSame(12000, $charge->getAmountCents());
+        self::assertSame('12-15', $charge->getDueAt()->format('m-d'));
     }
 
     public function testFinanceRejectsForeignClubAssignmentsAndCircularFamilyPayers(): void

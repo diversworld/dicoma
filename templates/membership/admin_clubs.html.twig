@@ -1,7 +1,7 @@
 {% extends 'admin/membership/layout.html.twig' %}
-{% block title %}Mitgliedschaftsverwaltung{% endblock %}
+{% block title %}Aufnahmeverfahren{% endblock %}
 {% block membership_body %}
-<h1>Mitgliedschaftsverwaltung</h1>
-<p>Wählen Sie einen Verein, um Mitgliedschaften im Backend zu verwalten.</p>
-<ul>{% for club in clubs %}<li class="mb-3"><strong>{{ club.name }}</strong> <a class="btn btn-primary" href="{{ path('membership_club', {id: club.id}) }}">Mitgliedschaften verwalten</a></li>{% else %}<li>Keine verwaltbare Vereinszuordnung.</li>{% endfor %}</ul>
+<h1>Aufnahmeverfahren</h1>
+<p>Wählen Sie einen Verein, um eingegangene Aufnahmeanträge nach dem festgelegten Freigabequorum zu bearbeiten.</p>
+<ul>{% for club in clubs %}<li class="mb-3"><strong>{{ club.name }}</strong> <a class="btn btn-primary" href="{{ path('membership_club', {id: club.id}) }}">Aufnahmeverfahren öffnen</a></li>{% else %}<li>Keine verwaltbare Vereinszuordnung.</li>{% endfor %}</ul>
 {% endblock %}

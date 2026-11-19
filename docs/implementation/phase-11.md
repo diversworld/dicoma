@@ -59,7 +59,7 @@ gesondert zu bearbeiten.
   - Rollentitel „Kassenwart – Arbeitsübersicht“;
   - Finanzstatus sichtbar;
   - operative Links „Mitgliedsfinanzen“, „Mitgliederzentrale“ und
-    „Mitgliedsanträge“ sind klar nach Aufgabe getrennt;
+    „Aufnahmeverfahren“ sind klar nach Aufgabe getrennt;
   - Superadmin-Systemzugang bleibt erhalten.
 - Bestehende ältere Dashboardtests mit direkt gesetzten Rollen weisen weiterhin
   bekannte Funktionsmodell-/Backendkontext-Abweichungen aus und sind nicht als

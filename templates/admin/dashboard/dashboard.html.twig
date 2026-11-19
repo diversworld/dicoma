@@ -49,7 +49,7 @@
         <div class="row g-3">
             {% set metrics = [
                 {label: 'Offene und laufende Kurse', count: activeCourseCount, url: path('admin_portal_training_portal'), key: 'courses'},
-                {label: 'Offene Mitgliedsanträge', count: pendingApplicationCount, url: path('membership_admin'), key: 'applications', show: canMembership},
+                {label: 'Offene Aufnahmeverfahren', count: pendingApplicationCount, url: path('membership_admin'), key: 'applications', show: canMembership},
                 {label: 'Qualifikationen abgelaufen', count: expiredQualificationCount, url: expiredQualificationsUrl, key: 'expired'},
                 {label: 'Ablauf innerhalb 30 Tagen', count: expiringQualificationCount, url: expiringQualificationsUrl, key: 'expiring'}
             ] %}
@@ -94,7 +94,7 @@
         </section>
         <section class="col-xl-5" aria-labelledby="dashboard-applications">
             <div class="card h-100">
-                <div class="card-header"><h2 id="dashboard-applications" class="h5 mb-0">{{ 'Offene Mitgliedsanträge'|trans }}</h2></div>
+                <div class="card-header"><h2 id="dashboard-applications" class="h5 mb-0">{{ 'Offene Aufnahmeverfahren'|trans }}</h2></div>
                 <div class="table-responsive">
                     <table class="table mb-0" data-dashboard-applications>
                         <thead><tr><th scope="col">{{ 'Eingang'|trans }}</th><th scope="col">{{ 'Antrag'|trans }}</th></tr></thead>
@@ -105,12 +105,12 @@
                                 <td><a href="{{ path('membership_application_decide', {id: application.id}) }}">{{ application.firstname }} {{ application.lastname }}</a></td>
                             </tr>
                         {% else %}
-                            <tr><td colspan="2" class="text-muted">{{ 'Keine offenen Mitgliedsanträge.'|trans }}</td></tr>
+                            <tr><td colspan="2" class="text-muted">{{ 'Keine offenen Aufnahmeverfahren.'|trans }}</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer"><a href="{{ path('membership_admin') }}">{{ 'Zur Mitgliederverwaltung'|trans }}</a></div>
+                <div class="card-footer"><a href="{{ path('membership_admin') }}">{{ 'Zum Aufnahmeverfahren'|trans }}</a></div>
             </div>
         </section>
     </div>

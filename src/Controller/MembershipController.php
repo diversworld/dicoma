@@ -479,8 +479,8 @@ final class MembershipController extends AbstractController
         
         $builder = $this->forms->createNamedBuilder('membership_decision')
             ->add('decision', F\ChoiceType::class, [
-                'label' => 'Entscheidung', 
-                'choices' => ['Genehmigen' => 'approve', 'Ablehnen' => 'reject']
+                'label' => 'Prüfergebnis',
+                'choices' => ['Prüfung bestätigen' => 'approve', 'Antrag ablehnen' => 'reject']
                 ]
             )
             ->add('note', F\TextareaType::class, [
@@ -568,6 +568,7 @@ final class MembershipController extends AbstractController
             'approvals' => $this->em->getRepository(MembershipApplicationApproval::class)
                 ->findBy(['application' => $application], ['approvedAt' => 'ASC']),
             'requiredApprovals' => $this->memberships->policy($application->getClub())?->getRequiredApprovalCount() ?? 1,
+            'requiredDocuments' => $this->memberships->policy($application->getClub())?->getRequiredDocuments() ?? [],
             ]
         );
     }

@@ -19,6 +19,16 @@
         </ul>
     </div>
 </section>
+{% if requiredDocuments is not empty %}
+<div class="alert alert-secondary">
+    <strong>Vor Freigabe zu prüfende Unterlagen:</strong>
+    <ul class="mb-0">
+    {% for kind in requiredDocuments %}
+        <li>{{ kind|replace({'_':' '}) }}</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% if application.status == 'pending' %}
 <p>Jede berechtigte Person prüft selbstständig Identität und Unterlagen und dokumentiert dies. Eine Person zählt nur einmal. Mit der letzten erforderlichen Bestätigung werden die konfigurierten Onboarding-Schritte in einem Vorgang ausgeführt.</p>
 {{ form_start(form) }}{{ form_widget(form) }}<button type="submit" class="btn btn-primary">{{ approvals|length + 1 >= requiredApprovals ? 'Freigeben und Onboarding ausführen' : 'Freigabe bestätigen' }}</button>{{ form_end(form) }}

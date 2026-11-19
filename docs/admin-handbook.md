@@ -27,12 +27,26 @@ Direkte URL-Aufrufe ersetzen die serverseitige Rechteprüfung nicht.
    im Mitgliedsdatensatz gepflegt.
 3. Die Detailseite bündelt Mitgliedschaft, Forderungen, Zahlungen, Kündigung,
    Statuswechsel und Vorgangshistorie.
-4. Aufnahmeverfahren bleiben unter „Mitgliedsanträge“ getrennt, weil hier noch
+4. Aufnahmeverfahren bleiben unter „Aufnahmeverfahren“ getrennt, weil hier noch
    keine bestehende Mitgliedschaft vorliegt.
 5. „Beitragsarten“ und Mitgliedschaftsregeln sind Stammdaten; sie gehören
    nicht in den täglichen Workflow des einzelnen Mitglieds.
 6. Technische Personen-, Rollen- und Systemlisten sind Superadministratoren
    vorbehalten.
+
+## Aufnahme und Onboarding
+
+1. In den Mitgliedschaftsregeln werden 1 bis 10 erforderliche Bestätigungen
+   festgelegt.
+2. Jede berechtigte Prüferin bzw. jeder berechtigte Prüfer dokumentiert
+   Identität, Antrag und die konfigurierten Unterlagen einmalig.
+3. Eine Person kann denselben Antrag nicht mehrfach bestätigen.
+4. Die letzte erforderliche Bestätigung führt atomar den Aufnahmevorgang aus:
+   Person, Mitgliedschaft, Mitgliedsnummer, Status, Verlauf und Benachrichtigung.
+5. Optional werden eine voreingestellte Beitragsart und die erste
+   Jahresforderung mit konfiguriertem Fälligkeitsdatum angelegt.
+6. Eine Ablehnung beendet den Antrag und ersetzt keine Löschung oder
+   Identitätsänderung.
 
 ## Mitgliederfinanzen
 
