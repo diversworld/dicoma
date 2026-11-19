@@ -1,0 +1,67 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}Vereinsdokumente{% endblock %}
+
+{% block main %}
+    <div class="row g-4">
+        <section class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><h2 class="h5 mb-0">Dokumentversion hochladen</h2></div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="vstack gap-3">
+                        <input type="hidden" name="_token" value="{{ csrf_token('club_document_upload') }}">
+                        <label class="form-label">Bestehendes Dokument
+                            <select class="form-select" name="documentId">
+                                <option value="0">Neues Dokument</option>
+                                {% for document in documents %}<option value="{{ document.id }}">{{ document.title }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <label class="form-label">Titel bei neuem Dokument<input class="form-control" name="title" maxlength="180"></label>
+                        <label class="form-label">Kategorie<select class="form-select" name="category">{% for label, value in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+                        <label class="form-label">Datei<input class="form-control" type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.txt,.docx,.odt" required></label>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="member-visible" name="memberVisible" value="1"><label class="form-check-label" for="member-visible">Für Mitglieder freigegeben sichtbar</label></div>
+                        <button class="btn btn-primary">Zur Freigabe hochladen</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+        <section class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><h2 class="h5 mb-0">Dokumentenablage</h2></div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Dokument</th><th>Kategorie</th><th>Status</th><th>Versionen</th></tr></thead>
+                        <tbody>
+                        {% for document in documents %}
+                            <tr>
+                                <td><strong>{{ document.title }}</strong>{% if document.memberVisible %}<div class="small text-muted">Mitgliederzugriff</div>{% endif %}</td>
+                                <td>{{ document.category }}</td>
+                                <td>{{ document.status }}</td>
+                                <td>
+                                    {% for version in document.versions %}
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <a href="{{ path('admin_club_document_download', {id: version.id}) }}">v{{ version.version }} – {{ version.originalName }}</a>
+                                            {% if version.approvedAt %}
+                                                <span class="badge bg-success">Freigegeben</span>
+                                            {% elseif is_granted('ROLE_BOARD') or is_granted('ROLE_ADMIN') %}
+                                                <form method="post" action="{{ path('admin_club_document_approve', {id: version.id}) }}">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('document_approve_' ~ version.id) }}">
+                                                    <button class="btn btn-sm btn-outline-success">Freigeben</button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Keine Version</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4" class="text-muted">Noch keine Dokumente.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

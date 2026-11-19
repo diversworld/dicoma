@@ -1,0 +1,99 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}Vorstand, Sitzungen & Beschlüsse{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-primary" href="{{ ea_url().setController('App\\Controller\\Admin\\BoardMeetingCrudController').setAction('new') }}">Sitzung anlegen</a>
+    <a class="btn btn-outline-primary" href="{{ ea_url().setController('App\\Controller\\Admin\\BoardTaskCrudController').setAction('new') }}">Aufgabe anlegen</a>
+{% endblock %}
+
+{% block main %}
+    <div class="row g-3 mb-4">
+        {% for metric in [
+            {label: 'Offene Aufgaben', value: metrics.openTasks},
+            {label: 'Kommende Sitzungen', value: metrics.upcomingMeetingCount},
+            {label: 'Offene Beschlüsse', value: metrics.openResolutions},
+            {label: 'Dokumentfreigaben', value: metrics.pendingDocuments}
+        ] %}
+            <div class="col-6 col-xl-3">
+                <div class="card h-100"><div class="card-body">
+                    <div class="text-muted">{{ metric.label }}</div>
+                    <div class="fs-1 fw-bold">{{ metric.value }}</div>
+                </div></div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4">
+        <section class="col-xl-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Sitzungen</h2>
+                    <a href="{{ ea_url().setController('App\\Controller\\Admin\\BoardMeetingCrudController').setAction('index') }}">Alle verwalten</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for meeting in meetings %}
+                        <article class="list-group-item">
+                            <div class="d-flex justify-content-between gap-3">
+                                <div>
+                                    <h3 class="h6 mb-1">{{ meeting.title }}</h3>
+                                    <div class="text-muted">{{ meeting.startsAt|date('d.m.Y H:i') }} · {{ meeting.location ?: 'Ort offen' }}</div>
+                                </div>
+                                <span class="badge bg-secondary">{{ meeting.status }}</span>
+                            </div>
+                            {% if meeting.resolutions|length %}
+                                <ul class="mt-3 mb-2">
+                                    {% for resolution in meeting.resolutions %}
+                                        <li>
+                                            <strong>{{ resolution.title }}</strong> – {{ resolution.status }}
+                                            {% if resolution.tasks is empty %}
+                                                <form method="post" action="{{ path('admin_governance_resolution_task', {id: resolution.id}) }}" class="d-inline">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('resolution_task_' ~ resolution.id) }}">
+                                                    <button class="btn btn-sm btn-link">Aufgabe erzeugen</button>
+                                                </form>
+                                            {% else %}
+                                                <span class="text-success">Aufgabe angelegt</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                            <details class="mt-3">
+                                <summary>Beschluss erfassen</summary>
+                                <form method="post" action="{{ path('admin_governance_resolution_create', {id: meeting.id}) }}" class="row g-2 mt-1">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('resolution_' ~ meeting.id) }}">
+                                    <div class="col-md-6"><label class="form-label">Titel<input class="form-control" name="title" maxlength="180" required></label></div>
+                                    <div class="col-md-6"><label class="form-label">Frist<input class="form-control" type="date" name="dueAt"></label></div>
+                                    <div class="col-12"><label class="form-label">Beschluss<input class="form-control" name="decision" required></label></div>
+                                    <div class="col-md-8"><label class="form-label">Verantwortlich<select class="form-select" name="responsible"><option value="">Offen</option>{% for user in users %}<option value="{{ user.id }}">{{ user.user }}</option>{% endfor %}</select></label></div>
+                                    <div class="col-md-4 d-flex align-items-end"><div class="form-check"><input class="form-check-input" id="task-{{ meeting.id }}" type="checkbox" name="createTask" value="1" checked><label class="form-check-label" for="task-{{ meeting.id }}">Aufgabe erzeugen</label></div></div>
+                                    <div class="col-12"><button class="btn btn-primary btn-sm">Beschluss speichern</button></div>
+                                </form>
+                            </details>
+                        </article>
+                    {% else %}
+                        <div class="list-group-item text-muted">Noch keine Sitzungen erfasst.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <section class="col-xl-5">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Dringende Aufgaben</h2>
+                    <a href="{{ ea_url().setController('App\\Controller\\Admin\\BoardTaskCrudController').setAction('index') }}">Alle Aufgaben</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for task in metrics.tasks %}
+                        <div class="list-group-item">
+                            <strong>{{ task.title }}</strong>
+                            <div class="text-muted small">{{ task.assignee ?: 'Nicht zugewiesen' }} · {{ task.dueAt ? task.dueAt|date('d.m.Y') : 'Keine Frist' }}</div>
+                        </div>
+                    {% else %}
+                        <div class="list-group-item text-muted">Keine offenen Aufgaben.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

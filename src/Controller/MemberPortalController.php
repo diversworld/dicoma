@@ -8,6 +8,8 @@ use App\Entity\MemberTank;
 use App\Entity\MemberTankCheckBooking;
 use App\Entity\Booking;
 use App\Entity\ClubEventRegistration;
+use App\Entity\ClubDocument;
+use App\Entity\ClubDocumentVersion;
 use App\Entity\InternalMessageRecipient;
 use App\Entity\MemberSport;
 use App\Entity\Schedule;
@@ -17,12 +19,49 @@ use App\Enum\MemberSportStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_MEMBER')]
 final class MemberPortalController extends AbstractController
 {
+    #[Route('/my/club-documents', name: 'member_club_documents', methods: ['GET'])]
+    public function clubDocuments(EntityManagerInterface $em): Response
+    {
+        $user = $this->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        if ($member?->getClub() === null) {
+            throw $this->createAccessDeniedException();
+        }
+        return $this->render('member_portal/documents.html.twig', [
+            'documents' => $em->getRepository(ClubDocument::class)->findBy([
+                'club' => $member->getClub(),
+                'status' => ClubDocument::STATUS_APPROVED,
+                'memberVisible' => true,
+            ], ['id' => 'DESC']),
+        ]);
+    }
+
+    #[Route('/my/club-documents/{id}', name: 'member_club_document_download', methods: ['GET'])]
+    public function downloadClubDocument(ClubDocumentVersion $version, \App\Service\ClubDocumentStorage $storage): BinaryFileResponse
+    {
+        $user = $this->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        $document = $version->getDocument();
+        if ($member?->getClub()?->getId() !== $document->getClub()->getId()
+            || $version->getApprovedAt() === null
+            || $document->getStatus() !== ClubDocument::STATUS_APPROVED
+            || !$document->isMemberVisible()) {
+            throw $this->createAccessDeniedException();
+        }
+        $response = new BinaryFileResponse($storage->path($version->getStorageName()));
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $version->getOriginalName());
+        $response->headers->set('Cache-Control', 'private, no-store');
+        return $response;
+    }
+
     #[Route('/my/bookings', name: 'member_bookings', methods: ['GET'])]
     public function bookings(EntityManagerInterface $em): Response
     {

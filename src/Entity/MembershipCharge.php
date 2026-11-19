@@ -71,7 +71,9 @@ class MembershipCharge
     public function getStatus(\DateTimeImmutable $today = new \DateTimeImmutable('today')): string
     {
         if ($this->getOutstandingCents() <= 0) { return 'paid'; }
-        if ($this->dueAt->format('Y-m-d') < $today->format('Y-m-d')) { return 'overdue'; }
+        if ($this->dueAt->format('Y-m-d') < $today->format('Y-m-d')) {
+            return $this->reminderCount > 0 ? 'reminded' : 'overdue';
+        }
         return 'open';
     }
 }

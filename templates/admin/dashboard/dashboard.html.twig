@@ -25,6 +25,33 @@
     </section>
 
     {% if dashboardScope %}
+    {% if canGovernance %}
+    <section aria-labelledby="dashboard-governance" class="mb-4">
+        <h2 id="dashboard-governance" class="h5">Vorstand & Organisation</h2>
+        <div class="row g-3">
+            {% for metric in [
+                {label: 'Mitglieder gesamt', value: governance.membersTotal},
+                {label: 'Aktive Mitglieder', value: governance.membersActive},
+                {label: 'Passive Mitglieder', value: governance.membersPassive},
+                {label: 'Offene Aufgaben', value: governance.openTasks},
+                {label: 'Offene Beschlüsse', value: governance.openResolutions},
+                {label: 'Dokumentfreigaben', value: governance.pendingDocuments},
+                {label: 'Aufnahmeverfahren', value: governance.newMemberApplications},
+                {label: 'Kommende Sitzungen', value: governance.upcomingMeetingCount}
+            ] %}
+                <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ metric.label }}</div><div class="fs-2 fw-bold">{{ metric.value }}</div></div></div></div>
+            {% endfor %}
+        </div>
+        <div class="row g-4 mt-1">
+            <section class="col-lg-6"><div class="card h-100"><div class="card-header">Offene Aufgaben</div><div class="list-group list-group-flush">
+                {% for task in governance.tasks|slice(0, 5) %}<a class="list-group-item list-group-item-action" href="{{ ea_url().setController('App\\Controller\\Admin\\BoardTaskCrudController').setAction('edit').setEntityId(task.id) }}">{{ task.title }}<span class="float-end">{{ task.dueAt ? task.dueAt|date('d.m.Y') : 'ohne Frist' }}</span></a>{% else %}<div class="list-group-item text-muted">Keine offenen Aufgaben.</div>{% endfor %}
+            </div></div></section>
+            <section class="col-lg-6"><div class="card h-100"><div class="card-header">Geburtstage in 14 Tagen</div><div class="list-group list-group-flush">
+                {% for member in governance.birthdays %}<div class="list-group-item">{{ member.fullName }} <span class="float-end">{{ member.person.birthday|date('d.m.') }}</span></div>{% else %}<div class="list-group-item text-muted">Keine Geburtstage.</div>{% endfor %}
+            </div></div></section>
+        </div>
+    </section>
+    {% endif %}
     {% if canFinance %}
     <section aria-labelledby="dashboard-finance" class="mb-4">
         <h2 id="dashboard-finance" class="h5">{{ dashboardRole == 'Kassenwart' ? 'Kassenwart: Finanzstatus' : 'Finanzstatus'|trans }}</h2>

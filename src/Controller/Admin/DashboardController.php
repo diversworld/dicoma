@@ -39,6 +39,7 @@ use App\Service\TankInspectionOverview;
 use App\Service\PublicWebsite;
 use App\Service\AdminClubContext;
 use App\Service\MembershipRoleContinuity;
+use App\Service\BoardDashboard;
 use App\Service\BarDutyAccess;
 use App\Security\EditorialAccess;
 use App\Security\ModuleAccess;
@@ -118,6 +119,7 @@ class DashboardController extends AbstractDashboardController
         private readonly ModuleAccess $moduleAccess,
         private readonly FolderPermissions $folderPermissions,
         private readonly MembershipRoleContinuity $continuity,
+        private readonly BoardDashboard $boardDashboard,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
 	) {
 	}
@@ -163,6 +165,11 @@ class DashboardController extends AbstractDashboardController
             && $this->moduleAccess->can($user, $club, PermissionModule::MEMBERSHIP, PermissionAction::READ);
         $isBoard = $this->isGranted(User::ROLE_BOARD);
         $isTreasurer = $this->isGranted(User::ROLE_TREASURER);
+        $isSecretary = $this->isGranted(User::ROLE_SECRETARY);
+        $storedRoles = $user instanceof User ? $user->getStoredRoles() : [];
+        $governance = $club !== null && ($isBoard || $isSecretary || $this->isGranted(User::ROLE_ADMIN))
+            ? $this->boardDashboard->forClub($club)
+            : null;
         $finance = ['openCents' => 0, 'overdueCents' => 0, 'paidCents' => 0, 'overdueCount' => 0, 'recentPayments' => []];
         if ($canFinance) {
             $chargeRepository = $this->em->getRepository(MembershipCharge::class);
@@ -237,7 +244,11 @@ class DashboardController extends AbstractDashboardController
             'finance' => $finance,
             'canFinance' => $canFinance,
             'canMembership' => $canMembership,
-            'dashboardRole' => $isTreasurer ? 'Kassenwart' : ($isBoard ? 'Vorstand' : 'Verwaltung'),
+            'dashboardRole' => in_array(User::ROLE_SECRETARY, $storedRoles, true) ? 'Schriftführung'
+                : (in_array(User::ROLE_TREASURER, $storedRoles, true) ? 'Kassenwart'
+                    : ($isBoard ? 'Vorstand' : 'Verwaltung')),
+            'governance' => $governance,
+            'canGovernance' => $governance !== null,
 			'expiredQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpired($club, 5),
@@ -761,6 +772,18 @@ class DashboardController extends AbstractDashboardController
         $eventRoute = $this->editorialAccess->can(PermissionAction::READ)
             ? 'admin_club_events'
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_club_event_new' : null);
+        if ($this->isGranted(User::ROLE_SECRETARY)
+            && !$this->isGranted(User::ROLE_BOARD)
+            && !$this->isGranted(User::ROLE_ADMIN)) {
+            return [
+                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
+                MenuItem::section('Schriftführung'),
+                MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
+                MenuItem::linkTo(BoardMeetingCrudController::class, 'Sitzungen', 'fa fa-calendar-days'),
+                MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
+                MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
+            ];
+        }
         if ($this->isGranted(User::ROLE_TREASURER) && !$this->isGranted(User::ROLE_SUPER_ADMIN)) {
             return [
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
@@ -780,6 +803,9 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
                 MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                MenuItem::linkToRoute('Vorstandsarbeit', 'fa fa-people-line', 'admin_governance'),
+                MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
+                MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
                 MenuItem::linkToRoute('Ausbildungsübersicht', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
                 ...($editorialRoute !== null ? [MenuItem::linkToRoute('Website & Redaktion', 'fa fa-newspaper', $editorialRoute)] : []),
@@ -832,6 +858,13 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card')
                         ->setPermission('ROLE_SUPER_ADMIN'),
             ]),
+            MenuItem::subMenu('Vorstand & Organisation', 'fa fa-people-roof')
+                ->setSubItems([
+                    MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
+                    MenuItem::linkTo(BoardMeetingCrudController::class, 'Sitzungen verwalten', 'fa fa-calendar-days'),
+                    MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben verwalten', 'fa fa-list-check'),
+                    MenuItem::linkToRoute('Dokumentenablage', 'fa fa-folder-open', 'admin_club_documents'),
+                ]),
 
             MenuItem::subMenu('Mannschaften & Turniere', 'fa fa-trophy')
                 ->setSubItems([

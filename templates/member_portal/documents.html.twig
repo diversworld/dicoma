@@ -1,0 +1,22 @@
+{% extends 'base.html.twig' %}
+{% block title %}Vereinsdokumente | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="member-portal"><div class="container py-4">
+    <h1>Vereinsdokumente</h1>
+    <p class="text-muted">Freigegebene Satzung, Ordnungen, Formulare und Vereinsinformationen.</p>
+    <div class="list-group">
+        {% for document in documents %}
+            <section class="list-group-item">
+                <h2 class="h5 mb-1">{{ document.title }}</h2>
+                <div class="text-muted mb-2">{{ document.category }}</div>
+                {% for version in document.versions %}
+                    {% if version.approvedAt %}<a href="{{ path('member_club_document_download', {id: version.id}) }}">{{ version.originalName }} (Version {{ version.version }})</a>{% endif %}
+                {% endfor %}
+            </section>
+        {% else %}
+            <p class="list-group-item text-muted">Derzeit sind keine Vereinsdokumente freigegeben.</p>
+        {% endfor %}
+    </div>
+</div></main>
+{% endblock %}

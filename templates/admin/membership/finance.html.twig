@@ -19,8 +19,8 @@
             <td>{{ (charge.amountCents / 100)|number_format(2, ',', '.') }} EUR</td>
             <td>{{ (charge.paidCents / 100)|number_format(2, ',', '.') }} EUR</td>
             <td>{{ (charge.outstandingCents / 100)|number_format(2, ',', '.') }} EUR</td>
-            <td>{{ charge.status == 'paid' ? 'Bezahlt' : (charge.status == 'overdue' ? 'Überfällig' : 'Offen') }}</td>
-            <td>{% for payment in row.payments %}{{ payment.receivedAt|date('d.m.Y') }}: {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }}<br>{% else %}—{% endfor %}</td>
+            <td>{{ charge.status == 'paid' ? 'Bezahlt' : (charge.status == 'reminded' ? 'Gemahnt (' ~ charge.reminderCount ~ ')' : (charge.status == 'overdue' ? 'Überfällig' : 'Offen')) }}</td>
+            <td>{% for payment in row.payments %}{{ payment.receivedAt|date('d.m.Y') }}: {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }}<br>{% endfor %}{% for notice in row.notices %}<a href="{{ path('admin_membership_dunning_pdf', {id: notice.id}) }}">Mahnung {{ notice.createdAt|date('d.m.Y') }} als PDF</a><br>{% endfor %}{% if row.payments is empty and row.notices is empty %}—{% endif %}</td>
         </tr>
     {% else %}<tr><td colspan="9">Keine Mitgliedsforderungen vorhanden.</td></tr>{% endfor %}</tbody>
 </table></div>

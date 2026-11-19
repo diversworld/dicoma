@@ -114,6 +114,7 @@ final class PortalNavigation
             $personal[] = ['label' => 'Interne Nachrichten', 'route' => 'member_messages'];
             $personal[] = ['label' => 'Meine Daten', 'route' => 'app_profile'];
             $personal[] = ['label' => 'Meine Mitgliedschaft', 'route' => 'membership_self'];
+            $personal[] = ['label' => 'Vereinsdokumente', 'route' => 'member_club_documents'];
             $personal[] = ['label' => 'Meine Ausrüstung', 'route' => 'member_equipment_index'];
             $personal[] = ['label' => 'Meine Buchungen', 'route' => 'member_bookings'];
             $personal[] = ['label' => 'Ausrüstung reservieren', 'route' => 'member_reservations'];

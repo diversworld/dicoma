@@ -29,6 +29,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_BAR_MANAGER = 'ROLE_BAR_MANAGER';
     public const ROLE_PRESS_OFFICER = 'ROLE_PRESS_OFFICER';
     public const ROLE_TREASURER = 'ROLE_TREASURER';
+    public const ROLE_SECRETARY = 'ROLE_SECRETARY';
     public const ROLE_BOARD = 'ROLE_BOARD';
     public const ROLE_ADMIN = 'ROLE_ADMIN';
     public const ROLE_SUPER_ADMIN = 'ROLE_SUPER_ADMIN';
@@ -429,6 +430,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             'Gerätekasse' => self::ROLE_EQUIPMENT_CASH,
             'Kompressorbediener' => self::ROLE_COMPRESSOR_OPERATOR,
             'Kassenwart' => self::ROLE_TREASURER,
+            'Schriftführung' => self::ROLE_SECRETARY,
             'Thekenleitung' => self::ROLE_BAR_MANAGER,
             'Pressewart' => self::ROLE_PRESS_OFFICER,
             'Vorstand' => self::ROLE_BOARD,

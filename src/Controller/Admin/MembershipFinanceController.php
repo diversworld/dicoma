@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipPayment;
+use App\Entity\MembershipDunningNotice;
 use App\Entity\User;
 use App\Enum\PermissionAction;
 use App\Enum\PermissionModule;
@@ -57,11 +58,17 @@ final class MembershipFinanceController extends AbstractController
         $charges = $query->setFirstResult(($page - 1) * $limit)->setMaxResults($limit)->getQuery()->getResult();
         $openCents = 0; $overdueCents = 0; $paidCents = 0;
         $payments = [];
+        $notices = [];
         if ($charges !== []) {
             foreach ($this->em->getRepository(MembershipPayment::class)->createQueryBuilder('payment')
                 ->where('payment.charge IN (:charges)')->setParameter('charges', $charges)
                 ->orderBy('payment.receivedAt', 'ASC')->getQuery()->getResult() as $payment) {
                 $payments[$payment->getCharge()->getId()][] = $payment;
+            }
+            foreach ($this->em->getRepository(MembershipDunningNotice::class)->createQueryBuilder('notice')
+                ->where('notice.charge IN (:charges)')->setParameter('charges', $charges)
+                ->orderBy('notice.createdAt', 'DESC')->getQuery()->getResult() as $notice) {
+                $notices[$notice->getCharge()->getId()][] = $notice;
             }
         }
         $rows = [];
@@ -69,6 +76,7 @@ final class MembershipFinanceController extends AbstractController
             $rows[] = [
                 'charge' => $charge,
                 'payments' => $payments[$charge->getId()] ?? [],
+                'notices' => $notices[$charge->getId()] ?? [],
             ];
         }
         return $this->render('admin/membership/finance.html.twig', [
