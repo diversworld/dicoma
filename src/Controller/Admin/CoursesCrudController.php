@@ -11,6 +11,8 @@ use App\Enum\CourseStatus;
 use App\Form\CourseParticipantType;
 use App\Form\CourseTrainingUnitType;
 use App\Form\CourseSchedulePlanningType;
+use App\Form\MediaImageType;
+use App\Security\Voter\CourseMediaImageEditVoter;
 use App\Field\CourseImageField;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -309,9 +311,26 @@ class CoursesCrudController extends AbstractCrudController
             throw new \DomainException('Kursausbilder muss ein Ausbilder des Kursvereins sein.');
         }
     }
+    private function assertMediaImageAccess(Courses $course, EntityManagerInterface $em): void
+    {
+        if ($this->courseImages->legacyEditingEnabled()) {
+            return;
+        }
+        $this->denyAccessUnlessGranted(CourseMediaImageEditVoter::EDIT, $course);
+        if ($course->getId() === null) {
+            return;
+        }
+        $original = $em->getUnitOfWork()->getOriginalEntityData($course)['mediaImage'] ?? null;
+        if ($original instanceof \App\Entity\MediaFile && $original->getId() !== $course->getMediaImage()?->getId()) {
+            $originalCourse = clone $course;
+            $originalCourse->setMediaImage($original);
+            $this->denyAccessUnlessGranted(CourseMediaImageEditVoter::EDIT, $originalCourse);
+        }
+    }
     public function persistEntity(EntityManagerInterface $em, $entityInstance): void {
         if ($entityInstance instanceof Courses) {
             $this->enforceCourseClub($entityInstance);
+            $this->assertMediaImageAccess($entityInstance, $em);
             $this->validateLeadInstructor($entityInstance);
         }
         parent::persistEntity($em, $entityInstance);
@@ -421,6 +440,16 @@ class CoursesCrudController extends AbstractCrudController
         if ($this->courseImages->legacyEditingEnabled()) {
             $this->courseImages->directory();
             yield CourseImageField::create();
+        } else {
+            $club = $this->clubContext->getClub();
+            if ($club !== null) {
+                yield AssociationField::new('mediaImage', 'Bild aus der Dateiverwaltung')
+                    ->setFormType(MediaImageType::class)
+                    ->setFormTypeOption('club', $club)
+                    ->setRequired(false)
+                    ->setColumns(5)
+                    ->onlyOnForms();
+            }
         }
         /*
          * Legacy-Kategorie.
@@ -763,6 +792,7 @@ class CoursesCrudController extends AbstractCrudController
         if ($entityInstance instanceof Courses) {
             $this->enforceCourseClub($entityInstance, $entityManager);
             $this->assertCourseManage($entityInstance);
+            $this->assertMediaImageAccess($entityInstance, $entityManager);
             $this->validateLeadInstructor($entityInstance);
         }
         parent::updateEntity(

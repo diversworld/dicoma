@@ -6,6 +6,8 @@ use App\Entity\Schedule;
 use App\Entity\Courses;
 use App\Service\AdminClubContext;
 use App\Field\CourseImageField;
+use App\Form\MediaImageType;
+use App\Security\Voter\CourseMediaImageEditVoter;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -54,10 +56,28 @@ class ScheduleCrudController extends AbstractCrudController
     ) {
     }
 
+    private function assertMediaImageAccess(Schedule $schedule, EntityManagerInterface $em): void
+    {
+        if ($this->courseImages->legacyEditingEnabled()) {
+            return;
+        }
+        $this->denyAccessUnlessGranted(CourseMediaImageEditVoter::EDIT, $schedule);
+        if ($schedule->getId() === null) {
+            return;
+        }
+        $original = $em->getUnitOfWork()->getOriginalEntityData($schedule)['mediaImage'] ?? null;
+        if ($original instanceof \App\Entity\MediaFile && $original->getId() !== $schedule->getMediaImage()?->getId()) {
+            $originalSchedule = clone $schedule;
+            $originalSchedule->setMediaImage($original);
+            $this->denyAccessUnlessGranted(CourseMediaImageEditVoter::EDIT, $originalSchedule);
+        }
+    }
+
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if ($entityInstance instanceof Schedule) {
             $this->assertSchedule($entityInstance);
+            $this->assertMediaImageAccess($entityInstance, $entityManager);
         }
         parent::persistEntity($entityManager, $entityInstance);
 
@@ -117,6 +137,7 @@ class ScheduleCrudController extends AbstractCrudController
             $course = $original['courses'] ?? null;
             $this->assertCourse($course instanceof Courses ? $course : null);
             $this->assertSchedule($entityInstance);
+            $this->assertMediaImageAccess($entityInstance, $entityManager);
         }
         parent::updateEntity($entityManager, $entityInstance);
     }
@@ -206,6 +227,16 @@ class ScheduleCrudController extends AbstractCrudController
         if ($this->courseImages->legacyEditingEnabled()) {
             $this->courseImages->directory();
             yield CourseImageField::create();
+        } else {
+            $club = $this->clubContext->getClub();
+            if ($club !== null) {
+                yield AssociationField::new('mediaImage', 'Bild aus der Dateiverwaltung')
+                    ->setFormType(MediaImageType::class)
+                    ->setFormTypeOption('club', $club)
+                    ->setRequired(false)
+                    ->setColumns(5)
+                    ->onlyOnForms();
+            }
         }
 
         /*
