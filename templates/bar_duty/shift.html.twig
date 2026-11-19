@@ -4,6 +4,52 @@
 <h2>{{ shift.title }} · #{{ shift.id }}</h2>
 <p><a href="{{ path(duty_route_prefix ~ 'bar_duty', {month:shift.startsAt|date('Y-m')}) }}">Zurück zum Veranstaltungskalender</a></p>
 <p>{{ shift.startsAt|date('d.m.Y H:i') }} – {{ shift.endsAt|date('d.m.Y H:i') }} · {{ shift.location }} · {{ shift.capacity }} Plätze · {{ {'open':'Offen', 'completed':'Abgeschlossen', 'cancelled':'Abgesagt'}[shift.status] }}</p>
+{% set ownAssignment = assignments|filter(a => a.member.id == app.user.member.id and a.status == 'active')|length > 0 %}
+{% if manager or ownAssignment %}
+    <section class="card card-body mb-4">
+        <h2>Checkliste und Übergabe</h2>
+        <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'checklist', id:shift.id}) }}">
+            {{ f.token('checklist', shift.id) }}
+            {% set items = checklist ? checklist.items : [
+                {'label':'Eingangsbereich und Theke kontrolliert'},
+                {'label':'Kühlschrank- und Getränkestand dokumentiert'},
+                {'label':'Sauberkeit und Müllentsorgung geprüft'},
+                {'label':'Besondere Vorkommnisse festgehalten'},
+                {'label':'Kasse und Schlüssel übergeben'}
+            ] %}
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Prüfpunkt</th><th>Erledigt</th><th>Bemerkung</th></tr></thead>
+                <tbody>{% for item in items %}<tr>
+                    <td>{{ item.label }}</td>
+                    <td><input type="checkbox" class="form-check-input" name="checks[{{ loop.index0 }}]" value="1" {{ item.done|default(false) ? 'checked' : '' }} aria-label="{{ item.label }} erledigt"></td>
+                    <td><input class="form-control" name="notes[{{ loop.index0 }}]" value="{{ item.note|default('') }}" maxlength="1000"></td>
+                </tr>{% endfor %}</tbody>
+            </table></div>
+            <label>Übergabe an nächste Schicht / Vereinsverantwortliche<textarea class="form-control" name="handover" rows="4" maxlength="10000">{{ checklist ? checklist.handover : '' }}</textarea></label>
+            {% if checklist and checklist.completedAt %}<p class="text-muted">Zuletzt {{ checklist.completedAt|date('d.m.Y H:i') }} von {{ checklist.completedBy }}</p>{% endif %}
+            <button class="btn btn-primary">Checkliste und Übergabe speichern</button>
+        </form>
+    </section>
+    <section class="card card-body mb-4">
+        <h2>Bestand und Verbrauch melden</h2>
+        <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'stock', id:shift.id}) }}">
+            {{ f.token('stock', shift.id) }}
+            <div class="row">
+                <div class="col-md-4"><label>Artikel <input class="form-control" name="item" maxlength="180" required></label></div>
+                <div class="col-md-2"><label>Anfang <input class="form-control" name="opening" type="number" min="0" required></label></div>
+                <div class="col-md-2"><label>Verbraucht <input class="form-control" name="consumed" type="number" min="0" required></label></div>
+                <div class="col-md-2"><label>Schluss <input class="form-control" name="closing" type="number" min="0" required></label></div>
+                <div class="col-md-12"><label>Bemerkung <textarea class="form-control" name="notes" maxlength="2000"></textarea></label></div>
+            </div>
+            <button class="btn btn-primary">Bestand/Verbrauch erfassen</button>
+        </form>
+        {% if stockEntries %}
+            <div class="table-responsive mt-3"><table class="table"><thead><tr><th>Zeit</th><th>Artikel</th><th>Anfang</th><th>Verbrauch</th><th>Schluss</th><th>Von</th></tr></thead><tbody>
+                {% for entry in stockEntries %}<tr><td>{{ entry.reportedAt|date('d.m.Y H:i') }}</td><td>{{ entry.item }}{% if entry.notes %}<br><small>{{ entry.notes }}</small>{% endif %}</td><td>{{ entry.opening }}</td><td>{{ entry.consumed }}</td><td>{{ entry.closing }}</td><td>{{ entry.reportedBy }}</td></tr>{% endfor %}
+            </tbody></table></div>
+        {% endif %}
+    </section>
+{% endif %}
 {% if shift.status == 'open' and shift.startsAt > date() %}
     <form method="post" action="{{ path(duty_route_prefix ~ 'bar_duty_action', {operation:'signup', id:shift.id}) }}" class="mb-3">{{ f.token('signup', shift.id) }}<button class="btn btn-primary">Für Dienst anmelden</button></form>
     {% if manager %}

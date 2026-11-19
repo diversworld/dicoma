@@ -55,4 +55,12 @@
             <li>Keine Thekenkassen in diesem Jahr.</li>
         {% endfor %}
     </ul>
+    <h2>Bestand und Verbrauch {{ year }}</h2>
+    <p>Verbrauch wird aus den schichtbezogenen Bestandsmeldungen summiert. Geldbewegungen bleiben davon getrennt.</p>
+    {% if stockSummary %}
+        <ul>{% for item, consumed in stockSummary %}<li><strong>{{ item }}</strong>: {{ consumed }} verbraucht</li>{% endfor %}</ul>
+        <details><summary>Einzelmeldungen</summary><ul>{% for entry in stockEntries %}
+            <li>{{ entry.shift.startsAt|date('d.m.Y') }} · {{ entry.item }} · {{ entry.opening }} − {{ entry.consumed }} = {{ entry.closing }} · {{ entry.reportedBy }}{% if entry.notes %} · {{ entry.notes }}{% endif %}</li>
+        {% endfor %}</ul></details>
+    {% else %}<p>Keine Bestandsmeldungen in diesem Jahr.</p>{% endif %}
 {% endblock %}

@@ -17,6 +17,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
@@ -84,17 +85,24 @@ final class TuvNotificationCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
-        yield IdField::new('id', 'ID')->hideOnForm();
-        yield TextField::new('bookingNumber', 'Anmeldung')->onlyOnDetail();
+        yield IdField::new('id', 'ID')
+            ->hideOnForm();
+        yield TextField::new('bookingNumber', 'Anmeldung')
+            ->onlyOnDetail();
         yield TextField::new('recipient', 'Empfänger');
         yield TextField::new('subject', 'Betreff');
         yield TextField::new('state', 'Status');
-        yield \EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField::new('attemptCount', 'Versuche')->onlyOnDetail();
-        yield DateTimeField::new('lastAttemptAt', 'Letzter Versuch')->onlyOnDetail();
-        yield TextareaField::new('lastError', 'Letzter Fehler')->onlyOnDetail();
+        yield IntegerField::new('attemptCount', 'Versuche')
+            ->onlyOnDetail();
+        yield DateTimeField::new('lastAttemptAt', 'Letzter Versuch')
+            ->onlyOnDetail();
+        yield TextareaField::new('lastError', 'Letzter Fehler')
+            ->onlyOnDetail();
         yield DateTimeField::new('createdAt', 'Vorgemerkt');
         yield DateTimeField::new('sentAt', 'Versendet');
-        yield TextField::new('dedupeKey', 'Eindeutiger Schlüssel')->onlyOnDetail();
-        yield TextareaField::new('body', 'Nachrichtentext')->onlyOnDetail();
+        yield TextField::new('dedupeKey', 'Eindeutiger Schlüssel')
+            ->onlyOnDetail();
+        yield TextareaField::new('body', 'Nachrichtentext')
+            ->onlyOnDetail();
     }
 }

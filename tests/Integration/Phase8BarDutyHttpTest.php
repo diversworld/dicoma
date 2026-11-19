@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Command\{BarDutyRemindersCommand, SendBarDutyNotificationsCommand};
-use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyExchange, BarDutyNotification, BarDutyPolicy, BarDutyRequirement, BarShift, BarShiftDefinition, Club, Member, Person, User};
+use App\Entity\{BarCashEntry, BarCashSession, BarDutyAssignment, BarDutyExchange, BarDutyNotification, BarDutyPolicy, BarDutyRequirement, BarShift, BarShiftChecklist, BarShiftDefinition, BarStockEntry, Club, ClubFunction, ClubFunctionAssignment, Member, Person, User};
 use App\Enum\MembershipStatus;
 use App\Service\{BarCashWorkflow, BarDutyAccounts, BarDutyWorkflow};
 use Doctrine\ORM\EntityManagerInterface;
@@ -229,6 +229,61 @@ final class Phase8BarDutyHttpTest extends WebTestCase
         $csv = $this->client->getInternalResponse()->getContent(); self::assertStringContainsString("'=SUM(A1)", $csv); self::assertStringContainsString('4766', $csv);
         $this->post('cash-book', $fresh->getId(), ['direction' => 'in', 'amount' => '1', 'reason' => 'Attempt after immutable cash closing']);
         self::assertSame(3, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM bar_cash_entry'));
+    }
+
+    public function testAssignedMemberCompletesChecklistAndStockHandoverAndManagerReportSeesIt(): void
+    {
+        $shift = $this->shift('+3 days');
+        $this->login($this->alice);
+        $this->post('signup', $shift->getId());
+        $this->client->request('GET', '/bar-duty/'.$shift->getId());
+        self::assertSelectorTextContains('body', 'Checkliste und Übergabe');
+        self::assertSelectorTextContains('body', 'Bestand und Verbrauch melden');
+
+        $this->post('checklist', $shift->getId(), [
+            'checks' => ['0' => '1', '2' => '1'],
+            'notes' => ['0' => 'Theke sauber'],
+            'handover' => 'Drei Schlüssel an nächste Schicht.',
+        ]);
+        $this->post('stock', $shift->getId(), [
+            'item' => 'Cola 0,5 l', 'opening' => '24', 'consumed' => '5', 'closing' => '19', 'notes' => 'Eine Kiste geöffnet',
+        ]);
+        $checklist = $this->em->getRepository(BarShiftChecklist::class)->findOneBy(['shift' => $shift]);
+        self::assertNotNull($checklist);
+        self::assertTrue($checklist->getItems()[0]['done']);
+        self::assertFalse($checklist->getItems()[1]['done']);
+        self::assertSame('Drei Schlüssel an nächste Schicht.', $checklist->getHandover());
+        self::assertSame(1, $this->em->getRepository(BarStockEntry::class)->count(['shift' => $shift]));
+
+        $this->login($this->bob);
+        $this->post('checklist', $shift->getId(), [
+            'checks' => [], 'handover' => 'Fremde Übergabe',
+        ], 403);
+        $this->em->clear();
+        $club = $this->em->find(Club::class, $this->club->getId());
+        $manager = $this->em->find(User::class, $this->manager->getId());
+        $function = new ClubFunction($club, 'Test-Thekenleitung');
+        $function->setPermissions([User::ROLE_BAR_MANAGER]);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $manager));
+        $this->em->flush();
+        $this->manager = $manager;
+        $this->login($this->manager);
+        $this->client->request('GET', '/admin/bar-duty/report?year='.$shift->getStartsAt()->format('Y'));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Cola 0,5 l');
+        self::assertSelectorTextContains('body', '5 verbraucht');
+    }
+
+    public function testStockEntryRejectsInvalidBalanceWithoutSaving(): void
+    {
+        $shift = $this->shift('+3 days');
+        $this->login($this->alice);
+        $this->post('signup', $shift->getId());
+        $this->post('stock', $shift->getId(), [
+            'item' => 'Bier', 'opening' => '20', 'consumed' => '5', 'closing' => '10',
+        ]);
+        self::assertSame(0, $this->em->getRepository(BarStockEntry::class)->count(['shift' => $shift]));
     }
 
     public function testCashRejectsOverdrawWithoutChangingJournal(): void

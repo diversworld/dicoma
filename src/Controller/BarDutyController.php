@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Controller;
 
-use App\Entity\{BarCashSession, BarDutyAssignment, BarDutyExchange, BarDutyNotification, BarDutyPolicy, BarShift, BarShiftDefinition, Member};
+use App\Entity\{BarCashSession, BarDutyAssignment, BarDutyExchange, BarDutyNotification, BarDutyPolicy, BarShift, BarShiftChecklist, BarShiftDefinition, BarStockEntry, Member};
 use App\Http\EasyAdminRequest;
 use App\Service\{BarCashWorkflow, BarDutyAccess, BarDutyAccounts, BarDutyWorkflow};
 use Doctrine\ORM\EntityManagerInterface;
@@ -155,12 +155,27 @@ final class BarDutyController extends AbstractController
             ->setParameter('start', new \DateTimeImmutable($year.'-01-01'))->setParameter('end', new \DateTimeImmutable(($year + 1).'-01-01'))
             ->orderBy('s.startsAt', 'ASC')->getQuery()->getResult();
         
+        $stock = $this->em->getRepository(BarStockEntry::class)->createQueryBuilder('entry')
+            ->join('entry.shift', 'shift')->addSelect('shift')
+            ->where('shift.club = :club AND shift.startsAt >= :start AND shift.startsAt < :end')
+            ->setParameter('club', $this->access->club())
+            ->setParameter('start', new \DateTimeImmutable($year.'-01-01'))
+            ->setParameter('end', new \DateTimeImmutable(($year + 1).'-01-01'))
+            ->orderBy('shift.startsAt', 'DESC')->addOrderBy('entry.reportedAt', 'DESC')
+            ->getQuery()->getResult();
+        $stockSummary = [];
+        foreach ($stock as $entry) {
+            $stockSummary[$entry->getItem()] = ($stockSummary[$entry->getItem()] ?? 0) + $entry->getConsumed();
+        }
+        ksort($stockSummary);
         return $this->render(
             'bar_duty/report.html.twig', [
                 'manager' => true, 
                 'year' => $year, 
                 'accounts' => $accounts->report($this->access->club(), $year), 
-                'cashSessions' => $sessions
+                'cashSessions' => $sessions,
+                'stockSummary' => $stockSummary,
+                'stockEntries' => $stock,
             ]
         );
     }
@@ -227,6 +242,8 @@ final class BarDutyController extends AbstractController
                 'session' => $session, 
                 'cashEntries' => $session ? $cash->entries($session) : [], 
                 'cashBalance' => $session ? $cash->balance($session) : 0,
+                'checklist' => $this->em->getRepository(BarShiftChecklist::class)->findOneBy(['shift' => $shift]),
+                'stockEntries' => $this->em->getRepository(BarStockEntry::class)->findBy(['shift' => $shift], ['reportedAt' => 'DESC', 'id' => 'DESC']),
             ]);
     }
 
@@ -297,7 +314,7 @@ final class BarDutyController extends AbstractController
         return $this->csv($rows, 'thekenkasse-'.$id.'.csv');
     }
 
-    #[Route('/bar-duty/actions/{operation}/{id}', name: 'bar_duty_action', requirements: ['id' => '\d+', 'operation' => 'plan|define|deactivate|schedule|policy|exception|assign|signup|withdraw|propose|accept|decline|retract|attendance|complete|cancel|read|cash-open|cash-book|cash-reverse|cash-close'], methods: ['POST'])]
+    #[Route('/bar-duty/actions/{operation}/{id}', name: 'bar_duty_action', requirements: ['id' => '\d+', 'operation' => 'plan|define|deactivate|schedule|policy|exception|assign|signup|withdraw|propose|accept|decline|retract|attendance|complete|cancel|read|checklist|stock|cash-open|cash-book|cash-reverse|cash-close'], methods: ['POST'])]
     public function action(string $operation, int $id, Request $request, BarDutyWorkflow $duty, BarCashWorkflow $cash): Response
     {
         $this->access->user();
@@ -382,6 +399,34 @@ final class BarDutyController extends AbstractController
                     $duty->finish($id, 'cancelled', $p->getString('reason')); 
                     $target = $id; 
                     break;
+                case 'checklist':
+                    $shift = $this->em->find(BarShift::class, $id);
+                    $this->assertShiftReporter($shift);
+                    $checklist = $this->em->getRepository(BarShiftChecklist::class)->findOneBy(['shift' => $shift]);
+                    if ($checklist === null) {
+                        $checklist = new BarShiftChecklist($shift);
+                        $this->em->persist($checklist);
+                    }
+                    $checklist->submit($p->all('checks'), $p->all('notes'), $p->getString('handover'), $this->access->member());
+                    $this->em->flush();
+                    $target = $id;
+                    break;
+                case 'stock':
+                    $shift = $this->em->find(BarShift::class, $id);
+                    $this->assertShiftReporter($shift);
+                    $entry = new BarStockEntry(
+                        $shift,
+                        $this->access->member(),
+                        $p->getString('item'),
+                        self::integer($p->getString('opening')),
+                        self::integer($p->getString('consumed')),
+                        self::integer($p->getString('closing')),
+                        $p->getString('notes'),
+                    );
+                    $this->em->persist($entry);
+                    $this->em->flush();
+                    $target = $id;
+                    break;
                 case 'cash-open': 
                     $cash->open($id, $p->getString('amount'), $p->getString('reason'), $this->backend()); 
                     $target = $id; 
@@ -422,6 +467,22 @@ final class BarDutyController extends AbstractController
         }
         
         return $this->redirectToRoute($this->route(in_array($operation, ['define', 'deactivate', 'policy', 'exception'], true) ? 'bar_duty_settings' : 'bar_duty'), [], Response::HTTP_SEE_OTHER);
+    }
+
+    private function assertShiftReporter(?BarShift $shift): void
+    {
+        if (!$shift instanceof BarShift || $shift->getClub()->getId() !== $this->access->club()->getId()) {
+            throw $this->createNotFoundException();
+        }
+        if ($this->backend() && $this->access->isManager()) {
+            return;
+        }
+        $assignment = $this->em->getRepository(BarDutyAssignment::class)->findOneBy([
+            'shift' => $shift, 'member' => $this->access->member(), 'status' => 'active',
+        ]);
+        if (!$assignment instanceof BarDutyAssignment) {
+            throw $this->createAccessDeniedException('Nur eingeteilte Mitglieder oder Verwaltung können Schichtdaten erfassen.');
+        }
     }
 
     private function exchanges(): array
