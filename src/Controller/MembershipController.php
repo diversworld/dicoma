@@ -568,7 +568,10 @@ final class MembershipController extends AbstractController
             'approvals' => $this->em->getRepository(MembershipApplicationApproval::class)
                 ->findBy(['application' => $application], ['approvedAt' => 'ASC']),
             'requiredApprovals' => $this->memberships->policy($application->getClub())?->getRequiredApprovalCount() ?? 1,
-            'requiredDocuments' => $this->memberships->policy($application->getClub())?->getRequiredDocuments() ?? [],
+            'requiredDocuments' => array_intersect_key(
+                array_flip(MemberDocument::kinds()),
+                array_flip($this->memberships->policy($application->getClub())?->getRequiredDocuments() ?? []),
+            ),
             ]
         );
     }

@@ -23,8 +23,8 @@
 <div class="alert alert-secondary">
     <strong>Vor Freigabe zu prüfende Unterlagen:</strong>
     <ul class="mb-0">
-    {% for kind in requiredDocuments %}
-        <li>{{ kind|replace({'_':' '}) }}</li>
+    {% for kind, label in requiredDocuments %}
+        <li>{{ label }}</li>
     {% endfor %}
     </ul>
 </div>
