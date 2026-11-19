@@ -16,7 +16,7 @@ final class TrainingAssessmentService
 {
     public function __construct(private readonly EntityManagerInterface $em, private readonly ValidatorInterface $validator) {}
 
-    /** @param array<int, array{attendance: ?BookingAttendanceStatus, result: ?TrainingUnitResultStatus}> $changes */
+    /** @param array<int, array{attendance: ?BookingAttendanceStatus, result: ?TrainingUnitResultStatus, excuseDecision?: string}> $changes */
     public function save(Schedule $schedule, array $participants, array $changes, array $existing, array $bookings, ?\App\Entity\Member $assessor = null): int
     {
         if (in_array($schedule->getCourses()?->getStatus(), [\App\Enum\CourseStatus::COMPLETED, \App\Enum\CourseStatus::CANCELLED], true)) {
@@ -39,6 +39,12 @@ final class TrainingAssessmentService
                 $status = $change['result'];
                 $booking = $bookings[$id] ?? null;
                 $result = $existing[$id] ?? null;
+                if (isset($change['excuseDecision'])) {
+                    if (!$booking instanceof Booking || $assessor === null) {
+                        throw new \DomainException('Entschuldigung kann ohne Terminzuordnung oder Ausbilder nicht entschieden werden.');
+                    }
+                    $booking->decideExcuse($change['excuseDecision'], $assessor);
+                }
                 if ($result?->getStatus() === TrainingUnitResultStatus::PASSED && $attendance !== null && $attendance !== BookingAttendanceStatus::PRESENT) {
                     throw new \DomainException('Die Anwesenheit eines bestandenen Nachweises darf nicht zurückgenommen werden.');
                 }

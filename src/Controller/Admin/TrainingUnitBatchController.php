@@ -95,6 +95,7 @@ final class TrainingUnitBatchController extends AbstractController
             }
             $submittedResults = $request->request->all('status');
             $submittedAttendance = $request->request->all('attendance');
+            $submittedDecisions = $request->request->all('excuse_decision');
             $changes = [];
             foreach ($attendees as $participant) {
                 $pid = $participant->getId();
@@ -113,6 +114,15 @@ final class TrainingUnitBatchController extends AbstractController
                 }
                 if ($resultStatus !== null || $attendanceStatus !== null) {
                     $changes[$pid] = ['result' => $resultStatus, 'attendance' => $attendanceStatus];
+                }
+                $decision = $submittedDecisions[(string) $pid] ?? '';
+                if (is_string($decision) && $decision !== '') {
+                    if (!in_array($decision, ['not_required', 'makeup_required'], true)) {
+                        $errors[] = 'Unbekannte Entschuldigungsentscheidung für Teilnehmer-ID '.$pid;
+                        continue;
+                    }
+                    $changes[$pid] ??= ['result' => $resultStatus, 'attendance' => $attendanceStatus];
+                    $changes[$pid]['excuseDecision'] = $decision;
                 }
             }
             if ($errors === []) {

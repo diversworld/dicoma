@@ -26,6 +26,12 @@ class ClubEvent
     #[ORM\Column] private bool $published = false;
     #[ORM\Column] private bool $cancelled = false;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
+    #[ORM\Column(length: 20)] private string $eventType = 'event';
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?Sport $division = null;
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')] private ?Member $responsible = null;
+    #[ORM\Column(length: 10, nullable: true)] private ?string $recurrence = null;
+    #[ORM\Column(type: 'date_immutable', nullable: true)] private ?\DateTimeImmutable $recurrenceUntil = null;
+    #[ORM\ManyToOne(targetEntity: ClubEvent::class), ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?self $seriesParent = null;
 
     public function __construct(Club $club) { $this->club = $club; }
     public function getId(): ?int { return $this->id; }
@@ -55,6 +61,18 @@ class ClubEvent
     public function isCancelled(): bool { return $this->cancelled; }
     public function getImage(): ?MediaFile { return $this->image; }
     public function setImage(?MediaFile $value): void { $this->image = $value; }
+    public function getEventType(): string { return $this->eventType; }
+    public function setEventType(string $value): void { $this->eventType = $value; }
+    public function getDivision(): ?Sport { return $this->division; }
+    public function setDivision(?Sport $value): void { $this->division = $value; }
+    public function getResponsible(): ?Member { return $this->responsible; }
+    public function setResponsible(?Member $value): void { $this->responsible = $value; }
+    public function getRecurrence(): ?string { return $this->recurrence; }
+    public function setRecurrence(?string $value): void { $this->recurrence = $value ?: null; }
+    public function getRecurrenceUntil(): ?\DateTimeImmutable { return $this->recurrenceUntil; }
+    public function setRecurrenceUntil(?\DateTimeImmutable $value): void { $this->recurrenceUntil = $value; }
+    public function getSeriesParent(): ?self { return $this->seriesParent; }
+    public function setSeriesParent(?self $value): void { $this->seriesParent = $value; }
     public function cancel(): void { $this->cancelled = true; }
     public function copyDetailsFrom(self $other): void
     {
@@ -63,6 +81,11 @@ class ClubEvent
         $this->startsAt = $other->startsAt; $this->endsAt = $other->endsAt; $this->deadline = $other->deadline;
         $this->location = $other->location; $this->capacity = $other->capacity; $this->published = $other->published;
         $this->image = $other->image;
+        $this->eventType = $other->eventType;
+        $this->division = $other->division;
+        $this->responsible = $other->responsible;
+        $this->recurrence = $other->recurrence;
+        $this->recurrenceUntil = $other->recurrenceUntil;
     }
 
     #[Assert\Callback]
@@ -81,6 +104,21 @@ class ClubEvent
             || ($this->pricing === 'paid' && ($this->memberFeeCents <= 0 || $this->guestFeeCents <= 0))
             || $this->memberFeeCents > 999999999 || $this->guestFeeCents > 999999999) {
             $context->buildViolation('Kostenfreie Mitgliedsveranstaltungen benötigen zwei Nullbeträge; kostenpflichtige Veranstaltungen zwei positive Beträge.')->atPath('pricing')->addViolation();
+        }
+        if (!in_array($this->eventType, ['event', 'dive', 'trip'], true)) {
+            $context->buildViolation('Ungültige Veranstaltungsart.')->atPath('eventType')->addViolation();
+        }
+        if ($this->division !== null && $this->division->getClub()?->getId() !== $this->club->getId()) {
+            $context->buildViolation('Die Sparte muss zum Veranstaltungsverein gehören.')->atPath('division')->addViolation();
+        }
+        if ($this->responsible !== null && $this->responsible->getClub()?->getId() !== $this->club->getId()) {
+            $context->buildViolation('Die verantwortliche Person muss zum Veranstaltungsverein gehören.')->atPath('responsible')->addViolation();
+        }
+        if (($this->recurrence !== null && !in_array($this->recurrence, ['weekly', 'monthly'], true))
+            || ($this->recurrence === null && $this->recurrenceUntil !== null)
+            || ($this->recurrence !== null && ($this->recurrenceUntil === null || $this->startsAt === null
+                || $this->recurrenceUntil < $this->startsAt->setTime(0, 0)))) {
+            $context->buildViolation('Wiederholung und gültiges Enddatum gemeinsam angeben.')->atPath('recurrenceUntil')->addViolation();
         }
     }
 }

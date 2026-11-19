@@ -19,6 +19,7 @@ final class FrontendCourseRegistrationService
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly SingleClubMode $singleClub,
+        private readonly ScheduleParticipantSyncService $scheduleSync,
     ) {}
 
     /** @throws \DomainException */
@@ -65,6 +66,7 @@ final class FrontendCourseRegistrationService
             $this->em->persist($registration);
             $course->addParticipant($registration);
             $this->em->flush();
+            $this->scheduleSync->syncCourse($course);
             return $registration;
         });
     }
@@ -102,6 +104,9 @@ final class FrontendCourseRegistrationService
                     ['registeredAt' => 'ASC', 'id' => 'ASC']
                 );
                 $next?->setStatus(CourseParticipantStatus::REGISTERED);
+                if ($next !== null) {
+                    $this->scheduleSync->syncCourse($course);
+                }
             }
             $this->em->flush();
         });

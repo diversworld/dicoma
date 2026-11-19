@@ -28,7 +28,7 @@ final class ClubCalendar
         private readonly BarDutyAccess $barAccess,
     ) {}
 
-    public function events(\DateTimeImmutable $from, \DateTimeImmutable $until, bool $backend = true): array
+    public function events(\DateTimeImmutable $from, \DateTimeImmutable $until, bool $backend = true, ?int $divisionId = null): array
     {
         $events = [];
         $user = $this->security->getUser();
@@ -39,6 +39,7 @@ final class ClubCalendar
             foreach ($this->em->getRepository(ClubEvent::class)->createQueryBuilder('e')
                 ->where('e.club = :club AND e.published = true AND e.cancelled = false AND e.startsAt < :until AND e.endsAt > :from')
                 ->setParameter('club', $club)->setParameter('from', $from)->setParameter('until', $until)->getQuery()->getResult() as $event) {
+                if ($divisionId !== null && $event->getDivision()?->getId() !== $divisionId) { continue; }
                 if (!$selectedBackend && !$this->bookings->canSee($event, $user)) { continue; }
                 $url = null;
                 if ($backend && $this->security->isGranted('ROLE_ADMIN')) {
@@ -46,7 +47,8 @@ final class ClubCalendar
                 } elseif (!$backend && $event->getClub()->getId() === $this->website->club()?->getId()) {
                     $url = $this->urls->generate('club_event_detail', ['id' => $event->getId()]);
                 }
-                $events[] = ['key' => 'club-event-'.$event->getId(), 'kind' => 'Veranstaltung', 'title' => $event->getTitle(),
+                $kind = match ($event->getEventType()) { 'dive' => 'Tauchgang', 'trip' => 'Ausfahrt', default => 'Veranstaltung' };
+                $events[] = ['key' => 'club-event-'.$event->getId(), 'kind' => $kind, 'title' => $event->getTitle(),
                     'start' => $event->getStartsAt(), 'end' => $event->getEndsAt(), 'location' => $event->getLocation(), 'url' => $url];
             }
         }
@@ -84,6 +86,12 @@ final class ClubCalendar
             if (($selectedBackend && ($club === null || $schedule->getCourses()->getClub()?->getId() !== $club->getId()))
                 || !$this->security->isGranted('COURSE_MANAGE', $schedule->getCourses())
                 || in_array($schedule->getCourses()->getStatus()->value, ['draft', 'cancelled'], true)) { continue; }
+            if ($divisionId !== null) {
+                $courseDivisions = $schedule->getCourses()->getDivisions();
+                if (!$courseDivisions->exists(static fn (int $key, \App\Entity\Sport $sport): bool => $sport->getId() === $divisionId)) {
+                    continue;
+                }
+            }
             $start = new \DateTimeImmutable($schedule->getStartDate()->format('Y-m-d') . ' ' . ($schedule->getStartTime()?->format('H:i') ?? '00:00'));
             $events[] = ['key' => 'course-' . $schedule->getId(), 'kind' => 'Tauchausbildung',
                 'title' => $schedule->getCourses()->getTitle() . ': ' . $schedule->getTitle(),

@@ -61,6 +61,22 @@ class Booking
 	#[ORM\Column(type: Types::TEXT,nullable: true)]
 	private ?string $attendanceNotes = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $excuseReason = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $excuseRequestedAt = null;
+
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $excuseDecision = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $excuseReviewedAt = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Member $excuseReviewedBy = null;
+
 	#[ORM\ManyToOne(targetEntity: self::class,inversedBy: 'makeupBookings')]
 	#[ORM\JoinColumn(name: 'makeup_for_id',referencedColumnName: 'id',nullable: true,onDelete: 'SET NULL')]
 	private ?self $makeupFor = null;
@@ -169,6 +185,44 @@ class Booking
 
 		return $this;
 	}
+
+    public function getExcuseReason(): ?string { return $this->excuseReason; }
+    public function getExcuseRequestedAt(): ?\DateTimeImmutable { return $this->excuseRequestedAt; }
+    public function getExcuseDecision(): ?string { return $this->excuseDecision; }
+    public function getExcuseReviewedAt(): ?\DateTimeImmutable { return $this->excuseReviewedAt; }
+    public function getExcuseReviewedBy(): ?Member { return $this->excuseReviewedBy; }
+
+    public function requestExcuse(string $reason): void
+    {
+        $reason = trim($reason);
+        if ($this->attendanceStatus !== BookingAttendanceStatus::PLANNED) {
+            throw new \DomainException('Für diesen bereits erfassten Termin kann keine Entschuldigung mehr eingereicht werden.');
+        }
+        if ($reason === '' || mb_strlen($reason) > 2000) {
+            throw new \DomainException('Bitte einen Grund mit höchstens 2000 Zeichen angeben.');
+        }
+        $this->excuseReason = $reason;
+        $this->excuseRequestedAt = new \DateTimeImmutable();
+        $this->excuseDecision = null;
+        $this->excuseReviewedAt = null;
+        $this->excuseReviewedBy = null;
+    }
+
+    public function decideExcuse(string $decision, Member $reviewer): void
+    {
+        if ($this->excuseRequestedAt === null) {
+            throw new \DomainException('Für diesen Termin liegt keine Entschuldigung vor.');
+        }
+        if (!in_array($decision, ['not_required', 'makeup_required'], true)) {
+            throw new \DomainException('Ungültige Entschuldigungsentscheidung.');
+        }
+        $this->excuseDecision = $decision;
+        $this->excuseReviewedAt = new \DateTimeImmutable();
+        $this->excuseReviewedBy = $reviewer;
+        $this->setAttendanceStatus($decision === 'makeup_required'
+            ? BookingAttendanceStatus::MAKEUP_REQUIRED
+            : BookingAttendanceStatus::EXCUSED);
+    }
 	
 	public function getMember(): ?Member
 	{

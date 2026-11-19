@@ -93,4 +93,13 @@ class ScheduleParticipantSyncService
 
         return $created;
     }
+
+    public function syncCourse(\App\Entity\Courses $course): int
+    {
+        $created = 0;
+        foreach ($course->getSchedule() as $schedule) {
+            $created += $this->sync($schedule);
+        }
+        return $created;
+    }
 }

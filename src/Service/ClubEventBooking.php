@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace App\Service;
 
-use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, Member, Person, User};
+use App\Entity\{Club, ClubEvent, ClubEventPayment, ClubEventRegistration, Member, MembershipMessage, Person, User};
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
@@ -66,6 +66,10 @@ final class ClubEventBooking
             $registration = new ClubEventRegistration($event, $person, $status,
                 $activeMember ? $event->getMemberFeeCents() : $event->getGuestFeeCents(), $activeMember ? 'member' : 'guest');
             $this->em->persist($registration); $this->em->flush();
+            $this->queue($registration, $status === 'waitlisted' ? 'Warteliste' : 'Anmeldung bestätigt',
+                $status === 'waitlisted'
+                    ? 'Du stehst auf der Warteliste. Bei einem freien Platz wirst du benachrichtigt.'
+                    : 'Deine Anmeldung wurde bestätigt. Details findest du in DICOMA.');
             return $registration;
         });
     }
@@ -92,10 +96,12 @@ final class ClubEventBooking
                         continue;
                     }
                     $next->promote();
+                    $this->queue($next, 'Wartelisten-Nachrücken', 'Ein Platz ist frei geworden. Deine Anmeldung wurde bestätigt.');
                     break;
                 }
                 $this->em->flush();
             }
+            $this->queue($registration, 'Veranstaltungsstornierung', 'Deine Anmeldung wurde storniert.');
         });
     }
 
@@ -110,6 +116,7 @@ final class ClubEventBooking
             if ($this->current($query) !== []) {
                 throw new \DomainException('Diese Belegreferenz wurde bereits gebucht.');
             }
+
             $paid = $this->paid($registration);
             if (in_array($registration->getStatus(), ['waitlisted', 'ineligible'], true) || (($registration->getStatus() === 'cancelled' || $event->isCancelled()) && $amount > 0)
                 || $paid + $amount < 0 || $paid + $amount > $registration->getFeeCents()) {
@@ -118,6 +125,17 @@ final class ClubEventBooking
             $this->em->persist(new ClubEventPayment($registration, $amount, $method, $reference, $actor));
             $this->em->flush();
         });
+    }
+
+    public function notifyCancellation(ClubEvent $event): void
+    {
+        foreach ($this->em->getRepository(ClubEventRegistration::class)->findBy(['event' => $event]) as $registration) {
+            if (!in_array($registration->getStatus(), ['registered', 'waitlisted'], true)) {
+                continue;
+            }
+            $this->queue($registration, 'Veranstaltung abgesagt', 'Die Veranstaltung wurde abgesagt. Bereits geleistete Zahlungen werden durch die Vereinsverwaltung geprüft.');
+        }
+        $this->em->flush();
     }
 
     public function paid(ClubEventRegistration $registration): int
@@ -157,5 +175,23 @@ final class ClubEventBooking
         if (!$event instanceof ClubEvent) { throw new \DomainException('Veranstaltung nicht gefunden.'); }
         $this->em->refresh($event, LockMode::PESSIMISTIC_WRITE);
         return $event;
+    }
+
+    private function queue(ClubEventRegistration $registration, string $subject, string $body): void
+    {
+        $recipient = trim((string) $registration->getPerson()->getEmail());
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false || $registration->getId() === null) {
+            return;
+        }
+        $key = sprintf('event:%d:%d:%s', $registration->getEvent()->getId(), $registration->getId(), strtolower(str_replace(' ', '-', $subject)));
+        if ($this->em->getRepository(MembershipMessage::class)->findOneBy(['messageKey' => $key]) === null) {
+            $this->em->persist(new MembershipMessage(
+                $key,
+                $recipient,
+                sprintf('DICOMA – %s: %s', $subject, $registration->getEvent()->getTitle()),
+                $body."\n\nVeranstaltung: ".$registration->getEvent()->getTitle()."\nBeginn: ".$registration->getEvent()->getStartsAt()?->format('d.m.Y H:i'),
+            ));
+            $this->em->flush();
+        }
     }
 }

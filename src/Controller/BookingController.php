@@ -121,76 +121,14 @@ class BookingController extends AbstractController
     }
 
     /**
-     * Self-service booking for an already registered course participant.
-     * No user/member identifier is accepted from the request.
+     * Teilnehmer sind mit dem Kurs für sämtliche Termine automatisch zugeordnet.
      */
-    #[IsGranted('ROLE_MEMBER')]
     #[Route('/book/{id}', name: 'app_booking_book', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function bookCourse(
-        int $id,
-        Request $request,
-        EntityManagerInterface $entityManager,
-        BookingNumberGenerator $bookingNumberGenerator
-    ): RedirectResponse {
-        if (!$this->isCsrfTokenValid('book_schedule_' . $id, (string) $request->request->get('_token', ''))) {
-            throw $this->createAccessDeniedException('Ungueltiger CSRF-Token.');
-        }
-
-        $user = $this->getUser();
-        if (!$user instanceof User || !$user->getMember() instanceof Member) {
-            throw $this->createAccessDeniedException('Keine Mitgliedszuordnung vorhanden.');
-        }
-        $member = $user->getMember();
-
-        // A row lock on the schedule serializes bookings for the same appointment.
-        // The unique database constraint remains the final duplicate protection.
-        $connection = $entityManager->getConnection();
-        $connection->beginTransaction();
-        try {
-            $schedule = $entityManager->find(Schedule::class, $id, LockMode::PESSIMISTIC_WRITE);
-            if (!$schedule instanceof Schedule || $schedule->getCourses() === null) {
-                throw $this->createNotFoundException('Kurstermin nicht gefunden.');
-            }
-            $course = $schedule->getCourses();
-            if ($course->getStatus() === CourseStatus::COMPLETED) {
-                throw $this->createAccessDeniedException('Dieser Kurs ist abgeschlossen.');
-            }
-            $registration = $entityManager->getRepository(CourseParticipant::class)->findOneBy([
-                'course' => $course, 'member' => $member,
-            ]);
-            if (!$registration instanceof CourseParticipant || !in_array(
-                $registration->getStatus(),
-                [CourseParticipantStatus::REGISTERED, CourseParticipantStatus::ACTIVE],
-                true
-            )) {
-                throw $this->createAccessDeniedException('Keine aktive Kursanmeldung vorhanden.');
-            }
-            if ($course->getClub()?->getId() !== $member->getClub()?->getId()) {
-                throw $this->createAccessDeniedException('Der Termin gehoert nicht zu deinem Verein.');
-            }
-            $existing = $entityManager->getRepository(Booking::class)->findOneBy([
-                'schedule' => $schedule, 'member' => $member,
-            ]);
-            if ($existing === null) {
-                $booking = (new Booking())
-                    ->setSchedule($schedule)
-                    ->setMember($member)
-                    ->setBookingdate(new \DateTimeImmutable('today'))
-                    ->setBookingnumber($bookingNumberGenerator->next())
-                    ->setStatus('gebucht')
-                    ->setAttendanceStatus(BookingAttendanceStatus::PLANNED);
-                $entityManager->persist($booking);
-                $entityManager->flush();
-                $this->addFlash('success', 'Terminbuchung wurde angelegt.');
-            } else {
-                $this->addFlash('info', 'Du bist fuer diesen Termin bereits gebucht.');
-            }
-            $connection->commit();
-        } catch (\Throwable $exception) {
-            $connection->rollBack();
-            throw $exception;
-        }
-        return $this->redirectToRoute('app_schedule_index', [], Response::HTTP_SEE_OTHER);
+    public function bookCourse(): Response {
+        return new Response(
+            'Kurstermine werden mit der Kursanmeldung automatisch zugeordnet. Eine Einzelbuchung ist nicht erforderlich.',
+            Response::HTTP_GONE,
+        );
     }
 
     #[Route('/{id}', name: 'app_booking_show', requirements: ['id' => '\d+'], methods: ['GET'])]

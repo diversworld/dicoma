@@ -19,9 +19,12 @@
 <p class="text-muted">{{ 'Gemeinsame Ansicht aus Tauchausbildung, Mannschaftstraining, Turnieren und Thekendiensten. Termine werden ausschließlich im jeweiligen Fachmodul gepflegt.'|trans }}</p>
 <form method="get" action="{{ path(calendar_route) }}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
 <div><label for="calendar-month">{{ 'Monat'|trans }}</label><input id="calendar-month" class="form-control" type="month" name="month" value="{{ month|date('Y-m') }}" required></div>
+{% if sports %}
+<div><label for="calendar-division">{{ 'Sparte'|trans }}</label><select id="calendar-division" class="form-control" name="division"><option value="">{{ 'Alle Sparten'|trans }}</option>{% for sport in sports %}<option value="{{ sport.id }}" {{ divisionId == sport.id ? 'selected' : '' }}>{{ sport.name }}</option>{% endfor %}</select></div>
+{% endif %}
 <button class="btn btn-primary">{{ 'Anzeigen'|trans }}</button>
-<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('-1 month')|date('Y-m')}) }}">{{ 'Vorheriger Monat'|trans }}</a>
-<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('+1 month')|date('Y-m')}) }}">{{ 'Nächster Monat'|trans }}</a>
+<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('-1 month')|date('Y-m'), division: divisionId}) }}">{{ 'Vorheriger Monat'|trans }}</a>
+<a class="btn btn-secondary" href="{{ path(calendar_route, {month: month|date_modify('+1 month')|date('Y-m'), division: divisionId}) }}">{{ 'Nächster Monat'|trans }}</a>
 </form>
 <div class="table-responsive"><table class="table" data-club-calendar><thead><tr><th>{{ 'Beginn'|trans }}</th><th>{{ 'Ende'|trans }}</th><th>{{ 'Bereich'|trans }}</th><th>{{ 'Veranstaltung'|trans }}</th><th>{{ 'Ort'|trans }}</th></tr></thead><tbody>
 {% for event in events %}<tr data-event-key="{{ event.key }}"><td>{{ event.start|date('d.m.Y H:i') }}</td><td>{{ event.end ? event.end|date('d.m.Y H:i') : '—' }}</td><td>{{ event.kind|trans }}</td><td>{% if event.url %}<a href="{{ event.url }}">{{ event.title }}</a>{% else %}{{ event.title }}{% endif %}</td><td>{{ event.location }}</td></tr>

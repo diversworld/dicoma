@@ -4,11 +4,11 @@
 {% block body %}
 <section class="container dw-training-spacing" >
     <h1>Meine Anwesenheit</h1>
-    <p>Hier siehst du ausschließlich deine eigenen Terminbuchungen und Anwesenheitsstände.</p>
+    <p>Deine Kursanmeldung gilt automatisch für alle Kurstermine. Einzelne Termine müssen nicht separat gebucht werden.</p>
     <p><a class="btn btn-default" href="{{ path('app_my_training_progress') }}">← Meine Ausbildung</a></p>
     <div class="table-responsive">
         <table class="table table-striped">
-            <thead><tr><th>Kurs</th><th>Termin</th><th>Datum</th><th>Beginn</th><th>Ort</th><th>Anwesenheit</th></tr></thead>
+            <thead><tr><th>Kurs</th><th>Termin</th><th>Datum</th><th>Beginn</th><th>Ort</th><th>Anwesenheit</th><th>Entschuldigung</th></tr></thead>
             <tbody>
             {% for row in rows %}
                 <tr>
@@ -18,13 +18,25 @@
                     <td>{{ row.time ? row.time ~ ' Uhr' : '—' }}</td>
                     <td>{{ row.location|default('—') }}</td>
                     <td><strong>{{ row.attendance }}</strong></td>
+                    <td>
+                        {% if row.excuseRequestedAt %}
+                            <span class="badge text-bg-secondary">{{ row.excuseDecision == 'makeup_required' ? 'Nachholtermin erforderlich' : (row.excuseDecision == 'not_required' ? 'Entschuldigung bestätigt' : 'An den Ausbilder gemeldet') }}</span>
+                        {% elseif row.attendance == 'Geplant' %}
+                            <form class="dw-form" method="post" action="{{ path('student_training_excuse', {id: row.bookingId}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('training_excuse_' ~ row.bookingId) }}">
+                                <label class="visually-hidden" for="reason-{{ row.bookingId }}">Grund der Verhinderung</label>
+                                <textarea id="reason-{{ row.bookingId }}" name="reason" rows="2" maxlength="2000" required placeholder="Grund der Verhinderung"></textarea>
+                                <button class="btn btn-outline-primary btn-sm mt-2" type="submit">Entschuldigen</button>
+                            </form>
+                        {% else %}—{% endif %}
+                    </td>
                 </tr>
             {% else %}
-                <tr><td colspan="6">Für deine Kurse sind noch keine Terminbuchungen vorhanden.</td></tr>
+                <tr><td colspan="7">Für deine Kurse sind noch keine Termine zugeordnet.</td></tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
-    <p class="text-muted">Die Anwesenheit wird vom zuständigen Ausbilder erfasst. Diese Ansicht ist schreibgeschützt.</p>
+    <p class="text-muted">Der Ausbilder entscheidet nach einer Entschuldigung, ob ein Nachholtermin erforderlich ist oder der Termin nicht nachgeholt werden muss.</p>
 </section>
 {% endblock %}

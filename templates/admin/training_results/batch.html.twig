@@ -24,12 +24,21 @@
 {% endif %}
 <div class="panel dw-form-card"><form class="dw-form" method="post">
 <input type="hidden" name="_token" value="{{ csrf_token('training_batch_' ~ schedule.id) }}">
-<table><thead><tr><th>Kursteilnehmer</th><th>Anwesenheit</th><th>Bewertung</th><th>Nachweis</th></tr></thead><tbody>
+<table><thead><tr><th>Kursteilnehmer</th><th>Entschuldigung</th><th>Anwesenheit</th><th>Bewertung</th><th>Nachweis</th></tr></thead><tbody>
 {% for participant in attendees %}
 {% set old = existing[participant.id] ?? null %}
 {% set booking = bookings[participant.id] ?? null %}
 <tr>
 <td>{{ participant.fullName|default('Teilnehmer') }}</td>
+<td>{% if booking and booking.excuseRequestedAt %}
+    <div class="small mb-2">{{ booking.excuseReason|nl2br }}</div>
+    <label class="visually-hidden" for="excuse-decision-{{ participant.id }}">Entscheidung</label>
+    <select class="form-select" id="excuse-decision-{{ participant.id }}" name="excuse_decision[{{ participant.id }}]">
+        <option value="">{{ booking.excuseDecision ? 'Entschieden: ' ~ (booking.excuseDecision == 'makeup_required' ? 'Nachholen' : 'Nicht erforderlich') : 'Entscheidung wählen' }}</option>
+        <option value="not_required">Termin ist nicht nachzuholen</option>
+        <option value="makeup_required">Nachholtermin erforderlich</option>
+    </select>
+{% else %}<span class="muted">Keine Entschuldigung</span>{% endif %}</td>
 <td>{% if booking %}<select name="attendance[{{ participant.id }}]" aria-label="Anwesenheit {{ participant.id }}">
 <option value="">— unverändert ({{ booking.attendanceStatus.label() }}) —</option>
 {% for item in attendanceChoices %}<option value="{{ item.value }}">{{ item.label() }}</option>{% endfor %}
@@ -41,7 +50,7 @@
 </select>{% endif %}</td>
 <td>{{ old ? old.statusLabel : 'Noch kein Nachweis' }}</td>
 </tr>
-{% else %}<tr><td colspan="4">Keine Kursteilnehmer vorhanden.</td></tr>{% endfor %}
+{% else %}<tr><td colspan="5">Keine Kursteilnehmer vorhanden.</td></tr>{% endfor %}
 </tbody></table>
 <p><button type="submit">Bewertungen speichern</button></p>
 </form></div>

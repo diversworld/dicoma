@@ -8,7 +8,7 @@ use App\Enum\{PermissionAction, PermissionModule};
 use App\Form\ClubEventType;
 use App\Form\MediaImageType;
 use App\Security\{EditorialAccess, FolderPermissions, ModuleAccess};
-use App\Service\{AdminClubContext, ClubEventBooking, FrontendCourseRegistrationService, MediaFileStorage, MembershipRoleContinuity};
+use App\Service\{AdminClubContext, ClubEventBooking, ClubEventConflictService, ClubEventSeries, FrontendCourseRegistrationService, MediaFileStorage, MembershipRoleContinuity};
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -43,36 +43,43 @@ final class ClubEventAdminController extends AbstractController
     }
 
     #[Route('/new', name: 'admin_club_event_new', methods: ['GET', 'POST'])]
-    public function create(Request $request, EntityManagerInterface $em): Response
+    public function create(Request $request, EntityManagerInterface $em, ClubEventSeries $series, ClubEventConflictService $conflicts): Response
     {
-        return $this->withWriteLock($request, $em, fn (): Response => $this->createEvent($request, $em));
+        return $this->withWriteLock($request, $em, fn (): Response => $this->createEvent($request, $em, $series, $conflicts));
     }
 
-    private function createEvent(Request $request, EntityManagerInterface $em): Response
+    private function createEvent(Request $request, EntityManagerInterface $em, ClubEventSeries $series, ClubEventConflictService $conflicts): Response
     {
         $this->requireWebsite(PermissionAction::CREATE);
         $event = new ClubEvent($this->club());
         $form = $this->createForm(ClubEventType::class, $event, ['csrf_token_id' => 'club_event_'.$event->getClub()->getId()]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $em->persist($event); $em->flush();
-            return $this->eventRedirect($event);
+            $conflict = $conflicts->firstFor($event);
+            if ($conflict !== null) {
+                $form->addError(new \Symfony\Component\Form\FormError($conflict));
+            } else {
+                $em->persist($event);
+                $series->materialize($event);
+                $em->flush();
+                return $this->eventRedirect($event);
+            }
         }
         return $this->render('club_event/admin/form.html.twig', ['form' => $form]);
     }
 
     #[Route('/{id}/edit', name: 'admin_club_event_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
-    public function edit(int $id, Request $request, EntityManagerInterface $em): Response
+    public function edit(int $id, Request $request, EntityManagerInterface $em, ClubEventConflictService $conflicts): Response
     {
         try {
-            return $this->withWriteLock($request, $em, fn (): Response => $this->editEvent($id, $request, $em));
+            return $this->withWriteLock($request, $em, fn (): Response => $this->editEvent($id, $request, $em, $conflicts));
         } catch (\DomainException $e) {
             $this->addFlash('warning', $e->getMessage());
             return $this->redirectToRoute('admin_club_event_edit', ['id' => $id], Response::HTTP_SEE_OTHER);
         }
     }
 
-    private function editEvent(int $id, Request $request, EntityManagerInterface $em): Response
+    private function editEvent(int $id, Request $request, EntityManagerInterface $em, ClubEventConflictService $conflicts): Response
     {
         $this->requireWebsite(PermissionAction::EDIT);
         $event = $this->event($id, $em);
@@ -83,6 +90,11 @@ final class ClubEventAdminController extends AbstractController
         ]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            $conflict = $conflicts->firstFor($draft);
+            if ($conflict !== null) {
+                $form->addError(new \Symfony\Component\Form\FormError($conflict));
+                return $this->render('club_event/admin/form.html.twig', ['form' => $form], new Response(status: 422));
+            }
             try {
                 $em->getConnection()->transactional(function () use ($em, $event, $draft, $form): void {
                     $em->refresh($event, LockMode::PESSIMISTIC_WRITE);
@@ -234,25 +246,26 @@ final class ClubEventAdminController extends AbstractController
     }
 
     #[Route('/{id}/cancel', name: 'admin_club_event_cancel', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function cancel(int $id, Request $request, EntityManagerInterface $em): Response
+    public function cancel(int $id, Request $request, EntityManagerInterface $em, ClubEventBooking $booking): Response
     {
         try {
-            return $this->withWriteLock($request, $em, fn (): Response => $this->cancelEvent($id, $request, $em));
+            return $this->withWriteLock($request, $em, fn (): Response => $this->cancelEvent($id, $request, $em, $booking));
         } catch (\DomainException $e) {
             $this->addFlash('warning', $e->getMessage());
             return $this->eventRedirect($this->event($id, $em));
         }
     }
 
-    private function cancelEvent(int $id, Request $request, EntityManagerInterface $em): Response
+    private function cancelEvent(int $id, Request $request, EntityManagerInterface $em, ClubEventBooking $booking): Response
     {
         $this->requireWebsite(PermissionAction::DELETE);
         if (!$this->isCsrfTokenValid('event_admin_cancel_'.$id, $request->request->getString('_token'))) { throw $this->createAccessDeniedException('Ungültiger CSRF-Token.'); }
         $event = $this->event($id, $em);
-        $em->getConnection()->transactional(function () use ($em, $event): void {
+        $em->getConnection()->transactional(function () use ($em, $event, $booking): void {
             $em->refresh($event, LockMode::PESSIMISTIC_WRITE);
             if ($event->isCancelled()) { throw new \DomainException('Die Veranstaltung ist bereits abgesagt.'); }
             $event->cancel(); $em->flush();
+            $booking->notifyCancellation($event);
         });
         $this->addFlash('warning', 'Veranstaltung abgesagt. Offene Erstattungen müssen manuell gebucht werden.');
         return $this->eventRedirect($event);

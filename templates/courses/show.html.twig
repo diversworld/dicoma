@@ -74,12 +74,7 @@
                         <td>{{ schedule.price }}</td>
                         <td>{{ schedule.bookingCount }}</td>
                         <td>
-                            {% if is_granted('ROLE_MEMBER') %}
-                                <form method="post" action="{{ path('app_booking_book', {'id': schedule.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('book_schedule_' ~ schedule.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Termin buchen">Termin buchen</button>
-                                </form>
-                            {% endif %}
+                            <span class="text-muted">Mit Kursanmeldung eingeschlossen</span>
                         </td>
                     </tr>
                 {% endfor %}

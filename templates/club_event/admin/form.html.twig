@@ -5,5 +5,14 @@
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
 <p>Bis zur ersten Anmeldung können Veranstaltungen bearbeitet werden. Danach bleiben die Angaben unveränderlich; bei Bedarf absagen und neu anlegen.</p>
 <p>Bilder zuerst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen und anschließend auswählen. Das Bild kann auch später separat geändert werden.</p>
-{{ form_start(form) }}{{ form_errors(form) }}{{ form_widget(form) }}<button class="btn btn-primary" type="submit">Veranstaltung speichern</button>{{ form_end(form) }}
+<section class="dw-form-card">
+{{ form_start(form, {attr: {class: 'dw-form', novalidate: 'novalidate'}}) }}
+    {{ form_errors(form) }}
+    {{ form_rest(form) }}
+    <div class="dw-form-actions">
+        <button class="btn btn-primary" type="submit">Veranstaltung speichern</button>
+        <a class="btn btn-outline-secondary" href="{{ path('admin_club_events') }}">Abbrechen</a>
+    </div>
+{{ form_end(form, {render_rest: false}) }}
+</section>
 {% endblock %}

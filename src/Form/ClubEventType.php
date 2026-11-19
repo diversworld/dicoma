@@ -4,8 +4,12 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\ClubEvent;
+use App\Entity\Member;
+use App\Entity\Sport;
+use Doctrine\ORM\EntityRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\{CheckboxType, ChoiceType, DateTimeType, IntegerType, MoneyType, TextareaType, TextType};
+use Symfony\Component\Form\Extension\Core\Type\{CheckboxType, ChoiceType, DateTimeType, DateType, IntegerType, MoneyType, TextareaType, TextType};
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -15,6 +19,23 @@ final class ClubEventType extends AbstractType
     {
         $builder->add('title', TextType::class, [
             'label' => 'Titel'])
+            ->add('eventType', ChoiceType::class, [
+                'label' => 'Kategorie',
+                'choices' => ['Veranstaltung' => 'event', 'Tauchgang' => 'dive', 'Ausfahrt' => 'trip'],
+            ])
+            ->add('division', EntityType::class, [
+                'class' => Sport::class, 'label' => 'Sparte', 'required' => false,
+                'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('s')
+                    ->where('s.club = :club')->setParameter('club', $builder->getData()->getClub())->andWhere('s.active = true')->orderBy('s.name', 'ASC'),
+            ])
+            ->add('responsible', EntityType::class, [
+                'class' => Member::class, 'label' => 'Verantwortliche Person', 'required' => false,
+                'choice_label' => 'fullName',
+                'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('m')
+                    ->where('m.club = :club')->setParameter('club', $builder->getData()->getClub())
+                    ->andWhere('m.membershipStatus = :active')->setParameter('active', 'active')
+                    ->andWhere('m.archivedAt IS NULL'),
+            ])
             ->add('description', TextareaType::class, [
                 'label' => 'Beschreibung'])
             ->add('pricing', ChoiceType::class, [
@@ -71,7 +92,17 @@ final class ClubEventType extends AbstractType
                 'required' => false,
                 'attr' => ['class' => 'form-control'],
                 ]
-        )
+            )
+            ->add('recurrence', ChoiceType::class, [
+                'label' => 'Wiederholung',
+                'required' => false,
+                'choices' => ['Keine' => null, 'Wöchentlich' => 'weekly', 'Monatlich' => 'monthly'],
+                'placeholder' => false,
+            ])
+            ->add('recurrenceUntil', DateType::class, [
+                'label' => 'Wiederholen bis einschließlich',
+                'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false,
+            ])
             ->add('published', CheckboxType::class, [
                 'label' => 'Veröffentlichen', 
                 'label_attr' => ['class' => 'checkbox-switch'],
