@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% block title %}Nachricht schreiben | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Nachricht schreiben</h1>
+        <a class="btn btn-outline-secondary" href="{{ path('member_messages') }}">Zum Posteingang</a>
+    </div>
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        {{ form_row(form.audience) }}
+        {{ form_row(form.recipient) }}
+        {{ form_row(form.division) }}
+        {{ form_row(form.role) }}
+        {{ form_row(form.subject) }}
+        {{ form_row(form.body) }}
+        {{ form_row(form.send) }}
+    {{ form_end(form) }}
+</main>
+{% endblock %}

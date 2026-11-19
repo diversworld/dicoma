@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% block title %}Interne Nachrichten | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div><h1>Posteingang</h1><p class="text-muted">Nur an dich gerichtete oder über deine Gruppen zugestellte Nachrichten.</p></div>
+        <a class="btn btn-primary" href="{{ path('member_message_new') }}">Nachricht schreiben</a>
+    </div>
+    <div class="list-group">
+        {% for delivery in recipients %}
+            <a class="list-group-item list-group-item-action {{ delivery.readAt is null ? 'fw-bold' : '' }}" href="{{ path('member_message_show', {id: delivery.message.id}) }}">
+                <div class="d-flex justify-content-between gap-3">
+                    <span>{{ delivery.message.subject }}</span>
+                    <time>{{ delivery.message.sentAt|date('d.m.Y H:i') }}</time>
+                </div>
+                <small class="text-muted">{{ delivery.message.sender.member ? delivery.message.sender.member.fullName : delivery.message.sender.userIdentifier }}</small>
+                {% if delivery.readAt is null %}<span class="badge text-bg-primary ms-2">Neu</span>{% endif %}
+            </a>
+        {% else %}
+            <div class="alert alert-info">Dein Posteingang ist leer.</div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}

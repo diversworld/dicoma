@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+{% block title %}Mein Kalender | DICOMA{% endblock %}
+{% block hero %}{% endblock %}
+{% block body %}
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div><h1>Mein Kalender</h1><p>Nur Termine, an denen du gebucht, angemeldet oder eingeteilt bist.</p></div>
+        <a class="btn btn-outline-secondary" href="{{ path('member_portal_dashboard') }}">Zurück zum Portal</a>
+    </div>
+    <div class="list-group">
+        {% for item in items %}
+            <div class="list-group-item">
+                <strong>{{ item.date|date('d.m.Y') }}{% if item.time %}, {{ item.time }}{% endif %}</strong>
+                <span class="badge text-bg-secondary ms-2">{{ item.type }}</span>
+                <h2 class="h5 mt-2 mb-1">{{ item.title }}</h2>
+                <div class="text-muted">{{ item.detail }}</div>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">Für die nächsten zwölf Monate sind keine persönlichen Termine vorhanden.</div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}

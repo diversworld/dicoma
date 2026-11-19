@@ -95,6 +95,8 @@ final class PortalNavigation
         }
         if ($isMember) {
             $personal[] = ['label' => 'Mein Dashboard', 'route' => 'member_portal_dashboard'];
+            $personal[] = ['label' => 'Mein Kalender', 'route' => 'member_personal_calendar'];
+            $personal[] = ['label' => 'Interne Nachrichten', 'route' => 'member_messages'];
             $personal[] = ['label' => 'Meine Daten', 'route' => 'app_profile'];
             $personal[] = ['label' => 'Meine Mitgliedschaft', 'route' => 'membership_self'];
             $personal[] = ['label' => 'Meine Ausrüstung', 'route' => 'member_equipment_index'];
