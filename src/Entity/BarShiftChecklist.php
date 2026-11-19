@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'bar_shift_checklist')]
 #[ORM\UniqueConstraint(name: 'uniq_bar_shift_checklist', columns: ['shift_id'])]
+#[ORM\Index(name: 'IDX_61BA675885ECDE76', columns: ['completed_by_id'])]
 class BarShiftChecklist
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]

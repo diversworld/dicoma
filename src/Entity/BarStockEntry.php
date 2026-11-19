@@ -8,6 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'bar_stock_entry')]
+#[ORM\Index(name: 'IDX_6448A515BB70BC0E', columns: ['shift_id'])]
+#[ORM\Index(name: 'IDX_6448A51571CE806', columns: ['reported_by_id'])]
 class BarStockEntry
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column] private ?int $id = null;
