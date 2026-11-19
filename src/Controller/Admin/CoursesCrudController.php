@@ -86,6 +86,7 @@ class CoursesCrudController extends AbstractCrudController
         FilterCollection $filters
     ): QueryBuilder {
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        $qb->leftJoin('entity.leadInstructor', 'leadInstructor')->addSelect('leadInstructor');
         if ($this->getContext()?->getRequest()->query->get('unassigned') === '1' && $this->isGranted('ROLE_SUPER_ADMIN')) {
             return $qb->andWhere('entity.club IS NULL');
         }
@@ -403,12 +404,17 @@ class CoursesCrudController extends AbstractCrudController
                 ->setColumns(3)
                 ->setFormTypeOption('disabled',$isCompleted);
         }
-        yield AssociationField::new('leadInstructor', 'Verantwortlicher Kursausbilder')
-            ->setColumns(4)
-            ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
-            ->setFormTypeOption('choices', $this->members->findInstructors(
-                $this->clubContext->getClub()
-            ));
+        if ($pageName === Crud::PAGE_INDEX) {
+            yield TextField::new('leadInstructorName', 'Verantwortlicher Kursausbilder')
+                ->onlyOnIndex();
+        } else {
+            yield AssociationField::new('leadInstructor', 'Verantwortlicher Kursausbilder')
+                ->setColumns(4)
+                ->setHelp('Verantwortlicher Ausbilder; Standard fuer neue Termine.')
+                ->setFormTypeOption('choices', $this->members->findInstructors(
+                    $this->clubContext->getClub()
+                ));
+        }
         yield AssociationField::new('qualification','Zielqualifikation')
             ->setRequired(false)
             ->setColumns(4)

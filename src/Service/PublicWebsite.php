@@ -51,7 +51,7 @@ final class PublicWebsite
     public function visible(WebsitePublication $publication): bool
     {
         if ($publication->getClub()->getId() !== $this->publicClub()?->getId() || !$publication->isPublished() || $publication->getPublishAt() === null || $publication->getPublishAt() > new \DateTimeImmutable()) { return false; }
-        $division = $publication->getDivision();
+        $division = $publication->getEffectiveDivision();
         if ($division !== null && (!$division->isActive() || $division->getClub()?->getId() !== $publication->getClub()->getId())) { return false; }
         foreach ([$publication->getCourse(), $publication->getTournament()] as $source) {
             if ($source !== null && ($source->getClub()?->getId() !== $publication->getClub()->getId() || in_array($source->getStatus()->value, ['draft', 'cancelled'], true))) { return false; }
@@ -66,11 +66,27 @@ final class PublicWebsite
         $qb = $this->em->getRepository(WebsitePublication::class)->createQueryBuilder('p')
             ->leftJoin('p.course', 'c')->addSelect('c')->leftJoin('p.tournament', 't')->addSelect('t')
             ->leftJoin('p.division', 'd')->addSelect('d')
+            ->leftJoin('p.parent', 'parent')->addSelect('parent')
             ->where('p.club = :club AND p.kind = :kind AND p.published = true AND p.publishAt <= :now')
             ->setParameter('club', $club)->setParameter('kind', $kind)->setParameter('now', new \DateTimeImmutable());
         if ($upcoming) { $qb->andWhere('p.endsAt >= :now'); }
-        $qb->orderBy($kind === 'event' ? 'p.startsAt' : 'p.publishAt', $kind === 'event' ? 'ASC' : 'DESC')->addOrderBy('p.id', 'DESC');
+        $qb->orderBy($kind === 'page' ? 'p.sortOrder' : ($kind === 'event' ? 'p.startsAt' : 'p.publishAt'), $kind === 'article' ? 'DESC' : 'ASC')->addOrderBy('p.id', $kind === 'article' ? 'DESC' : 'ASC');
         return array_values(array_filter($qb->getQuery()->getResult(), $this->visible(...)));
+    }
+
+    /** @return list<WebsitePublication> */
+    public function articlesForPage(WebsitePublication $page): array
+    {
+        if ($page->getKind() !== 'page') {
+            return [];
+        }
+        return array_values(array_filter(
+            $this->em->getRepository(WebsitePublication::class)->findBy(
+                ['club' => $page->getClub(), 'kind' => 'article', 'parent' => $page],
+                ['publishAt' => 'DESC', 'sortOrder' => 'ASC', 'id' => 'DESC'],
+            ),
+            $this->visible(...),
+        ));
     }
 
     /** @return array<int, array{division: Sport, publications: list<WebsitePublication>}> */
@@ -79,7 +95,7 @@ final class PublicWebsite
         $divisions = [];
         foreach (['page', 'article', 'event'] as $kind) {
             foreach ($this->publications($kind) as $publication) {
-                $division = $publication->getDivision();
+                $division = $publication->getEffectiveDivision();
                 if ($division === null) { continue; }
                 $id = $division->getId();
                 $divisions[$id] ??= ['division' => $division, 'publications' => []];

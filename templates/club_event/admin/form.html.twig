@@ -8,7 +8,47 @@
 <section class="dw-form-card">
 {{ form_start(form, {attr: {class: 'dw-form', novalidate: 'novalidate'}}) }}
     {{ form_errors(form) }}
-    {{ form_rest(form) }}
+    <div class="card mb-3">
+        <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#event-basics">Grunddaten und Inhalt</button></div>
+        <div id="event-basics" class="collapse show"><div class="card-body row">
+            <div class="col-md-8">{{ form_row(form.title) }}</div>
+            <div class="col-md-4">{{ form_row(form.eventType) }}</div>
+            <div class="col-12">{{ form_row(form.description) }}</div>
+            <div class="col-md-6">{{ form_row(form.division) }}</div>
+            <div class="col-md-6">{{ form_row(form.responsible) }}</div>
+        </div></div>
+    </div>
+    <div class="card mb-3">
+        <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#event-time">Termin und Wiederholung</button></div>
+        <div id="event-time" class="collapse show"><div class="card-body row">
+            <div class="col-md-6">{{ form_row(form.startsAt) }}</div>
+            <div class="col-md-6">{{ form_row(form.endsAt) }}</div>
+            <div class="col-md-6">{{ form_row(form.deadline) }}</div>
+            <div class="col-md-6">{{ form_row(form.location) }}</div>
+            <div class="col-md-6">{{ form_row(form.recurrence) }}</div>
+            <div class="col-md-6">{{ form_row(form.recurrenceUntil) }}</div>
+        </div></div>
+    </div>
+    <div class="card mb-3">
+        <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#event-module">Kurs, Turnier, Anmeldung und Preise</button></div>
+        <div id="event-module" class="collapse show"><div class="card-body row">
+            <div class="col-md-6">{{ form_row(form.course) }}</div>
+            <div class="col-md-6">{{ form_row(form.tournament) }}</div>
+            <div class="col-md-4">{{ form_row(form.pricing) }}</div>
+            <div class="col-md-4">{{ form_row(form.memberFeeCents) }}</div>
+            <div class="col-md-4">{{ form_row(form.guestFeeCents) }}</div>
+            <div class="col-md-4">{{ form_row(form.capacity) }}</div>
+            <div class="col-md-4">{{ form_row(form.registrationEnabled) }}</div>
+            <div class="col-md-4">{{ form_row(form.published) }}</div>
+        </div></div>
+    </div>
+    {% if form.image is defined %}
+    <div class="card mb-3">
+        <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#event-image">Bild</button></div>
+        <div id="event-image" class="collapse"><div class="card-body">{{ form_row(form.image) }}</div></div>
+    </div>
+    {% endif %}
+    {{ form_row(form._token) }}
     <div class="dw-form-actions">
         <button class="btn btn-primary" type="submit">Veranstaltung speichern</button>
         <a class="btn btn-outline-secondary" href="{{ path('admin_club_events') }}">Abbrechen</a>

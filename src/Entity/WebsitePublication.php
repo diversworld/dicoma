@@ -13,6 +13,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 #[ORM\Index(name: 'idx_website_publication_course', columns: ['course_id'])]
 #[ORM\Index(name: 'idx_website_publication_tournament', columns: ['tournament_id'])]
 #[ORM\Index(name: 'idx_website_publication_division', columns: ['division_id'])]
+#[ORM\Index(name: 'idx_website_publication_parent', columns: ['parent_id'])]
 class WebsitePublication
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column] private ?int $id = null;
@@ -31,6 +32,12 @@ class WebsitePublication
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Tournament $tournament = null;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?Sport $division = null;
+    #[ORM\ManyToOne(targetEntity: self::class), ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?self $parent = null;
+    #[ORM\Column]
+    private int $sortOrder = 0;
+    #[ORM\Column(options: ['default' => true])]
+    private bool $menuVisible = true;
     #[ORM\Column(type: 'json')] private array $history = [];
 
     public function __construct(Club $club) { $this->club = $club; $this->publishAt = new \DateTimeImmutable(); }
@@ -63,6 +70,16 @@ class WebsitePublication
     public function setImage(?MediaFile $value): void { $this->image = $value; }
     public function getDivision(): ?Sport { return $this->division; }
     public function setDivision(?Sport $value): void { $this->division = $value; }
+    public function getParent(): ?self { return $this->parent; }
+    public function setParent(?self $value): void { $this->parent = $value; }
+    public function getSortOrder(): int { return $this->sortOrder; }
+    public function setSortOrder(int $value): void { $this->sortOrder = $value; }
+    public function isMenuVisible(): bool { return $this->menuVisible; }
+    public function setMenuVisible(bool $value): void { $this->menuVisible = $value; }
+    public function getEffectiveDivision(): ?Sport
+    {
+        return $this->division ?? ($this->kind === 'article' ? $this->parent?->getEffectiveDivision() : null);
+    }
     public function getHistory(): array { return $this->history; }
     public function record(string $actor): void
     {
@@ -82,6 +99,20 @@ class WebsitePublication
         }
         if ($this->kind === 'event' && ($this->startsAt === null || $this->endsAt === null || $this->endsAt <= $this->startsAt || $this->location === '')) {
             $context->buildViolation('Veranstaltungen benötigen Ort, Beginn und ein späteres Ende.')->atPath('startsAt')->addViolation();
+        }
+        if ($this->parent !== null) {
+            if (!in_array($this->kind, ['article', 'page'], true) || $this->parent->getKind() !== 'page'
+                || $this->parent->getClub()->getId() !== $this->club->getId()) {
+                $context->buildViolation('Seiten und Artikel können nur unter einer Seite desselben Vereins angelegt werden.')->atPath('parent')->addViolation();
+            }
+            $seen = [$this];
+            for ($parent = $this->parent; $parent !== null; $parent = $parent->getParent()) {
+                if (in_array($parent, $seen, true)) {
+                    $context->buildViolation('Seitenhierarchien dürfen keinen Zyklus enthalten.')->atPath('parent')->addViolation();
+                    break;
+                }
+                $seen[] = $parent;
+            }
         }
         if ($this->course !== null && $this->tournament !== null) {
             $context->buildViolation('Nur einen Kurs oder ein Turnier verknüpfen.')->atPath('course')->addViolation();

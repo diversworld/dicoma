@@ -16,6 +16,7 @@ use Doctrine\Common\Collections\Collection;
 #[UniqueEntity(fields: ['schedule', 'member'], errorPath: 'member', message: 'Für dieses Mitglied existiert bereits eine Buchung für diesen Termin.')]
 #[Assert\Callback('validateCourseParticipant')]
 #[ORM\Table(name: 'booking',uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_booking_schedule_member',columns: ['schedule_id', 'students_id'])])]
+#[ORM\Index(name: 'IDX_E00CEDDEE3ACDAAA', columns: ['excuse_reviewed_by_id'])]
 #[ORM\Entity(repositoryClass: BookingRepository::class)]
 class Booking
 {

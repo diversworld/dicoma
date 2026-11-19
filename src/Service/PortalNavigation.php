@@ -39,8 +39,23 @@ final class PortalNavigation
             ['label' => 'Sparten', 'route' => 'website_divisions'],
         ];
         $pages = [];
-        foreach ($this->website->publications('page') as $page) {
-            $pages[] = ['label' => $page->getTitle(), 'route' => 'website_page', 'parameters' => ['id' => $page->getId()]];
+        $allPages = $this->website->publications('page');
+        foreach ($allPages as $page) {
+            if ($page->getParent() !== null || !$page->isMenuVisible()) { continue; }
+            $pages[] = [
+                'label' => $page->getTitle(),
+                'route' => 'website_page',
+                'parameters' => ['id' => $page->getId()],
+                'children' => array_values(array_map(
+                    static fn (\App\Entity\WebsitePublication $child): array => [
+                        'label' => $child->getTitle(), 'route' => 'website_page',
+                        'parameters' => ['id' => $child->getId()],
+                    ],
+                    array_filter($allPages, static fn (\App\Entity\WebsitePublication $candidate): bool =>
+                        $candidate->getParent()?->getId() === $page->getId() && $candidate->isMenuVisible()
+                    ),
+                )),
+            ];
         }
 
         return [

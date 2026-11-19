@@ -3,6 +3,7 @@
 {% block main %}
 {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
 <p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
+<p class="text-muted">{{ event.eventType == 'dive' ? 'Tauchgang' : (event.eventType == 'trip' ? 'Ausfahrt' : 'Veranstaltung') }}{% if event.division %} · {{ event.division.name }}{% endif %}{% if event.responsible %} · Verantwortlich: {{ event.responsible.fullName }}{% endif %}</p>
 <p>{{ event.description|nl2br }}</p>
 <p>Status: {{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }} · Mitglieder {{ (event.memberFeeCents / 100)|number_format(2, ',', '.') }} EUR · Gäste {{ (event.guestFeeCents / 100)|number_format(2, ',', '.') }} EUR</p>
 {% if event.image and canReadImage %}<p><img src="{{ path('admin_media_file', {id:event.image.id}) }}" alt="{{ event.image.altText }}" width="200"></p>{% endif %}

@@ -47,7 +47,14 @@ final class ClubCalendar
                 } elseif (!$backend && $event->getClub()->getId() === $this->website->club()?->getId()) {
                     $url = $this->urls->generate('club_event_detail', ['id' => $event->getId()]);
                 }
-                $kind = match ($event->getEventType()) { 'dive' => 'Tauchgang', 'trip' => 'Ausfahrt', default => 'Veranstaltung' };
+                $kind = match ($event->getEventType()) {
+                    'course' => 'Kurs',
+                    'tournament' => 'Turnier',
+                    'dive' => 'Tauchgang',
+                    'trip' => 'Ausfahrt',
+                    'other' => 'Sonstige Veranstaltung',
+                    default => 'Vereinsveranstaltung',
+                };
                 $events[] = ['key' => 'club-event-'.$event->getId(), 'kind' => $kind, 'title' => $event->getTitle(),
                     'start' => $event->getStartsAt(), 'end' => $event->getEndsAt(), 'location' => $event->getLocation(), 'url' => $url];
             }

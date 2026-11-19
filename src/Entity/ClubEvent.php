@@ -9,6 +9,11 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity]
 #[ORM\Index(name: 'idx_club_event_listing', columns: ['club_id', 'published', 'starts_at'])]
+#[ORM\Index(name: 'IDX_5B0B8D9A41859289', columns: ['division_id'])]
+#[ORM\Index(name: 'IDX_5B0B8D9A602AD315', columns: ['responsible_id'])]
+#[ORM\Index(name: 'IDX_5B0B8D9A7B4CFBA', columns: ['series_parent_id'])]
+#[ORM\Index(name: 'idx_club_event_course', columns: ['course_id'])]
+#[ORM\Index(name: 'idx_club_event_tournament', columns: ['tournament_id'])]
 class ClubEvent
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column] private ?int $id = null;
@@ -26,12 +31,15 @@ class ClubEvent
     #[ORM\Column] private bool $published = false;
     #[ORM\Column] private bool $cancelled = false;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
-    #[ORM\Column(length: 20)] private string $eventType = 'event';
+    #[ORM\Column(length: 20, options: ['default' => 'event'])] private string $eventType = 'event';
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?Sport $division = null;
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')] private ?Member $responsible = null;
     #[ORM\Column(length: 10, nullable: true)] private ?string $recurrence = null;
     #[ORM\Column(type: 'date_immutable', nullable: true)] private ?\DateTimeImmutable $recurrenceUntil = null;
     #[ORM\ManyToOne(targetEntity: ClubEvent::class), ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?self $seriesParent = null;
+    #[ORM\Column(options: ['default' => true])] private bool $registrationEnabled = true;
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?Courses $course = null;
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?Tournament $tournament = null;
 
     public function __construct(Club $club) { $this->club = $club; }
     public function getId(): ?int { return $this->id; }
@@ -73,6 +81,12 @@ class ClubEvent
     public function setRecurrenceUntil(?\DateTimeImmutable $value): void { $this->recurrenceUntil = $value; }
     public function getSeriesParent(): ?self { return $this->seriesParent; }
     public function setSeriesParent(?self $value): void { $this->seriesParent = $value; }
+    public function isRegistrationEnabled(): bool { return $this->registrationEnabled; }
+    public function setRegistrationEnabled(bool $value): void { $this->registrationEnabled = $value; }
+    public function getCourse(): ?Courses { return $this->course; }
+    public function setCourse(?Courses $value): void { $this->course = $value; }
+    public function getTournament(): ?Tournament { return $this->tournament; }
+    public function setTournament(?Tournament $value): void { $this->tournament = $value; }
     public function cancel(): void { $this->cancelled = true; }
     public function copyDetailsFrom(self $other): void
     {
@@ -86,6 +100,9 @@ class ClubEvent
         $this->responsible = $other->responsible;
         $this->recurrence = $other->recurrence;
         $this->recurrenceUntil = $other->recurrenceUntil;
+        $this->registrationEnabled = $other->registrationEnabled;
+        $this->course = $other->course;
+        $this->tournament = $other->tournament;
     }
 
     #[Assert\Callback]
@@ -105,7 +122,7 @@ class ClubEvent
             || $this->memberFeeCents > 999999999 || $this->guestFeeCents > 999999999) {
             $context->buildViolation('Kostenfreie Mitgliedsveranstaltungen benötigen zwei Nullbeträge; kostenpflichtige Veranstaltungen zwei positive Beträge.')->atPath('pricing')->addViolation();
         }
-        if (!in_array($this->eventType, ['event', 'dive', 'trip'], true)) {
+        if (!in_array($this->eventType, ['event', 'course', 'tournament', 'dive', 'trip', 'other'], true)) {
             $context->buildViolation('Ungültige Veranstaltungsart.')->atPath('eventType')->addViolation();
         }
         if ($this->division !== null && $this->division->getClub()?->getId() !== $this->club->getId()) {
@@ -119,6 +136,14 @@ class ClubEvent
             || ($this->recurrence !== null && ($this->recurrenceUntil === null || $this->startsAt === null
                 || $this->recurrenceUntil < $this->startsAt->setTime(0, 0)))) {
             $context->buildViolation('Wiederholung und gültiges Enddatum gemeinsam angeben.')->atPath('recurrenceUntil')->addViolation();
+        }
+        if ($this->course !== null && $this->tournament !== null) {
+            $context->buildViolation('Eine Veranstaltung kann höchstens ein Fachmodul referenzieren.')->atPath('course')->addViolation();
+        }
+        foreach ([$this->course, $this->tournament] as $source) {
+            if ($source !== null && $source->getClub()?->getId() !== $this->club->getId()) {
+                $context->buildViolation('Verknüpftes Fachmodul muss zum selben Verein gehören.')->atPath('course')->addViolation();
+            }
         }
     }
 }

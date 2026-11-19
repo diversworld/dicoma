@@ -5,6 +5,8 @@ namespace App\Form;
 
 use App\Entity\ClubEvent;
 use App\Entity\Member;
+use App\Entity\Courses;
+use App\Entity\Tournament;
 use App\Entity\Sport;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -21,7 +23,14 @@ final class ClubEventType extends AbstractType
             'label' => 'Titel'])
             ->add('eventType', ChoiceType::class, [
                 'label' => 'Kategorie',
-                'choices' => ['Veranstaltung' => 'event', 'Tauchgang' => 'dive', 'Ausfahrt' => 'trip'],
+                'choices' => [
+                    'Vereinsveranstaltung' => 'event',
+                    'Kurs' => 'course',
+                    'Turnier' => 'tournament',
+                    'Tauchgang' => 'dive',
+                    'Ausfahrt' => 'trip',
+                    'Sonstige Veranstaltung' => 'other',
+                ],
             ])
             ->add('division', EntityType::class, [
                 'class' => Sport::class, 'label' => 'Sparte', 'required' => false,
@@ -35,6 +44,19 @@ final class ClubEventType extends AbstractType
                     ->where('m.club = :club')->setParameter('club', $builder->getData()->getClub())
                     ->andWhere('m.membershipStatus = :active')->setParameter('active', 'active')
                     ->andWhere('m.archivedAt IS NULL'),
+            ])
+            ->add('course', EntityType::class, [
+                'class' => Courses::class, 'label' => 'Kurs dieses Ereignisses', 'required' => false,
+                'placeholder' => 'Kein Kurs',
+                'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('course')
+                    ->where('course.club = :club AND course.status NOT IN (:hidden)')
+                    ->setParameter('club', $builder->getData()->getClub())->setParameter('hidden', ['draft', 'cancelled']),
+            ])
+            ->add('tournament', EntityType::class, [
+                'class' => Tournament::class, 'label' => 'Turnier dieses Ereignisses', 'required' => false,
+                'placeholder' => 'Kein Turnier',
+                'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('tournament')
+                    ->where('tournament.club = :club')->setParameter('club', $builder->getData()->getClub()),
             ])
             ->add('description', TextareaType::class, [
                 'label' => 'Beschreibung'])
@@ -108,7 +130,11 @@ final class ClubEventType extends AbstractType
                 'label_attr' => ['class' => 'checkbox-switch'],
                 'required' => false
                 ]
-            );
+            )
+            ->add('registrationEnabled', CheckboxType::class, [
+                'label' => 'Anmeldungen für diese Veranstaltung aktivieren',
+                'required' => false,
+            ]);
         if (!$options['image_locked']) {
             $builder->add('image', MediaImageType::class, ['club' => $builder->getData()->getClub()]);
         }

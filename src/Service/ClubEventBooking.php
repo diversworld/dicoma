@@ -48,7 +48,7 @@ final class ClubEventBooking
         }
         return $this->transaction(function () use ($id, $person): ClubEventRegistration {
             $event = $this->lockedEvent($id);
-            if (!$event->isPublished() || $event->isCancelled() || $event->getStartsAt() <= new \DateTimeImmutable()
+            if (!$event->isPublished() || $event->isCancelled() || !$event->isRegistrationEnabled() || $event->getStartsAt() <= new \DateTimeImmutable()
                 || ($event->getDeadline() !== null && $event->getDeadline() < new \DateTimeImmutable())) {
                 throw new \DomainException('Die Anmeldung für diese Veranstaltung ist geschlossen.');
             }

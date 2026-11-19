@@ -132,6 +132,7 @@ class Courses
     public function unpublishSchedule(): void { $this->schedulePublishedAt = null; }
 
     public function getLeadInstructor(): ?Member { return $this->leadInstructor; }
+    public function getLeadInstructorName(): string { return $this->leadInstructor?->getFullName() ?? '—'; }
     public function setLeadInstructor(?Member $member): static { $this->leadInstructor = $member; return $this; }
     public function getId(): ?int
     {

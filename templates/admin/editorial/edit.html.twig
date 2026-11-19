@@ -5,15 +5,54 @@
 
 {% block main %}
     {% if canRead %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Übersicht und Veröffentlichungshilfe</a></p>{% endif %}
-    <p>Texte werden als reiner Text veröffentlicht, HTML wird nicht ausgeführt. Optional kann eine aktive Sparte zugeordnet werden; nur ausdrücklich veröffentlichte Beiträge erscheinen in ihrem öffentlichen Bereich. Interne Spartenbeschreibungen werden nicht veröffentlicht. Bei Veranstaltungen öffentliche Termine und Ort ausdrücklich angeben. Optional einen eigenen freigegebenen Kurs oder ein Turnier zuordnen; interne Daten werden nicht kopiert. Wird die Quelle abgesagt oder zum Entwurf, verschwindet die Ankündigung automatisch.</p>
+    <p>Seiten bilden die Navigationsstruktur. Artikel werden einer Seite zugeordnet und erben deren Sparte, sofern sie keine eigene Sparte überschreiben. Neue Veranstaltungen, Kurse, Turniere, Tauchgänge und Clubreisen werden zentral unter „Veranstaltungsbuchungen“ angelegt; vorhandene Legacy-Veranstaltungen bleiben bearbeitbar.</p>
     <p>Bilder zuerst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen und anschließend hier auswählen.</p>
     {% if not canReadImage %}<p>Das vorhandene Bild bleibt unverändert, da keine Leseberechtigung für die Datei besteht.</p>{% endif %}
     {% if publication.image and canReadImage %}<img src="{{ path('admin_media_file', {id:publication.image.id}) }}" alt="{{ publication.image.altText }}" width="200">{% endif %}
-    {{ form_start(form) }}
+    {{ form_start(form, {attr: {class: 'ea-form dw-form'}}) }}
         {{ form_errors(form) }}
-        {{ form_widget(form) }}
-        <button class="btn btn-primary" type="submit">Beitrag speichern</button>
-    {{ form_end(form) }}
+        <div class="card mb-4">
+            <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#cms-base">Grunddaten und Hierarchie</button></div>
+            <div id="cms-base" class="collapse show"><div class="card-body row">
+                <div class="col-md-4">{{ form_row(form.kind) }}</div>
+                <div class="col-md-8">{{ form_row(form.title) }}</div>
+                <div class="col-md-8">{{ form_row(form.parent) }}</div>
+                <div class="col-md-2">{{ form_row(form.sortOrder) }}</div>
+                <div class="col-md-2">{{ form_row(form.menuVisible) }}</div>
+                <div class="col-12">{{ form_row(form.summary) }}</div>
+                <div class="col-12">{{ form_row(form.body) }}</div>
+            </div></div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#cms-scope">Sparte, Bild und Veröffentlichung</button></div>
+            <div id="cms-scope" class="collapse show"><div class="card-body row">
+                <div class="col-md-6">{{ form_row(form.division) }}</div>
+                <div class="col-md-6">{{ form_row(form.image) }}</div>
+                <div class="col-md-6">{{ form_row(form.publishAt) }}</div>
+                <div class="col-md-6">{{ form_row(form.published) }}</div>
+            </div></div>
+        </div>
+        {% if form.kind.vars.value == 'event' %}
+        <div class="card mb-4">
+            <div class="card-header"><button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#cms-legacy-event">Legacy-Veranstaltungsdaten</button></div>
+            <div id="cms-legacy-event" class="collapse"><div class="card-body row">
+                <div class="col-md-6">{{ form_row(form.startsAt) }}</div>
+                <div class="col-md-6">{{ form_row(form.endsAt) }}</div>
+                <div class="col-12">{{ form_row(form.location) }}</div>
+                <div class="col-md-6">{{ form_row(form.course) }}</div>
+                <div class="col-md-6">{{ form_row(form.tournament) }}</div>
+            </div></div>
+        </div>
+        {% else %}
+            {% do form.startsAt.setRendered %}
+            {% do form.endsAt.setRendered %}
+            {% do form.location.setRendered %}
+            {% do form.course.setRendered %}
+            {% do form.tournament.setRendered %}
+        {% endif %}
+        {{ form_row(form.version) }}
+        <div class="dw-form-actions"><button class="btn btn-primary" type="submit">Inhalt speichern</button></div>
+    {{ form_end(form, {render_rest: false}) }}
     {% if publication.id %}
         <details class="mt-4"><summary>Änderungsnachweis</summary><ul>{% for entry in publication.history %}
             <li>{{ entry.at|date('d.m.Y H:i') }} · {{ entry.actor }} · {{ entry.published ? 'Freigegeben' : 'Entwurf' }} · {{ entry.title }}</li>

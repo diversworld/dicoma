@@ -135,7 +135,13 @@ final class PublicWebsiteController extends AbstractController
         if ($publication === null || ($publication->getKind() === 'page') !== $pageRoute || !$website->visible($publication)) {
             throw $this->createNotFoundException();
         }
-        return $this->render('website/detail.html.twig', ['publication' => $publication]);
+        return $this->render('website/detail.html.twig', [
+            'publication' => $publication,
+            'articles' => $publication->getKind() === 'page' ? $website->articlesForPage($publication) : [],
+            'subpages' => $publication->getKind() === 'page'
+                ? array_values(array_filter($website->publications('page'), static fn (WebsitePublication $page): bool => $page->getParent()?->getId() === $publication->getId()))
+                : [],
+        ]);
     }
 
     #[Route('/news/{id}/image', name: 'website_publication_image', requirements: ['id' => '\d+'], methods: ['GET'])]

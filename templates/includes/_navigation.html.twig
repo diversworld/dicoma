@@ -24,7 +24,17 @@
             {% endfor %}
             {% for page in publicMenu.pages %}
                 {% set active = current_route == page.route and app.request.attributes.get('id') == page.parameters.id %}
-                <li class="nav-item"><a class="nav-link{{ active ? ' active' : '' }}" href="{{ path(page.route, page.parameters) }}"{% if active %} aria-current="page"{% endif %}>{{ page.label }}</a></li>
+                {% if page.children|default([]) %}
+                    <li class="nav-item dropdown">
+                        <button class="nav-link dropdown-toggle btn{{ active ? ' active' : '' }}" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ page.label }}</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ path(page.route, page.parameters) }}">{{ page.label }}</a></li>
+                            {% for child in page.children %}<li><a class="dropdown-item" href="{{ path(child.route, child.parameters) }}">{{ child.label }}</a></li>{% endfor %}
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link{{ active ? ' active' : '' }}" href="{{ path(page.route, page.parameters) }}"{% if active %} aria-current="page"{% endif %}>{{ page.label }}</a></li>
+                {% endif %}
             {% endfor %}
             {% if app.user %}
                 <li class="nav-item dropdown">

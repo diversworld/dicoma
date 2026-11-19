@@ -8,7 +8,7 @@ use App\Entity\{Club, Courses, Sport, Tournament, WebsitePublication};
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\{CheckboxType, ChoiceType, DateTimeType, HiddenType, TextareaType, TextType};
+use Symfony\Component\Form\Extension\Core\Type\{CheckboxType, ChoiceType, DateTimeType, HiddenType, IntegerType, TextareaType, TextType};
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -21,7 +21,9 @@ final class WebsitePublicationType extends AbstractType
                 'label' => 'Inhaltstyp', 
                 'attr' => [
                     'class' => 'form-control'],
-                'choices' => ['Artikel' => 'article', 'Veranstaltung' => 'event', 'Seite' => 'page']
+                'choices' => $builder->getData()->getKind() === 'event'
+                    ? ['Legacy-Veranstaltung' => 'event', 'Artikel' => 'article', 'Seite' => 'page']
+                    : ['Artikel' => 'article', 'Seite' => 'page']
                 ]
             )
             ->add('title', TextType::class, [
@@ -29,6 +31,25 @@ final class WebsitePublicationType extends AbstractType
                 'attr' => ['class' => 'form-control'],
                 ]
             )
+            ->add('parent', EntityType::class, [
+                'class' => WebsitePublication::class,
+                'label' => 'Übergeordnete Seite',
+                'required' => false,
+                'placeholder' => 'Hauptebene',
+                'query_builder' => static fn (EntityRepository $repository) => $repository->createQueryBuilder('parent')
+                    ->where('parent.club = :club AND parent.kind = :kind')
+                    ->andWhere('parent.id != :current OR :current = 0')
+                    ->setParameter('club', $options['club'])
+                    ->setParameter('kind', 'page')
+                    ->setParameter('current', $builder->getData()->getId() ?? 0)
+                    ->orderBy('parent.sortOrder')->addOrderBy('parent.title'),
+                'help' => 'Artikel werden einer Seite zugeordnet; Seiten können als Unterseite strukturiert werden.',
+            ])
+            ->add('sortOrder', IntegerType::class, ['label' => 'Menü- und Seitenreihenfolge'])
+            ->add('menuVisible', CheckboxType::class, [
+                'label' => 'Im Hauptmenü anzeigen',
+                'required' => false,
+            ])
             ->add('summary', TextareaType::class, [
                 'label' => 'Kurzbeschreibung', 
                 'attr' => ['class' => 'form-control', 'data-plain-text' => 'true', 'maxlength' => 500]
