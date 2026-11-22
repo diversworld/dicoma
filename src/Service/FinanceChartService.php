@@ -32,7 +32,28 @@ final class FinanceChartService
                 );
                 $this->em->persist($account);
                 ++$summary['created'];
-            } elseif ($account->getChart() !== Skr42Chart::NAME || $account->getSphere() !== $row['sphere']) {
+            } else {
+                $metadataChanged = $account->getChart() !== Skr42Chart::NAME
+                    || $account->getSphere() !== $row['sphere']
+                    || $account->getUsage() !== $row['usage']
+                    || $account->getSourceReference() !== Skr42Chart::SOURCE;
+                $identityChanged = $account->getType() !== $row['type'] || $account->getName() !== $row['name'];
+                if ($identityChanged) {
+                    $used = (int) $this->em->getRepository(\App\Entity\FinanceTransaction::class)->createQueryBuilder('transaction')
+                        ->select('COUNT(transaction.id)')
+                        ->where('transaction.debitAccount = :account OR transaction.creditAccount = :account')
+                        ->setParameter('account', $account)
+                        ->getQuery()->getSingleScalarResult();
+                    if ($used > 0) {
+                        throw new \DomainException(sprintf('SKR42-Konto %s kollidiert mit dem bereits bebuchten individuellen Konto „%s“. Bitte neues Konto verwenden.', $row['code'], $account->getName()));
+                    }
+                    $account->setName($row['name']);
+                    $account->setType($row['type']);
+                }
+                if (!$metadataChanged && !$identityChanged) {
+                    ++$summary['total'];
+                    continue;
+                }
                 $account->applyChartMetadata(Skr42Chart::NAME, $row['sphere'], $row['usage'], Skr42Chart::SOURCE);
                 ++$summary['updated'];
             }

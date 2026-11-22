@@ -116,34 +116,48 @@ final class BoardGovernanceController extends AbstractController
             $this->assertCsrf('club_document_upload', $request);
             $file = $request->files->get('document');
             if (!$file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
-                throw $this->createAccessDeniedException('Dokument fehlt.');
+                $this->addFlash('danger', 'Bitte eine gültige Datei auswählen.');
+                return $this->redirectToRoute('admin_club_documents');
             }
             $actor = $this->getUser();
             if (!$actor instanceof User) {
                 throw $this->createAccessDeniedException();
             }
-            $stored = $storage->store($file);
+            $stored = null;
             try {
+                $stored = $storage->store($file);
                 $documentId = $request->request->getInt('documentId');
                 $document = $documentId > 0 ? $this->em->find(ClubDocument::class, $documentId) : null;
+                $latest = 0;
                 if ($document !== null) {
                     if ($document->getClub()->getId() !== $club->getId()) {
                         throw $this->createAccessDeniedException();
                     }
+                    $latest = (int) $this->em->getRepository(ClubDocumentVersion::class)->createQueryBuilder('version')
+                        ->select('MAX(version.version)')
+                        ->where('version.document = :document')
+                        ->setParameter('document', $document)
+                        ->getQuery()
+                        ->getSingleScalarResult();
                 } else {
                     $document = new ClubDocument($club, $actor, $request->request->getString('title'));
                     $document->setCategory($request->request->getString('category'))->setMemberVisible($request->request->getBoolean('memberVisible'));
                     $this->em->persist($document);
                 }
-                $latest = $this->em->getRepository(ClubDocumentVersion::class)->createQueryBuilder('version')
-                    ->select('MAX(version.version)')->join('version.document', 'document')
-                    ->where('document = :document')->setParameter('document', $document)->getQuery()->getSingleScalarResult();
-                $version = new ClubDocumentVersion($document, (int) $latest + 1, $stored['storageName'], $stored['originalName'], $stored['mimeType'], $stored['size'], $actor);
+                $version = new ClubDocumentVersion($document, $latest + 1, $stored['storageName'], $stored['originalName'], $stored['mimeType'], $stored['size'], $actor);
                 $document->addVersion($version)->setStatus(ClubDocument::STATUS_PENDING);
                 $this->audit->record($club, $actor->getUserIdentifier(), 'document.version.uploaded', $document, ['version' => $version->getVersion()]);
                 $this->em->flush();
+            } catch (\DomainException|\InvalidArgumentException $exception) {
+                if ($stored !== null) {
+                    @unlink($storage->path($stored['storageName']));
+                }
+                $this->addFlash('danger', $exception->getMessage());
+                return $this->redirectToRoute('admin_club_documents');
             } catch (\Throwable $exception) {
-                @unlink($storage->path($stored['storageName']));
+                if ($stored !== null) {
+                    @unlink($storage->path($stored['storageName']));
+                }
                 throw $exception;
             }
             $this->addFlash('success', 'Dokumentversion hochgeladen und zur Freigabe vorgelegt.');

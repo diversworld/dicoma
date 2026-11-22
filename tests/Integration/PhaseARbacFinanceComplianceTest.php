@@ -173,6 +173,7 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         $second = $chart->installSkr42($this->club, 'tester');
         self::assertSame(0, $second['created']);
         self::assertSame(47, $second['total']);
+        self::assertSame(0, $second['updated']);
     }
 
     public function testRetentionCommandDryRunDoesNotDeleteExpiredAudit(): void

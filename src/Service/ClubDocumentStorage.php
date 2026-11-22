@@ -25,7 +25,8 @@ final class ClubDocumentStorage
         if (!$file->isValid() || $file->getSize() === false || $file->getSize() > 20_000_000) {
             throw new \DomainException('Dokument ist ungültig oder größer als 20 MB.');
         }
-        $mime = (string) $file->getMimeType();
+        $originalName = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($file->getPathname());
         if (!in_array($mime, self::ALLOWED_MIME_TYPES, true)) {
             throw new \DomainException('Dieser Dateityp ist nicht erlaubt.');
         }
@@ -38,7 +39,7 @@ final class ClubDocumentStorage
         @chmod($directory.'/'.$storageName, 0600);
         return [
             'storageName' => $storageName,
-            'originalName' => $file->getClientOriginalName(),
+            'originalName' => mb_substr($originalName, 0, 255),
             'mimeType' => $mime,
             'size' => (int) filesize($directory.'/'.$storageName),
         ];
