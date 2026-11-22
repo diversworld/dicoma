@@ -31,8 +31,16 @@ class FinanceAccount
     private bool $active = true;
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+    #[ORM\Column(length: 40, options: ['default' => 'custom'])]
+    private string $chart = 'custom';
+    #[ORM\Column(length: 80, nullable: true)]
+    private ?string $sphere = null;
+    #[ORM\Column(name: 'usage_label', length: 120, nullable: true)]
+    private ?string $usage = null;
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $sourceReference = null;
 
-    public function __construct(Club $club, string $code, string $name, string $type)
+    public function __construct(Club $club, string $code, string $name, string $type, string $chart = 'custom', ?string $sphere = null, ?string $usage = null, ?string $sourceReference = null)
     {
         if (!in_array($type, self::types(), true) || trim($code) === '' || trim($name) === '') { throw new \DomainException('Ungültiges Konto.'); }
         $this->club = $club;
@@ -40,6 +48,10 @@ class FinanceAccount
         $this->name = trim($name);
         $this->type = $type;
         $this->createdAt = new \DateTimeImmutable();
+        $this->chart = trim($chart);
+        $this->sphere = $sphere;
+        $this->usage = $usage;
+        $this->sourceReference = $sourceReference;
     }
     public function __toString(): string { return $this->code.' – '.$this->name; }
     public function getId(): ?int { return $this->id; }
@@ -52,6 +64,17 @@ class FinanceAccount
     public function setType(string $type): void { if (!in_array($type, self::types(), true)) { throw new \DomainException('Ungültiger Kontotyp.'); } $this->type = $type; }
     public function isActive(): bool { return $this->active; }
     public function setActive(bool $active): void { $this->active = $active; }
+    public function getChart(): string { return $this->chart; }
+    public function getSphere(): ?string { return $this->sphere; }
+    public function getUsage(): ?string { return $this->usage; }
+    public function getSourceReference(): ?string { return $this->sourceReference; }
+    public function applyChartMetadata(string $chart, ?string $sphere, ?string $usage, ?string $sourceReference): void
+    {
+        $this->chart = trim($chart);
+        $this->sphere = $sphere;
+        $this->usage = $usage;
+        $this->sourceReference = $sourceReference;
+    }
     /** @return list<string> */
     public static function types(): array { return [self::TYPE_ASSET, self::TYPE_LIABILITY, self::TYPE_EQUITY, self::TYPE_INCOME, self::TYPE_EXPENSE]; }
 }

@@ -13,6 +13,7 @@ use App\Enum\PermissionModule;
 use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use App\Service\FinanceLedgerService;
+use App\Service\FinanceChartService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,6 +30,7 @@ final class FinanceLedgerController extends AbstractController
         private readonly AdminClubContext $clubs,
         private readonly ModuleAccess $access,
         private readonly FinanceLedgerService $ledger,
+        private readonly FinanceChartService $chart,
     ) {}
 
     #[Route('', name: 'admin_accounting', methods: ['GET', 'POST'])]
@@ -48,6 +50,10 @@ final class FinanceLedgerController extends AbstractController
                 $this->em->persist($account);
                 $this->em->flush();
                 $this->addFlash('success', 'Konto angelegt.');
+            } elseif ($operation === 'import_skr42') {
+                $summary = $this->chart->installSkr42($club, $user->getUserIdentifier());
+                $this->em->flush();
+                $this->addFlash('success', sprintf('%d SKR42-Konten geprüft, %d neu angelegt, %d ergänzt.', $summary['total'], $summary['created'], $summary['updated']));
             } elseif ($operation === 'transaction') {
                 $debit = $this->em->find(FinanceAccount::class, $request->request->getInt('debit'));
                 $credit = $this->em->find(FinanceAccount::class, $request->request->getInt('credit'));
@@ -72,6 +78,7 @@ final class FinanceLedgerController extends AbstractController
             'balances' => $balances,
             'transactions' => $this->em->getRepository(FinanceTransaction::class)->findBy(['club' => $club], ['effectiveAt' => 'DESC', 'id' => 'DESC'], 100),
             'closes' => $this->em->getRepository(FinanceAnnualClose::class)->findBy(['club' => $club], ['year' => 'DESC']),
+            'skr42Installed' => (bool) $this->em->getRepository(FinanceAccount::class)->count(['club' => $club, 'chart' => 'SKR42 2026 EÜR']),
         ]);
     }
 

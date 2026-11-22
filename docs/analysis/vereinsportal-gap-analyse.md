@@ -153,6 +153,7 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 - E-Mail-/Interne Gruppenkommunikation mit Vorlagen, Preview, Testversand und Audit
 - Geschlecht, privates Profilbild und strukturierte Mitgliederhistorie
 - Öffentlicher Menü-Cache, zusätzliche Query-Indizes und authentifizierbare Lasttests
+- Idempotenter SKR42-2026-EÜR-Kontenrahmen für Buchungen mit Sphäre und Quelle
 - EasyAdmin-CRUDs für Sitzungen und Aufgaben
 - Direkter Beschluss-/Aufgaben-Workflow sowie responsive Dokumentablage
 - Doctrine-Migration und Integrations-Tests

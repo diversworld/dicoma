@@ -10,15 +10,15 @@
       <button class="btn btn-primary">Konto anlegen</button>
     </form>
   </div></div></section>
-  <section class="col-xl-8"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Kontostände</h2></div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Konto</th><th>Typ</th><th class="text-end">Saldo</th></tr></thead><tbody>
-    {% for account in accounts %}<tr><td>{{ account.code }} – {{ account.name }}</td><td>{{ account.type }}</td><td class="text-end">{{ (balances[account.id] / 100)|number_format(2, ',', '.') }} EUR</td></tr>{% else %}<tr><td colspan="3">Noch keine Konten.</td></tr>{% endfor %}
+  <section class="col-xl-8"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Kontostände</h2><form method="post"><input type="hidden" name="_token" value="{{ csrf_token('accounting_post') }}"><input type="hidden" name="operation" value="import_skr42"><button class="btn btn-sm {{ skr42Installed ? 'btn-outline-secondary' : 'btn-primary' }}">{{ skr42Installed ? 'SKR42 erneut prüfen' : 'SKR42 2026 importieren' }}</button></form></div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Konto</th><th>Kontenrahmen / Sphäre</th><th>Typ</th><th class="text-end">Saldo</th></tr></thead><tbody>
+    {% for account in accounts %}<tr><td>{{ account.code }} – {{ account.name }}{% if account.usage %}<div class="small text-muted">{{ account.usage }}</div>{% endif %}</td><td>{{ account.chart }}{% if account.sphere %}<div class="small text-muted">{{ account.sphere }}</div>{% endif %}</td><td>{{ account.type }}</td><td class="text-end">{{ (balances[account.id] / 100)|number_format(2, ',', '.') }} EUR</td></tr>{% else %}<tr><td colspan="4">Noch keine Konten.</td></tr>{% endfor %}
   </tbody></table></div></div></section>
 </div>
 <div class="card mt-4"><div class="card-header"><h2 class="h5 mb-0">Buchung erfassen</h2></div><div class="card-body">
   <form method="post" class="row g-3"><input type="hidden" name="_token" value="{{ csrf_token('accounting_post') }}"><input type="hidden" name="operation" value="transaction">
     <div class="col-md-3"><label class="form-label">Datum<input class="form-control" type="date" name="date" value="{{ 'now'|date('Y-m-d') }}" required></label></div>
-    <div class="col-md-3"><label class="form-label">Sollkonto<select class="form-select" name="debit" required>{% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endfor %}</select></label></div>
-    <div class="col-md-3"><label class="form-label">Habenkonto<select class="form-select" name="credit" required>{% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endfor %}</select></label></div>
+    <div class="col-md-3"><label class="form-label">Sollkonto<select class="form-select" name="debit" required>{% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}{% if account.sphere %} ({{ account.sphere }}){% endif %}</option>{% endfor %}</select></label></div>
+    <div class="col-md-3"><label class="form-label">Habenkonto<select class="form-select" name="credit" required>{% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}{% if account.sphere %} ({{ account.sphere }}){% endif %}</option>{% endfor %}</select></label></div>
     <div class="col-md-3"><label class="form-label">Betrag in EUR<input class="form-control" type="number" min="0.01" step="0.01" name="amount" required></label></div>
     <div class="col-md-6"><label class="form-label">Buchungstext<input class="form-control" name="description" maxlength="240" required></label></div>
     <div class="col-md-4"><label class="form-label">Belegreferenz<input class="form-control" name="reference" maxlength="180"></label></div>

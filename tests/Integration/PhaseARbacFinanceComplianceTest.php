@@ -22,6 +22,8 @@ use App\Enum\PermissionModule;
 use App\Security\ModuleAccess;
 use App\Service\AuditLogger;
 use App\Service\FinanceLedgerService;
+use App\Service\FinanceChartService;
+use App\Finance\Skr42Chart;
 use App\Service\SepaDirectDebitService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -153,6 +155,24 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         self::assertSame('[redacted]', $event->getContext()['iban']);
         self::assertSame('[redacted]', $event->getContext()['nested']['token']);
         self::assertSame(100, $event->getContext()['amountCents']);
+    }
+
+    public function testSkr42ChartImportIsIdempotentAndUsesProvidedAccountTypes(): void
+    {
+        $chart = static::getContainer()->get(FinanceChartService::class);
+        $first = $chart->installSkr42($this->club, 'tester');
+        $this->em->flush();
+        self::assertSame(47, $first['total']);
+        self::assertSame(47, $first['created']);
+        $memberIncome = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '40000']);
+        self::assertSame(FinanceAccount::TYPE_INCOME, $memberIncome->getType());
+        self::assertSame('1', $memberIncome->getSphere());
+        self::assertSame(Skr42Chart::SOURCE, $memberIncome->getSourceReference());
+        $expense = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '60040']);
+        self::assertSame(FinanceAccount::TYPE_EXPENSE, $expense->getType());
+        $second = $chart->installSkr42($this->club, 'tester');
+        self::assertSame(0, $second['created']);
+        self::assertSame(47, $second['total']);
     }
 
     public function testRetentionCommandDryRunDoesNotDeleteExpiredAudit(): void

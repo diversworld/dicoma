@@ -73,3 +73,17 @@ scripts/phase-a-load-test.sh https://staging.example
 ```
 
 Cookies dürfen nur in der lokalen Testumgebung eingesetzt werden und nicht in Logs oder Versionsverwaltung gelangen.
+
+## SKR42-Kontenrahmen 2026
+
+Die Buchhaltung berücksichtigt den bereitgestellten `SKR42_Sportverein_2026_EUER_Kontenplan.xlsx`. Alle 47 Zeilen mit fünfstelliger Kontonummer werden idempotent importiert und mit Kontotyp, KOST1/Sphäre, Verwendung und Quellenreferenz gespeichert.
+
+Zeilen ohne offizielle Kontonummer – etwa Girokonto, Barkasse oder Jugend-/Erwachsenenunterkonto – werden ausdrücklich nicht als DATEV-Konten erzeugt. Sie bleiben belegbar als individuelle Unterkonten des Vereins.
+
+Import über CLI oder Buchhaltungsseite:
+
+```bash
+php bin/console app:finance:import-skr42 --confirm
+```
+
+Bei jeder Buchung zeigt die Soll-/Haben-Auswahl Kontonummer, Bezeichnung und Sphäre. Einnahmenkonten 40000/40100/40450/40550 und Aufwandskonten 60020/60040 werden ausdrücklich als SKR42-Konten ausgewiesen.
