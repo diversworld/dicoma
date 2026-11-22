@@ -44,6 +44,7 @@ run 'Composer-Konfiguration' composer validate --no-check-publish
 run 'PHP-Plattform' composer check-platform-reqs
 run 'Symfony-YAML (test)' "$PHP_BIN" bin/console lint:yaml config --env=test
 run 'Symfony-Container (test)' "$PHP_BIN" bin/console lint:container --env=test
+run 'Phase-B-WCAG-Template-Gate' "$PHP_BIN" tests/Static/PhaseBTemplateAccessibilitySmoke.php
 check_routes() {
   "$PHP_BIN" bin/console debug:router --env=test --format=json >/dev/null
 }

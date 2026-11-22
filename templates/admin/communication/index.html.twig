@@ -1,0 +1,32 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Gruppenkommunikation{% endblock %}
+{% block main %}
+<div class="row g-4">
+  <section class="col-xl-5"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Vorlage anlegen</h2></div><div class="card-body">
+    <form method="post" class="vstack gap-3">
+      <input type="hidden" name="_token" value="{{ csrf_token('communication') }}"><input type="hidden" name="operation" value="template">
+      <label class="form-label">Code<input class="form-control" name="code" maxlength="60" required placeholder="membership-confirmation"></label>
+      <label class="form-label">Bezeichnung<input class="form-control" name="name" maxlength="120" required placeholder="Aufnahmebestätigung"></label>
+      <label class="form-label">Betreff<input class="form-control" name="subject" maxlength="180" required></label>
+      <label class="form-label">Text<textarea class="form-control" name="body" rows="10" required></textarea></label>
+      <p class="small text-muted mb-0">Platzhalter in E-Mails: {% verbatim %}{{ firstname }}, {{ lastname }}, {{ memberNumber }}, {{ club }}{% endverbatim %}.</p>
+      <button class="btn btn-primary">Vorlage speichern</button>
+    </form>
+  </div></div></section>
+  <section class="col-xl-7"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Empfängergruppe und Versand</h2></div><div class="card-body">
+    <form method="post" class="row g-3">
+      <input type="hidden" name="_token" value="{{ csrf_token('communication') }}">
+      <div class="col-md-6"><label class="form-label">Empfängergruppe<select class="form-select" name="audience">{% for label, value in audiences %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label></div>
+      <div class="col-md-6"><label class="form-label">Vorlage<select class="form-select" name="templateId" required>{% for template in templates %}<option value="{{ template.id }}">{{ template.name }}</option>{% else %}<option value="">Zuerst Vorlage anlegen</option>{% endfor %}</select></label></div>
+      <div class="col-12">
+        <button class="btn btn-outline-secondary" name="operation" value="preview">Empfängerzahl prüfen</button>
+        <button class="btn btn-outline-primary" name="operation" value="test">Test an mich senden</button>
+        <button class="btn btn-primary" name="operation" value="send" {% if templates is empty %}disabled{% endif %}>An Gruppe senden</button>
+      </div>
+      {% if preview is not null %}<div class="col-12"><div class="alert alert-info mb-0" role="status">{{ preview }} aktive Mitglieder würden die Nachricht erhalten.</div></div>{% endif %}
+    </form>
+  </div></div>
+  <div class="card mt-4"><div class="card-header"><h2 class="h5 mb-0">Vorlagen</h2></div><div class="list-group list-group-flush">{% for template in templates %}<article class="list-group-item"><strong>{{ template.name }}</strong><div class="text-muted">{{ template.code }} · {{ template.subject }}</div></article>{% else %}<div class="list-group-item text-muted">Noch keine Vorlagen.</div>{% endfor %}</div></div>
+  </section>
+</div>
+{% endblock %}

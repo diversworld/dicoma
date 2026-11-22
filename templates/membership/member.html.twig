@@ -22,5 +22,10 @@
 {% for name, title in titles %}{% if forms[name] is defined and (name in ['status', 'archive'] or canFinance) %}<details class="mb-3"><summary>{{ title }}</summary>{{ form_start(forms[name]) }}{{ form_widget(forms[name]) }}<button type="submit" class="btn btn-primary">{{ title }}</button>{{ form_end(forms[name]) }}</details>{% endif %}{% endfor %}
 {% endif %}
 <h2>Vorgangshistorie</h2>
+{% if history %}
+<div class="table-responsive"><table class="table"><thead><tr><th>Zeit</th><th>Akteur</th><th>Änderung</th></tr></thead><tbody>
+{% for item in history %}<tr><td>{{ item.occurredAt|date('d.m.Y H:i') }}</td><td>{{ item.actor }}</td><td>{% for field, change in item.changes %}<div><strong>{{ field }}</strong>: {{ change.from ?? '—' }} → {{ change.to ?? '—' }}</div>{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
 <ul>{% for event in events %}<li>{{ event.occurredAt|date('d.m.Y H:i') }} · {{ event.actor }} · {{ event.description }}</li>{% else %}<li>Keine protokollierten Vorgänge.</li>{% endfor %}</ul>
 {% endblock %}

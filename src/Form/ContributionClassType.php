@@ -9,6 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -26,6 +27,21 @@ final class ContributionClassType extends AbstractType
                 'input' => 'integer',
                 'attr' => ['min' => 0, 'max' => 100000000, 'class' => 'form-control'],
                 'constraints' => [new Assert\Range(min: 0, max: 100000000)],
+            ])
+            ->add('monthlyCents', MoneyType::class, [
+                'label' => 'Monatsbeitrag EUR',
+                'currency' => 'EUR',
+                'divisor' => 100,
+                'input' => 'integer',
+                'constraints' => [new Assert\Range(min: 0, max: 100000000)],
+            ])
+            ->add('billingPeriod', ChoiceType::class, [
+                'label' => 'Abrechnungsrhythmus',
+                'choices' => ['Jährlich' => 'yearly', 'Monatlich' => 'monthly'],
+            ])
+            ->add('memberCategory', ChoiceType::class, [
+                'label' => 'Beitragskategorie',
+                'choices' => ['Standard' => 'standard', 'Jugend' => 'youth', 'Ehrenmitglied' => 'honorary', 'Fördermitglied' => 'supporter', 'Familie' => 'family'],
             ])
             ->add('family', CheckboxType::class, [
                 'label' => 'Familienbeitrag', 

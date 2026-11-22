@@ -112,8 +112,14 @@ final class PrivacyRetentionCommand extends Command
                 if (is_file($path) && !unlink($path)) { throw new \RuntimeException('Mitgliedsdokument konnte nicht gelöscht werden.'); }
                 $this->em->remove($file);
             }
+            $profileImage = $person->getProfileImageStorageName();
+            if ($profileImage !== null) {
+                $imagePath = $this->documents->path($profileImage);
+                if (is_file($imagePath) && !unlink($imagePath)) { throw new \RuntimeException('Profilbild konnte nicht gelöscht werden.'); }
+                $person->setProfileImageStorageName(null);
+            }
             $person->setFirstname('Anonymisiert')->setLastname('Mitglied '.substr(hash('sha256', (string) $member->getId()), 0, 8))
-                ->setBirthday(null)->setEmail(null)->setMobile(null)->setPhone(null)
+                ->setBirthday(null)->setGender(null)->setEmail(null)->setMobile(null)->setPhone(null)
                 ->setStreet(null)->setPostalCode(null)->setCity(null);
             $member->setNotes(null);
             if ($member->getUser() !== null) {

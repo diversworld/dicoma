@@ -119,11 +119,11 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 
 ### Phase B – Wichtig
 
-1. Monatsbeiträge, Jugend- und Ehrenmitglieder als periodische Beitragsregeln.
-2. Empfängergruppenauswahl, E-Mail-Vorlagen, Testversand und Versandprotokoll.
-3. Geschlecht, optionale Profilbilder und strukturierte Mitgliedschaftshistorie.
-4. Vertiefte WCAG-Expertiseprüfung, Kontrasttest und mobile Usability-Abnahme.
-5. Cachingstrategie und produktionsähnlicher Langzeittest.
+1. Monatsbeiträge, Jugend- und Ehrenmitglieder als periodische Beitragsregeln. **Umgesetzt.**
+2. Empfängergruppenauswahl, E-Mail-Vorlagen, Testversand und Versandprotokoll. **Umgesetzt.**
+3. Geschlecht, optionale Profilbilder und strukturierte Mitgliedschaftshistorie. **Umgesetzt.**
+4. Vertiefte WCAG-Expertiseprüfung, Kontrasttest und mobile Usability-Abnahme. **Automatisierte Baseline umgesetzt; manuelle Expertisenprüfung bleibt fachliche Abnahme.**
+5. Cachingstrategie und produktionsähnlicher Langzeittest. **Menü-Cache, Indizes und authentifizierter Lasttestpfad umgesetzt.**
 
 ### Phase C – Komfort
 
@@ -149,6 +149,10 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 - Generischer Audit-Trail, Aufbewahrungsrichtlinie, Retention-CLI und Mitgliederdatenexport
 - WCAG-Basisprüfung und Lasttestskript mit p95-/Fehler-Gates
 - Governance-Dashboard mit Mitglieder-, Aufgaben-, Sitzungs-, Beschluss- und Freigabe-KPIs
+- Monats-/Jahresklassen sowie Jugend-, Ehren- und Förderkategorien
+- E-Mail-/Interne Gruppenkommunikation mit Vorlagen, Preview, Testversand und Audit
+- Geschlecht, privates Profilbild und strukturierte Mitgliederhistorie
+- Öffentlicher Menü-Cache, zusätzliche Query-Indizes und authentifizierbare Lasttests
 - EasyAdmin-CRUDs für Sitzungen und Aufgaben
 - Direkter Beschluss-/Aufgaben-Workflow sowie responsive Dokumentablage
 - Doctrine-Migration und Integrations-Tests

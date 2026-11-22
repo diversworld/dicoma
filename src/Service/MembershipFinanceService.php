@@ -29,7 +29,7 @@ final class MembershipFinanceService
     {
         $clubId = $member->getClub()?->getId();
         if ($clubId === null || ($class !== null && ($class->getClub()->getId() !== $clubId || !$class->isActive()))
-            || $discount < 0 || $discount > ($class?->getAnnualCents() ?? 0)
+            || $discount < 0 || $discount > (($class?->getBillingPeriod() === 'monthly' ? $class?->getMonthlyCents() * 12 : $class?->getAnnualCents()) ?? 0)
             || ($discount > 0 && trim((string) $reason) === '') || mb_strlen((string) $reason) > 500) {
             throw new \DomainException('Ungültige Beitragsklasse oder Ermäßigung. Bei Ermäßigung ist eine Begründung erforderlich.');
         }
@@ -66,12 +66,31 @@ final class MembershipFinanceService
         if ($class === null || !$class->isActive() || $class->getClub()->getId() !== $member->getClub()->getId()) {
             throw new \DomainException('Keine gültige aktive Beitragsklasse zugeordnet.');
         }
+        if ($class->getBillingPeriod() !== 'yearly') { throw new \DomainException('Diese Beitragsklasse wird monatlich abgerechnet.'); }
         $key = 'annual:' . $member->getId() . ':' . $year;
         if ($this->em->getRepository(MembershipCharge::class)->findOneBy(['chargeKey' => $key]) !== null) {
             throw new \DomainException('Der Jahresbeitrag wurde bereits erhoben; keine doppelte Forderung erstellt.');
         }
         $amount = $class->getAnnualCents() - $member->getContributionDiscountCents();
         return $this->issue($member, $key, ($class->isFamily() ? 'Familienbeitrag ' : 'Mitgliedsbeitrag ') . $year . ' – ' . $class->getName(), $amount, $due, $actor);
+    }
+
+    public function monthly(Member $member, string $period, \DateTimeImmutable $due, string $actor): MembershipCharge
+    {
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $period) || $member->getClub() === null || $member->getArchivedAt() !== null
+            || $member->getMembershipStatus() === MembershipStatus::FORMER || $member->getFamilyPayer() !== null) {
+            throw new \DomainException('Ungültiger Beitragsmonat oder keine beitragsfähige Mitgliedschaft.');
+        }
+        $class = $member->getContributionClass();
+        if ($class === null || !$class->isActive() || $class->getBillingPeriod() !== 'monthly') {
+            throw new \DomainException('Für diesen Mitgliedstyp ist keine aktive Monatsbeitragsklasse hinterlegt.');
+        }
+        $key = 'monthly:'.$member->getId().':'.$period;
+        if ($this->em->getRepository(MembershipCharge::class)->findOneBy(['chargeKey' => $key]) !== null) {
+            throw new \DomainException('Der Monatsbeitrag wurde bereits erhoben.');
+        }
+        $monthlyDiscount = intdiv($member->getContributionDiscountCents(), 12);
+        return $this->issue($member, $key, 'Mitgliedsbeitrag '.$period.' – '.$class->getName(), max(0, $class->getMonthlyCents() - $monthlyDiscount), $due, $actor);
     }
 
     public function special(Member $member, string $description, int $cents, \DateTimeImmutable $due, string $actor): MembershipCharge

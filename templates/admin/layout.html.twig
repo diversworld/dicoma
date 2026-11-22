@@ -2,8 +2,12 @@
 {% extends '@EasyAdmin/layout.html.twig' %}
 
 {% block javascript_page_layout %}
-    <a class="skip-link" href="#main">Zum Hauptinhalt springen</a>
+    <a class="skip-link" href="#main-content">Zum Hauptinhalt springen</a>
     {{ parent() }}
+{% endblock %}
+
+{% block main_content_wrapper %}
+    <div id="main-content" tabindex="-1">{{ parent() }}</div>
 {% endblock %}
 
 {# The vendor layout renders this block inside the user dropdown's ActionList. #}

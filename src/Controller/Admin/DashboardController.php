@@ -807,6 +807,7 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
                 MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
                 MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
+                MenuItem::linkToRoute('Gruppenkommunikation', 'fa fa-envelope', 'admin_communication'),
                 ...($editorialRoute !== null ? [MenuItem::linkToRoute('Website & Redaktion', 'fa fa-newspaper', $editorialRoute)] : []),
             ];
         }
@@ -865,6 +866,7 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben verwalten', 'fa fa-list-check'),
                     MenuItem::linkToRoute('Dokumentenablage', 'fa fa-folder-open', 'admin_club_documents'),
                     MenuItem::linkToRoute('Audit & Datenschutz', 'fa fa-shield-halved', 'admin_privacy'),
+                    MenuItem::linkToRoute('Gruppenkommunikation', 'fa fa-envelope', 'admin_communication'),
                 ]),
 
             MenuItem::subMenu('Mannschaften & Turniere', 'fa fa-trophy')

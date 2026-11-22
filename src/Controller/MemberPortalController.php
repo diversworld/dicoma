@@ -58,6 +58,8 @@ final class MemberPortalController extends AbstractController
                 'firstname' => $person->getFirstname(),
                 'lastname' => $person->getLastname(),
                 'birthday' => $person->getBirthday()?->format('Y-m-d'),
+                'gender' => $person->getGender(),
+                'profileImage' => $person->getProfileImageStorageName(),
                 'email' => $person->getEmail(),
                 'phone' => $person->getPhone(),
                 'mobile' => $person->getMobile(),

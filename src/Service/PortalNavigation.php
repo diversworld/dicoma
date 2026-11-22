@@ -9,6 +9,8 @@ use App\Security\LoginDestination;
 use App\Security\EditorialAccess;
 use App\Enum\PermissionAction;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final class PortalNavigation
 {
@@ -17,6 +19,7 @@ final class PortalNavigation
         private readonly PublicWebsite $website,
         private readonly LoginDestination $loginDestination,
         private readonly EditorialAccess $editorialAccess,
+        private readonly CacheInterface $cache,
     ) {}
 
     /**
@@ -38,25 +41,29 @@ final class PortalNavigation
             ['label' => 'Kursangebot', 'route' => 'app_courses_index'],
             ['label' => 'Sparten', 'route' => 'website_divisions'],
         ];
-        $pages = [];
-        $allPages = $this->website->publications('page');
-        foreach ($allPages as $page) {
-            if ($page->getParent() !== null || !$page->isMenuVisible()) { continue; }
-            $pages[] = [
-                'label' => $page->getTitle(),
-                'route' => 'website_page',
-                'parameters' => ['id' => $page->getId()],
-                'children' => array_values(array_map(
-                    static fn (\App\Entity\WebsitePublication $child): array => [
-                        'label' => $child->getTitle(), 'route' => 'website_page',
-                        'parameters' => ['id' => $child->getId()],
-                    ],
-                    array_filter($allPages, static fn (\App\Entity\WebsitePublication $candidate): bool =>
-                        $candidate->getParent()?->getId() === $page->getId() && $candidate->isMenuVisible()
-                    ),
-                )),
-            ];
-        }
+        $pages = $this->cache->get('portal.public_pages.'.($this->website->publicClub()?->getId() ?? 0), function (ItemInterface $item): array {
+            $item->expiresAfter(60);
+            $pages = [];
+            $allPages = $this->website->publications('page');
+            foreach ($allPages as $page) {
+                if ($page->getParent() !== null || !$page->isMenuVisible()) { continue; }
+                $pages[] = [
+                    'label' => $page->getTitle(),
+                    'route' => 'website_page',
+                    'parameters' => ['id' => $page->getId()],
+                    'children' => array_values(array_map(
+                        static fn (\App\Entity\WebsitePublication $child): array => [
+                            'label' => $child->getTitle(), 'route' => 'website_page',
+                            'parameters' => ['id' => $child->getId()],
+                        ],
+                        array_filter($allPages, static fn (\App\Entity\WebsitePublication $candidate): bool =>
+                            $candidate->getParent()?->getId() === $page->getId() && $candidate->isMenuVisible()
+                        ),
+                    )),
+                ];
+            }
+            return $pages;
+        });
 
         return [
             'home' => ['label' => 'Startseite', 'route' => 'app_home'],

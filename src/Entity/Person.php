@@ -29,6 +29,13 @@ class Person
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $birthday = null;
 
+    #[ORM\Column(length: 20, nullable: true)]
+    #[Assert\Choice(choices: ['female', 'male', 'diverse', 'unspecified'])]
+    private ?string $gender = null;
+
+    #[ORM\Column(length: 45, nullable: true)]
+    private ?string $profileImageStorageName = null;
+
     #[ORM\Column(length: 100, nullable: true)]
     #[Assert\Email]
     #[Assert\Length(max: 100)]
@@ -101,6 +108,11 @@ class Person
         $this->birthday = $birthday;
         return $this;
     }
+
+    public function getGender(): ?string { return $this->gender; }
+    public function setGender(?string $gender): static { $this->gender = $gender; return $this; }
+    public function getProfileImageStorageName(): ?string { return $this->profileImageStorageName; }
+    public function setProfileImageStorageName(?string $storageName): static { $this->profileImageStorageName = $storageName; return $this; }
 
     public function getEmail(): ?string
     {

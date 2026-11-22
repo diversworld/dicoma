@@ -120,6 +120,7 @@ security:
         - { path: ^/admin/membership-finance(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/accounting(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/privacy(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/communication(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/governance(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/documents(?:/|$), roles: ROLE_USER }
         - { path: ^/admin$, roles: ROLE_USER }

@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'uniq_membership_charge_key', columns: ['charge_key'])]
+#[ORM\Index(name: 'idx_membership_charge_member_due', columns: ['member_id', 'due_at'])]
 class MembershipCharge
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]

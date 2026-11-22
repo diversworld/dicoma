@@ -11,6 +11,8 @@ use App\Entity\InternalMessageRecipient;
 use App\Entity\Member;
 use App\Entity\MemberSport;
 use App\Entity\MembershipMessage;
+use App\Entity\ContributionClass;
+use App\Entity\CommunicationTemplate;
 use App\Entity\Sport;
 use App\Entity\User;
 use App\Enum\DivisionRole;
@@ -87,6 +89,10 @@ final class InternalMessaging
             'member' => $this->directRecipients($club, $member),
             'division' => $this->divisionRecipients($sender, $senderMember, $club, $division),
             'role' => $this->roleRecipients($sender, $club, $role),
+            'all' => $this->allRecipients($sender, $club),
+            'youth' => $this->categoryRecipients($sender, $club, 'youth'),
+            'honorary' => $this->categoryRecipients($sender, $club, 'honorary'),
+            'board' => $this->roleRecipients($sender, $club, User::ROLE_BOARD),
             default => throw new \DomainException('Ungültige Empfängergruppe.'),
         };
         if ($recipients === []) {
@@ -105,17 +111,49 @@ final class InternalMessaging
             if ($email !== null && filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $key = sprintf('internal-message:%d:%d', $message->getId(), $recipient->getId());
                 if ($this->em->getRepository(MembershipMessage::class)->findOneBy(['messageKey' => $key]) === null) {
+                    $personalizedSubject = strtr($message->getSubject(), $this->recipientValues($recipient));
+                    $personalizedBody = strtr($message->getBody(), $this->recipientValues($recipient));
+                    $campaign = $audience !== 'member';
                     $this->em->persist(new MembershipMessage(
                         $key,
                         $email,
-                        'Neue DICOMA-Nachricht: '.$message->getSubject(),
-                        "Du hast eine neue interne Nachricht von {$senderMember->getFullName()} erhalten.\n\nBetreff: {$message->getSubject()}\n\nBitte melde dich in DICOMA an und öffne deinen Posteingang.",
+                        $campaign ? $personalizedSubject : 'Neue DICOMA-Nachricht: '.$personalizedSubject,
+                        $campaign ? $personalizedBody : "Du hast eine neue interne Nachricht von {$senderMember->getFullName()} erhalten.\n\nBetreff: {$personalizedSubject}\n\nBitte melde dich in DICOMA an und öffne deinen Posteingang.",
                     ));
                 }
             }
         }
         $this->em->flush();
         return $message;
+    }
+
+    /** @return list<Member> */
+    public function previewRecipients(User $sender, string $audience, ?Member $member = null, ?Sport $division = null, ?string $role = null): array
+    {
+        $senderMember = $sender->getMember();
+        $club = $senderMember?->getClub();
+        if ($senderMember === null || $club === null) { throw new \DomainException('Vereinszuordnung fehlt.'); }
+        return match ($audience) {
+            'member' => $this->directRecipients($club, $member),
+            'division' => $this->divisionRecipients($sender, $senderMember, $club, $division),
+            'role' => $this->roleRecipients($sender, $club, $role),
+            'all' => $this->allRecipients($sender, $club),
+            'youth' => $this->categoryRecipients($sender, $club, 'youth'),
+            'honorary' => $this->categoryRecipients($sender, $club, 'honorary'),
+            'board' => $this->roleRecipients($sender, $club, User::ROLE_BOARD),
+            default => throw new \DomainException('Ungültige Empfängergruppe.'),
+        };
+    }
+
+    public function renderTemplate(CommunicationTemplate $template, Member $member): array
+    {
+        $values = [
+            '{{ firstname }}' => $member->getPerson()->getFirstname() ?? '',
+            '{{ lastname }}' => $member->getPerson()->getLastname() ?? '',
+            '{{ memberNumber }}' => $member->getMemberNumber() ?? '',
+            '{{ club }}' => $member->getClub()?->getName() ?? '',
+        ];
+        return [strtr($template->getSubject(), $values), strtr($template->getBody(), $values)];
     }
 
     /** @return list<Member> */
@@ -151,8 +189,25 @@ final class InternalMessaging
         if (!$this->canSendClubWide($sender) || !$valid || in_array($role, [User::ROLE_USER, User::ROLE_MEMBER, User::ROLE_SUPER_ADMIN], true)) {
             throw new \DomainException('Kein berechtigter Rollenversand.');
         }
+
         return array_values(array_filter($this->directChoices($club), static fn (Member $member): bool =>
             $member->getUser() !== null && in_array($role, $member->getUser()->getRoles(), true)
+        ));
+    }
+
+    /** @return list<Member> */
+    private function allRecipients(User $sender, Club $club): array
+    {
+        if (!$this->canSendClubWide($sender)) { throw new \DomainException('Kein berechtigter Gesamtversand.'); }
+        return $this->directChoices($club);
+    }
+
+    /** @return list<Member> */
+    private function categoryRecipients(User $sender, Club $club, string $category): array
+    {
+        if (!$this->canSendClubWide($sender)) { throw new \DomainException('Kein berechtigter Gruppenversand.'); }
+        return array_values(array_filter($this->directChoices($club), static fn (Member $member): bool =>
+            $member->getContributionClass()?->getMemberCategory() === $category
         ));
     }
 
@@ -173,6 +228,17 @@ final class InternalMessaging
         return $this->security->isGranted(User::ROLE_ADMIN)
             || $this->security->isGranted(User::ROLE_BOARD)
             || $this->security->isGranted(User::ROLE_SUPER_ADMIN);
+    }
+
+    /** @return array<string, string> */
+    private function recipientValues(Member $member): array
+    {
+        return [
+            '{{ firstname }}' => $member->getPerson()->getFirstname() ?? '',
+            '{{ lastname }}' => $member->getPerson()->getLastname() ?? '',
+            '{{ memberNumber }}' => $member->getMemberNumber() ?? '',
+            '{{ club }}' => $member->getClub()?->getName() ?? '',
+        ];
     }
 
     private function actor(): User

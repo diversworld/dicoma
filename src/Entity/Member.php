@@ -370,6 +370,9 @@ class Member
         return $this;
     }
 
+    public function getGender(): ?string { return $this->person->getGender(); }
+    public function setGender(?string $gender): static { $this->person->setGender($gender); return $this; }
+
     public function getEmail(): ?string
     {
         return $this->person->getEmail();

@@ -56,6 +56,7 @@
             <file>tests/Integration/PhaseARbacFinanceComplianceTest.php</file>
             <file>tests/Integration/PhaseARoleBoundaryHttpTest.php</file>
             <file>tests/Integration/AccessibilitySmokeTest.php</file>
+            <file>tests/Integration/PhaseBMembershipCommunicationHttpTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

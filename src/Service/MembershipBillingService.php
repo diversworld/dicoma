@@ -81,7 +81,30 @@ final class MembershipBillingService
         if ($class === null || !$class->isActive()) {
             throw new \DomainException('Keine aktive Beitragsklasse.');
         }
+        if ($class->getBillingPeriod() !== 'yearly') { throw new \DomainException('Monatsbeitragsklasse gehört in den Monatslauf.'); }
         return $class->getAnnualCents() - $member->getContributionDiscountCents() + $this->divisionAmount($member, $year);
+    }
+
+    /** @return array{members:int,charges:int,amountCents:int,skipped:int} */
+    public function runMonthly(Club $club, string $period, \DateTimeImmutable $due, string $actor): array
+    {
+        $summary = ['members' => 0, 'charges' => 0, 'amountCents' => 0, 'skipped' => 0];
+        return $this->em->wrapInTransaction(function () use (&$summary, $club, $period, $due, $actor): array {
+            foreach ($this->eligibleMembers($club, (int) substr($period, 0, 4)) as $member) {
+                ++$summary['members'];
+                $class = $member->getContributionClass();
+                if ($class === null || !$class->isActive() || $class->getBillingPeriod() !== 'monthly') { ++$summary['skipped']; continue; }
+                try {
+                    $charge = $this->finance->monthly($member, $period, $due, $actor);
+                    $charge->issueInvoice($this->invoiceNumber($club, (int) substr($period, 0, 4), $charge));
+                    ++$summary['charges'];
+                    $summary['amountCents'] += $charge->getAmountCents();
+                } catch (\DomainException) {
+                    ++$summary['skipped'];
+                }
+            }
+            return $summary;
+        });
     }
 
     public function divisionAmount(Member $member, int $year): int

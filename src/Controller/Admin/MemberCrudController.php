@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Security\Voter\MemberManagementVoter;
 use App\Service\AdminClubContext;
 use App\Service\MembershipRoleContinuity;
+use App\Service\MembershipHistoryRecorder;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -65,6 +66,7 @@ class MemberCrudController extends AbstractCrudController
         private readonly AdminClubContext $clubContext,
         private readonly MembershipRoleContinuity $continuity,
         private readonly MembershipFinanceService $finance,
+        private readonly MembershipHistoryRecorder $history,
         private readonly FormFactoryInterface $forms,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
     ) {}
@@ -201,6 +203,7 @@ class MemberCrudController extends AbstractCrudController
                 $this->assertMemberAccess($entityInstance);
                 $this->assertAccountAssignment($entityManager, $entityInstance, $stored['user_id'] === null ? null : (int) $stored['user_id']);
                 $original = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance);
+                $personOriginal = $entityManager->getUnitOfWork()->getOriginalEntityData($entityInstance->getPerson());
                 if (($original['contributionClass'] ?? null) !== $entityInstance->getContributionClass()
                     || ($original['familyPayer'] ?? null) !== $entityInstance->getFamilyPayer()
                     || ($original['contributionDiscountCents'] ?? 0) !== $entityInstance->getContributionDiscountCents()
@@ -214,6 +217,21 @@ class MemberCrudController extends AbstractCrudController
                         $this->getUser()->getUserIdentifier(),
                     );
                 }
+                $changes = [];
+                foreach (['memberNumber', 'membershipType', 'clubFunctions', 'terminationDate', 'joinedAt', 'leftAt', 'membershipStatus', 'contributionClass', 'familyPayer', 'contributionDiscountCents', 'contributionDiscountReason', 'notes', 'published', 'category', 'status'] as $field) {
+                    $getter = 'get'.ucfirst($field);
+                    if ($field === 'published') { $getter = 'isPublished'; }
+                    if (method_exists($entityInstance, $getter)) {
+                        $changes[$field] = ['from' => $original[$field] ?? null, 'to' => $entityInstance->$getter()];
+                    }
+                }
+                foreach (['firstname', 'lastname', 'birthday', 'gender', 'email', 'mobile', 'phone', 'street', 'postalCode', 'city'] as $field) {
+                    $getter = 'get'.ucfirst($field);
+                    if (method_exists($entityInstance->getPerson(), $getter)) {
+                        $changes['person.'.$field] = ['from' => $personOriginal[$field] ?? null, 'to' => $entityInstance->getPerson()->$getter()];
+                    }
+                }
+                $this->history->record($entityInstance, $this->getUser()->getUserIdentifier(), 'administrative_update', $changes);
                 $this->memberships->record($entityInstance, 'administrative_update', $this->getUser()->getUserIdentifier(), 'Verwaltungspflichtige Mitglieds- oder Stammdaten geändert.');
                 parent::updateEntity($entityManager, $entityInstance);
             });
@@ -568,6 +586,12 @@ class MemberCrudController extends AbstractCrudController
             ->setColumns(3)
             ->setFormat('dd.MM.yyyy')
             ->setHelp('Format: TT.MM.JJJJ')
+            ->hideOnIndex();
+
+        yield ChoiceField::new('gender', 'Geschlecht')
+            ->setChoices(['Keine Angabe' => null, 'Weiblich' => 'female', 'Männlich' => 'male', 'Divers' => 'diverse', 'Nicht spezifiziert' => 'unspecified'])
+            ->setRequired(false)
+            ->setColumns(3)
             ->hideOnIndex();
 
         /*

@@ -35,6 +35,8 @@ use App\Enum\PermissionModule;
 use App\Service\MembershipFinanceService;
 use App\Service\MembershipService;
 use App\Service\MembershipRoleContinuity;
+use App\Service\MembershipHistoryRecorder;
+use App\Entity\MembershipHistory;
 use App\Service\BarDutyAccess;
 use App\Service\BarDutyWorkflow;
 use App\Service\PublicWebsite;
@@ -71,6 +73,7 @@ final class MembershipController extends AbstractController
         private readonly EditorialAccess $editorialAccess,
         private readonly MembershipRoleContinuity $continuity,
         private readonly ModuleAccess $moduleAccess,
+        private readonly MembershipHistoryRecorder $history,
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
@@ -552,7 +555,12 @@ final class MembershipController extends AbstractController
                         $year = (int) date('Y');
                         $monthDay = $policy->getOnboardingChargeDue() ?? '12-31';
                         $due = new \DateTimeImmutable($year.'-'.$monthDay);
-                        $this->finance->annual($member, $year, $due, $actor->getUserIdentifier());
+                        $class = $policy->getOnboardingContributionClass();
+                        if ($class?->getBillingPeriod() === 'monthly') {
+                            $this->finance->monthly($member, date('Y-m'), $due, $actor->getUserIdentifier());
+                        } else {
+                            $this->finance->annual($member, $year, $due, $actor->getUserIdentifier());
+                        }
                     }
                     $this->memberships->queue(
                         'application-onboarded:'.$application->getId(),
@@ -594,16 +602,44 @@ final class MembershipController extends AbstractController
     public function contact(Request $request): Response
     {
         $member = $this->ownMember();
+        $before = [
+            'email' => $member->getPerson()->getEmail(),
+            'mobile' => $member->getPerson()->getMobile(),
+            'phone' => $member->getPerson()->getPhone(),
+            'street' => $member->getPerson()->getStreet(),
+            'postalCode' => $member->getPerson()->getPostalCode(),
+            'city' => $member->getPerson()->getCity(),
+            'gender' => $member->getPerson()->getGender(),
+            'emergencyContactName' => $member->getEmergencyContactName(),
+            'emergencyContactPhone' => $member->getEmergencyContactPhone(),
+            'emergencyContactRelation' => $member->getEmergencyContactRelation(),
+        ];
         $form = $this->createForm(MemberContactType::class, $member)->handleRequest($request);
         
-        if ($response = $this->process($form, function () use ($member): void {
-            $this->em->wrapInTransaction(function () use ($member): void {
+        if ($response = $this->process($form, function () use ($member, $before): void {
+            $this->em->wrapInTransaction(function () use ($member, $before): void {
                 $this->memberships->record(
                     $member, 
                     'contact_updated', 
                     $this->account()->getUserIdentifier(), 
                     'Eigene Kontakt- und Notfalldaten geändert. Konto-E-Mail und Verwaltungsdaten bleiben unverändert.'
                 );
+                $after = [
+                    'email' => $member->getPerson()->getEmail(),
+                    'mobile' => $member->getPerson()->getMobile(),
+                    'phone' => $member->getPerson()->getPhone(),
+                    'street' => $member->getPerson()->getStreet(),
+                    'postalCode' => $member->getPerson()->getPostalCode(),
+                    'city' => $member->getPerson()->getCity(),
+                    'gender' => $member->getPerson()->getGender(),
+                    'emergencyContactName' => $member->getEmergencyContactName(),
+                    'emergencyContactPhone' => $member->getEmergencyContactPhone(),
+                    'emergencyContactRelation' => $member->getEmergencyContactRelation(),
+                ];
+                $this->history->record($member, $this->account()->getUserIdentifier(), 'contact_updated', array_combine(
+                    array_keys($before),
+                    array_map(static fn (string $key): array => ['from' => $before[$key], 'to' => $after[$key]], array_keys($before)),
+                ));
             });
         }, 'membership_self')) { return $response; }
         
@@ -844,6 +880,7 @@ final class MembershipController extends AbstractController
                 ->findBy(['member' => $member], ['id' => 'DESC']),
             'mandates' => $this->em->getRepository(SepaMandate::class)
                 ->findBy(['member' => $member], ['id' => 'DESC']),
+            'history' => $this->em->getRepository(MembershipHistory::class)->findBy(['member' => $member], ['id' => 'DESC'], 50),
             'canFinance' => $canFinance,
         ]);
     }
@@ -978,6 +1015,7 @@ final class MembershipController extends AbstractController
 
     private function saveContribution(ContributionClass $class): void
     {
+        $class->validateBilling();
         $duplicate = $this->em->getRepository(ContributionClass::class)
             ->findOneBy(['club' => $class->getClub(), 'name' => $class->getName()]);
         

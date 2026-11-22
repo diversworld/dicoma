@@ -7,6 +7,7 @@ namespace App\Form;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 
 final class PersonContactFields
@@ -16,5 +17,11 @@ final class PersonContactFields
         foreach (['email' => ['Kontakt-E-Mail', EmailType::class], 'mobile' => ['Mobiltelefon', TelType::class], 'phone' => ['Telefon', TelType::class], 'street' => ['Straße / Hausnummer', TextType::class], 'postalCode' => ['Postleitzahl', TextType::class], 'city' => ['Ort', TextType::class]] as $name => [$label, $type]) {
             $builder->add($name, $type, ['label' => $label, 'required' => false, 'property_path' => $prefix . $name]);
         }
+        $builder->add('gender', ChoiceType::class, [
+            'label' => 'Geschlecht',
+            'required' => false,
+            'property_path' => $prefix.'gender',
+            'choices' => ['Keine Angabe' => null, 'Weiblich' => 'female', 'Männlich' => 'male', 'Divers' => 'diverse', 'Nicht spezifiziert' => 'unspecified'],
+        ]);
     }
 }

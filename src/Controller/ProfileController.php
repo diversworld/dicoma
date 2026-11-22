@@ -17,6 +17,8 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use App\Service\MembershipHistoryRecorder;
+use App\Service\AuditLogger;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -128,5 +130,37 @@ final class ProfileController extends AbstractController
         if (is_file($path)) { @unlink($path); }
         $this->addFlash('success', 'Dokument entfernt.');
         return $this->redirectToRoute('app_profile');
+    }
+
+    #[Route('/profile/image', name: 'app_profile_image_upload', methods: ['POST'])]
+    public function uploadImage(Request $request, EntityManagerInterface $em, PrivateMemberDocumentStorage $storage, MembershipHistoryRecorder $history, AuditLogger $audit): Response
+    {
+        $member = $this->currentMember();
+        if (!$this->isCsrfTokenValid('member_profile_image', $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        $file = $request->files->get('image');
+        if (!$file instanceof UploadedFile) { throw $this->createNotFoundException('Profilbild fehlt.'); }
+        [$name, $mime] = $storage->store($file);
+        if (!in_array($mime, ['image/jpeg', 'image/png'], true)) { @unlink($storage->path($name)); throw $this->createNotFoundException('Nur JPG oder PNG.'); }
+        $old = $member->getPerson()->getProfileImageStorageName();
+        $member->getPerson()->setProfileImageStorageName($name);
+        $history->record($member, $this->getUser()->getUserIdentifier(), 'profile_image_updated', ['profileImage' => ['from' => $old, 'to' => $name]]);
+        $audit->record($member->getClub(), $this->getUser()->getUserIdentifier(), 'member.profile_image.updated', $member);
+        $em->flush();
+        if ($old !== null && $old !== $name && is_file($storage->path($old))) { @unlink($storage->path($old)); }
+        $this->addFlash('success', 'Profilbild aktualisiert.');
+        return $this->redirectToRoute('app_profile');
+    }
+
+    #[Route('/profile/image/{id}', name: 'app_profile_image_show', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function showImage(int $id, EntityManagerInterface $em, PrivateMemberDocumentStorage $storage): BinaryFileResponse
+    {
+        $member = $this->currentMember();
+        if ($member->getId() !== $id || $member->getPerson()->getProfileImageStorageName() === null) { throw $this->createNotFoundException(); }
+        $path = $storage->path($member->getPerson()->getProfileImageStorageName());
+        if (!is_file($path)) { throw $this->createNotFoundException(); }
+        $response = new BinaryFileResponse($path);
+        $response->headers->set('Cache-Control', 'private, no-store');
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE);
+        return $response;
     }
 }

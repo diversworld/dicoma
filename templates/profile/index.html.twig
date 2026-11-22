@@ -14,6 +14,15 @@
 <div class="col-md-3"><div class="card p-3"><strong>{{ documents|length }}</strong><span>{{ 'Dokumente'|trans }}</span></div></div>
 </div>
 <div class="card mb-4"><div class="card-body"><h2>{{ 'Persönliche Daten'|trans }}</h2>
+{% if member.person.profileImageStorageName %}
+<img src="{{ path('app_profile_image_show', {id: member.id}) }}" alt="Profilbild von {{ member.fullName }}" width="120" height="120" class="rounded-circle object-fit-cover mb-3">
+{% endif %}
+<form method="post" action="{{ path('app_profile_image_upload') }}" enctype="multipart/form-data" class="mb-3">
+  <input type="hidden" name="_token" value="{{ csrf_token('member_profile_image') }}">
+  <label for="profile-image">Profilbild</label>
+  <input class="form-control mb-2" id="profile-image" type="file" name="image" accept=".jpg,.jpeg,.png" required>
+  <button class="btn btn-outline-primary" type="submit">Profilbild speichern</button>
+</form>
 <dl class="row"><dt class="col-sm-3">{{ 'Name'|trans }}</dt><dd class="col-sm-9">{{ member.fullName }}</dd>
 <dt class="col-sm-3">{{ 'Mitgliedsnummer'|trans }}</dt><dd class="col-sm-9">{{ member.memberNumber|default('—') }}</dd>
 <dt class="col-sm-3">{{ 'Verein'|trans }}</dt><dd class="col-sm-9">{{ member.club ? member.club : '—' }}</dd>
@@ -21,7 +30,8 @@
 <dt class="col-sm-3">{{ 'Eintritt'|trans }}</dt><dd class="col-sm-9">{{ member.joinedAt ? member.joinedAt|date('d.m.Y') : '—' }}</dd>
 <dt class="col-sm-3">{{ 'Adresse'|trans }}</dt><dd class="col-sm-9">{{ member.street|default('') }} · {{ member.postalCode|default('') }} {{ member.city|default('') }}</dd>
 <dt class="col-sm-3">{{ 'E-Mail'|trans }}</dt><dd class="col-sm-9">{{ member.email|default('—') }}</dd>
-<dt class="col-sm-3">{{ 'Telefon'|trans }}</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd></dl>
+<dt class="col-sm-3">{{ 'Telefon'|trans }}</dt><dd class="col-sm-9">{{ member.phone|default('—') }}</dd>
+<dt class="col-sm-3">Geschlecht</dt><dd class="col-sm-9">{{ member.person.gender|default('—') }}</dd></dl>
 <p><a href="{{ path('membership_contact') }}">{{ 'Kontakt- und Notfalldaten bearbeiten'|trans }}</a> · <a href="{{ path('membership_self') }}">{{ 'Mitgliedschaft und Beiträge'|trans }}</a></p>
 <p class="text-muted">{{ 'Name, Geburtstag, Mitgliedsnummer und Mitgliedschaftsdaten verwaltet weiterhin der Verein.'|trans }}</p></div></div>
 <div class="card mb-4"><div class="card-body"><h2>{{ 'Meine Qualifikationen'|trans }}</h2>

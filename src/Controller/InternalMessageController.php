@@ -59,6 +59,14 @@ final class InternalMessageController extends AbstractController
             $divisionValues[(string) $choice->getName()] = (string) $choice->getId();
         }
         $audiences = ['Ein Mitglied' => 'member'];
+        if ($this->isGranted(User::ROLE_ADMIN) || $this->isGranted(User::ROLE_BOARD)) {
+            $audiences += [
+                'Alle aktiven Mitglieder' => 'all',
+                'Vorstand' => 'board',
+                'Jugendabteilung' => 'youth',
+                'Ehrenmitglieder' => 'honorary',
+            ];
+        }
         if ($divisions !== []) { $audiences['Sparte'] = 'division'; }
         if ($roles !== []) { $audiences['Rolle'] = 'role'; }
         $form = $this->createFormBuilder([

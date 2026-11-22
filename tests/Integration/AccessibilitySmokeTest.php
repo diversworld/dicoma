@@ -8,6 +8,9 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use App\Entity\Club;
+use App\Entity\Member;
+use App\Entity\Person;
+use App\Entity\User;
 
 final class AccessibilitySmokeTest extends WebTestCase
 {
@@ -19,7 +22,15 @@ final class AccessibilitySmokeTest extends WebTestCase
         $client->disableReboot();
         $em = static::getContainer()->get(EntityManagerInterface::class);
         (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
-        $em->persist((new Club())->setName('Accessibility'));
+        $club = (new Club())->setName('Accessibility');
+        $em->persist($club);
+        $person = (new Person())->setFirstname('Accessible')->setLastname('Member')->setEmail('accessible@example.invalid');
+        $member = (new Member())->setClub($club)->setPerson($person);
+        $user = (new User())->setUser('accessible')->setEmail('accessible@example.invalid')->setPassword('unused')->setMember($member);
+        $person2 = (new Person())->setFirstname('Admin')->setLastname('User');
+        $member2 = (new Member())->setClub($club)->setPerson($person2);
+        $admin = (new User())->setUser('accessible-admin')->setEmail('admin@example.invalid')->setPassword('unused')->setRoles([User::ROLE_ADMIN])->setMember($member2);
+        foreach ([$person, $member, $user, $person2, $member2, $admin] as $entity) { $em->persist($entity); }
         $em->flush();
         foreach (['/', '/login'] as $path) {
             $crawler = $client->request('GET', $path);
@@ -38,5 +49,17 @@ final class AccessibilitySmokeTest extends WebTestCase
             self::assertNotEmpty($id);
             self::assertGreaterThan(0, $crawler->filter('label[for="'.$id.'"]')->count(), 'Every form control needs a label.');
         }
+
+        $client->loginUser($user);
+        $crawler = $client->request('GET', '/my');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('#main-content'));
+        self::assertCount(1, $crawler->filter('nav[aria-label]'));
+
+        $client->loginUser($admin);
+        $crawler = $client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('#main-content[tabindex="-1"]'));
+        self::assertCount(1, $crawler->filter('a.skip-link'));
     }
 }

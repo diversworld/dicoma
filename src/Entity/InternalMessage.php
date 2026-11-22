@@ -12,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_internal_message_club_sent', columns: ['club_id', 'sent_at'])]
 #[ORM\Index(name: 'IDX_internal_message_sender', columns: ['sender_id'])]
 #[ORM\Index(name: 'IDX_internal_message_division', columns: ['division_id'])]
+#[ORM\Index(name: 'idx_internal_message_template_club_sent', columns: ['club_id', 'audience', 'sent_at'])]
 class InternalMessage
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
@@ -47,7 +48,7 @@ class InternalMessage
 
     public function __construct(Club $club, User $sender, string $audience, string $subject, string $body)
     {
-        if (!in_array($audience, ['member', 'division', 'role'], true)) {
+        if (!in_array($audience, ['member', 'division', 'role', 'all', 'youth', 'honorary', 'board'], true)) {
             throw new \InvalidArgumentException('Ungültige Empfängergruppe.');
         }
         $subject = trim($subject);
