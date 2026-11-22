@@ -95,6 +95,16 @@ body[data-ea-dark-scheme-is-enabled] {
 .datagrid td, .datagrid th { padding-block: var(--dw-admin-table-cell-padding); }
 .audit-changes td { white-space: pre-wrap; }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+    outline: 3px solid #f0a202;
+    outline-offset: 2px;
+}
+
 tbody, td, tfoot, th, thead, tr {
     border: 0 solid;
     border-color: inherit;

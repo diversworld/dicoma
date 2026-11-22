@@ -1,0 +1,27 @@
+.skip-link {
+    position: fixed;
+    left: 1rem;
+    top: -5rem;
+    z-index: 10000;
+    padding: .75rem 1rem;
+    background: #111;
+    color: #fff;
+    font-weight: 700;
+}
+
+.skip-link:focus {
+    top: 1rem;
+}
+
+.scroll-to-top {
+    border: 0;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid #f0a202;
+    outline-offset: 2px;
+}

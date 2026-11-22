@@ -172,7 +172,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 		$roles = array_values(array_filter(
             $this->roles,
             fn (string $role): bool => $role !== self::ROLE_MEMBER
-                && (!$this->functionModelEnabled || in_array($role, [self::ROLE_USER, self::ROLE_SUPER_ADMIN], true))
+                && (!$this->functionModelEnabled || in_array($role, [self::ROLE_USER, self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true))
                 && $this->isRoleValidOn($role, $today)
         ));
         if ($this->functionModelEnabled) {

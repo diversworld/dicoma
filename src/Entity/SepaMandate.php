@@ -26,6 +26,8 @@ class SepaMandate
     private string $holder;
     #[ORM\Column(length: 255)]
     private string $encryptedIban;
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $encryptedBic = null;
     #[ORM\Column(length: 4)]
     private string $ibanSuffix;
     #[ORM\Column(type: 'date_immutable')]
@@ -36,7 +38,7 @@ class SepaMandate
     #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private MemberDocument $document;
 
-    public function __construct(Member $member, string $reference, string $creditor, string $holder, string $encrypted, string $suffix, \DateTimeImmutable $signed)
+    public function __construct(Member $member, string $reference, string $creditor, string $holder, string $encrypted, string $suffix, \DateTimeImmutable $signed, ?string $encryptedBic = null)
     {
         $club = $member->getClub();
         if ($club === null) { throw new \DomainException('Verein fehlt.'); }
@@ -48,6 +50,7 @@ class SepaMandate
         $this->encryptedIban = $encrypted;
         $this->ibanSuffix = $suffix;
         $this->signedAt = $signed;
+        $this->encryptedBic = $encryptedBic;
     }
     public function getId(): ?int { return $this->id; }
     public function getMember(): Member { return $this->member; }
@@ -55,6 +58,8 @@ class SepaMandate
     public function getCreditorIdentifier(): string { return $this->creditorIdentifier; }
     public function getHolder(): string { return $this->holder; }
     public function getEncryptedIban(): string { return $this->encryptedIban; }
+    public function getEncryptedBic(): ?string { return $this->encryptedBic; }
+    public function getMaskedBic(): ?string { return $this->encryptedBic === null ? null : '****'; }
     public function getMaskedIban(): string { return '**** ' . $this->ibanSuffix; }
     public function getSignedAt(): \DateTimeImmutable { return $this->signedAt; }
     public function getRevokedAt(): ?\DateTimeImmutable { return $this->revokedAt; }

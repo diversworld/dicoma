@@ -16,6 +16,7 @@ use App\Service\BoardDashboard;
 use App\Service\BoardGovernanceService;
 use App\Service\ClubDocumentStorage;
 use App\Service\SimplePdfRenderer;
+use App\Service\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -32,6 +33,7 @@ final class BoardGovernanceController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly AdminClubContext $clubs,
+        private readonly AuditLogger $audit,
     ) {}
 
     #[Route('/governance', name: 'admin_governance', methods: ['GET'])]
@@ -81,6 +83,8 @@ final class BoardGovernanceController extends AbstractController
             $governance->createTaskFromResolution($resolution, $actor);
         }
         $this->em->flush();
+        $this->audit->record($meeting->getClub(), $this->getUser()->getUserIdentifier(), 'governance.resolution.created', $resolution, ['meetingId' => $meeting->getId()]);
+        $this->em->flush();
         $this->addFlash('success', 'Beschluss gespeichert.');
         return $this->redirectToRoute('admin_governance');
     }
@@ -96,6 +100,7 @@ final class BoardGovernanceController extends AbstractController
             throw $this->createAccessDeniedException();
         }
         $governance->createTaskFromResolution($resolution, $actor);
+        $this->audit->record($resolution->getMeeting()->getClub(), $actor->getUserIdentifier(), 'governance.task.created_from_resolution', $resolution);
         $this->em->flush();
         $this->addFlash('success', 'Aufgabe aus Beschluss angelegt.');
         return $this->redirectToRoute('admin_governance');
@@ -135,6 +140,7 @@ final class BoardGovernanceController extends AbstractController
                     ->where('document = :document')->setParameter('document', $document)->getQuery()->getSingleScalarResult();
                 $version = new ClubDocumentVersion($document, (int) $latest + 1, $stored['storageName'], $stored['originalName'], $stored['mimeType'], $stored['size'], $actor);
                 $document->addVersion($version)->setStatus(ClubDocument::STATUS_PENDING);
+                $this->audit->record($club, $actor->getUserIdentifier(), 'document.version.uploaded', $document, ['version' => $version->getVersion()]);
                 $this->em->flush();
             } catch (\Throwable $exception) {
                 @unlink($storage->path($stored['storageName']));
@@ -164,6 +170,7 @@ final class BoardGovernanceController extends AbstractController
         }
         $version->approve($actor);
         $version->getDocument()->setStatus(ClubDocument::STATUS_APPROVED);
+        $this->audit->record($club, $actor->getUserIdentifier(), 'document.version.approved', $version->getDocument(), ['version' => $version->getVersion()]);
         $this->em->flush();
         $this->addFlash('success', 'Dokument freigegeben.');
         return $this->redirectToRoute('admin_club_documents');

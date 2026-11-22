@@ -35,20 +35,21 @@
     {% block stylesheets %}{% endblock %}
 </head>
     <body data-site-theme="{{ site_theme.name }}">
+    <a class="skip-link" href="#main-content">Zum Hauptinhalt springen</a>
     {% set publicMenu = portal_navigation.publicMenu %}
         {% include 'includes/_header.html.twig' %}
         {% block hero %}
             {% include 'includes/_slider.html.twig' %}
         {% endblock %}
 
-        {% block body %}{% endblock %}
+        <div id="main-content" tabindex="-1">{% block body %}{% endblock %}</div>
 
         {% include 'includes/_footer.html.twig' %}
 
         <!--Scroll to top-->
-        <div id="scroll-to-top" class="scroll-to-top">
-            <span class="icon ion-ios-arrow-up"></span>
-        </div>
+        <button id="scroll-to-top" class="scroll-to-top" type="button" aria-label="Zum Seitenanfang">
+            <span class="icon ion-ios-arrow-up" aria-hidden="true"></span>
+        </button>
         {% block javascripts %}
         <!--
         Essential Scripts

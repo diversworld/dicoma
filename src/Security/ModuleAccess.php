@@ -27,7 +27,11 @@ final class ModuleAccess
                 return false;
             }
         }
-        if (in_array(User::ROLE_SUPER_ADMIN, $this->hierarchy->getReachableRoleNames($user->getRoles()), true)) {
+        $roles = array_values(array_unique([...$user->getRoles(), ...$this->validStoredRoles($user)]));
+        if (in_array(User::ROLE_SUPER_ADMIN, $this->hierarchy->getReachableRoleNames($roles), true)) {
+            return true;
+        }
+        if (self::roleCan($roles, $module, $action)) {
             return true;
         }
         $date ??= new \DateTimeImmutable('today');
@@ -40,5 +44,38 @@ final class ModuleAccess
             }
         }
         return false;
+    }
+
+    /** @param list<string> $roles */
+    private static function roleCan(array $roles, PermissionModule $module, PermissionAction $action): bool
+    {
+        if (in_array(User::ROLE_ADMIN, $roles, true)) {
+            return true;
+        }
+        if (in_array(User::ROLE_BOARD, $roles, true)) {
+            return in_array($module, [PermissionModule::MEMBERSHIP, PermissionModule::GOVERNANCE, PermissionModule::FILES, PermissionModule::WEBSITE], true)
+                || ($module === PermissionModule::FINANCE && $action === PermissionAction::READ);
+        }
+        if (in_array(User::ROLE_TREASURER, $roles, true)) {
+            return in_array($module, [PermissionModule::FINANCE, PermissionModule::ACCOUNTING], true);
+        }
+        if (in_array(User::ROLE_SECRETARY, $roles, true)) {
+            return $module === PermissionModule::GOVERNANCE
+                || ($module === PermissionModule::FILES && $action !== PermissionAction::DELETE);
+        }
+        return false;
+    }
+
+    /** @return list<string> */
+    private function validStoredRoles(User $user): array
+    {
+        $today = new \DateTimeImmutable('today');
+        $validity = $user->getRoleValidity();
+        return array_values(array_filter($user->getStoredRoles(), static function (string $role) use ($today, $validity): bool {
+            $window = $validity[$role] ?? null;
+            if (!is_array($window)) { return true; }
+            return ($window['startsAt'] === null || $window['startsAt'] <= $today->format('Y-m-d'))
+                && ($window['endsAt'] === null || $window['endsAt'] >= $today->format('Y-m-d'));
+        }));
     }
 }

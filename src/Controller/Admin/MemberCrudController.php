@@ -54,7 +54,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Form\MemberQualificationType;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 class MemberCrudController extends AbstractCrudController
 {
     public function __construct(
@@ -72,6 +72,9 @@ class MemberCrudController extends AbstractCrudController
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
+        if (!$this->isGranted(User::ROLE_ADMIN) && !$this->isGranted(User::ROLE_BOARD)) {
+            throw $this->createAccessDeniedException();
+        }
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
         $qb->leftJoin('entity.person', 'memberPerson')->addSelect('memberPerson');
         if ($searchDto->getSort() === []) {

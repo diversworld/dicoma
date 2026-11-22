@@ -22,6 +22,7 @@ final class MembershipFinanceService
         private readonly MembershipService $memberships,
         private readonly ValidatorInterface $validator,
         private readonly PrivateMemberDocumentStorage $documents,
+        private readonly AuditLogger $audit,
     ) {}
 
     public function assign(Member $member, ?ContributionClass $class, ?Member $payer, int $discount, ?string $reason, string $actor): void
@@ -85,6 +86,7 @@ final class MembershipFinanceService
             $charge = new MembershipCharge($member, $key, $description, $cents, $due);
             $this->em->persist($charge);
             $this->memberships->record($member, 'charge_created', $actor, $description . ': ' . number_format($cents / 100, 2, ',', '.') . ' EUR, fällig am ' . $due->format('d.m.Y'));
+            if ($member->getClub() !== null) { $this->audit->record($member->getClub(), $actor, 'finance.charge.created', $charge, ['amountCents' => $cents, 'dueAt' => $due->format('Y-m-d')]); }
             return $charge;
         });
     }
@@ -104,18 +106,21 @@ final class MembershipFinanceService
             $this->em->refresh($charge);
             $this->em->persist(new MembershipPayment($charge, $cents, trim($reference), $actor));
             $this->memberships->record($charge->getMember(), 'payment_recorded', $actor, 'Beitragszahlung über ' . number_format($cents / 100, 2, ',', '.') . ' EUR verbucht.');
+            if ($charge->getMember()->getClub() !== null) { $this->audit->record($charge->getMember()->getClub(), $actor, 'finance.payment.recorded', $charge, ['amountCents' => $cents, 'reference' => $reference]); }
         });
     }
 
-    public function createMandate(Member $member, string $reference, string $holder, string $iban, \DateTimeImmutable $signed, MemberDocument $proof, string $actor): void
+    public function createMandate(Member $member, string $reference, string $holder, string $iban, \DateTimeImmutable $signed, MemberDocument $proof, string $actor, string $bic = ''): void
     {
         $iban = strtoupper(str_replace(' ', '', $iban));
+        $bic = strtoupper(str_replace(' ', '', trim($bic)));
         $creditor = $member->getClub() !== null ? $this->memberships->policy($member->getClub())?->getCreditorIdentifier() : null;
         if (!$creditor || !preg_match('/^[A-Za-z0-9\-]{1,35}$/D', $reference)
             || trim($holder) === '' || mb_strlen($holder) > 180 || $signed > new \DateTimeImmutable('today')
             || $proof->getMember()?->getId() !== $member->getId()
             || !is_file($this->documents->path($proof->getStorageName()))
-            || count($this->validator->validate($iban, new Assert\Iban())) !== 0) {
+            || count($this->validator->validate($iban, new Assert\Iban())) !== 0
+            || ($bic !== '' && !preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/D', $bic))) {
             throw new \DomainException('Mandatsdaten ungültig: Gläubiger-ID, Referenz, Kontoinhaber, gültige IBAN, Unterschriftsdatum und eigener Nachweis erforderlich.');
         }
         if ($this->em->getRepository(SepaMandate::class)->findOneBy(['club' => $member->getClub(), 'reference' => $reference]) !== null) {
@@ -124,18 +129,37 @@ final class MembershipFinanceService
         $key = $this->bankKey();
         $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
         $encrypted = base64_encode($nonce . sodium_crypto_secretbox($iban, $nonce, $key));
-        $this->em->wrapInTransaction(function () use ($member, $reference, $holder, $iban, $signed, $encrypted, $creditor, $actor, $proof): void {
-            $mandate = new SepaMandate($member, $reference, $creditor, $holder, $encrypted, substr($iban, -4), $signed);
+        $encryptedBic = $bic === '' ? null : $this->encrypt($bic);
+        $this->em->wrapInTransaction(function () use ($member, $reference, $holder, $iban, $signed, $encrypted, $encryptedBic, $creditor, $actor, $proof): void {
+            $mandate = new SepaMandate($member, $reference, $creditor, $holder, $encrypted, substr($iban, -4), $signed, $encryptedBic);
             $mandate->setDocument($proof);
             $this->em->persist($mandate);
             $this->memberships->record($member, 'sepa_created', $actor, 'SEPA-Mandat angelegt. Es wurde kein Bankeinzug ausgelöst.');
+            $this->audit->record($member->getClub(), $actor, 'sepa.mandate.created', $mandate, ['reference' => $reference]);
         });
     }
 
     public function decryptIban(SepaMandate $mandate): string
     {
+        return $this->decrypt($mandate->getEncryptedIban());
+    }
+
+    public function decryptBic(SepaMandate $mandate): ?string
+    {
+        return $mandate->getEncryptedBic() === null ? null : $this->decrypt($mandate->getEncryptedBic());
+    }
+
+    private function encrypt(string $plain): string
+    {
         $key = $this->bankKey();
-        $binary = base64_decode($mandate->getEncryptedIban(), true);
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        return base64_encode($nonce . sodium_crypto_secretbox($plain, $nonce, $key));
+    }
+
+    private function decrypt(string $encrypted): string
+    {
+        $key = $this->bankKey();
+        $binary = base64_decode($encrypted, true);
         if ($binary === false || strlen($binary) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
             throw new \RuntimeException('Beschädigte verschlüsselte Mandatsdaten.');
         }

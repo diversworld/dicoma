@@ -10,6 +10,10 @@ use App\Entity\Booking;
 use App\Entity\ClubEventRegistration;
 use App\Entity\ClubDocument;
 use App\Entity\ClubDocumentVersion;
+use App\Entity\MembershipCharge;
+use App\Entity\MembershipPayment;
+use App\Entity\MemberDocument;
+use App\Entity\MembershipEvent;
 use App\Entity\InternalMessageRecipient;
 use App\Entity\MemberSport;
 use App\Entity\Schedule;
@@ -21,12 +25,78 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_MEMBER')]
 final class MemberPortalController extends AbstractController
 {
+    #[Route('/my/data-export', name: 'member_data_export', methods: ['GET'])]
+    public function dataExport(EntityManagerInterface $em, \App\Service\AuditLogger $audit): JsonResponse
+    {
+        $user = $this->getUser();
+        $member = $user instanceof User ? $user->getMember() : null;
+        if ($member?->getClub() === null) { throw $this->createAccessDeniedException(); }
+        $charges = $em->getRepository(MembershipCharge::class)->findBy(['member' => $member], ['id' => 'ASC']);
+        $payments = [];
+        foreach ($charges as $charge) {
+            foreach ($em->getRepository(MembershipPayment::class)->findBy(['charge' => $charge], ['receivedAt' => 'ASC']) as $payment) {
+                $payments[] = [
+                    'charge' => $charge->getInvoiceNumber() ?? $charge->getDescription(),
+                    'amountCents' => $payment->getAmountCents(),
+                    'receivedAt' => $payment->getReceivedAt()->format(DATE_ATOM),
+                    'reference' => $payment->getReference(),
+                ];
+            }
+        }
+        $person = $member->getPerson();
+        $payload = [
+            'exportedAt' => (new \DateTimeImmutable())->format(DATE_ATOM),
+            'member' => [
+                'memberNumber' => $member->getMemberNumber(),
+                'firstname' => $person->getFirstname(),
+                'lastname' => $person->getLastname(),
+                'birthday' => $person->getBirthday()?->format('Y-m-d'),
+                'email' => $person->getEmail(),
+                'phone' => $person->getPhone(),
+                'mobile' => $person->getMobile(),
+                'street' => $person->getStreet(),
+                'postalCode' => $person->getPostalCode(),
+                'city' => $person->getCity(),
+                'joinedAt' => $member->getJoinedAt()?->format('Y-m-d'),
+                'leftAt' => $member->getLeftAt()?->format('Y-m-d'),
+                'status' => $member->getMembershipStatus()->value,
+                'membershipType' => $member->getMembershipType(),
+            ],
+            'charges' => array_map(static fn (MembershipCharge $charge): array => [
+                'description' => $charge->getDescription(),
+                'invoiceNumber' => $charge->getInvoiceNumber(),
+                'amountCents' => $charge->getAmountCents(),
+                'paidCents' => $charge->getPaidCents(),
+                'dueAt' => $charge->getDueAt()->format('Y-m-d'),
+                'status' => $charge->getStatus(),
+            ], $charges),
+            'payments' => $payments,
+            'documents' => array_map(static fn (MemberDocument $document): array => [
+                'name' => $document->getOriginalName(),
+                'kind' => $document->getKind(),
+                'uploadedAt' => $document->getCreatedAt()->format(DATE_ATOM),
+            ], $em->getRepository(MemberDocument::class)->findBy(['member' => $member])),
+            'events' => array_map(static fn (MembershipEvent $event): array => [
+                'kind' => $event->getKind(),
+                'description' => $event->getDescription(),
+                'occurredAt' => $event->getOccurredAt()->format(DATE_ATOM),
+            ], $em->getRepository(MembershipEvent::class)->findBy(['member' => $member], ['id' => 'ASC'])),
+        ];
+        $response = new JsonResponse($payload, 200, [
+            'Cache-Control' => 'private, no-store',
+            'Content-Disposition' => 'attachment; filename="dicoma-datenexport-'.$member->getId().'.json"',
+        ], true);
+        $audit->record($member->getClub(), $user->getUserIdentifier(), 'privacy.member_export', $member);
+        $em->flush();
+        return $response;
+    }
     #[Route('/my/club-documents', name: 'member_club_documents', methods: ['GET'])]
     public function clubDocuments(EntityManagerInterface $em): Response
     {

@@ -46,34 +46,17 @@ class Tank
     #[ORM\Column(type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
     private string $rentalFee = '0.00';
 
-    public function getRentalFee(): string { return $this->rentalFee; }
-    public function setRentalFee(string $value): static { $this->rentalFee = $value; return $this; }
+    #[ORM\Column(length: 20)]
+    private ?string $baz_number = null;
+
+    #[ORM\Column(length: 120)]
+    private ?string $manufacturer  = null;
 
     #[ORM\Column(length: 20, options: ['default' => 'ready'])]
     private string $conditionStatus = 'ready';
 
     #[ORM\Column(options: ['default' => true])]
     private bool $lendable = true;
-
-    public function getConditionStatus(): string { return $this->conditionStatus; }
-    public function setConditionStatus(string $status): static
-    {
-        if (!in_array($status, ['ready', 'maintenance', 'damaged'], true)) {
-            throw new \InvalidArgumentException('Ungueltiger Flaschenzustand.');
-        }
-        $this->conditionStatus = $status;
-        if ($status !== 'ready') { $this->lendable = false; }
-        return $this;
-    }
-    public function isLendable(): bool { return $this->lendable; }
-    public function setLendable(bool $lendable): static
-    {
-        if ($lendable && $this->conditionStatus !== 'ready') {
-            throw new \DomainException('Gesperrte Flasche kann nicht freigegeben werden.');
-        }
-        $this->lendable = $lendable;
-        return $this;
-    }
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
@@ -98,6 +81,36 @@ class Tank
         targetEntity: TankCheckDetail::class
     )]
     private Collection $checkDetails;
+    
+    public function getConditionStatus(): string { return $this->conditionStatus; }
+    public function setConditionStatus(string $status): static
+    {
+        if (!in_array($status, ['ready', 'maintenance', 'damaged'], true)) {
+            throw new \InvalidArgumentException('Ungueltiger Flaschenzustand.');
+        }
+        $this->conditionStatus = $status;
+        if ($status !== 'ready') { $this->lendable = false; }
+        return $this;
+    }
+    public function isLendable(): bool { return $this->lendable; }
+    public function setLendable(bool $lendable): static
+    {
+        if ($lendable && $this->conditionStatus !== 'ready') {
+            throw new \DomainException('Gesperrte Flasche kann nicht freigegeben werden.');
+        }
+        $this->lendable = $lendable;
+        return $this;
+    }
+
+    public function getBazNumber(): ?string { return $this->baz_number; }
+    public function setBazNumber(?string $value): static { $this->baz_number = $value; return $this; }
+    
+    public function getManufacturer(): ?string { return $this->manufacturer; }
+    public function setManufacturer(?string $value): static { $this->manufacturer = $value; return $this; }
+
+    public function getRentalFee(): string { return $this->rentalFee; }
+    public function setRentalFee(string $value): static { $this->rentalFee = $value; return $this; }
+
 
     public function __construct()
     {

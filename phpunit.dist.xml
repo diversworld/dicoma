@@ -53,6 +53,9 @@
             <file>tests/Integration/ImportCourseImagesCommandTest.php</file>
             <file>tests/Integration/AreaRouteBoundaryTest.php</file>
             <file>tests/Integration/AccountSelfServiceHttpTest.php</file>
+            <file>tests/Integration/PhaseARbacFinanceComplianceTest.php</file>
+            <file>tests/Integration/PhaseARoleBoundaryHttpTest.php</file>
+            <file>tests/Integration/AccessibilitySmokeTest.php</file>
         </testsuite>
         <testsuite name="staging">
             <directory>tests/Http</directory>

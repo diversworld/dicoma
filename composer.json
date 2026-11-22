@@ -25,7 +25,7 @@
         "symfony/html-sanitizer": "^7.0",
         "symfony/lock": "^7.0",
         "symfony/mailer": "^7.0",
-        "symfony/maker-bundle": "^1.52",
+        "symfony/maker-bundle": "*",
         "symfony/monolog-bundle": "^3.10",
         "symfony/password-hasher": "^7.0",
         "symfony/process": "^7.0",

@@ -330,6 +330,7 @@ class DashboardController extends AbstractDashboardController
         return Assets::new()
            ->addCssFile('css/theme-variables.css')
 		   ->addCssFile('css/admin.css')
+		    ->addCssFile('css/accessibility.css')
            ->addCssFile('css/admin-theme.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
@@ -789,8 +790,7 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 MenuItem::section('Kassenwart'),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
-                MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users')
-                    ->setPermission('ROLE_ADMIN'),
+                MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting'),
                 ...($this->isGranted(User::ROLE_EQUIPMENT_CASH) ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
                 ...($this->isGranted(User::ROLE_BAR_MANAGER) ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
                 ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
@@ -806,7 +806,6 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::linkToRoute('Vorstandsarbeit', 'fa fa-people-line', 'admin_governance'),
                 MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
                 MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
-                MenuItem::linkToRoute('Ausbildungsübersicht', 'fa fa-chart-line', 'admin_training_overview'),
                 MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
                 ...($editorialRoute !== null ? [MenuItem::linkToRoute('Website & Redaktion', 'fa fa-newspaper', $editorialRoute)] : []),
             ];
@@ -835,6 +834,7 @@ class DashboardController extends AbstractDashboardController
             ...($financeRoute ? [
                 MenuItem::section($this->isGranted(User::ROLE_TREASURER) ? 'Kassenwart' : 'Vorstand & Finanzen'),
                 MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance'),
+                MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting'),
             ] : []),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
@@ -864,6 +864,7 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(BoardMeetingCrudController::class, 'Sitzungen verwalten', 'fa fa-calendar-days'),
                     MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben verwalten', 'fa fa-list-check'),
                     MenuItem::linkToRoute('Dokumentenablage', 'fa fa-folder-open', 'admin_club_documents'),
+                    MenuItem::linkToRoute('Audit & Datenschutz', 'fa fa-shield-halved', 'admin_privacy'),
                 ]),
 
             MenuItem::subMenu('Mannschaften & Turniere', 'fa fa-trophy')

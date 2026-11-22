@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\BoardTask;
 use App\Entity\User;
 use App\Service\AdminClubContext;
+use App\Service\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -26,7 +27,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class BoardTaskCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly AdminClubContext $clubs) {}
+    public function __construct(private readonly AdminClubContext $clubs, private readonly AuditLogger $audit) {}
 
     public static function getEntityFqcn(): string { return BoardTask::class; }
 
@@ -80,12 +81,16 @@ final class BoardTaskCrudController extends AbstractCrudController
     {
         $this->assertEntityScope($entityInstance);
         parent::persistEntity($entityManager, $entityInstance);
+        $this->audit->record($entityInstance->getClub(), $this->getUser()->getUserIdentifier(), 'governance.task.created', $entityInstance);
+        $entityManager->flush();
     }
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         $this->assertEntityScope($entityInstance);
         parent::updateEntity($entityManager, $entityInstance);
+        $this->audit->record($entityInstance->getClub(), $this->getUser()->getUserIdentifier(), 'governance.task.updated', $entityInstance, ['status' => $entityInstance->getStatus()]);
+        $entityManager->flush();
     }
 
     private function assertEntityScope(BoardTask $task): void

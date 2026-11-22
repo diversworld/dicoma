@@ -30,6 +30,8 @@ use App\Form\MembershipPolicyType;
 use App\Form\WebsiteDisplaySettingsType;
 use App\Security\Voter\MemberManagementVoter;
 use App\Security\EditorialAccess;
+use App\Security\ModuleAccess;
+use App\Enum\PermissionModule;
 use App\Service\MembershipFinanceService;
 use App\Service\MembershipService;
 use App\Service\MembershipRoleContinuity;
@@ -68,6 +70,7 @@ final class MembershipController extends AbstractController
         private readonly AdminClubContext $clubContext,
         private readonly EditorialAccess $editorialAccess,
         private readonly MembershipRoleContinuity $continuity,
+        private readonly ModuleAccess $moduleAccess,
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
@@ -138,10 +141,11 @@ final class MembershipController extends AbstractController
         return $this->privatePage('membership/form.html.twig', ['title' => 'Mitgliedsantrag – ' . $club->getName(), 'form' => $form->createView(), 'explanation' => 'Ihre Angaben werden ausschließlich für die manuelle Identitätsprüfung und Entscheidung durch den Verein verarbeitet. Der Antrag erstellt weder automatisch ein Konto noch Mitgliedsrechte. Für Auskunft, Berichtigung oder Rücknahme wenden Sie sich an die Vereinsverwaltung.']);
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership', name: 'membership_admin', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function administration(): Response
     {
+        $this->assertClubPermission(PermissionModule::MEMBERSHIP, PermissionAction::READ);
         $club = $this->clubContext->getClub()
             ?? throw $this->createAccessDeniedException('Bitte zuerst einen Verein auswählen.');
         return $this->club($club);
@@ -156,11 +160,14 @@ final class MembershipController extends AbstractController
     #[Route('/admin/settings', name: 'admin_settings', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function settings(PublicWebsite $website, BarDutyAccess $barAccess): Response
     {
-        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$barAccess->isManager()) {
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_BOARD') && !$this->isGranted('ROLE_TREASURER') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$barAccess->isManager()) {
             throw $this->createAccessDeniedException();
         }
-        if ($this->isGranted('ROLE_ADMIN')) {
+        if ($this->isGranted('ROLE_ADMIN') || $this->isGranted('ROLE_BOARD')) {
             return $this->redirectToRoute('admin_settings_membership', [], Response::HTTP_SEE_OTHER);
+        }
+        if ($this->isGranted('ROLE_TREASURER')) {
+            return $this->redirectToRoute('admin_settings_contributions', [], Response::HTTP_SEE_OTHER);
         }
         if ($website->canManageEditorial()) {
             return $this->redirectToRoute('admin_settings_website', [], Response::HTTP_SEE_OTHER);
@@ -202,14 +209,15 @@ final class MembershipController extends AbstractController
         }
 
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_BAR_MANAGER')) {
-            throw $this->createAccessDeniedException();
+            if (!$this->isGranted('ROLE_BOARD') && !$this->isGranted('ROLE_TREASURER')) {
+                throw $this->createAccessDeniedException();
+            }
         }
 
         $barOnly = $section === 'bar';
         
-        if (in_array($section, ['membership', 'contributions'], true)) {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-        }
+        if ($section === 'membership') { $this->assertClubPermission(PermissionModule::MEMBERSHIP, PermissionAction::EDIT); }
+        if ($section === 'contributions') { $this->assertClubPermission(PermissionModule::FINANCE, PermissionAction::EDIT); }
         
         if ($barOnly && !$barAccess->isManager()) {
             throw $this->createAccessDeniedException('Nur die Thekenleitung darf diese Einstellungen verwalten.');
@@ -228,7 +236,7 @@ final class MembershipController extends AbstractController
         
         $club = null;
 
-        if ($this->isGranted('ROLE_ADMIN')) {
+        if ($this->isGranted('ROLE_ADMIN') || $this->isGranted('ROLE_BOARD') || $this->isGranted('ROLE_TREASURER')) {
             $clubId = $request->query->getInt('club', $this->clubContext->getClub()?->getId() ?? 0);
             if ($clubId > 0) {
                 $club = $this->em->find(Club::class, $clubId) ?? throw $this->createNotFoundException();
@@ -420,10 +428,11 @@ final class MembershipController extends AbstractController
         return $response;
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/club/{id}', name: 'membership_club', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function club(Club $club): Response
     {
+        $this->assertClubPermission(PermissionModule::MEMBERSHIP, PermissionAction::READ);
         $this->assertClub($club);
         
         return $this->adminPage('membership/club.html.twig', [
@@ -443,10 +452,11 @@ final class MembershipController extends AbstractController
         ]);
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/contribution/{id}', name: 'membership_contribution_edit', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function editContribution(ContributionClass $class, Request $request): Response
     {
+        $this->assertClubPermission(PermissionModule::FINANCE, PermissionAction::EDIT);
         $this->assertClub($class->getClub());
 
         if ($request->isMethod('GET')) {
@@ -471,10 +481,11 @@ final class MembershipController extends AbstractController
         );
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/application/{id}', name: 'membership_application_decide', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function decide(MembershipApplication $application, Request $request): Response
     {
+        $this->assertClubPermission(PermissionModule::MEMBERSHIP, PermissionAction::EDIT);
         $this->assertClub($application->getClub());
         
         $builder = $this->forms->createNamedBuilder('membership_decision')
@@ -610,10 +621,11 @@ final class MembershipController extends AbstractController
         return $this->memberPage($this->ownMember(), $request, false);
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/member/{id}', name: 'membership_member', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function member(Member $member, Request $request): Response
     {
+        $this->assertClubPermission(PermissionModule::MEMBERSHIP, PermissionAction::READ);
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $member);
         $this->assertClub($member->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
         return $this->memberPage($member, $request, true);
@@ -625,6 +637,8 @@ final class MembershipController extends AbstractController
         $parameters = $admin ? ['id' => $member->getId()] : [];
         $actor = $this->account()->getUserIdentifier();
         $forms = [];
+        $canFinance = $admin && $member->getClub() !== null
+            && $this->moduleAccess->can($this->account(), $member->getClub(), PermissionModule::FINANCE, PermissionAction::EDIT);
         $forms['termination'] = $this->forms->createNamedBuilder('membership_termination')
             ->getForm()
             ->handleRequest($request);
@@ -707,7 +721,7 @@ final class MembershipController extends AbstractController
                 ->getForm()
                 ->handleRequest($request);
 
-            if ($response = $this->process($forms['assignment'], function () use ($forms, $member, $actor): void {
+            if ($canFinance && ($response = $this->process($forms['assignment'], function () use ($forms, $member, $actor): void {
                 $d = $forms['assignment']->getData();
                 $this->finance->assign(
                     $member, 
@@ -717,7 +731,7 @@ final class MembershipController extends AbstractController
                     $d['reason'], 
                     $actor
                 );
-            }, $route, $parameters)) { 
+            }, $route, $parameters))) {
                 return $response; 
             }
 
@@ -734,7 +748,7 @@ final class MembershipController extends AbstractController
                     ->getForm()
                     ->handleRequest($request);
             
-                if ($response = $this->process($forms['annual'], function () use ($forms, $member, $actor): void {
+                if ($canFinance && ($response = $this->process($forms['annual'], function () use ($forms, $member, $actor): void {
                     $d = $forms['annual']->getData();
                     
                     $this->finance->annual(
@@ -743,7 +757,7 @@ final class MembershipController extends AbstractController
                         $d['due'], 
                         $actor
                     );
-                }, $route, $parameters)) { 
+                }, $route, $parameters))) {
                     return $response; 
                 }
             
@@ -763,11 +777,11 @@ final class MembershipController extends AbstractController
                 )
                 ->getForm()->handleRequest($request);
             
-                if ($response = $this->process($forms['special'], function () use ($forms, $member, $actor): void {
+                if ($canFinance && ($response = $this->process($forms['special'], function () use ($forms, $member, $actor): void {
                 
                     $d = $forms['special']->getData();
                     $this->finance->special($member, $d['description'], $d['amount'], $d['due'], $actor);
-                }, $route, $parameters)) { return $response; }
+                }, $route, $parameters))) { return $response; }
             $forms['mandate'] = $this->forms->createNamedBuilder('sepa_mandate')
                 ->add('reference', F\TextType::class, [
                     'label' => 'Mandatsreferenz', 
@@ -785,6 +799,11 @@ final class MembershipController extends AbstractController
                     'constraints' => [new Assert\Length(max: 50)]
                     ]
                 )
+                ->add('bic', F\TextType::class, [
+                    'label' => 'BIC (verschlüsselt gespeichert, sofern erforderlich)',
+                    'required' => false,
+                    'constraints' => [new Assert\Length(max: 11)],
+                ])
                 ->add('signed', F\DateType::class, [
                     'label' => 'Unterschriftsdatum', 
                     'widget' => 'single_text', 
@@ -800,7 +819,7 @@ final class MembershipController extends AbstractController
                 )
                 ->getForm()->handleRequest($request);
 
-            if ($response = $this->process($forms['mandate'], function () use ($forms, $member, $actor): void {
+            if ($canFinance && ($response = $this->process($forms['mandate'], function () use ($forms, $member, $actor): void {
                 $d = $forms['mandate']->getData();
                 $this->finance->createMandate(
                     $member, 
@@ -808,9 +827,9 @@ final class MembershipController extends AbstractController
                     $d['holder'], 
                     $d['iban'], 
                     $d['signed'], 
-                    $d['proof'], $actor
+                    $d['proof'], $actor, (string) ($d['bic'] ?? '')
                 );
-            }, $route, $parameters)) { 
+            }, $route, $parameters))) {
                 return $response; 
             }
         }
@@ -825,13 +844,15 @@ final class MembershipController extends AbstractController
                 ->findBy(['member' => $member], ['id' => 'DESC']),
             'mandates' => $this->em->getRepository(SepaMandate::class)
                 ->findBy(['member' => $member], ['id' => 'DESC']),
+            'canFinance' => $canFinance,
         ]);
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/charge/{id}/payment', name: 'membership_payment', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET', 'POST'])]
     public function payment(MembershipCharge $charge, Request $request): Response
     {
+        $this->assertClubPermission(PermissionModule::FINANCE, PermissionAction::EDIT);
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $charge->getMember());
         $this->assertClub($charge->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
         
@@ -862,10 +883,11 @@ final class MembershipController extends AbstractController
         ]);
     }
 
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_USER')]
     #[Route('/admin/membership/mandate/{id}/revoke', name: 'membership_mandate_revoke', requirements: ['id' => '\d+'], defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['POST'])]
     public function revoke(SepaMandate $mandate, Request $request): Response
     {
+        $this->assertClubPermission(PermissionModule::FINANCE, PermissionAction::EDIT);
         $this->denyAccessUnlessGranted(MemberManagementVoter::MANAGE, $mandate->getMember());
         
         $this->assertClub($mandate->getMember()->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.'));
@@ -924,6 +946,14 @@ final class MembershipController extends AbstractController
     {
         if ($this->clubContext->getClub()?->getId() !== $club->getId()) {
             throw $this->createAccessDeniedException('Verein nicht im Verwaltungsbereich.');
+        }
+    }
+
+    private function assertClubPermission(PermissionModule $module, PermissionAction $action): void
+    {
+        $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Kein Verein ausgewählt.');
+        if (!$this->moduleAccess->can($this->account(), $club, $module, $action)) {
+            throw $this->createAccessDeniedException();
         }
     }
 

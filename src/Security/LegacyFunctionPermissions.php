@@ -56,10 +56,23 @@ final class LegacyFunctionPermissions
                 PermissionModule::FILES->value => $all,
             ],
             User::ROLE_TREASURER => [PermissionModule::FINANCE->value => $all],
+            User::ROLE_BOARD => [
+                PermissionModule::MEMBERSHIP->value => $all,
+                PermissionModule::GOVERNANCE->value => $all,
+                PermissionModule::FINANCE->value => [PermissionAction::READ],
+            ],
+            User::ROLE_SECRETARY => [
+                PermissionModule::GOVERNANCE->value => $all,
+                PermissionModule::FILES->value => [PermissionAction::READ, PermissionAction::CREATE, PermissionAction::EDIT],
+            ],
             User::ROLE_ADMIN => [
                 PermissionModule::MEMBERSHIP->value => $all,
                 PermissionModule::SPORT->value => $all,
                 PermissionModule::SYSTEM->value => $all,
+                PermissionModule::GOVERNANCE->value => $all,
+                PermissionModule::FINANCE->value => $all,
+                PermissionModule::ACCOUNTING->value => $all,
+                PermissionModule::AUDIT->value => $all,
             ],
             default => [],
         };

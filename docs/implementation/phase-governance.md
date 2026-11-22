@@ -41,4 +41,4 @@ php bin/console app:membership:queue-dunning --minimum-days 14 --repeat-days 30
 
 ## Bekannte Restpunkte
 
-Die bestehende Rollenvererbung ist für eine strikte Trennung der Ehrenämter noch zu breit. Produktionsstart mit mehreren Finanzberechtigten sollte daher erst nach Umsetzung einer expliziten Rollenmatrix erfolgen.
+Die Rollenvererbung wurde entfernt. Vorstand, Kassenwart, Schriftführung und Administrator werden über explizite Modulberechtigungen getrennt und besitzen HTTP-Abnahmetests. Vor einem Mehrpersonen-Finanzstart muss das konkrete Bankprofil für pain.008 abgenommen werden.

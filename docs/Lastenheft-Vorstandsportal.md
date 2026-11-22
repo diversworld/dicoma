@@ -264,13 +264,12 @@ Bereitstellung:
 
 ## 8. Offene produktive Abnahme
 
-Noch nicht als vollständige Kassenbuchhaltung oder rechtssichere Dokumentenvorlage freigegeben sind:
+Die Phase-A-Module für Buchhaltung, SEPA, Rollen, Mahnung, Audit, Datenschutz und Testgates sind implementiert. Für die formale Produktivabnahme verbleiben:
 
-- Konten, Einnahmen, Ausgaben und Jahresabschluss
-- SEPA pain.008 und BIC
-- vollständig konfigurierbare Mahnfristen
+- Bankseitiger Abgleich des konkreten pain.008-Profils
+- historischer Abgleich/Backfill des neuen Journals gegen Bestandssysteme
 - Gruppen-E-Mail mit Vorlageneditor
-- rollenscharfe Trennung gegenüber der vorhandenen breiten Vererbung
+- steuerrechtliche Bestätigung der Aufbewahrungsfristen und Jahresabschlussrichtlinie
 - AV-Malware-Prüfung und Dokumentaufbewahrung
 - rechtliche Gestaltung der PDF-Mahntexte
-- formale WCAG- und Lastabnahme
+- vertiefte manuelle WCAG-2.2-AA- und Langzeitlastabnahme

@@ -62,10 +62,10 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 
 | Nummer | Anforderung | IST vor Umsetzung | SOLL | Bewertung nach Umsetzung | Phase |
 |---|---|---|---|---|---|
-| 1 | Vereinsvorstand | Rolle und Menü vorhanden, aber zu breite Rechte | Club-scoped Leitung mit Aufgaben, Dokumenten, Beschlüssen, Berichten | Fachmodule vorhanden; Hierarchie noch kritisch | A |
+| 1 | Vereinsvorstand | Rolle und Menü vorhanden, aber zu breite Rechte | Club-scoped Leitung mit Aufgaben, Dokumenten, Beschlüssen, Berichten | Umgesetzt und mit HTTP-Boundary-Tests abgesichert | A |
 | 2 | Schriftführer | Keine eigene Rolle oder Oberfläche | Eigene Rolle, Sitzungen, Protokolle, Beschlüsse und Aufgaben | Umgesetzt | A |
-| 3 | Kassenwart | Beiträge/Zahlungen vorhanden; Rolle zu breit | Beiträge, Mahnung, Kasse, Konten, Abschluss | Forderungen und Mahnung umgesetzt; Vollfinanz offen | A |
-| 4 | Vereinsadministrator | Nur allgemeine ADMIN/SUPER_ADMIN-Namen | Explizite globale vs. vereinsbezogene Administration | Noch zu präzisieren | A |
+| 3 | Kassenwart | Beiträge/Zahlungen vorhanden; Rolle zu breit | Beiträge, Mahnung, Kasse, Konten, Abschluss | Umgesetzt mit separater Finanz-/Buchhaltungsberechtigung | A |
+| 4 | Vereinsadministrator | Nur allgemeine ADMIN/SUPER_ADMIN-Namen | Explizite globale vs. vereinsbezogene Administration | Modulberechtigungen getrennt; Superadmin bleibt technische Gesamtrolle | A |
 | 5 | Normales Mitglied | Starke Self-Service-Grundlage | Ausschließlich eigene Daten und freigegebene Vereinsdokumente | Bestehendes Portal ergänzt | A |
 | 6 | Aufgaben | Nur ausbildungsbezogene Aufgabenübersicht | Rollenübergreifende, priorisierte Aufgaben mit Frist/Erinnerung | Umgesetzt | A |
 | 7 | Sitzungen | Vereinskalender, aber keine Vorstandssitzungsakte | Agenda, Teilnehmende, Protokoll, Beschlüsse | Umgesetzt | A |
@@ -75,22 +75,22 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 | 11 | Dashboard Vorstand | Kurse, Anträge und Finanzsummen | Mitglieder-, Austritts-, Aufgaben-, Termin-, Beschluss- und Finanz-KPIs | Vorstands-KPIs umgesetzt; allgemeines Ledger offen | A |
 | 12 | Dashboard Schriftführer | Fehlt | Sitzungen, Protokolle, Aufgaben, Freigaben | Eigenes Menü und gemeinsames Governance-Dashboard umgesetzt | A |
 | 13 | Beitragsperioden | Jahres- und Familienlogik | Monat/Jahr, Jugend/Ehre/Familie | Klassen unterstützen Fachtypen; Monatsalgorithmus fehlt | B |
-| 14 | BIC und SEPA-Export | IBAN verschlüsselt; kein BIC/SEPA-Datei | BIC, Mandat, pain.008-Export, Batch-Protokoll | Fehlt | A |
-| 15 | Buchhaltung | Mitgliedsforderungen vorhanden | Einnahmen, Ausgaben, Konten, Jahresabschluss | Fehlt als allgemeines Ledger | A |
+| 14 | BIC und SEPA-Export | IBAN verschlüsselt; kein BIC/SEPA-Datei | BIC, Mandat, pain.008-Export, Batch-Protokoll | Umgesetzt mit Vier-Augen-Freigabe und idempotentem Export | A |
+| 15 | Buchhaltung | Mitgliedsforderungen vorhanden | Einnahmen, Ausgaben, Konten, Jahresabschluss | Doppelbuchungs-Journal, Kontostände und Abschluss umgesetzt | A |
 | 16 | Mitglieder-Stammdaten | Kein Geschlecht, kein Profilbild, nur Ereignishistorie | Alle genannten Stammdaten und Historienansicht | Stammdaten weitgehend, Details offen | B |
 | 17 | Kommunikation | Messaging und Mail-Outbox | Empfängergruppen und Vorlagen | Interne Basis vorhanden; gruppierte Versand-UI fehlt | B |
 | 18 | UX | Responsive, aber stark modulbezogen | Mobile First, wenige Klicks, einheitliche Sprache | Governance-UI mit direktem Workflow ergänzt; Gesamt-A11y offen | B |
-| 19 | Datenschutz | Private Dateien, Scope, CSRF, Verschlüsselung | Vollständiger Lösch-/Aufbewahrungsplan, Export, Audit | Teilweise, Nachweis und Prozesse fehlen | A |
-| 20 | Performance | Mehrere SQL-optimierte Bereiche | Indizes, N+1-Kontrolle, Query-Budgets, Caching | Neue Join-/Indexpfade angelegt; Lasttest offen | B |
+| 19 | Datenschutz | Private Dateien, Scope, CSRF, Verschlüsselung | Vollständiger Lösch-/Aufbewahrungsplan, Export, Audit | Audit, Auskunft, Retention-Dry-Run und bereinigter Ablauf umgesetzt | A |
+| 20 | Performance | Mehrere SQL-optimierte Bereiche | Indizes, N+1-Kontrolle, Query-Budgets, Caching | Reproduzierbarer p95/Fehlerquoten-Lasttest ergänzt | A |
 
 ## 5. Zentrale Risiken
 
 ### Kritisch
 
-- Breite Rollenvererbung muss vor produktivem Mehrbenutzerbetrieb umgestellt werden. Bis dahin dürfen Vorstand und Kassenwart nicht als wirtschaftlich getrennte Funktionen betrachtet werden.
-- IBAN ist verschlüsselt, aber es existiert weder BIC noch SEPA pain.008-Export. Ein manueller Export darf keine unmaskierten IBANs in Dateisystem oder Log schreiben.
-- Das allgemeine Kassenwesen und Jahresabschluss-Workflow fehlen. Die vorhandenen Forderungszahlen sind kein vollständiger Finanzabschluss.
-- Dokumente benötigen vor öffentlichkeitsnahem Betrieb Malware-Prüfung, Hash, Aufbewahrungsdatum und revisionssichere Rechteänderungsprotokolle.
+- Produktive SEPA-Dateien müssen vor dem ersten Bankupload mit der Zielbank bzw. deren pain.008-Profil abgeglichen werden.
+- Das neue Journal ersetzt noch keine externe DATEV-/Steuerberater-Schnittstelle; zurückliegende Kassenbewegungen sind vor einem Wechsel abzugleichen.
+- Aufbewahrungsfristen sind fachlich/steuerlich zu bestätigen, bevor `--apply` produktiv automatisiert wird.
+- Dokumente benötigen vor öffentlichkeitsnahem Betrieb weiterhin Malware-Prüfung und einen revisionssicheren Freigabeprozess mit SHA-256 je Datei.
 
 ### Hoch
 
@@ -109,20 +109,21 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 
 ### Phase A – Kritisch
 
-1. Rollenmatrix technisch verengen; Route- und Voter-Tests für Vorstand, Schriftführer, Kassenwart, Administrator und Mitglied.
+1. Rollenmatrix technisch verengen; Route- und Voter-Tests für Vorstand, Schriftführung, Kassenwart, Administrator und Mitglied. **Umgesetzt.**
 2. Schriftführung, Aufgaben, Beschlüsse und Dokumentfreigaben produktiv abnehmen. (Kern implementiert.)
-3. Mahnstufen und PDF-Ausgabe mit echten Vereinsvorlagen und Fristen konfigurieren. (Grundfunktion implementiert.)
-4. SEPA pain.008 mit BIC, Kontenabgleich, Vier-Augen-Freigabe und signiertem Export ergänzen.
-5. Ledger für Einnahmen/Ausgaben, Kontostände und Jahresabschluss ergänzen.
-6. Zentralen Audit-Trail, DSGVO-Aufbewahrung, Export und Löschkonzept abschließen.
+3. Mahnstufen und PDF-Ausgabe mit echten Vereinsvorlagen und Fristen konfigurieren. **Umgesetzt.**
+4. SEPA pain.008 mit BIC, Kontenabgleich, Vier-Augen-Freigabe und signiertem Export ergänzen. **Technisch umgesetzt; Bankprofil muss vor Upload abgenommen werden.**
+5. Ledger für Einnahmen/Ausgaben, Kontostände und Jahresabschluss ergänzen. **Umgesetzt.**
+6. Zentralen Audit-Trail, DSGVO-Aufbewahrung, Export und Löschkonzept abschließen. **Umgesetzt; Fristen fachlich bestätigen.**
+7. Automatisierte WCAG-Baseline und reproduzierbaren Lasttest einführen. **Umgesetzt.**
 
 ### Phase B – Wichtig
 
 1. Monatsbeiträge, Jugend- und Ehrenmitglieder als periodische Beitragsregeln.
 2. Empfängergruppenauswahl, E-Mail-Vorlagen, Testversand und Versandprotokoll.
 3. Geschlecht, optionale Profilbilder und strukturierte Mitgliedschaftshistorie.
-4. WCAG-Prüfung, Keyboard-Tests, Kontrasttest und mobile Abnahme.
-5. Query-/Lasttests und Cachingstrategie.
+4. Vertiefte WCAG-Expertiseprüfung, Kontrasttest und mobile Usability-Abnahme.
+5. Cachingstrategie und produktionsähnlicher Langzeittest.
 
 ### Phase C – Komfort
 
@@ -142,6 +143,11 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 - Vereinsdokumente und versionierte Dateistände (`ClubDocument`, `ClubDocumentVersion`)
 - Freigabe durch Vorstand, private Speicherung und Mitgliederdownload
 - Vier Mahnstufen, Mahnprotokoll und druckbare PDF-Antwort
+- Konfigurierbare Mahnfristen und Vorlagen
+- Verschlüsselter BIC, vieräugiger SEPA-Lastschriftlauf und pain.008-Export
+- Doppelseitiges Vereinsjournal mit Konten, Buchungen und Jahresabschluss
+- Generischer Audit-Trail, Aufbewahrungsrichtlinie, Retention-CLI und Mitgliederdatenexport
+- WCAG-Basisprüfung und Lasttestskript mit p95-/Fehler-Gates
 - Governance-Dashboard mit Mitglieder-, Aufgaben-, Sitzungs-, Beschluss- und Freigabe-KPIs
 - EasyAdmin-CRUDs für Sitzungen und Aufgaben
 - Direkter Beschluss-/Aufgaben-Workflow sowie responsive Dokumentablage

@@ -5,19 +5,17 @@ security:
     role_hierarchy:
         ROLE_TRAINING_MANAGER:
             - ROLE_INSTRUCTOR
-        ROLE_BOARD:
+        ROLE_SUPER_ADMIN:
             - ROLE_ADMIN
-        ROLE_ADMIN:
+            - ROLE_BOARD
+            - ROLE_TREASURER
+            - ROLE_SECRETARY
             - ROLE_PRESS_OFFICER
             - ROLE_BAR_MANAGER
             - ROLE_INSTRUCTOR
             - ROLE_EQUIPMENT_MANAGER
             - ROLE_EQUIPMENT_CASH
             - ROLE_COMPRESSOR_OPERATOR
-            - ROLE_TREASURER
-
-        ROLE_SUPER_ADMIN:
-            - ROLE_ADMIN
 
     providers:
         app_user_provider:
@@ -112,12 +110,16 @@ security:
         - { path: ^/admin/settings$, roles: [ROLE_ADMIN, ROLE_PRESS_OFFICER, ROLE_BAR_MANAGER] }
         - { path: ^/admin/settings/website$, roles: ROLE_USER }
         - { path: ^/admin/settings/bar-services$, roles: ROLE_BAR_MANAGER }
+        - { path: ^/admin/settings/(?:membership|contributions)$, roles: ROLE_USER }
+        - { path: ^/admin/membership(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/(?:de|en|fr|es)/editorial(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/(?:de|en|fr|es)/?$, roles: ROLE_USER }
         - { path: ^/admin/media(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/course-images(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/club-events(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/membership-finance(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/accounting(?:/|$), roles: ROLE_USER }
+        - { path: ^/admin/privacy(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/governance(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/documents(?:/|$), roles: ROLE_USER }
         - { path: ^/admin$, roles: ROLE_USER }

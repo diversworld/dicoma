@@ -1,6 +1,11 @@
 {# DiCoMa backend only: EasyAdmin context is available on EasyAdmin pages. #}
 {% extends '@EasyAdmin/layout.html.twig' %}
 
+{% block javascript_page_layout %}
+    <a class="skip-link" href="#main">Zum Hauptinhalt springen</a>
+    {{ parent() }}
+{% endblock %}
+
 {# The vendor layout renders this block inside the user dropdown's ActionList. #}
 {% block user_menu %}
     {{ parent() }}
@@ -17,7 +22,7 @@
 {% endblock user_menu %}
 
 {% block header_custom_menu %}
-    {% if is_granted('ROLE_ADMIN') %}
+    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_BOARD') or is_granted('ROLE_TREASURER') or is_granted('ROLE_SECRETARY') %}
         <span class="me-3" data-sport-club-context>
             {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }}
         </span>
@@ -27,7 +32,7 @@
 
 {% block responsive_header_logo %}
     {{ parent() }}
-    {% if is_granted('ROLE_ADMIN') %}
+    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_BOARD') or is_granted('ROLE_TREASURER') or is_granted('ROLE_SECRETARY') %}
         <span class="ms-2" data-sport-club-context>
             {{ 'Verein'|trans }}: {{ admin_club_context.club ? admin_club_context.club.name : 'kein Verein ausgewählt'|trans }}
         </span>

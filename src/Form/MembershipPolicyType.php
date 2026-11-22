@@ -15,6 +15,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use App\Entity\Club;
@@ -90,7 +91,18 @@ final class MembershipPolicyType extends AbstractType
                 'label' => 'SEPA-Gläubiger-ID',
                 'attr' => ['class' => 'form-control'],
                 'required' => false,
-            ]);
+            ])
+            ->add('sepaCreditorName', TextType::class, ['label' => 'SEPA-Gläubigername', 'required' => false])
+            ->add('sepaCreditorIban', TextType::class, ['label' => 'SEPA-Gläubiger-IBAN', 'required' => false])
+            ->add('sepaCreditorBic', TextType::class, ['label' => 'SEPA-Gläubiger-BIC', 'required' => false])
+            ->add('dunningReminderDays', IntegerType::class, ['label' => 'Zahlungserinnerung nach Tagen'])
+            ->add('dunningFirstDays', IntegerType::class, ['label' => 'Erste Mahnung nach Tagen'])
+            ->add('dunningSecondDays', IntegerType::class, ['label' => 'Zweite Mahnung nach Tagen'])
+            ->add('dunningFinalDays', IntegerType::class, ['label' => 'Letzte Mahnung nach Tagen'])
+            ->add('dunningReminderTemplate', TextareaType::class, ['label' => 'Vorlage Zahlungserinnerung', 'attr' => ['rows' => 6], 'help' => 'Platzhalter: {{ description }}, {{ amount }}, {{ dueDate }}, {{ invoice }}, {{ stage }}'])
+            ->add('dunningFirstTemplate', TextareaType::class, ['label' => 'Vorlage erste Mahnung', 'attr' => ['rows' => 6]])
+            ->add('dunningSecondTemplate', TextareaType::class, ['label' => 'Vorlage zweite Mahnung', 'attr' => ['rows' => 6]])
+            ->add('dunningFinalTemplate', TextareaType::class, ['label' => 'Vorlage letzte Mahnung', 'attr' => ['rows' => 6]]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

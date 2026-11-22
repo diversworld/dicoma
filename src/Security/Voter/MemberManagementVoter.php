@@ -43,7 +43,7 @@ final class MemberManagementVoter extends Voter
             }
             return true;
         }
-        if (!$this->authorizationChecker->isGranted('ROLE_ADMIN')) {
+        if (!$this->authorizationChecker->isGranted('ROLE_ADMIN') && !$this->authorizationChecker->isGranted('ROLE_BOARD')) {
             return false;
         }
         $ownClubId = $user->getMember()?->getClub()?->getId();
