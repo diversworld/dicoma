@@ -11,6 +11,9 @@ use App\Entity\ClubDocument;
 use App\Entity\ClubDocumentVersion;
 use App\Entity\MembershipDunningNotice;
 use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
+use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use App\Service\BoardDashboard;
 use App\Service\BoardGovernanceService;
@@ -34,6 +37,7 @@ final class BoardGovernanceController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly AdminClubContext $clubs,
         private readonly AuditLogger $audit,
+        private readonly ModuleAccess $modules,
     ) {}
 
     #[Route('/governance', name: 'admin_governance', methods: ['GET'])]
@@ -61,7 +65,7 @@ final class BoardGovernanceController extends AbstractController
     #[Route('/governance/meetings/{id}/resolutions', name: 'admin_governance_resolution_create', methods: ['POST'])]
     public function createResolution(BoardMeeting $meeting, Request $request, BoardGovernanceService $governance): Response
     {
-        $this->assertGovernanceWriter();
+        $this->assertGovernance(PermissionAction::CREATE);
         $this->assertCsrf('resolution_'.$meeting->getId(), $request);
         $this->assertMeetingClub($meeting);
         $responsibleId = $request->request->getInt('responsible');
@@ -92,7 +96,7 @@ final class BoardGovernanceController extends AbstractController
     #[Route('/governance/resolutions/{id}/task', name: 'admin_governance_resolution_task', methods: ['POST'])]
     public function createTask(BoardResolution $resolution, Request $request, BoardGovernanceService $governance): Response
     {
-        $this->assertGovernanceWriter();
+        $this->assertGovernance(PermissionAction::CREATE);
         $this->assertCsrf('resolution_task_'.$resolution->getId(), $request);
         $this->assertMeetingClub($resolution->getMeeting());
         $actor = $this->getUser();
@@ -112,7 +116,7 @@ final class BoardGovernanceController extends AbstractController
         $this->assertGovernanceReader();
         $club = $this->clubs->getClub() ?? throw $this->createAccessDeniedException();
         if ($request->isMethod('POST')) {
-            $this->assertGovernanceWriter();
+            $this->assertGovernance(PermissionAction::CREATE);
             $this->assertCsrf('club_document_upload', $request);
             $file = $request->files->get('document');
             if (!$file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
@@ -239,9 +243,25 @@ final class BoardGovernanceController extends AbstractController
         if ($date === false) { throw $this->createNotFoundException('Ungültige Frist.'); }
         return $date->setTime(23, 59);
     }
-    private function isGovernanceReader(): bool { return $this->isGranted(User::ROLE_BOARD) || $this->isGranted(User::ROLE_SECRETARY) || $this->isGranted(User::ROLE_ADMIN); }
-    private function assertGovernanceReader(): void { if (!$this->isGovernanceReader()) { throw $this->createAccessDeniedException(); } }
-    private function assertGovernanceWriter(): void { $this->assertGovernanceReader(); }
+    private function isGovernanceReader(): bool { return $this->hasModuleAccess(PermissionModule::GOVERNANCE, PermissionAction::READ); }
+    private function assertGovernanceReader(): void { $this->assertGovernance(PermissionAction::READ); }
+    private function assertGovernance(PermissionAction $action): void
+    {
+        if (!$this->hasModuleAccess(PermissionModule::GOVERNANCE, $action)) {
+            throw $this->createAccessDeniedException('Für diesen Bereich fehlen die Berechtigungen der Vereinsfunktion.');
+        }
+    }
+    private function hasModuleAccess(PermissionModule $module, PermissionAction $action): bool
+    {
+        $user = $this->getUser();
+        $club = $this->clubs->getClub();
+        return $user instanceof User && $club !== null && $this->modules->can($user, $club, $module, $action);
+    }
     private function assertBoardApprover(): void { if (!$this->isGranted(User::ROLE_BOARD) && !$this->isGranted(User::ROLE_ADMIN)) { throw $this->createAccessDeniedException(); } }
-    private function assertFinanceReader(): void { if (!$this->isGranted(User::ROLE_TREASURER) && !$this->isGranted(User::ROLE_ADMIN)) { throw $this->createAccessDeniedException(); } }
+    private function assertFinanceReader(): void
+    {
+        if (!$this->hasModuleAccess(PermissionModule::FINANCE, PermissionAction::READ)) {
+            throw $this->createAccessDeniedException('Für die Finanzunterlagen fehlen die Zugriffsrechte.');
+        }
+    }
 }

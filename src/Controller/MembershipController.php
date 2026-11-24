@@ -154,7 +154,7 @@ final class MembershipController extends AbstractController
         return $this->club($club);
     }
 
-    #[Route('/admin/configuration', name: 'admin_configuration', methods: ['GET'])]
+    #[Route('/admin/configuration', name: 'admin_configuration', defaults: self::ADMIN_ROUTE_DEFAULTS, methods: ['GET'])]
     public function legacyConfiguration(): Response
     {
         return $this->redirectToRoute('admin_settings', [], Response::HTTP_SEE_OTHER);

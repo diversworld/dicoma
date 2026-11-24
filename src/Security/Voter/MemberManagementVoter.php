@@ -6,6 +6,9 @@ namespace App\Security\Voter;
 
 use App\Entity\Member;
 use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
+use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
@@ -19,6 +22,7 @@ final class MemberManagementVoter extends Voter
     public function __construct(
         private readonly AuthorizationCheckerInterface $authorizationChecker,
         private readonly AdminClubContext $clubContext,
+        private readonly ModuleAccess $moduleAccess,
     ) {}
 
     protected function supports(string $attribute, mixed $subject): bool
@@ -43,7 +47,8 @@ final class MemberManagementVoter extends Voter
             }
             return true;
         }
-        if (!$this->authorizationChecker->isGranted('ROLE_ADMIN') && !$this->authorizationChecker->isGranted('ROLE_BOARD')) {
+        $club = $this->clubContext->getClub();
+        if ($club === null || !$this->moduleAccess->can($user, $club, PermissionModule::MEMBERSHIP, PermissionAction::EDIT)) {
             return false;
         }
         $ownClubId = $user->getMember()?->getClub()?->getId();

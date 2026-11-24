@@ -55,5 +55,16 @@ final class AreaRouteBoundaryTest extends KernelTestCase
             self::assertTrue(EasyAdminRequest::matches(new Request(attributes: $admin->getDefaults())), $adminName);
             self::assertSame(DashboardController::class, $admin->getDefault('dashboardControllerFqcn'), $adminName);
         }
+
+        foreach ([
+            'admin_membership_finance', 'admin_accounting', 'admin_governance',
+            'admin_privacy', 'admin_communication', 'admin_club_events', 'admin_media_index',
+            'admin_course_division_review', 'admin_division_functions',
+        ] as $routeName) {
+            $route = $routes->get($routeName);
+            self::assertNotNull($route, $routeName);
+            self::assertTrue(EasyAdminRequest::matches(new Request(attributes: $route->getDefaults())), $routeName);
+            self::assertSame(DashboardController::class, $route->getDefault('dashboardControllerFqcn'), $routeName);
+        }
     }
 }

@@ -99,6 +99,12 @@ final class CompetitionAccess
     public function isStaff(): bool
     {
         if ($this->security->isGranted('ROLE_SUPER_ADMIN')) { return true; }
+        if ($this->security->isGranted(User::ROLE_BOARD)
+            || $this->security->isGranted(User::ROLE_SECRETARY)
+            || $this->security->isGranted(User::ROLE_TREASURER)
+            || $this->security->isGranted(User::ROLE_PRESS_OFFICER)) {
+            return true;
+        }
         if ($this->security->isGranted('ROLE_ADMIN')) {
             $user = $this->security->getUser();
             return $user instanceof User && $user->getMember()?->getClub() !== null;

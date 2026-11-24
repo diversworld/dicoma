@@ -170,8 +170,10 @@ class DashboardController extends AbstractDashboardController
         $isBoard = $this->isGranted(User::ROLE_BOARD);
         $isTreasurer = $this->isGranted(User::ROLE_TREASURER);
         $isSecretary = $this->isGranted(User::ROLE_SECRETARY);
+        $canGovernance = $user instanceof User && $club !== null
+            && $this->moduleAccess->can($user, $club, PermissionModule::GOVERNANCE, PermissionAction::READ);
         $storedRoles = $user instanceof User ? $user->getStoredRoles() : [];
-        $governance = $club !== null && ($isBoard || $isSecretary || $this->isGranted(User::ROLE_ADMIN))
+        $governance = $club !== null && $canGovernance
             ? $this->boardDashboard->forClub($club)
             : null;
         $finance = [
@@ -300,7 +302,7 @@ class DashboardController extends AbstractDashboardController
                 : (in_array(User::ROLE_TREASURER, $storedRoles, true) ? 'Kassenwart'
                     : ($isBoard ? 'Vorstand' : 'Verwaltung')),
             'governance' => $governance,
-            'canGovernance' => $governance !== null,
+            'canGovernance' => $canGovernance,
 			'expiredQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpired($club, 5),
@@ -811,6 +813,12 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
+        $user = $this->getUser();
+        $club = $this->clubContext->getClub();
+        $canModule = fn (PermissionModule $module, PermissionAction $action = PermissionAction::READ): bool =>
+            $user instanceof User && $club !== null && $this->moduleAccess->can($user, $club, $module, $action);
+        $canMembership = $canModule(PermissionModule::MEMBERSHIP);
+        $canGovernance = $canModule(PermissionModule::GOVERNANCE);
         $financeRoute = $this->functionModelEnabled && $this->getUser() instanceof \App\Entity\User
             && $this->clubContext->getClub() instanceof \App\Entity\Club
             && $this->moduleAccess->can(
@@ -865,6 +873,17 @@ class DashboardController extends AbstractDashboardController
         }
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
+                ...($canMembership ? [
+                    MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
+                    MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
+                ] : []),
+                ...($canGovernance ? [
+                    MenuItem::section('Vorstand & Organisation'),
+                    MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
+                    MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
+                    MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
+                    MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
+                ] : []),
                 ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 ...($websiteSettings
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),

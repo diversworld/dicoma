@@ -67,6 +67,34 @@ final class PhaseARoleBoundaryHttpTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testBoardCanUseGovernanceAndCalendarWithoutLosingTheAdminNavigation(): void
+    {
+        $board = $this->account('board-navigation', [User::ROLE_BOARD]);
+        $this->client->loginUser($board);
+
+        $this->client->request('GET', '/admin/de/board-task');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('a[href*="routeName=admin_governance"]');
+
+        $this->client->request('GET', '/admin/calendar');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('[data-competition-navigation]');
+    }
+
+    public function testDeniedAdminAccessShowsAnActionablePageWithTheAdminNavigation(): void
+    {
+        $treasurer = $this->account('treasurer-denied', [User::ROLE_TREASURER]);
+        $this->client->loginUser($treasurer);
+
+        $this->client->request('GET', '/admin/de/board-task');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSelectorTextContains('body', 'Für diesen Bereich fehlen die Zugriffsrechte');
+        self::assertSelectorExists('aside.sidebar');
+    }
+
     private function account(string $name, array $roles): User
     {
         $person = (new Person())->setFirstname(ucfirst($name))->setLastname('Tester');

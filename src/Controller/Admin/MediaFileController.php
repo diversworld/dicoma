@@ -26,7 +26,7 @@ use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-#[Route('/admin/media')]
+#[Route('/admin/media', defaults: DashboardController::ROUTE_DEFAULTS)]
 #[IsGranted('ROLE_USER')]
 final class MediaFileController extends AbstractController
 {
@@ -409,7 +409,9 @@ final class MediaFileController extends AbstractController
         if ($this->functionModelEnabled) {
             return $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
         }
-        $this->denyAccessUnlessGranted('ROLE_PRESS_OFFICER');
+        if (!$this->isGranted('ROLE_PRESS_OFFICER') && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
         if (!$this->isGranted('ROLE_ADMIN')) { return $website->editorialClub(); }
         return $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Vereinszuordnung erforderlich.');
     }

@@ -24,7 +24,7 @@ final class CourseDivisionController extends AbstractController
 {
     public function __construct(private readonly AdminClubContext $clubContext) {}
 
-    #[Route('/admin/training/divisions/review', name: 'admin_course_division_review', methods: ['GET'])]
+    #[Route('/admin/training/divisions/review', name: 'admin_course_division_review', methods: ['GET'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function review(Request $request, EntityManagerInterface $em): Response
     {
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_TRAINING_MANAGER') && !$this->isGranted('ROLE_COURSE_ADMIN')) {
@@ -47,7 +47,7 @@ final class CourseDivisionController extends AbstractController
         return $this->render('admin/course/division_review.html.twig', ['club' => $club, 'courses' => $courses]);
     }
 
-    #[Route('/admin/training/course/{id}/divisions', name: 'admin_course_division_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/training/course/{id}/divisions', name: 'admin_course_division_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function edit(Courses $course, Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted(CourseManagementVoter::MANAGE, $course);

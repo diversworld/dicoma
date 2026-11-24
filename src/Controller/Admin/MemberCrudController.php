@@ -22,6 +22,8 @@ use App\Entity\TeamMember;
 use App\Entity\ContributionClass;
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipEvent;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Service\MembershipFinanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -54,6 +56,7 @@ use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Form\MemberQualificationType;
+use App\Security\ModuleAccess;
 
 #[IsGranted('ROLE_USER')]
 class MemberCrudController extends AbstractCrudController
@@ -68,13 +71,17 @@ class MemberCrudController extends AbstractCrudController
         private readonly MembershipFinanceService $finance,
         private readonly MembershipHistoryRecorder $history,
         private readonly FormFactoryInterface $forms,
+        private readonly ModuleAccess $moduleAccess,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $functionModelEnabled,
     ) {}
 
     /** Schritt 32: Listenfilter erfolgt in SQL, nicht erst beim Rendern. */
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
-        if (!$this->isGranted(User::ROLE_ADMIN) && !$this->isGranted(User::ROLE_BOARD)) {
+        $user = $this->getUser();
+        $club = $this->clubContext->getClub();
+        if (!$user instanceof User || $club === null
+            || !$this->moduleAccess->can($user, $club, PermissionModule::MEMBERSHIP, PermissionAction::READ)) {
             throw $this->createAccessDeniedException();
         }
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);

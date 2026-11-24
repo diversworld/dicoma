@@ -19,7 +19,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-#[Route('/admin/club-events')]
+#[Route('/admin/club-events', defaults: DashboardController::ROUTE_DEFAULTS)]
 #[IsGranted('ROLE_USER')]
 final class ClubEventAdminController extends AbstractController
 {

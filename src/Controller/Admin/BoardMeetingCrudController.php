@@ -6,6 +6,9 @@ namespace App\Controller\Admin;
 
 use App\Entity\BoardMeeting;
 use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
+use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use App\Service\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,19 +30,23 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class BoardMeetingCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly AdminClubContext $clubs, private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AdminClubContext $clubs,
+        private readonly AuditLogger $audit,
+        private readonly ModuleAccess $modules,
+    ) {}
     public static function getEntityFqcn(): string { return BoardMeeting::class; }
 
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
-        $this->assertManagementAccess();
+        $this->assertManagementAccess(PermissionAction::READ);
         return parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters)
             ->andWhere('entity.club = :club')->setParameter('club', $this->clubs->getClub());
     }
 
     public function createEntity(string $entityFqcn): BoardMeeting
     {
-        $this->assertManagementAccess();
+        $this->assertManagementAccess(PermissionAction::CREATE);
         $club = $this->clubs->getClub() ?? throw $this->createAccessDeniedException();
         $user = $this->getUser();
         if (!$user instanceof User) {
@@ -73,7 +80,7 @@ final class BoardMeetingCrudController extends AbstractCrudController
 
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
-        $this->assertEntityScope($entityInstance);
+        $this->assertEntityScope($entityInstance, PermissionAction::CREATE);
         parent::persistEntity($entityManager, $entityInstance);
         $this->audit->record($entityInstance->getClub(), $this->getUser()->getUserIdentifier(), 'governance.meeting.created', $entityInstance);
         $entityManager->flush();
@@ -81,25 +88,26 @@ final class BoardMeetingCrudController extends AbstractCrudController
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
-        $this->assertEntityScope($entityInstance);
+        $this->assertEntityScope($entityInstance, PermissionAction::EDIT);
         parent::updateEntity($entityManager, $entityInstance);
         $this->audit->record($entityInstance->getClub(), $this->getUser()->getUserIdentifier(), 'governance.meeting.updated', $entityInstance, ['status' => $entityInstance->getStatus()]);
         $entityManager->flush();
     }
 
-    private function assertEntityScope(BoardMeeting $meeting): void
+    private function assertEntityScope(BoardMeeting $meeting, PermissionAction $action): void
     {
-        $this->assertManagementAccess();
+        $this->assertManagementAccess($action);
         if ($meeting->getClub()->getId() !== $this->clubs->getClub()?->getId()) {
             throw $this->createAccessDeniedException();
         }
     }
 
-    private function assertManagementAccess(): void
+    private function assertManagementAccess(PermissionAction $action): void
     {
-        if (!$this->isGranted(User::ROLE_BOARD)
-            && !$this->isGranted(User::ROLE_SECRETARY)
-            && !$this->isGranted(User::ROLE_ADMIN)) {
+        $user = $this->getUser();
+        $club = $this->clubs->getClub();
+        if (!$user instanceof User || $club === null
+            || !$this->modules->can($user, $club, PermissionModule::GOVERNANCE, $action)) {
             throw $this->createAccessDeniedException();
         }
     }

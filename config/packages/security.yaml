@@ -124,7 +124,9 @@ security:
         - { path: ^/admin/governance(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/documents(?:/|$), roles: ROLE_USER }
         - { path: ^/admin$, roles: ROLE_USER }
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        # Domain controllers and voters enforce the actual module permission.
+        # Do not reject delegated club functions here solely because they are not ROLE_ADMIN.
+        - { path: ^/admin, roles: ROLE_USER }
         - { path: ^/settings, roles: ROLE_ADMIN }
 
         # ---------------------------------------------------------

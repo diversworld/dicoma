@@ -14,8 +14,11 @@ use App\Entity\Person;
 use App\Entity\TankCheck;
 use App\Entity\User;
 use App\Enum\MembershipStatus;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Security\DelegatedRoles;
 use App\Security\FolderPermissions;
+use App\Security\ModulePermission;
 use App\Service\MembershipService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -83,6 +86,29 @@ final class Phase3RoleAuthorizationHttpTest extends WebTestCase
         $this->client->request('GET', '/profile/membership');
         self::assertResponseRedirects();
         self::assertStringContainsString('/login', (string) $this->client->getResponse()->headers->get('Location'));
+    }
+
+    public function testNewFunctionModulePermissionsAuthorizeGovernanceAndPopulateTheMenu(): void
+    {
+        $user = $this->account('module-governance', [], $this->club);
+        $function = new ClubFunction($this->club, 'Vorstandskoordination');
+        $function->setModulePermissions([
+            ModulePermission::key(PermissionModule::GOVERNANCE, PermissionAction::READ),
+            ModulePermission::key(PermissionModule::GOVERNANCE, PermissionAction::CREATE),
+            ModulePermission::key(PermissionModule::GOVERNANCE, PermissionAction::EDIT),
+        ]);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $user));
+        $this->em->flush();
+
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/admin/de');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar a[href*="routeName=admin_governance"]');
+
+        $this->client->request('GET', '/admin/de/board-task');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
     }
 
     public function testNewFunctionAdministrationChecksPrivilegesAndStaleForms(): void

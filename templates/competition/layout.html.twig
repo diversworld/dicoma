@@ -1,18 +1,7 @@
-{% extends '@EasyAdmin/page/content.html.twig' %}
+{% extends 'admin/portal_layout.html.twig' %}
 {% block sidebar %}
-    {% if is_granted('ROLE_ADMIN') %}{{ parent() }}{% else %}
-        <aside class="sidebar" data-competition-navigation>
-            <nav class="p-3" aria-label="{{ 'Mannschaften und Turniere'|trans }}">
-                {% if competitionStaff is not defined or competitionStaff %}
-                <h2 class="h5">{{ 'Mannschaften und Turniere'|trans }}</h2>
-                <p><a href="{{ path('competition_teams') }}">{{ 'Meine Mannschaften'|trans }}</a></p>
-                <p><a href="{{ path('competition_tournaments') }}">{{ 'Turniere'|trans }}</a></p>
-                {% endif %}
-                {% if is_granted('ROLE_BAR_MANAGER') %}<p><a href="{{ path('admin_portal_bar_duty') }}">Clubheimverwaltung</a></p>{% endif %}
-                <p><a href="{{ path('club_calendar') }}">{{ 'Veranstaltungskalender'|trans }}</a></p>
-            </nav>
-        </aside>
-    {% endif %}
+    {{ parent() }}
+    <span class="visually-hidden" data-competition-navigation></span>
 {% endblock %}
 {% block content_title %}{% block competition_title %}{{ 'Mannschaften und Turniere'|trans }}{% endblock %}{% endblock %}
 {% block main %}

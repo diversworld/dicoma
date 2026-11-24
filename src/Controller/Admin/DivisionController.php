@@ -50,7 +50,7 @@ final class DivisionController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/divisions/club/{id}/new', name: 'admin_division_new', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/divisions/club/{id}/new', name: 'admin_division_new', requirements: ['id' => '\d+'], methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function create(Club $club, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($club);
@@ -58,7 +58,7 @@ final class DivisionController extends AbstractController
         return $this->editForm((new Sport())->setClub($club), $request, $em);
     }
 
-    #[Route('/admin/divisions/{id}/edit', name: 'admin_division_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/divisions/{id}/edit', name: 'admin_division_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function edit(Sport $sport, Request $request, EntityManagerInterface $em): Response
     {
         $club = $sport->getClub();
@@ -72,7 +72,7 @@ final class DivisionController extends AbstractController
         return $this->editForm($sport, $request, $em);
     }
 
-    #[Route('/admin/divisions/{id}/functions/new', name: 'admin_division_function_new', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/divisions/{id}/functions/new', name: 'admin_division_function_new', requirements: ['id' => '\d+'], methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function createFunction(Sport $sport, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($sport->getClub() ?? throw $this->createNotFoundException());
@@ -80,7 +80,7 @@ final class DivisionController extends AbstractController
         return $this->functionForm(new DivisionRoleAssignment($sport), $request, $em);
     }
 
-    #[Route('/admin/divisions/functions/{id}/edit', name: 'admin_division_function_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    #[Route('/admin/divisions/functions/{id}/edit', name: 'admin_division_function_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     public function editFunction(DivisionRoleAssignment $assignment, Request $request, EntityManagerInterface $em): Response
     {
         $this->assertClub($assignment->getSport()->getClub() ?? throw $this->createNotFoundException());

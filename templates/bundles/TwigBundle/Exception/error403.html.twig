@@ -1,0 +1,43 @@
+{% set backend_request = (app.request.pathInfo == '/admin' or app.request.pathInfo starts with '/admin/')
+    and ea is defined and ea is not null %}
+{% extends backend_request ? 'admin/portal_layout.html.twig' : 'base.html.twig' %}
+
+{% block title %}Zugriff nicht möglich{% endblock %}
+
+{% block content_title %}Zugriff nicht möglich{% endblock %}
+
+{% block body %}
+    {% if backend_request %}
+        {{ parent() }}
+    {% else %}
+        <main class="container py-5">
+            {{ block('access_denied_message') }}
+        </main>
+    {% endif %}
+{% endblock %}
+
+{% block main %}
+    <main id="main-content" class="py-4">
+        {{ block('access_denied_message') }}
+    </main>
+{% endblock %}
+
+{% block access_denied_message %}
+    <section class="card border-warning" aria-labelledby="access-denied-title">
+        <div class="card-body">
+            <h1 id="access-denied-title" class="h3">Für diesen Bereich fehlen die Zugriffsrechte</h1>
+            <p class="mb-3">
+                Dein Konto ist angemeldet, der aktuellen Vereinsfunktion fehlt aber die notwendige Berechtigung.
+                Wende dich an die Vereinsverwaltung, wenn dieser Bereich zu deinen Aufgaben gehört.
+            </p>
+            <p class="text-muted mb-4">
+                Es wurden keine Daten verändert. Du kannst über das Menü zu einem freigegebenen Bereich wechseln.
+            </p>
+            {% if backend_request %}
+                <a class="btn btn-primary" href="{{ path('admin') }}">Zur Arbeitsübersicht</a>
+            {% else %}
+                <a class="btn btn-primary" href="{{ path('app_home') }}">Zur Startseite</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
