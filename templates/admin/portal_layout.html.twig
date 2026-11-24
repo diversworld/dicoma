@@ -1,38 +1,6 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
 {% block sidebar %}
-    {% if is_granted('ROLE_ADMIN') %}
-        {{ parent() }}
-    {% else %}
-        <aside class="sidebar" data-training-staff-navigation>
-            <nav aria-label="Fachverwaltung" class="p-3">
-                {% if is_granted('ROLE_INSTRUCTOR') or is_granted('ROLE_COURSE_ADMIN') %}
-                    <h2>Ausbildung</h2>
-                    <p><a href="{{ path('admin_portal_training_portal') }}">Zugeordnete Kurse</a></p>
-                {% endif %}
-                {% if is_granted('ROLE_TRAINING_MANAGER') %}
-                    <p><a href="{{ path('admin_training_overview') }}">Ausbildungsübersicht</a></p>
-                {% endif %}
-                {% if is_granted('ROLE_BAR_MANAGER') %}
-                    <p><a href="{{ path('admin_portal_bar_duty') }}">Clubheimverwaltung</a></p>
-                {% endif %}
-                {% if (club_function_membership_enabled and editorial_access.canViewSettings) or (not club_function_membership_enabled and is_granted('ROLE_PRESS_OFFICER')) %}
-                    <p><a href="{{ path('admin_settings_website') }}">{{ 'Website-Anzeige'|trans }}</a></p>
-                {% endif %}
-                {% if club_function_membership_enabled %}
-                    {% if editorial_access.can(constant('App\\Enum\\PermissionAction::READ')) %}
-                        <p><a href="{{ path('admin_club_events') }}">Veranstaltungsbuchungen</a></p>
-                    {% elseif editorial_access.can(constant('App\\Enum\\PermissionAction::CREATE')) %}
-                        <p><a href="{{ path('admin_club_event_new') }}">Veranstaltungsbuchungen</a></p>
-                    {% endif %}
-                {% endif %}
-                {% if (club_function_membership_enabled and is_granted('ROLE_MEMBER')) or is_granted('ROLE_PRESS_OFFICER') %}
-                    <p><a href="{{ path('admin_media_index') }}">{{ 'Dateiverwaltung'|trans }}</a></p>
-                {% endif %}
-                {% if is_granted('ROLE_BAR_MANAGER') %}
-                    <p><a href="{{ path('admin_settings_bar_services') }}">Thekendiensteinstellungen</a></p>
-                {% endif %}
-            </nav>
-        </aside>
-    {% endif %}
+    {{ parent() }}
+    <span class="visually-hidden" data-training-staff-navigation></span>
 {% endblock %}

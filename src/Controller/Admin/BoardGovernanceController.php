@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin')]
+#[Route('/admin', defaults: DashboardController::ROUTE_DEFAULTS)]
 #[IsGranted('ROLE_USER')]
 final class BoardGovernanceController extends AbstractController
 {

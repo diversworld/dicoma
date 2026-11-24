@@ -59,8 +59,11 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         $em->flush();
 
         $client->loginUser($treasurer);
-        $client->request('GET', '/admin/membership-finance');
+        $crawler = $client->request('GET', '/admin/membership-finance');
         self::assertResponseIsSuccessful();
+        self::assertSelectorExists('aside.sidebar');
+        self::assertSelectorExists('[data-training-staff-navigation]');
+        self::assertSelectorExists('a[href*="routeName=admin_membership_finance"]');
         self::assertSelectorTextContains('body', 'IBAN, Mandatsnachweise, Kontaktdaten');
         $client->request('GET', '/admin');
         self::assertResponseIsSuccessful();
