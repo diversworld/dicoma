@@ -1,6 +1,11 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}Audit und Datenschutz{% endblock %}
 {% block main %}
+{% if readinessBlockers is empty %}
+<div class="alert alert-success">Alle technisch prüfbaren Punkte und dokumentierten Produktivfreigaben sind vorhanden.</div>
+{% else %}
+<div class="alert alert-warning"><strong>Produktivabnahme offen</strong><ul class="mb-0 mt-2">{% for blocker in readinessBlockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>
+{% endif %}
 <div class="row g-4"><section class="col-lg-4"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Aufbewahrungsrichtlinie</h2></div><div class="card-body"><form method="post" class="vstack gap-3">
 <input type="hidden" name="_token" value="{{ csrf_token('privacy_policy') }}">
 <label class="form-label">Mitgliedsdaten nach Austritt in Jahren<input class="form-control" type="number" min="1" max="10" name="memberRetentionYears" value="{{ policy.memberRetentionYears }}"></label>
@@ -8,7 +13,29 @@
 <label class="form-label">Finanzdaten in Jahren<input class="form-control" type="number" min="10" max="30" name="financialRetentionYears" value="{{ policy.financialRetentionYears }}"></label>
 <label class="form-label">Auditdaten in Jahren<input class="form-control" type="number" min="1" max="10" name="auditRetentionYears" value="{{ policy.auditRetentionYears }}"></label>
 <div class="form-check"><input class="form-check-input" type="checkbox" id="purge-enabled" name="purgeEnabled" value="1" {{ policy.purgeEnabled ? 'checked' : '' }}><label class="form-check-label" for="purge-enabled">Automatische Bereinigung zulassen</label></div>
-<button class="btn btn-primary">Speichern</button></form></div></div></section>
+<button class="btn btn-primary">Speichern</button></form></div></div>
+<div class="card mt-4"><div class="card-header"><h2 class="h5 mb-0">Produktivfreigaben dokumentieren</h2></div><div class="card-body">
+<p class="small text-muted">Nur nach extern bestätigter Bank-, Steuer-, Datenschutz- oder WCAG-Prüfung verwenden. Der Nachweis muss Ticket, Schreiben, Bericht oder Protokoll eindeutig bezeichnen.</p>
+{% set approvals = {
+    sepa: {label: 'Bank: pain.008-Profil', at: approval.sepaApprovedAt, by: approval.sepaApprovedBy, evidence: approval.sepaEvidence},
+    chart: {label: 'Steuerberatung: interne SKR42-Konten', at: approval.chartApprovedAt, by: approval.chartApprovedBy, evidence: approval.chartEvidence},
+    retention: {label: 'Aufbewahrungsfristen', at: approval.retentionApprovedAt, by: approval.retentionApprovedBy, evidence: approval.retentionEvidence},
+    wcag: {label: 'Manuelle WCAG 2.2 AA', at: approval.wcagApprovedAt, by: approval.wcagApprovedBy, evidence: approval.wcagEvidence}
+} %}
+{% for area, item in approvals %}
+<form method="post" class="border-top pt-3 mt-3">
+<input type="hidden" name="_token" value="{{ csrf_token('privacy_policy') }}">
+<input type="hidden" name="operation" value="approve">
+<input type="hidden" name="area" value="{{ area }}">
+<label class="form-label">{{ item.label }}</label>
+{% if item.at %}
+<p class="small mb-2 text-success">Freigegeben {{ item.at|date('d.m.Y H:i') }} durch {{ item.by }}<br>Nachweis: {{ item.evidence }}</p>
+{% endif %}
+<input class="form-control mb-2" name="evidence" maxlength="255" required placeholder="Prüfnachweis oder Ticket-Referenz" {% if item.at %}value="{{ item.evidence }}"{% endif %}>
+<button class="btn btn-sm btn-outline-primary">{{ item.at ? 'Freigabenachweis erneuern' : 'Freigabe dokumentieren' }}</button>
+</form>
+{% endfor %}
+</div></div></section>
 <section class="col-lg-8"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Audit-Trail</h2></div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Zeit</th><th>Akteur</th><th>Aktion</th><th>Objekt</th></tr></thead><tbody>
 {% for event in audit %}<tr><td>{{ event.occurredAt|date('d.m.Y H:i:s') }}</td><td>{{ event.actor }}</td><td>{{ event.action }}</td><td>{{ event.subjectType }} {{ event.subjectId }}</td></tr>{% else %}<tr><td colspan="4">Keine Audit-Ereignisse.</td></tr>{% endfor %}
 </tbody></table></div></div></section></div>

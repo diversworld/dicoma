@@ -121,8 +121,14 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         foreach ([$person, $member, $class, $document, $charge, $mandate, $policy] as $entity) { $this->em->persist($entity); }
         $this->em->flush();
         $service = static::getContainer()->get(SepaDirectDebitService::class);
-        $batch = $service->create($this->club, $this->treasurer, 'BATCH-1', new \DateTimeImmutable('+3 days'), [$charge->getId()]);
+        $batch = $service->create($this->club, $this->treasurer, 'BATCH-1', new \DateTimeImmutable('+7 days'), [$charge->getId()]);
         $this->em->flush();
+        try {
+            $service->create($this->club, $this->treasurer, 'BATCH-2', new \DateTimeImmutable('+7 days'), [$charge->getId()]);
+            self::fail('A charge must not be included in two active direct-debit batches.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('aktiven oder exportierten Lastschriftlauf', $exception->getMessage());
+        }
         try {
             $service->approve($batch, $this->treasurer);
             self::fail('Same maker and approver must be rejected.');
@@ -162,28 +168,72 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         $chart = static::getContainer()->get(FinanceChartService::class);
         $first = $chart->installSkr42($this->club, 'tester');
         $this->em->flush();
-        self::assertSame(47, $first['total']);
-        self::assertSame(47, $first['created']);
+        self::assertSame(96, $first['total']);
+        self::assertSame(96, $first['created']);
         $memberIncome = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '40000']);
         self::assertSame(FinanceAccount::TYPE_INCOME, $memberIncome->getType());
         self::assertSame('1', $memberIncome->getSphere());
         self::assertSame(Skr42Chart::SOURCE, $memberIncome->getSourceReference());
         $expense = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '60040']);
         self::assertSame(FinanceAccount::TYPE_EXPENSE, $expense->getType());
+        $bank = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '19000']);
+        self::assertSame(FinanceAccount::TYPE_ASSET, $bank->getType());
+        self::assertStringContainsString('Internes Vereins-Unterkonto', $bank->getUsage());
+        $youthFees = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '40010']);
+        self::assertSame('1', $youthFees->getSphere());
+        self::assertSame('Mitgliedsbeiträge Jugend', $youthFees->getName());
         $second = $chart->installSkr42($this->club, 'tester');
         self::assertSame(0, $second['created']);
-        self::assertSame(47, $second['total']);
+        self::assertSame(96, $second['total']);
         self::assertSame(0, $second['updated']);
     }
 
     public function testRetentionCommandDryRunDoesNotDeleteExpiredAudit(): void
     {
+        $policy = new PrivacyPolicy($this->club);
+        $policy->setPurgeEnabled(true);
+        $this->em->persist($policy);
         $this->em->persist(new \App\Entity\AuditEvent($this->club, 'tester', 'expired', Club::class, null, [], new \DateTimeImmutable('-1 day')));
         $this->em->flush();
         $tester = new \Symfony\Component\Console\Tester\CommandTester(static::getContainer()->get(\App\Command\PrivacyRetentionCommand::class));
         self::assertSame(0, $tester->execute([]));
         self::assertSame(1, $this->em->getRepository(\App\Entity\AuditEvent::class)->count([]));
         self::assertStringContainsString('"audit":1', $tester->getDisplay());
+    }
+
+    public function testRetentionRequiresAnExplicitPolicyAndSkipsIneligibleMembersBeforeLimit(): void
+    {
+        $expired = new \App\Entity\AuditEvent($this->club, 'tester', 'expired', Club::class, null, [], new \DateTimeImmutable('-1 day'));
+        $this->em->persist($expired);
+        $this->em->flush();
+
+        $tester = new \Symfony\Component\Console\Tester\CommandTester(static::getContainer()->get(\App\Command\PrivacyRetentionCommand::class));
+        self::assertSame(0, $tester->execute(['--apply' => true]));
+        self::assertSame(1, $this->em->getRepository(\App\Entity\AuditEvent::class)->count([]));
+
+        $policy = new PrivacyPolicy($this->club);
+        $policy->setPurgeEnabled(true);
+        $this->em->persist($policy);
+        $blockedPerson = (new Person())->setFirstname('Neu')->setLastname('Finanzvorgang')->setEmail('blocked@example.invalid');
+        $blocked = (new Member())->setClub($this->club)->setPerson($blockedPerson);
+        $blocked->setMembershipStatus(\App\Enum\MembershipStatus::FORMER);
+        $blocked->setArchivedAt(new \DateTimeImmutable('-5 years'));
+        $eligiblePerson = (new Person())->setFirstname('Alt')->setLastname('Datensatz')->setEmail('eligible@example.invalid');
+        $eligible = (new Member())->setClub($this->club)->setPerson($eligiblePerson);
+        $eligible->setMembershipStatus(\App\Enum\MembershipStatus::FORMER);
+        $eligible->setArchivedAt(new \DateTimeImmutable('-4 years'));
+        $recentCharge = new MembershipCharge($blocked, 'retention:recent', 'Jüngerer Vorgang', 1000, new \DateTimeImmutable('-1 day'));
+        foreach ([$blockedPerson, $blocked, $eligiblePerson, $eligible, $recentCharge] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+
+        self::assertSame(0, $tester->execute(['--apply' => true, '--limit' => '1']));
+        $this->em->clear();
+        $storedBlocked = $this->em->find(Member::class, $blocked->getId());
+        $storedEligible = $this->em->find(Member::class, $eligible->getId());
+        self::assertSame('Neu', $storedBlocked->getPerson()->getFirstname());
+        self::assertSame('Anonymisiert', $storedEligible->getPerson()->getFirstname());
     }
 
     public function testDunningUsesConfiguredDeadlineAndTemplate(): void

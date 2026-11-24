@@ -14,6 +14,7 @@ use App\Entity\ClubDocumentVersion;
 use App\Entity\MembershipMessage;
 use App\Entity\User;
 use App\Service\BoardGovernanceService;
+use App\Service\BoardDashboard;
 use App\Service\SimplePdfRenderer;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -81,6 +82,19 @@ final class BoardGovernanceHttpTest extends KernelTestCase
         self::assertSame(1, $this->em->getRepository(MembershipMessage::class)->count([]));
         self::assertSame(Command::SUCCESS, $command->execute([]));
         self::assertSame(1, $this->em->getRepository(MembershipMessage::class)->count([]));
+    }
+
+    public function testDashboardCountsAllOpenTasksWhileLimitingTheDisplayList(): void
+    {
+        for ($index = 1; $index <= 12; ++$index) {
+            $this->em->persist(new BoardTask($this->club, $this->actor, 'Aufgabe '.$index));
+        }
+        $this->em->flush();
+
+        $metrics = static::getContainer()->get(BoardDashboard::class)->forClub($this->club);
+
+        self::assertSame(12, $metrics['openTasks']);
+        self::assertCount(10, $metrics['tasks']);
     }
 
     public function testDocumentApprovalAndPdfRenderer(): void

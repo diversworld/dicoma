@@ -1,6 +1,6 @@
 # Analysebericht und GAP-Analyse Vereinsportal
 
-Stand: 19.11.2026
+Stand: 22.11.2026
 
 ## 1. Management Summary
 
@@ -35,7 +35,7 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 ### Schwächen und Risiken
 
 1. Das System ist funktionsreich und einige EasyAdmin-Controller sind sehr groß. Die langfristige Grenze zwischen Controller, Application Service und Domain Service ist uneinheitlich.
-2. Die Rollenhierarchie ist zu großzügig: Vorstand erbt Administratorrechte; Administrator erbt unter anderem Kassenwart. Das widerspricht einer strikten Funktionstrennung.
+2. Die fachlichen Rollen sind technisch getrennt, müssen aber bei jeder neuen Route weiterhin gegen `ModuleAccess`, Voter und den Club-Scope geprüft werden. Legacy-Routen dürfen nicht als alleiniger Berechtigungsnachweis dienen.
 3. Einige Rechte werden gleichzeitig durch URL-Regeln, Attribute, ModuleAccess und EasyAdmin-Menüs bestimmt. Sichtbarkeit ist deshalb nicht identisch mit Zugriff.
 4. Das DICOMA-Datenmodell enthält viele historische bzw. fachlich spezialisierte Felder. Refactorings erfordern Migrationsdisziplin und separate Kompatibilitätstests.
 5. Der Finanzteil modelliert Mitgliedsforderungen, aber noch kein vollständiges Kassenbuch, Konto, Jahresabschluss oder allgemeines Einnahmen-/Ausgaben-Ledger.
@@ -71,14 +71,14 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 | 7 | Sitzungen | Vereinskalender, aber keine Vorstandssitzungsakte | Agenda, Teilnehmende, Protokoll, Beschlüsse | Umgesetzt | A |
 | 8 | Beschluss-Automatik | Fehlt | Verantwortlicher, Frist und Aufgabe aus Beschluss | Umgesetzt, idempotent | A |
 | 9 | Dokumente | Nur Mitglieder- und Medienablage | Kategorien, Versionen, Freigabe, Archivstatus, Mitgliederzugriff | Kern umgesetzt; Aufbewahrung/Virenscan offen | A |
-| 10 | Mahnstufen | Ein wiederholtes generisches Schreiben | Zahlungserinnerung, 1., 2. und letzte Mahnung, PDF | Umgesetzt; Fristen künftig konfigurierbar | A |
-| 11 | Dashboard Vorstand | Kurse, Anträge und Finanzsummen | Mitglieder-, Austritts-, Aufgaben-, Termin-, Beschluss- und Finanz-KPIs | Vorstands-KPIs umgesetzt; allgemeines Ledger offen | A |
+| 10 | Mahnstufen | Ein wiederholtes generisches Schreiben | Zahlungserinnerung, 1., 2. und letzte Mahnung, PDF | Umgesetzt mit konfigurierbaren Fristen und Vorlagen | A |
+| 11 | Dashboard Vorstand | Kurse, Anträge und Finanzsummen | Mitglieder-, Austritts-, Aufgaben-, Termin-, Beschluss- und Finanz-KPIs | Governance- und Finanz-KPIs inklusive Mahnungen, SEPA, Einnahmen, Ausgaben und Saldo umgesetzt | A |
 | 12 | Dashboard Schriftführer | Fehlt | Sitzungen, Protokolle, Aufgaben, Freigaben | Eigenes Menü und gemeinsames Governance-Dashboard umgesetzt | A |
-| 13 | Beitragsperioden | Jahres- und Familienlogik | Monat/Jahr, Jugend/Ehre/Familie | Klassen unterstützen Fachtypen; Monatsalgorithmus fehlt | B |
+| 13 | Beitragsperioden | Jahres- und Familienlogik | Monat/Jahr, Jugend/Ehre/Familie | Jahres- und Monatsabrechnung idempotent umgesetzt | B |
 | 14 | BIC und SEPA-Export | IBAN verschlüsselt; kein BIC/SEPA-Datei | BIC, Mandat, pain.008-Export, Batch-Protokoll | Umgesetzt mit Vier-Augen-Freigabe und idempotentem Export | A |
 | 15 | Buchhaltung | Mitgliedsforderungen vorhanden | Einnahmen, Ausgaben, Konten, Jahresabschluss | Doppelbuchungs-Journal, Kontostände und Abschluss umgesetzt | A |
-| 16 | Mitglieder-Stammdaten | Kein Geschlecht, kein Profilbild, nur Ereignishistorie | Alle genannten Stammdaten und Historienansicht | Stammdaten weitgehend, Details offen | B |
-| 17 | Kommunikation | Messaging und Mail-Outbox | Empfängergruppen und Vorlagen | Interne Basis vorhanden; gruppierte Versand-UI fehlt | B |
+| 16 | Mitglieder-Stammdaten | Kein Geschlecht, kein Profilbild, nur Ereignishistorie | Alle genannten Stammdaten und Historienansicht | Geschlecht, privates Profilbild, Stammdaten und strukturierte Historie umgesetzt | B |
+| 17 | Kommunikation | Messaging und Mail-Outbox | Empfängergruppen und Vorlagen | Gruppenversand, Vorlagen, Vorschau, Testversand und Audit umgesetzt | B |
 | 18 | UX | Responsive, aber stark modulbezogen | Mobile First, wenige Klicks, einheitliche Sprache | Governance-UI mit direktem Workflow ergänzt; Gesamt-A11y offen | B |
 | 19 | Datenschutz | Private Dateien, Scope, CSRF, Verschlüsselung | Vollständiger Lösch-/Aufbewahrungsplan, Export, Audit | Audit, Auskunft, Retention-Dry-Run und bereinigter Ablauf umgesetzt | A |
 | 20 | Performance | Mehrere SQL-optimierte Bereiche | Indizes, N+1-Kontrolle, Query-Budgets, Caching | Reproduzierbarer p95/Fehlerquoten-Lasttest ergänzt | A |
@@ -153,10 +153,12 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 - E-Mail-/Interne Gruppenkommunikation mit Vorlagen, Preview, Testversand und Audit
 - Geschlecht, privates Profilbild und strukturierte Mitgliederhistorie
 - Öffentlicher Menü-Cache, zusätzliche Query-Indizes und authentifizierbare Lasttests
-- Idempotenter SKR42-2026-EÜR-Kontenrahmen für Buchungen mit Sphäre und Quelle
+- Idempotenter SKR42-2026-EÜR-Kontenrahmen mit 47 bestätigten und 49 eindeutig gekennzeichneten internen Vereins-Unterkonten
 - EasyAdmin-CRUDs für Sitzungen und Aufgaben
 - Direkter Beschluss-/Aufgaben-Workflow sowie responsive Dokumentablage
 - Doctrine-Migration und Integrations-Tests
+- Explizite Freigabe vor DSGVO-Bereinigung und begrenzte, deterministische Retention-Batches
+- SEPA-Doppelreservierungsschutz, Werktagsfrist und verständliche Fehlerbehandlung ohne fachbedingte 500-Antwort
 
 Siehe außerdem `docs/Lastenheft-Vorstandsportal.md` und `docs/implementation/phase-governance.md`.
 
@@ -169,4 +171,6 @@ Siehe außerdem `docs/Lastenheft-Vorstandsportal.md` und `docs/implementation/ph
 - Eine nicht freigegebene Dokumentversion wird für normale Mitglieder nicht ausgeliefert.
 - Mitglied kann nur freigegebene, als mitgliedersichtbar markierte Dokumente des eigenen Vereins laden.
 - Mahnungen erzeugen höchstens eine neue Mahnstufe pro Wiederholfrist und besitzen eine PDF-Ausgabe.
+- Datenschutzbereinigung läuft nur mit ausdrücklich aktivierter Richtlinie; wiederholte Limits verarbeiten berechtigte Altbestände.
+- Eine Forderung ist höchstens in einem aktiven oder exportierten SEPA-Lauf enthalten; Benutzerfehler werden als Rückmeldung statt HTTP-500 dargestellt.
 - `lint:container`, `lint:twig`, Doctrine-Mapping, PHP-Syntax und fokussierte Tests sind erfolgreich.

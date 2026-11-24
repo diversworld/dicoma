@@ -1,8 +1,8 @@
 .dw-form-card {
-    background: var(--dw-surface, #fff);
-    border: 1px solid var(--dw-border, #dfe4ea);
+    background: var(--dw-surface);
+    border: 1px solid var(--dw-border);
     border-radius: 12px;
-    box-shadow: 0 10px 30px var(--dw-shadow-soft, rgba(0, 0, 0, .08));
+    box-shadow: 0 10px 30px var(--dw-shadow-soft);
     padding: clamp(1rem, 2.5vw, 2rem);
     margin-bottom: 1.5rem;
 }
@@ -25,7 +25,7 @@
 .dw-form .form-label,
 .dw-form legend {
     display: block;
-    color: var(--dw-neutral-800, #343a40);
+    color: var(--dw-neutral-800);
     font-weight: 600;
     margin-bottom: .4rem;
 }
@@ -40,9 +40,9 @@
     width: 100%;
     min-height: 44px;
     padding: .65rem .8rem;
-    color: var(--dw-neutral-900, #212529);
-    background-color: var(--dw-surface, #fff);
-    border: 1px solid var(--dw-neutral-300, #ced4da);
+    color: var(--dw-neutral-900);
+    background-color: var(--dw-surface);
+    border: 1px solid var(--dw-neutral-300);
     border-radius: 8px;
     box-shadow: none;
 }
@@ -57,8 +57,8 @@
 .dw-form textarea:focus,
 .dw-form .form-control:focus,
 .dw-form .form-select:focus {
-    border-color: var(--dw-primary, #003366);
-    box-shadow: 0 0 0 .2rem var(--dw-overlay-accent, rgba(0, 51, 102, .15));
+    border-color: var(--dw-primary);
+    box-shadow: 0 0 0 .2rem var(--dw-overlay-accent);
     outline: 0;
 }
 
@@ -66,13 +66,13 @@
 .dw-form input[aria-invalid="true"],
 .dw-form select[aria-invalid="true"],
 .dw-form textarea[aria-invalid="true"] {
-    border-color: var(--dw-danger, #b42318);
+    border-color: var(--dw-danger);
 }
 
 .dw-form .invalid-feedback,
 .dw-form .form-error-message,
 .dw-form ul.form-errors {
-    color: var(--dw-danger, #b42318);
+    color: var(--dw-danger);
     font-size: .9rem;
     margin: .4rem 0 0;
     padding: 0;
@@ -81,7 +81,7 @@
 
 .dw-form .form-text,
 .dw-form .help-text {
-    color: var(--dw-neutral-600, #6c757d);
+    color: var(--dw-neutral-600);
     display: block;
     margin-top: .35rem;
 }
@@ -113,7 +113,7 @@
 
 .dw-form .required::after {
     content: " *";
-    color: var(--dw-danger, #b42318);
+    color: var(--dw-danger);
 }
 
 @media (max-width: 575.98px) {

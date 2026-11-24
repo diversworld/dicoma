@@ -87,7 +87,7 @@ final class ProfileController extends AbstractController
                 throw $e;
             }
             $this->addFlash('success', 'Dokument hochgeladen.');
-        } catch (\InvalidArgumentException $e) {
+        } catch (\DomainException|\InvalidArgumentException $e) {
             $this->addFlash('danger', $e->getMessage());
         }
         return $this->redirectToRoute('app_profile');
@@ -139,7 +139,12 @@ final class ProfileController extends AbstractController
         if (!$this->isCsrfTokenValid('member_profile_image', $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
         $file = $request->files->get('image');
         if (!$file instanceof UploadedFile) { throw $this->createNotFoundException('Profilbild fehlt.'); }
-        [$name, $mime] = $storage->store($file);
+        try {
+            [$name, $mime] = $storage->store($file);
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('danger', $exception->getMessage());
+            return $this->redirectToRoute('app_profile');
+        }
         if (!in_array($mime, ['image/jpeg', 'image/png'], true)) { @unlink($storage->path($name)); throw $this->createNotFoundException('Nur JPG oder PNG.'); }
         $old = $member->getPerson()->getProfileImageStorageName();
         $member->getPerson()->setProfileImageStorageName($name);

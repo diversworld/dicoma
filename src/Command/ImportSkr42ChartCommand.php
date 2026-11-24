@@ -13,7 +13,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
-#[AsCommand(name: 'app:finance:import-skr42', description: 'Importiert idempotent den nummerierten SKR42-2026-EÜR-Kontenplan für den Verein.')]
+#[AsCommand(name: 'app:finance:import-skr42', description: 'Importiert idempotent den SKR42-2026-EÜR-Kontenplan mit internen Vereins-Unterkonten.')]
 final class ImportSkr42ChartCommand extends Command
 {
     public function __construct(

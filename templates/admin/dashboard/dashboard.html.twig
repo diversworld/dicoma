@@ -9,7 +9,7 @@
         <p class="alert alert-warning">Bitte wählen Sie im Benutzermenü einen Verein aus, um die Übersicht anzuzeigen.</p>
     {% endif %}
 
-    <section aria-labelledby="dashboard-shortcuts" class="mb-4">
+    <nav aria-label="Dashboard-Schnellzugriffe" class="mb-4">
         <h2 id="dashboard-shortcuts" class="h5">{{ 'Schnellzugriffe'|trans }}</h2>
         <div class="row g-3" data-dashboard-shortcuts>
             {% for link in quickLinks %}
@@ -22,7 +22,7 @@
                 </div>
             {% endfor %}
         </div>
-    </section>
+    </nav>
 
     {% if dashboardScope %}
     {% if canGovernance %}
@@ -37,7 +37,8 @@
                 {label: 'Offene Beschlüsse', value: governance.openResolutions},
                 {label: 'Dokumentfreigaben', value: governance.pendingDocuments},
                 {label: 'Aufnahmeverfahren', value: governance.newMemberApplications},
-                {label: 'Kommende Sitzungen', value: governance.upcomingMeetingCount}
+                {label: 'Kommende Sitzungen', value: governance.upcomingMeetingCount},
+                {label: 'Austritte gesamt', value: governance.memberDepartures}
             ] %}
                 <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ metric.label }}</div><div class="fs-2 fw-bold">{{ metric.value }}</div></div></div></div>
             {% endfor %}
@@ -59,6 +60,11 @@
             <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Offene Forderungen</div><div class="fs-2 fw-bold">{{ (finance.openCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
             <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Davon überfällig</div><div class="fs-2 fw-bold text-danger">{{ (finance.overdueCents / 100)|number_format(2, ',', '.') }} EUR</div><small>{{ finance.overdueCount }} Forderungen</small></div></div></div>
             <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Eingegangene Zahlungen</div><div class="fs-2 fw-bold">{{ (finance.paidCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Offene Mahnfälle</div><div class="fs-2 fw-bold">{{ finance.dunningCount }}</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Einnahmen {{ 'now'|date('Y') }}</div><div class="fs-2 fw-bold">{{ (finance.yearIncomeCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Ausgaben {{ 'now'|date('Y') }}</div><div class="fs-2 fw-bold">{{ (finance.yearExpenseCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Saldo Vermögenskonten</div><div class="fs-2 fw-bold">{{ (finance.assetBalanceCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Lastschriften in Vorbereitung</div><div class="fs-2 fw-bold">{{ finance.sepaOpenCount }}</div></div></div></div>
             <div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ path('admin_membership_finance') }}"><div class="card-body"><i class="fa fa-coins me-2"></i>Forderungen und Zahlungen öffnen</div></a></div>
         </div>
         <div class="card mt-3">

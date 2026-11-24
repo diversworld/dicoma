@@ -36,9 +36,11 @@ final class BoardDashboard
             ->andWhere('m.membershipStatus = :status')->setParameter('status', MembershipStatus::FORMER->value)
             ->getQuery()->getSingleScalarResult();
 
-        $tasks = $this->em->getRepository(BoardTask::class)->createQueryBuilder('task')
+        $tasksQuery = $this->em->getRepository(BoardTask::class)->createQueryBuilder('task')
             ->where('task.club = :club AND task.status NOT IN (:closed)')
-            ->setParameter('club', $club)->setParameter('closed', [BoardTask::STATUS_DONE, BoardTask::STATUS_CANCELLED])
+            ->setParameter('club', $club)->setParameter('closed', [BoardTask::STATUS_DONE, BoardTask::STATUS_CANCELLED]);
+        $openTaskCount = (int) (clone $tasksQuery)->select('COUNT(task.id)')->getQuery()->getSingleScalarResult();
+        $tasks = (clone $tasksQuery)
             ->orderBy('CASE WHEN task.dueAt IS NULL THEN 1 ELSE 0 END', 'ASC')
             ->addOrderBy('task.dueAt', 'ASC')->setMaxResults(10)->getQuery()->getResult();
         $meetingQb = $this->em->getRepository(BoardMeeting::class)->createQueryBuilder('meeting')
@@ -79,7 +81,7 @@ final class BoardDashboard
             'membersPassive' => $passive,
             'memberDepartures' => $former,
             'newMemberApplications' => $applications->count(['club' => $club, 'status' => 'pending']),
-            'openTasks' => count($tasks),
+            'openTasks' => $openTaskCount,
             'tasks' => $tasks,
             'upcomingMeetings' => $meetingQb->setMaxResults(5)->getQuery()->getResult(),
             'upcomingMeetingCount' => $meetingCount,

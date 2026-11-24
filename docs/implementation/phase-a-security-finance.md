@@ -32,6 +32,11 @@ Der Export:
 
 BIC wird wie IBAN verschlüsselt gespeichert. Das gemeinsame Bankmodell besitzt weiterhin keinen automatischen Zahlungsabgleich; bestätigte Rückgaben werden über den vorhandenen Zahlungsworkflow separat gebucht.
 
+Die Oberfläche verarbeitet fachliche SEPA-Fehler als Flash-Meldung und verhindert,
+dass dieselbe Forderung gleichzeitig in mehreren Entwurfs-, Freigabe- oder
+Exportläufen reserviert wird. Das früheste Einzugsdatum wird anhand von zwei
+Werktagen berechnet.
+
 ## Buchhaltung
 
 `FinanceAccount` und `FinanceTransaction` bilden ein vereinsbezogenes, ausgeglichenes Journal. Jede Buchung benötigt Soll- und Habenkonto, positiven Cent-Betrag, Datum, Referenz und Akteur. Abgeschlossene Jahre lehnen nachträgliche Buchungen ab.
@@ -80,7 +85,7 @@ Ausführung nach Freigabe:
 php bin/console app:privacy:retention --apply --limit 250
 ```
 
-Vor erster produktiver Ausführung sind die gesetzlich/fachlich festgelegten Fristen zu bestätigen. Der Befehl begrenzt jede Kategorie pro Lauf und schützt Mitgliederdaten, solange jüngere Finanzvorgänge bestehen.
+Vor erster produktiver Ausführung sind die gesetzlich/fachlich festgelegten Fristen zu bestätigen. Ohne gespeicherte Richtlinie oder ohne explizite Freigabe wird nichts bereinigt. Der Befehl begrenzt jede Kategorie pro Lauf, filtert berechtigte Datensätze bereits in der Abfrage und schützt Mitgliederdaten, solange jüngere Finanzvorgänge oder eine zweite Vereinsmitgliedschaft bestehen.
 
 ## WCAG-Gate
 

@@ -20,8 +20,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Psr\Log\LoggerInterface;
 
-#[Route('/admin/membership-finance')]
+#[Route('/admin/membership-finance', defaults: DashboardController::ROUTE_DEFAULTS)]
 #[IsGranted('ROLE_USER')]
 final class MembershipFinanceController extends AbstractController
 {
@@ -29,6 +30,7 @@ final class MembershipFinanceController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly AdminClubContext $clubs,
         private readonly ModuleAccess $access,
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[Route('', name: 'admin_membership_finance', methods: ['GET'])]
@@ -90,6 +92,8 @@ final class MembershipFinanceController extends AbstractController
             'pages' => $pages,
             'sepaBatches' => $this->em->getRepository(SepaDirectDebitBatch::class)->findBy(['club' => $club], ['id' => 'DESC'], 20),
             'canFinanceWrite' => $this->access->can($user, $club, PermissionModule::FINANCE, PermissionAction::EDIT),
+            'sepaMinimumDate' => $this->secondBankWorkingDay()->format('Y-m-d'),
+            'sepaSuggestedDate' => $this->secondBankWorkingDay()->format('Y-m-d'),
         ]);
     }
 
@@ -100,12 +104,18 @@ final class MembershipFinanceController extends AbstractController
         $user = $this->getUser();
         if (!$user instanceof User || !$this->access->can($user, $club, PermissionModule::FINANCE, PermissionAction::CREATE)) { throw $this->createAccessDeniedException(); }
         if (!$this->isCsrfTokenValid('sepa_batch_create', $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
-        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $request->request->getString('collectionDate'));
-        if ($date === false) { throw $this->createNotFoundException('Ungültiges Einzugsdatum.'); }
-        $chargeIds = array_map('intval', $request->request->all('charges'));
-        $sepa->create($club, $user, $request->request->getString('batchKey'), $date, $chargeIds);
-        $this->em->flush();
-        $this->addFlash('success', 'Lastschriftlauf als Entwurf angelegt.');
+        try {
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $request->request->getString('collectionDate'));
+            if ($date === false) {
+                throw new \DomainException('Ungültiges Einzugsdatum.');
+            }
+            $chargeIds = array_map('intval', $request->request->all('charges'));
+            $sepa->create($club, $user, $request->request->getString('batchKey'), $date, $chargeIds);
+            $this->em->flush();
+            $this->addFlash('success', 'Lastschriftlauf als Entwurf angelegt.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('danger', $exception->getMessage());
+        }
         return $this->redirectToRoute('admin_membership_finance');
     }
 
@@ -117,9 +127,13 @@ final class MembershipFinanceController extends AbstractController
         if (!$user instanceof User || $batch->getClub()->getId() !== $club->getId()
             || !$this->access->can($user, $club, PermissionModule::FINANCE, PermissionAction::EDIT)) { throw $this->createAccessDeniedException(); }
         if (!$this->isCsrfTokenValid('sepa_batch_approve_'.$batch->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
-        $sepa->approve($batch, $user);
-        $this->em->flush();
-        $this->addFlash('success', 'Lastschriftlauf nach Vier-Augen-Prinzip freigegeben.');
+        try {
+            $sepa->approve($batch, $user);
+            $this->em->flush();
+            $this->addFlash('success', 'Lastschriftlauf nach Vier-Augen-Prinzip freigegeben.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('danger', $exception->getMessage());
+        }
         return $this->redirectToRoute('admin_membership_finance');
     }
 
@@ -131,13 +145,37 @@ final class MembershipFinanceController extends AbstractController
         if (!$user instanceof User || $batch->getClub()->getId() !== $club->getId()
             || !$this->access->can($user, $club, PermissionModule::FINANCE, PermissionAction::EDIT)) { throw $this->createAccessDeniedException(); }
         if (!$this->isCsrfTokenValid('sepa_batch_export_'.$batch->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
-        $result = $sepa->export($batch, $user);
-        $this->em->flush();
-        return new Response($result['xml'], 200, [
-            'Content-Type' => 'application/xml',
-            'Content-Disposition' => 'attachment; filename="pain.008-'.$batch->getId().'.xml"',
-            'Cache-Control' => 'private, no-store',
-            'X-Content-SHA256' => $result['sha256'],
-        ]);
+        try {
+            $result = $sepa->export($batch, $user);
+            $this->em->flush();
+            return new Response($result['xml'], 200, [
+                'Content-Type' => 'application/xml',
+                'Content-Disposition' => 'attachment; filename="pain.008-'.$batch->getId().'.xml"',
+                'Cache-Control' => 'private, no-store',
+                'X-Content-SHA256' => $result['sha256'],
+            ]);
+        } catch (\DomainException $exception) {
+            $this->addFlash('danger', $exception->getMessage());
+        } catch (\RuntimeException $exception) {
+            $this->logger->error('SEPA pain.008 export failed.', [
+                'batchId' => $batch->getId(),
+                'exception' => $exception,
+            ]);
+            $this->addFlash('danger', 'Die SEPA-Datei konnte nicht erzeugt werden. Mandats- und Gläubigerdaten sowie den Verschlüsselungsschlüssel prüfen.');
+        }
+        return $this->redirectToRoute('admin_membership_finance');
+    }
+
+    private function secondBankWorkingDay(): \DateTimeImmutable
+    {
+        $date = new \DateTimeImmutable('today');
+        $workingDays = 0;
+        while ($workingDays < 2) {
+            $date = $date->modify('+1 day');
+            if (!in_array((int) $date->format('N'), [6, 7], true)) {
+                ++$workingDays;
+            }
+        }
+        return $date;
     }
 }

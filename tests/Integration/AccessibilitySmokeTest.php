@@ -35,13 +35,7 @@ final class AccessibilitySmokeTest extends WebTestCase
         foreach (['/', '/login'] as $path) {
             $crawler = $client->request('GET', $path);
             self::assertResponseIsSuccessful();
-            self::assertSame('de', $crawler->filter('html')->attr('lang'));
-            self::assertCount(1, $crawler->filter('#main-content'));
-            self::assertCount(1, $crawler->filter('a.skip-link'));
-            self::assertNotEmpty((string) $crawler->filter('title')->text());
-            foreach ($crawler->filter('img') as $image) {
-                self::assertTrue($image->hasAttribute('alt'), 'Images must have alternative text.');
-            }
+            $this->assertPageSemantics($crawler);
         }
         $crawler = $client->request('GET', '/login');
         foreach ($crawler->filter('input:not([type=hidden])') as $input) {
@@ -53,13 +47,64 @@ final class AccessibilitySmokeTest extends WebTestCase
         $client->loginUser($user);
         $crawler = $client->request('GET', '/my');
         self::assertResponseIsSuccessful();
-        self::assertCount(1, $crawler->filter('#main-content'));
-        self::assertCount(1, $crawler->filter('nav[aria-label]'));
+        $this->assertPageSemantics($crawler);
 
         $client->loginUser($admin);
         $crawler = $client->request('GET', '/admin');
         self::assertResponseIsSuccessful();
+        $this->assertPageSemantics($crawler);
         self::assertCount(1, $crawler->filter('#main-content[tabindex="-1"]'));
         self::assertCount(1, $crawler->filter('a.skip-link'));
+    }
+
+    private function assertPageSemantics(\Symfony\Component\DomCrawler\Crawler $crawler): void
+    {
+        self::assertSame('de', $crawler->filter('html')->attr('lang'));
+        self::assertCount(1, $crawler->filter('#main-content'));
+        self::assertCount(1, $crawler->filter('a.skip-link'));
+        self::assertNotEmpty((string) $crawler->filter('title')->text());
+        self::assertGreaterThan(0, $crawler->filter('h1')->count());
+        self::assertGreaterThan(
+            0,
+            $crawler->filter('nav[aria-label], [role="navigation"][aria-label]')->count(),
+            $crawler->getUri().' | '.$crawler->filter('h1')->first()->text(),
+        );
+
+        foreach ($crawler->filter('img') as $image) {
+            self::assertTrue($image->hasAttribute('alt'), 'Images must have alternative text: '.$image->getAttribute('src'));
+        }
+        $ids = [];
+        foreach ($crawler->filter('[id]') as $element) {
+            $id = $element->getAttribute('id');
+            self::assertArrayNotHasKey($id, $ids, 'Element IDs must be unique: '.$id);
+            $ids[$id] = true;
+        }
+        foreach ($crawler->filter('a, button') as $control) {
+            $name = trim($control->textContent);
+            self::assertTrue(
+                $name !== '' || $control->hasAttribute('aria-label') || $control->hasAttribute('title')
+                || $this->hasNamedImage($control),
+                'Links and buttons need an accessible name: '.$control->ownerDocument->saveHTML($control),
+            );
+        }
+        foreach ($crawler->filter('input:not([type=hidden]), select, textarea') as $control) {
+            $id = $control->getAttribute('id');
+            self::assertTrue(
+                $control->hasAttribute('aria-label')
+                || $control->hasAttribute('aria-labelledby')
+                || ($id !== '' && $crawler->filter('label[for="'.$id.'"]')->count() > 0),
+                'Every form control needs an accessible label.',
+            );
+        }
+    }
+
+    private function hasNamedImage(\DOMElement $element): bool
+    {
+        foreach ($element->getElementsByTagName('img') as $image) {
+            if ($image->hasAttribute('alt') && trim((string) $image->getAttribute('alt')) !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 }

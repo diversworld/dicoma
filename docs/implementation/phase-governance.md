@@ -31,6 +31,9 @@ php bin/console app:board:task-reminders
 php bin/console app:membership:queue-dunning --minimum-days 14 --repeat-days 30
 ```
 
+Für produktive Laufsteuerung, Exitcode-Überwachung und Monats-/Retention-Jobs siehe
+`DEPLOY-SERVER.md`.
+
 ## Sicherheitsabnahme
 
 - die tatsächlichen Rolle-Konto-Zuordnungen kontrollieren

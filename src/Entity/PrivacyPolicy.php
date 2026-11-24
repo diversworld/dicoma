@@ -22,8 +22,8 @@ class PrivacyPolicy
     private int $financialRetentionYears = 10;
     #[ORM\Column(options: ['default' => 3])]
     private int $auditRetentionYears = 3;
-    #[ORM\Column(options: ['default' => true])]
-    private bool $purgeEnabled = true;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $purgeEnabled = false;
     public function __construct(Club $club) { $this->club = $club; }
     public function getId(): ?int { return $this->id; }
     public function getClub(): Club { return $this->club; }

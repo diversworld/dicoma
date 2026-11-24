@@ -9,6 +9,7 @@ parameters:
     env(PUBLIC_SITE_CLUB_ID): '0'
     env(CLUB_FUNCTION_MEMBERSHIP_ENABLED): '0'
     env(CONTACT_MAIL_FROM): ''
+    env(DICOMA_CLAMAV_COMMAND): ''
     site.themes:
         airspace:
             layout: 'themes/airspace/layout.html.twig'

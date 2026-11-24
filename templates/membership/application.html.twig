@@ -8,7 +8,7 @@
         <h2 class="h5">Freigabequorum</h2>
         <p class="mb-2">{{ approvals|length }} von {{ requiredApprovals }} erforderlichen Bestätigungen.</p>
         <div class="progress" role="progressbar" aria-label="Aufnahmebestätigungen" aria-valuemin="0" aria-valuemax="{{ requiredApprovals }}" aria-valuenow="{{ min(approvals|length, requiredApprovals) }}">
-            <div class="progress-bar" style="width: {{ min(100, (approvals|length / requiredApprovals) * 100) }}%"></div>
+            <div class="progress-bar" style="--dw-progress: {{ min(100, (approvals|length / requiredApprovals) * 100) }}%"></div>
         </div>
         <ul class="mb-0 mt-3">
         {% for approval in approvals %}

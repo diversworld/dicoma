@@ -6,12 +6,14 @@ namespace App\Controller\Admin;
 
 use App\Entity\AuditEvent;
 use App\Entity\PrivacyPolicy;
+use App\Entity\ProductionApproval;
 use App\Entity\User;
 use App\Enum\PermissionAction;
 use App\Enum\PermissionModule;
 use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use App\Service\AuditLogger;
+use App\Service\ProductionReadiness;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/privacy')]
+#[Route('/admin/privacy', defaults: DashboardController::ROUTE_DEFAULTS)]
 #[IsGranted('ROLE_USER')]
 final class PrivacyController extends AbstractController
 {
@@ -28,6 +30,7 @@ final class PrivacyController extends AbstractController
         private readonly AdminClubContext $clubs,
         private readonly ModuleAccess $access,
         private readonly AuditLogger $audit,
+        private readonly ProductionReadiness $readiness,
     ) {}
 
     #[Route('', name: 'admin_privacy', methods: ['GET', 'POST'])]
@@ -37,9 +40,26 @@ final class PrivacyController extends AbstractController
         $user = $this->getUser();
         if (!$user instanceof User || !$this->access->can($user, $club, PermissionModule::AUDIT, PermissionAction::READ)) { throw $this->createAccessDeniedException(); }
         $policy = $this->em->getRepository(PrivacyPolicy::class)->findOneBy(['club' => $club]) ?? new PrivacyPolicy($club);
+        $approval = $this->em->getRepository(ProductionApproval::class)->findOneBy(['club' => $club]) ?? new ProductionApproval($club);
         if ($request->isMethod('POST')) {
             if (!$this->access->can($user, $club, PermissionModule::AUDIT, PermissionAction::EDIT)) { throw $this->createAccessDeniedException(); }
             if (!$this->isCsrfTokenValid('privacy_policy', $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+            if ($request->request->getString('operation') === 'approve') {
+                $area = $request->request->getString('area');
+                try {
+                    $approval->approve($area, $user->getUserIdentifier(), $request->request->getString('evidence'));
+                    $this->em->persist($approval);
+                    $this->audit->record($club, $user->getUserIdentifier(), 'compliance.approved', $approval, [
+                        'area' => $area,
+                        'evidence' => $request->request->getString('evidence'),
+                    ]);
+                    $this->em->flush();
+                    $this->addFlash('success', 'Produktivfreigabe dokumentiert.');
+                } catch (\DomainException $exception) {
+                    $this->addFlash('danger', $exception->getMessage());
+                }
+                return $this->redirectToRoute('admin_privacy');
+            }
             $policy->setMemberRetentionYears($request->request->getInt('memberRetentionYears'));
             $policy->setMessageRetentionDays($request->request->getInt('messageRetentionDays'));
             $policy->setFinancialRetentionYears($request->request->getInt('financialRetentionYears'));
@@ -58,6 +78,8 @@ final class PrivacyController extends AbstractController
         }
         return $this->render('admin/privacy/index.html.twig', [
             'policy' => $policy,
+            'approval' => $approval,
+            'readinessBlockers' => $this->readiness->blockers($club),
             'audit' => $this->em->getRepository(AuditEvent::class)->findBy(['club' => $club], ['occurredAt' => 'DESC'], 100),
         ]);
     }

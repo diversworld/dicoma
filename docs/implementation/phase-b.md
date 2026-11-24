@@ -76,9 +76,17 @@ Cookies dürfen nur in der lokalen Testumgebung eingesetzt werden und nicht in L
 
 ## SKR42-Kontenrahmen 2026
 
-Die Buchhaltung berücksichtigt den bereitgestellten `SKR42_Sportverein_2026_EUER_Kontenplan.xlsx`. Alle 47 Zeilen mit fünfstelliger Kontonummer werden idempotent importiert und mit Kontotyp, KOST1/Sphäre, Verwendung und Quellenreferenz gespeichert.
+Die Buchhaltung berücksichtigt den bereitgestellten `SKR42_Sportverein_2026_EUER_Kontenplan.xlsx`. Alle 47 offiziell nummerierten Zeilen und 49 fachliche Zeilen ohne Vorgabenummer werden idempotent importiert und mit Kontotyp, KOST1/Sphäre, Verwendung und Quellenreferenz gespeichert.
 
-Zeilen ohne offizielle Kontonummer – etwa Girokonto, Barkasse oder Jugend-/Erwachsenenunterkonto – werden ausdrücklich nicht als DATEV-Konten erzeugt. Sie bleiben belegbar als individuelle Unterkonten des Vereins.
+Für die 49 offenen Zeilen verwendet DICOMA stabile fünfstellige interne Vereins-Unterkontonummern. Sie bleiben im Datenmodell als `Internes Vereins-Unterkonto` gekennzeichnet und dürfen nicht als offiziell von DATEV bestätigte Nummern verstanden werden. Vor einem DATEV-Export muss der Steuerberater die Zuordnung freigeben.
+
+Nummernkreise der internen Unterkonten:
+
+- `09500`, `16000`, `17000`, `19000–19200`: Eigenkapital-, Verbindlichkeits-, Steuer- und Liquiditätskonten
+- `40010–40030`, `40460`, `40800–40820`: Mitglieder, Spenden und Zuschüsse
+- `42000–45100`: Gebühren, Veranstaltungen, Gastronomie, Sponsoring und Vermögensverwaltung
+- `61000–62010`: Personal, Schiedsgericht und Reisekosten
+- `63000–66070`: Sportbetrieb, Anlagen, Verwaltung und Veranstaltungen
 
 Import über CLI oder Buchhaltungsseite:
 

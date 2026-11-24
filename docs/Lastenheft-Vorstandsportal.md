@@ -43,11 +43,10 @@ Pflichtfelder:
 - Vereinsrollen, Sport-/Abteilungszuordnung
 - Ereignis- und Verwaltungsänderungshistorie
 
-Noch fachlich auszubauen:
+Fachlich umgesetzt:
 
-- optionales Geschlecht
-- Profilbild
-- strukturierte Änderungsübersicht für alle personenbezogenen Felder
+- optionales Geschlecht und privates Profilbild
+- strukturierte Änderungsübersicht für personenbezogene Felder
 
 ### 3.2 Beitragsverwaltung
 
@@ -268,8 +267,8 @@ Die Phase-A-Module für Buchhaltung, SEPA, Rollen, Mahnung, Audit, Datenschutz u
 
 - Bankseitiger Abgleich des konkreten pain.008-Profils
 - historischer Abgleich/Backfill des neuen Journals gegen Bestandssysteme
-- Gruppen-E-Mail mit Vorlageneditor
 - steuerrechtliche Bestätigung der Aufbewahrungsfristen und Jahresabschlussrichtlinie
 - AV-Malware-Prüfung und Dokumentaufbewahrung
 - rechtliche Gestaltung der PDF-Mahntexte
 - vertiefte manuelle WCAG-2.2-AA- und Langzeitlastabnahme
+- Steuerberater-Freigabe der internen Kontonummern aus dem 49-zeiligen Ergänzungsbereich des SKR42-Kontenplans

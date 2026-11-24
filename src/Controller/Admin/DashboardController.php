@@ -25,6 +25,10 @@ use App\Entity\TrainingUnitResult;
 use App\Entity\MembershipApplication;
 use App\Entity\MembershipCharge;
 use App\Entity\MembershipPayment;
+use App\Entity\MembershipDunningNotice;
+use App\Entity\SepaDirectDebitBatch;
+use App\Entity\FinanceAccount;
+use App\Entity\FinanceTransaction;
 use App\Entity\WebsitePublication;
 use App\Entity\FileAction;
 use App\Enum\CourseStatus;
@@ -170,9 +174,23 @@ class DashboardController extends AbstractDashboardController
         $governance = $club !== null && ($isBoard || $isSecretary || $this->isGranted(User::ROLE_ADMIN))
             ? $this->boardDashboard->forClub($club)
             : null;
-        $finance = ['openCents' => 0, 'overdueCents' => 0, 'paidCents' => 0, 'overdueCount' => 0, 'recentPayments' => []];
+        $finance = [
+            'openCents' => 0,
+            'overdueCents' => 0,
+            'paidCents' => 0,
+            'overdueCount' => 0,
+            'dunningCount' => 0,
+            'yearIncomeCents' => 0,
+            'yearExpenseCents' => 0,
+            'assetBalanceCents' => 0,
+            'sepaOpenCount' => 0,
+            'recentPayments' => [],
+        ];
         if ($canFinance) {
             $chargeRepository = $this->em->getRepository(MembershipCharge::class);
+            $year = (int) date('Y');
+            $yearStart = new \DateTimeImmutable($year.'-01-01');
+            $yearEnd = new \DateTimeImmutable($year.'-12-31');
             $totals = $chargeRepository->createQueryBuilder('charge')
                 ->select('SUM(charge.amountCents - charge.paidCents) AS openCents', 'SUM(charge.paidCents) AS paidCents')
                 ->join('charge.member', 'm')
@@ -185,11 +203,45 @@ class DashboardController extends AbstractDashboardController
                 ->where('m.club = :club AND charge.dueAt < :today AND charge.amountCents > charge.paidCents')
                 ->setParameter('club', $club)->setParameter('today', new \DateTimeImmutable('today'))
                 ->getQuery()->getSingleResult();
+            $dunningCount = $this->em->getRepository(MembershipDunningNotice::class)->createQueryBuilder('notice')
+                ->select('COUNT(DISTINCT charge.id)')
+                ->join('notice.charge', 'charge')->join('charge.member', 'm')
+                ->where('m.club = :club AND charge.amountCents > charge.paidCents')
+                ->setParameter('club', $club)->getQuery()->getSingleScalarResult();
+            $journalTotals = $this->em->getRepository(FinanceTransaction::class)->createQueryBuilder('transaction')
+                ->select(
+                    'SUM(CASE WHEN debitAccount.type = :income THEN -transaction.amountCents ELSE 0 END)
+                        + SUM(CASE WHEN creditAccount.type = :income THEN transaction.amountCents ELSE 0 END) AS incomeCents',
+                    'SUM(CASE WHEN debitAccount.type = :expense THEN transaction.amountCents ELSE 0 END)
+                        - SUM(CASE WHEN creditAccount.type = :expense THEN transaction.amountCents ELSE 0 END) AS expenseCents',
+                )
+                ->join('transaction.debitAccount', 'debitAccount')
+                ->join('transaction.creditAccount', 'creditAccount')
+                ->where('transaction.club = :club AND transaction.effectiveAt BETWEEN :yearStart AND :yearEnd')
+                ->setParameter('club', $club)->setParameter('yearStart', $yearStart)->setParameter('yearEnd', $yearEnd)
+                ->setParameter('income', FinanceAccount::TYPE_INCOME)->setParameter('expense', FinanceAccount::TYPE_EXPENSE)
+                ->getQuery()->getSingleResult();
+            $assetBalanceCents = $this->em->getRepository(FinanceTransaction::class)->createQueryBuilder('transaction')
+                ->select('SUM(CASE WHEN debitAccount.type = :asset THEN transaction.amountCents ELSE 0 END)
+                    - SUM(CASE WHEN creditAccount.type = :asset THEN transaction.amountCents ELSE 0 END)')
+                ->join('transaction.debitAccount', 'debitAccount')
+                ->join('transaction.creditAccount', 'creditAccount')
+                ->where('transaction.club = :club')->setParameter('club', $club)
+                ->setParameter('asset', FinanceAccount::TYPE_ASSET)
+                ->getQuery()->getSingleScalarResult();
             $finance = [
                 'openCents' => (int) ($totals['openCents'] ?? 0),
                 'paidCents' => (int) ($totals['paidCents'] ?? 0),
                 'overdueCents' => (int) ($overdue['cents'] ?? 0),
                 'overdueCount' => (int) ($overdue['count'] ?? 0),
+                'dunningCount' => (int) $dunningCount,
+                'yearIncomeCents' => (int) ($journalTotals['incomeCents'] ?? 0),
+                'yearExpenseCents' => (int) ($journalTotals['expenseCents'] ?? 0),
+                'assetBalanceCents' => (int) $assetBalanceCents,
+                'sepaOpenCount' => $this->em->getRepository(SepaDirectDebitBatch::class)->count([
+                    'club' => $club,
+                    'status' => SepaDirectDebitBatch::STATUS_DRAFT,
+                ]),
                 'recentPayments' => $this->em->getRepository(MembershipPayment::class)->createQueryBuilder('payment')
                     ->join('payment.charge', 'charge')->addSelect('charge')
                     ->join('charge.member', 'm')->addSelect('m')
@@ -1003,7 +1055,7 @@ class DashboardController extends AbstractDashboardController
 
         $menu = parent::configureUserMenu($user)
             ->setName($name)
-            ->setAvatarUrl('/images/images/Diversworld_Viking.png')
+            ->setAvatarUrl(null)
             ->addMenuItems([
                 MenuItem::linkToUrl('Mein Konto', 'fa fa-user', $this->generateUrl('admin_account_profile')),
                 MenuItem::linkToUrl('Kennwort ändern', 'fa fa-key', $this->generateUrl('admin_account_password')),

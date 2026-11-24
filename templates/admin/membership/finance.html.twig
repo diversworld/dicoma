@@ -29,7 +29,7 @@
     <input type="hidden" name="_token" value="{{ csrf_token('sepa_batch_create') }}">
     <div class="row g-3 align-items-end">
         <div class="col-lg-4"><label class="form-label" for="sepa-key">Laufschlüssel</label><input class="form-control" id="sepa-key" name="batchKey" required value="SEPA-{{ 'now'|date('Ymd-His') }}"></div>
-        <div class="col-lg-3"><label class="form-label" for="sepa-date">Einzugsdatum</label><input class="form-control" id="sepa-date" type="date" name="collectionDate" required value="{{ 'now'|date_modify('+3 days')|date('Y-m-d') }}"></div>
+        <div class="col-lg-3"><label class="form-label" for="sepa-date">Einzugsdatum</label><input class="form-control" id="sepa-date" type="date" name="collectionDate" required min="{{ sepaMinimumDate|default('') }}" value="{{ sepaSuggestedDate|default('now'|date_modify('+3 days')|date('Y-m-d')) }}"></div>
         <div class="col-lg-5"><fieldset><legend class="form-label">Forderungen für Lastschriftlauf</legend>{% for row in rows %}{% if row.charge.outstandingCents > 0 %}<div class="form-check"><input class="form-check-input" id="sepa-charge-{{ row.charge.id }}" type="checkbox" name="charges[]" value="{{ row.charge.id }}"><label class="form-check-label" for="sepa-charge-{{ row.charge.id }}">{{ row.charge.invoiceNumber ?? row.charge.description }} – {{ row.charge.member.fullName }}</label></div>{% endif %}{% endfor %}</fieldset></div>
         <div class="col-12"><button class="btn btn-primary">Lastschriftentwurf anlegen</button></div>
     </div>

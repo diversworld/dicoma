@@ -11,11 +11,16 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class FinanceChartService
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly AuditLogger $audit,
+        private readonly ProductionReadiness $readiness,
+    ) {}
 
     /** @return array{created:int,updated:int,total:int} */
     public function installSkr42(Club $club, string $actor): array
     {
+        $this->readiness->requireApproved($club, 'chart');
         $summary = ['created' => 0, 'updated' => 0, 'total' => 0];
         foreach (Skr42Chart::accounts() as $row) {
             $account = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $club, 'code' => $row['code']]);

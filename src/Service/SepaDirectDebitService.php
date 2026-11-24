@@ -23,6 +23,7 @@ final class SepaDirectDebitService
         private readonly MembershipFinanceService $finance,
         private readonly AuditLogger $audit,
         private readonly ModuleAccess $access,
+        private readonly ProductionReadiness $readiness,
     ) {}
 
     /** @param list<int> $chargeIds */
@@ -32,10 +33,27 @@ final class SepaDirectDebitService
         $batchKey = trim($batchKey);
         $existing = $this->em->getRepository(SepaDirectDebitBatch::class)->findOneBy(['club' => $club, 'batchKey' => $batchKey]);
         if ($existing !== null) { throw new \DomainException('Ein Lastschriftlauf mit diesem Schlüssel existiert bereits.'); }
-        if ($collectionDate < new \DateTimeImmutable('today')->modify('+2 days')) {
+        if ($collectionDate < $this->secondBankWorkingDay()) {
             throw new \DomainException('Das Einzugsdatum muss mindestens zwei Bankarbeitstage im Voraus liegen.');
         }
         $charges = $this->loadCharges($club, $chargeIds);
+        $alreadyReserved = (int) $this->em->getRepository(SepaDirectDebitItem::class)->createQueryBuilder('item')
+            ->select('COUNT(item.id)')
+            ->join('item.batch', 'batch')
+            ->where('item.charge IN (:charges)')
+            ->andWhere('batch.club = :club')
+            ->andWhere('batch.status IN (:statuses)')
+            ->setParameter('charges', $charges)
+            ->setParameter('club', $club)
+            ->setParameter('statuses', [
+                SepaDirectDebitBatch::STATUS_DRAFT,
+                SepaDirectDebitBatch::STATUS_APPROVED,
+                SepaDirectDebitBatch::STATUS_EXPORTED,
+            ])
+            ->getQuery()->getSingleScalarResult();
+        if ($alreadyReserved > 0) {
+            throw new \DomainException('Mindestens eine Forderung ist bereits in einem aktiven oder exportierten Lastschriftlauf enthalten.');
+        }
         $batch = new SepaDirectDebitBatch($club, $creator, $batchKey, $collectionDate);
         foreach ($charges as $charge) {
             $mandates = $this->em->getRepository(SepaMandate::class)->findBy(['member' => $charge->getMember()], ['id' => 'DESC']);
@@ -69,6 +87,7 @@ final class SepaDirectDebitService
 
     public function export(SepaDirectDebitBatch $batch, User $exporter): array
     {
+        $this->readiness->requireApproved($batch->getClub(), 'sepa');
         if (!$this->access->can($exporter, $batch->getClub(), PermissionModule::FINANCE, PermissionAction::EDIT)) { throw new \DomainException('Keine Exportberechtigung.'); }
         if ($batch->getStatus() === SepaDirectDebitBatch::STATUS_EXPORTED) {
             $xml = $this->xml($batch);
@@ -177,6 +196,18 @@ final class SepaDirectDebitService
         if ($attribute !== null && $attributeValue !== null) { $child->setAttribute($attribute, $attributeValue); }
         $parent->appendChild($child);
         return $child;
+    }
+    private function secondBankWorkingDay(): \DateTimeImmutable
+    {
+        $date = new \DateTimeImmutable('today');
+        $workingDays = 0;
+        while ($workingDays < 2) {
+            $date = $date->modify('+1 day');
+            if (!in_array((int) $date->format('N'), [6, 7], true)) {
+                ++$workingDays;
+            }
+        }
+        return $date;
     }
     private function text(\DOMDocument $dom, \DOMElement $parent, string $ns, string $name, string $value): void
     {

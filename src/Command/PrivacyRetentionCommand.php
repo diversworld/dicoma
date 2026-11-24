@@ -11,6 +11,7 @@ use App\Entity\MemberDocument;
 use App\Entity\MembershipMessage;
 use App\Entity\PrivacyPolicy;
 use App\Service\PrivateMemberDocumentStorage;
+use App\Service\ProductionReadiness;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -24,6 +25,7 @@ final class PrivacyRetentionCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly PrivateMemberDocumentStorage $documents,
+        private readonly ProductionReadiness $readiness,
     ) { parent::__construct(); }
 
     protected function configure(): void
@@ -39,8 +41,13 @@ final class PrivacyRetentionCommand extends Command
         $apply = (bool) $input->getOption('apply');
         $counts = ['audit' => 0, 'messages' => 0, 'members' => 0, 'documents' => 0];
         foreach ($this->em->getRepository(Club::class)->findAll() as $club) {
-            $policy = $this->em->getRepository(PrivacyPolicy::class)->findOneBy(['club' => $club]) ?? new PrivacyPolicy($club);
-            if (!$policy->isPurgeEnabled()) { continue; }
+            if ($apply) {
+                $this->readiness->requireApproved($club, 'retention');
+            }
+            $policy = $this->em->getRepository(PrivacyPolicy::class)->findOneBy(['club' => $club]);
+            if ($policy === null || !$policy->isPurgeEnabled()) {
+                continue;
+            }
             $today = new \DateTimeImmutable('today');
             $counts['audit'] += $this->purgeAudit($club, $today, $apply, $limit);
             $counts['messages'] += $this->purgeMessages($club, $today->modify('-'.$policy->getMessageRetentionDays().' days'), $apply, $limit);
@@ -62,10 +69,13 @@ final class PrivacyRetentionCommand extends Command
 
     private function purgeAudit(Club $club, \DateTimeImmutable $today, bool $apply, int $limit): int
     {
-        $events = $this->em->getRepository(AuditEvent::class)->findBy(['club' => $club], ['expiresAt' => 'ASC'], $limit);
-        $expired = array_values(array_filter($events, static fn (AuditEvent $event): bool => $event->getExpiresAt() < $today));
-        if ($apply) { foreach ($expired as $event) { $this->em->remove($event); } }
-        return count($expired);
+        $events = $this->em->getRepository(AuditEvent::class)->createQueryBuilder('event')
+            ->where('event.club = :club AND event.expiresAt < :today')
+            ->setParameter('club', $club)->setParameter('today', $today)
+            ->orderBy('event.expiresAt', 'ASC')->addOrderBy('event.id', 'ASC')
+            ->setMaxResults($limit)->getQuery()->getResult();
+        if ($apply) { foreach ($events as $event) { $this->em->remove($event); } }
+        return count($events);
     }
 
     private function purgeMessages(Club $club, \DateTimeImmutable $cutoff, bool $apply, int $limit): int
@@ -79,6 +89,7 @@ final class PrivacyRetentionCommand extends Command
             ->where('message.recipient IN (:recipients)')
             ->andWhere('message.sentAt IS NOT NULL AND message.sentAt <= :cutoff')
             ->setParameter('recipients', $recipients)->setParameter('cutoff', $cutoff)
+            ->orderBy('message.sentAt', 'ASC')->addOrderBy('message.id', 'ASC')
             ->setMaxResults($limit)->getQuery()->getResult();
         if ($apply) { foreach ($messages as $message) { $this->em->remove($message); } }
         return count($messages);
@@ -87,21 +98,46 @@ final class PrivacyRetentionCommand extends Command
     /** @return array{members:int,documents:int} */
     private function anonymizeMembers(Club $club, \DateTimeImmutable $memberCutoff, \DateTimeImmutable $financialCutoff, bool $apply, int $limit): array
     {
-        $members = $this->em->getRepository(Member::class)->createQueryBuilder('m')
-            ->where('m.club = :club')->andWhere('m.archivedAt IS NOT NULL AND m.archivedAt <= :cutoff')
-            ->setParameter('club', $club)->setParameter('cutoff', $memberCutoff)->setMaxResults($limit)
-            ->getQuery()->getResult();
+        $ids = $this->em->getConnection()->fetchFirstColumn(
+            <<<'SQL'
+SELECT m.id
+FROM member m
+WHERE m.club_id = :club
+  AND m.membership_status = :status
+  AND m.archived_at IS NOT NULL
+  AND m.archived_at <= :memberCutoff
+  AND (SELECT COUNT(*) FROM member shared WHERE shared.person_id = m.person_id) = 1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM membership_charge charge
+      LEFT JOIN membership_payment payment ON payment.charge_id = charge.id
+      WHERE charge.member_id = m.id
+        AND (charge.created_at > :financialCutoff OR payment.received_at > :financialCutoff)
+  )
+ORDER BY m.archived_at ASC, m.id ASC
+LIMIT :limit
+SQL,
+            [
+                'club' => $club->getId(),
+                'status' => \App\Enum\MembershipStatus::FORMER->value,
+                'memberCutoff' => $memberCutoff->format('Y-m-d H:i:s'),
+                'financialCutoff' => $financialCutoff->format('Y-m-d H:i:s'),
+                'limit' => $limit,
+            ],
+            [
+                'club' => \Doctrine\DBAL\ParameterType::INTEGER,
+                'status' => \Doctrine\DBAL\ParameterType::STRING,
+                'memberCutoff' => \Doctrine\DBAL\ParameterType::STRING,
+                'financialCutoff' => \Doctrine\DBAL\ParameterType::STRING,
+                'limit' => \Doctrine\DBAL\ParameterType::INTEGER,
+            ],
+        );
+        $members = $ids === []
+            ? []
+            : $this->em->getRepository(Member::class)->findBy(['id' => array_map('intval', $ids)], ['id' => 'ASC']);
         $count = 0; $documents = 0;
         foreach ($members as $member) {
-            if ($member->getMembershipStatus()->value !== 'former') { continue; }
             $person = $member->getPerson();
-            $otherMemberships = $this->em->getRepository(Member::class)->count(['person' => $person]);
-            if ($otherMemberships !== 1) { continue; }
-            $financial = $this->em->getConnection()->fetchOne(
-                'SELECT COUNT(*) FROM membership_charge charge LEFT JOIN membership_payment payment ON payment.charge_id = charge.id WHERE charge.member_id = ? AND (charge.created_at > ? OR payment.received_at > ?)',
-                [$member->getId(), $financialCutoff->format('Y-m-d H:i:s'), $financialCutoff->format('Y-m-d H:i:s')],
-            );
-            if ((int) $financial > 0) { continue; }
             ++$count;
             $files = $this->em->getRepository(MemberDocument::class)->findBy(['member' => $member]);
             $documents += count($files);

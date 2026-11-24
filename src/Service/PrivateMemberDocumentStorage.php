@@ -9,7 +9,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class PrivateMemberDocumentStorage
 {
-    public function __construct(#[Autowire('%kernel.project_dir%')] private readonly string $projectDir) {}
+    public function __construct(
+        #[Autowire('%kernel.project_dir%')] private readonly string $projectDir,
+        private readonly DocumentMalwareScanner $scanner,
+    ) {}
 
     public function path(string $storageName): string
     {
@@ -32,6 +35,7 @@ final class PrivateMemberDocumentStorage
         if (!isset($extensions[$mime])) {
             throw new \InvalidArgumentException('Nur PDF, JPG und PNG sind erlaubt.');
         }
+        $this->scanner->scan($file->getPathname());
 
         $name = bin2hex(random_bytes(20)) . '.' . $extensions[$mime];
         $file->move($this->directory(), $name);

@@ -18,7 +18,10 @@ final class ClubDocumentStorage
         'application/vnd.oasis.opendocument.text',
     ];
 
-    public function __construct(#[Autowire('%kernel.project_dir%')] private readonly string $projectDir) {}
+    public function __construct(
+        #[Autowire('%kernel.project_dir%')] private readonly string $projectDir,
+        private readonly DocumentMalwareScanner $scanner,
+    ) {}
 
     public function store(UploadedFile $file): array
     {
@@ -30,6 +33,7 @@ final class ClubDocumentStorage
         if (!in_array($mime, self::ALLOWED_MIME_TYPES, true)) {
             throw new \DomainException('Dieser Dateityp ist nicht erlaubt.');
         }
+        $this->scanner->scan($file->getPathname());
         $storageName = bin2hex(random_bytes(16)).'.'.($file->guessExtension() ?? 'bin');
         $directory = $this->directory();
         if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
