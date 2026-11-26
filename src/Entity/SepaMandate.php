@@ -63,6 +63,7 @@ class SepaMandate
     public function getMaskedIban(): string { return '**** ' . $this->ibanSuffix; }
     public function getSignedAt(): \DateTimeImmutable { return $this->signedAt; }
     public function getRevokedAt(): ?\DateTimeImmutable { return $this->revokedAt; }
+    public function getDocument(): MemberDocument { return $this->document; }
     public function setDocument(MemberDocument $document): void { $this->document = $document; }
     public function revoke(\DateTimeImmutable $date): void
     {

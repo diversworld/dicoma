@@ -524,6 +524,40 @@ final class Phase3MembershipHttpTest extends WebTestCase
         }
     }
 
+    public function testSepaMandateCanUploadItsProofDirectlyFromTheMandateForm(): void
+    {
+        $admin = $this->memberUser('sepa-admin', [User::ROLE_ADMIN]);
+        $member = $this->memberUser('sepa-upload')->getMember();
+        $policy = $this->policy();
+        $policy->setCreditorIdentifier('DE98ZZZ09999999999');
+        $this->em->flush();
+        $_ENV['DICOMA_MEMBERSHIP_BANK_KEY'] = $_SERVER['DICOMA_MEMBERSHIP_BANK_KEY'] = base64_encode(random_bytes(32));
+
+        $temporary = tempnam(sys_get_temp_dir(), 'dicoma-sepa-upload-');
+        self::assertIsString($temporary);
+        self::assertNotFalse(file_put_contents($temporary, "%PDF-1.4\nSynthetic signed mandate\n%%EOF\n"));
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/admin/membership/member/'.$member->getId());
+        self::assertResponseIsSuccessful();
+        $form = $crawler->filter('form[name="sepa_mandate"]')->form();
+        $form['sepa_mandate[proofUpload]']->upload($temporary);
+        $this->client->submit($form, [
+            'sepa_mandate[reference]' => 'MANDATE-UPLOAD-1',
+            'sepa_mandate[holder]' => 'SEPA Upload Member',
+            'sepa_mandate[iban]' => 'DE89370400440532013000',
+            'sepa_mandate[bic]' => 'COBADEFFXXX',
+            'sepa_mandate[signed]' => '2026-01-01',
+            'sepa_mandate[proof]' => '',
+        ]);
+
+        self::assertResponseRedirects('/admin/membership/member/'.$member->getId());
+        $mandate = $this->em->getRepository(SepaMandate::class)->findOneBy(['member' => $member]);
+        self::assertInstanceOf(SepaMandate::class, $mandate);
+        self::assertSame('consent', $mandate->getDocument()->getKind());
+        self::assertSame(basename($temporary), $mandate->getDocument()->getOriginalName());
+        self::assertFileExists(static::getContainer()->get(PrivateMemberDocumentStorage::class)->path($mandate->getDocument()->getStorageName()));
+    }
+
     public function testRealContributionAndPaymentFormsUseExactCents(): void
     {
         $admin = $this->memberUser('finance-admin', ['ROLE_ADMIN']);

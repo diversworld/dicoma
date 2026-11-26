@@ -15,7 +15,11 @@
 <div class="table-responsive"><table class="table"><thead><tr><th>Forderung</th><th>Fällig</th><th>EUR</th><th>Bezahlt EUR</th><th>Offen EUR</th>{% if canFinance %}<th>Aktion</th>{% endif %}</tr></thead><tbody>
 {% for charge in charges %}<tr><td>{{ charge.invoiceNumber ? charge.invoiceNumber ~ ' · ' : '' }}{{ charge.description }}</td><td>{{ charge.dueAt|date('d.m.Y') }}</td><td>{{ (charge.amountCents / 100)|number_format(2, ',', '.') }}</td><td>{{ (charge.paidCents / 100)|number_format(2, ',', '.') }}</td><td>{{ (charge.outstandingCents / 100)|number_format(2, ',', '.') }}</td>{% if canFinance %}<td><a href="{{ path('membership_payment', {id: charge.id}) }}">Zahlung / Historie</a></td>{% endif %}</tr>{% else %}<tr><td colspan="{{ canFinance ? 6 : 5 }}">Keine Forderungen.</td></tr>{% endfor %}
 </tbody></table></div>
-<h2>SEPA-Mandate</h2><p>Nur Mandatsverwaltung, kein automatischer Bankeinzug. IBAN wird verschlüsselt gespeichert und hier ausschließlich maskiert angezeigt.</p>
+<h2>SEPA-Mandate</h2>
+<p>Nur Mandatsverwaltung, kein automatischer Bankeinzug. IBAN wird verschlüsselt gespeichert und hier ausschließlich maskiert angezeigt.</p>
+{% if admin and canFinance %}
+<p class="text-muted">Zum Anlegen wird ein unterschriebenes SEPA-Mandat benötigt. Lade PDF, JPG oder PNG direkt im Formular hoch; alternativ kann ein bereits gespeicherter Mitgliedsnachweis gewählt werden.</p>
+{% endif %}
 <ul>{% for mandate in mandates %}<li>{{ mandate.reference }} · {{ mandate.creditorIdentifier }} · {{ mandate.holder }} · {{ mandate.maskedIban }} · unterschrieben {{ mandate.signedAt|date('d.m.Y') }} {% if mandate.revokedAt %}· widerrufen {{ mandate.revokedAt|date('d.m.Y') }}{% elseif canFinance %}<form method="post" action="{{ path('membership_mandate_revoke', {id: mandate.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('mandate_revoke_' ~ mandate.id) }}"><button type="submit" class="btn btn-outline-danger">Widerruf erfassen</button></form>{% endif %}</li>{% else %}<li>Keine Mandate.</li>{% endfor %}</ul>
 {% if admin %}
 {% set titles = {status: 'Mitgliedschaftswechsel', assignment: 'Beiträge / Familienzuordnung', annual: 'Jahresbeitrag erheben', special: 'Sonderbeitrag erheben', mandate: 'SEPA-Mandat mit Nachweis erfassen', archive: 'Archivieren nach Austritt'} %}

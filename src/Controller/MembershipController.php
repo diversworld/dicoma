@@ -33,6 +33,7 @@ use App\Security\EditorialAccess;
 use App\Security\ModuleAccess;
 use App\Enum\PermissionModule;
 use App\Service\MembershipFinanceService;
+use App\Service\PrivateMemberDocumentStorage;
 use App\Service\MembershipService;
 use App\Service\MembershipRoleContinuity;
 use App\Service\MembershipHistoryRecorder;
@@ -51,6 +52,7 @@ use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -74,6 +76,7 @@ final class MembershipController extends AbstractController
         private readonly MembershipRoleContinuity $continuity,
         private readonly ModuleAccess $moduleAccess,
         private readonly MembershipHistoryRecorder $history,
+        private readonly PrivateMemberDocumentStorage $documents,
     ) {}
 
     #[Route('/membership/apply', name: 'membership_application_clubs', methods: ['GET'])]
@@ -847,24 +850,71 @@ final class MembershipController extends AbstractController
                     ]
                 )
                 ->add('proof', EntityType::class, [
-                    'label' => 'Unterzeichneter Nachweis aus Mitgliederdokumenten', 
+                    'label' => 'Vorhandenen Nachweis auswählen',
                     'class' => MemberDocument::class, 
-                    'choices' => $this->em->getRepository(MemberDocument::class)->findBy(['member' => $member]), 
-                    'choice_label' => 'originalName'
-                    ]
-                )
+                    'choices' => $this->em->getRepository(MemberDocument::class)->findBy(['member' => $member]),
+                    'choice_label' => 'originalName',
+                    'required' => false,
+                    'placeholder' => 'Kein vorhandener Nachweis',
+                ])
+                ->add('proofUpload', F\FileType::class, [
+                    'label' => 'Unterzeichnetes SEPA-Mandat hochladen (PDF, JPG oder PNG, maximal 5 MB)',
+                    'mapped' => false,
+                    'required' => false,
+                    'attr' => ['accept' => '.pdf,.jpg,.jpeg,.png'],
+                    'constraints' => [
+                        new Assert\File(
+                            maxSize: '5M',
+                            mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+                            mimeTypesMessage: 'Bitte eine PDF-, JPG- oder PNG-Datei verwenden.',
+                        ),
+                    ],
+                ])
                 ->getForm()->handleRequest($request);
 
             if ($canFinance && ($response = $this->process($forms['mandate'], function () use ($forms, $member, $actor): void {
                 $d = $forms['mandate']->getData();
-                $this->finance->createMandate(
-                    $member, 
-                    $d['reference'], 
-                    $d['holder'], 
-                    $d['iban'], 
-                    $d['signed'], 
-                    $d['proof'], $actor, (string) ($d['bic'] ?? '')
-                );
+                $upload = $forms['mandate']->get('proofUpload')->getData();
+                $proof = $d['proof'] ?? null;
+                $storedName = null;
+                $uploadedDocument = null;
+                try {
+                    if ($upload instanceof UploadedFile) {
+                        [$storedName, $mime, $size] = $this->documents->store($upload);
+                        $original = mb_substr(basename(str_replace('\\', '/', $upload->getClientOriginalName())), 0, 255);
+                        $uploadedDocument = new MemberDocument($member, $storedName, $original, $mime, $size);
+                        $uploadedDocument->setKind('consent');
+                        $this->em->persist($uploadedDocument);
+                        $proof = $uploadedDocument;
+                    }
+                    if (!$proof instanceof MemberDocument) {
+                        throw new \DomainException('Bitte einen vorhandenen Nachweis auswählen oder das unterschriebene Mandat hochladen.');
+                    }
+                    $this->finance->createMandate(
+                        $member,
+                        $d['reference'],
+                        $d['holder'],
+                        $d['iban'],
+                        $d['signed'],
+                        $proof,
+                        $actor,
+                        (string) ($d['bic'] ?? ''),
+                    );
+                } catch (\Throwable $exception) {
+                    if ($uploadedDocument !== null && $this->em->contains($uploadedDocument)) {
+                        $this->em->remove($uploadedDocument);
+                    }
+                    if ($storedName !== null) {
+                        @unlink($this->documents->path($storedName));
+                    }
+                    if ($exception instanceof \DomainException) {
+                        throw $exception;
+                    }
+                    if ($exception instanceof \InvalidArgumentException) {
+                        throw new \DomainException($exception->getMessage());
+                    }
+                    throw $exception;
+                }
             }, $route, $parameters))) {
                 return $response; 
             }
