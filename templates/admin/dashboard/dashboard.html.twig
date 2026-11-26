@@ -25,21 +25,35 @@
     </nav>
 
     {% if dashboardScope %}
+    <details class="mb-4">
+        <summary class="btn btn-sm btn-outline-secondary">Dashboard anpassen</summary>
+        <form method="post" action="{{ path('admin_dashboard_preferences') }}" class="card card-body mt-2">
+            <input type="hidden" name="_token" value="{{ csrf_token('dashboard_preferences') }}">
+            <div class="row g-3">
+                {% for group, metrics in {governance: dashboardGovernanceMetrics, finance: dashboardFinanceMetrics} %}
+                    {% if metrics %}
+                    <div class="col-lg-6">
+                        <h2 class="h6">{{ group == 'governance' ? 'Vorstands-KPIs' : 'Finanz-KPIs' }}</h2>
+                        {% for metric in metrics %}
+                            <label class="input-group input-group-sm mb-2">
+                                <span class="input-group-text">{{ loop.index }}</span>
+                                <span class="form-control">{{ metric.label }}</span>
+                                <span class="input-group-text">Position</span>
+                                <input class="form-control" type="number" min="1" max="{{ metrics|length }}" name="{{ group }}[{{ metric.key }}]" value="{{ loop.index }}" aria-label="Position für {{ metric.label }}">
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <button class="btn btn-primary btn-sm mt-3 align-self-start">Reihenfolge speichern</button>
+        </form>
+    </details>
     {% if canGovernance %}
     <section aria-labelledby="dashboard-governance" class="mb-4">
         <h2 id="dashboard-governance" class="h5">Vorstand & Organisation</h2>
         <div class="row g-3">
-            {% for metric in [
-                {label: 'Mitglieder gesamt', value: governance.membersTotal},
-                {label: 'Aktive Mitglieder', value: governance.membersActive},
-                {label: 'Passive Mitglieder', value: governance.membersPassive},
-                {label: 'Offene Aufgaben', value: governance.openTasks},
-                {label: 'Offene Beschlüsse', value: governance.openResolutions},
-                {label: 'Dokumentfreigaben', value: governance.pendingDocuments},
-                {label: 'Aufnahmeverfahren', value: governance.newMemberApplications},
-                {label: 'Kommende Sitzungen', value: governance.upcomingMeetingCount},
-                {label: 'Austritte gesamt', value: governance.memberDepartures}
-            ] %}
+            {% for metric in dashboardGovernanceMetrics %}
                 <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ metric.label }}</div><div class="fs-2 fw-bold">{{ metric.value }}</div></div></div></div>
             {% endfor %}
         </div>
@@ -57,14 +71,15 @@
     <section aria-labelledby="dashboard-finance" class="mb-4">
         <h2 id="dashboard-finance" class="h5">{{ dashboardRole == 'Kassenwart' ? 'Kassenwart: Finanzstatus' : 'Finanzstatus'|trans }}</h2>
         <div class="row g-3" data-dashboard-finance>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Offene Forderungen</div><div class="fs-2 fw-bold">{{ (finance.openCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Davon überfällig</div><div class="fs-2 fw-bold text-danger">{{ (finance.overdueCents / 100)|number_format(2, ',', '.') }} EUR</div><small>{{ finance.overdueCount }} Forderungen</small></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Eingegangene Zahlungen</div><div class="fs-2 fw-bold">{{ (finance.paidCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Offene Mahnfälle</div><div class="fs-2 fw-bold">{{ finance.dunningCount }}</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Einnahmen {{ 'now'|date('Y') }}</div><div class="fs-2 fw-bold">{{ (finance.yearIncomeCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Ausgaben {{ 'now'|date('Y') }}</div><div class="fs-2 fw-bold">{{ (finance.yearExpenseCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Saldo Vermögenskonten</div><div class="fs-2 fw-bold">{{ (finance.assetBalanceCents / 100)|number_format(2, ',', '.') }} EUR</div></div></div></div>
-            <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Lastschriften in Vorbereitung</div><div class="fs-2 fw-bold">{{ finance.sepaOpenCount }}</div></div></div></div>
+            {% for metric in dashboardFinanceMetrics %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card h-100"><div class="card-body">
+                        <div class="text-muted">{{ metric.label }}</div>
+                        <div class="fs-2 fw-bold {{ metric.key == 'overdueCents' ? 'text-danger' : '' }}">{{ metric.formatted ? metric.value|number_format(2, ',', '.') ~ ' EUR' : metric.value }}</div>
+                        {% if metric.key == 'overdueCents' %}<small>{{ finance.overdueCount }} Forderungen</small>{% endif %}
+                    </div></div>
+                </div>
+            {% endfor %}
             <div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ path('admin_membership_finance') }}"><div class="card-body"><i class="fa fa-coins me-2"></i>Forderungen und Zahlungen öffnen</div></a></div>
         </div>
         <div class="card mt-3">

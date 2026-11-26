@@ -5,6 +5,7 @@
 {% block page_actions %}
     <a class="btn btn-primary" href="{{ ea_url().setController('App\\Controller\\Admin\\BoardMeetingCrudController').setAction('new') }}">Sitzung anlegen</a>
     <a class="btn btn-outline-primary" href="{{ ea_url().setController('App\\Controller\\Admin\\BoardTaskCrudController').setAction('new') }}">Aufgabe anlegen</a>
+    <a class="btn btn-outline-secondary" href="{{ path('admin_governance_annual_export', {year: ('now'|date('Y')) - 1}) }}">Jahresbericht {{ ('now'|date('Y')) - 1 }} exportieren</a>
 {% endblock %}
 
 {% block main %}

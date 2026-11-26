@@ -17,6 +17,7 @@ final class FinanceLedgerService
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly AuditLogger $audit,
+        private readonly ProductionReadiness $readiness,
     ) {}
 
     public function post(Club $club, FinanceAccount $debit, FinanceAccount $credit, int $amountCents, \DateTimeImmutable $date, string $description, string $sourceKey, User $actor, ?string $reference = null): FinanceTransaction
@@ -58,6 +59,7 @@ final class FinanceLedgerService
 
     public function closeYear(Club $club, int $year, User $actor): FinanceAnnualClose
     {
+        $this->readiness->requireApproved($club, 'chart');
         if ($this->em->getRepository(FinanceAnnualClose::class)->findOneBy(['club' => $club, 'year' => $year]) !== null) {
             throw new \DomainException('Dieses Geschäftsjahr ist bereits abgeschlossen.');
         }

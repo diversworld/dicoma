@@ -52,6 +52,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $roleValidity = null;
 
+    /** @var array{governance:list<string>,finance:list<string>}|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $dashboardPreferences = null;
+
     /**
      * @var string|null Das gehashte Passwort
      */
@@ -245,6 +249,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoleValidity(): array
     {
         return $this->roleValidity ?? [];
+    }
+
+    /** @return array{governance:list<string>,finance:list<string>} */
+    public function getDashboardPreferences(): array
+    {
+        return $this->dashboardPreferences ?? ['governance' => [], 'finance' => []];
+    }
+
+    /** @param list<string> $governance @param list<string> $finance */
+    public function setDashboardPreferences(array $governance, array $finance): void
+    {
+        $governanceAllowed = ['membersTotal', 'membersActive', 'membersPassive', 'memberDepartures', 'openTasks', 'openResolutions', 'pendingDocuments', 'newMemberApplications', 'upcomingMeetingCount'];
+        $financeAllowed = ['openCents', 'overdueCents', 'paidCents', 'dunningCount', 'yearIncomeCents', 'yearExpenseCents', 'assetBalanceCents', 'sepaOpenCount'];
+        foreach ([[$governance, $governanceAllowed], [$finance, $financeAllowed]] as [$values, $allowed]) {
+            sort($values);
+            $expected = $allowed;
+            sort($expected);
+            if ($values !== $expected) {
+                throw new \InvalidArgumentException('Unbekannte oder doppelte Dashboard-Kennzahl.');
+            }
+        }
+        $this->dashboardPreferences = ['governance' => $governance, 'finance' => $finance];
     }
 
     /**

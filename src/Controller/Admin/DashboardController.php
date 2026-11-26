@@ -303,6 +303,14 @@ class DashboardController extends AbstractDashboardController
                     : ($isBoard ? 'Vorstand' : 'Verwaltung')),
             'governance' => $governance,
             'canGovernance' => $canGovernance,
+            'dashboardGovernanceMetrics' => $this->orderedMetrics(
+                $this->governanceMetrics($governance),
+                $user instanceof User ? $user->getDashboardPreferences()['governance'] : [],
+            ),
+            'dashboardFinanceMetrics' => $this->orderedMetrics(
+                $this->financeMetrics($finance),
+                $user instanceof User ? $user->getDashboardPreferences()['finance'] : [],
+            ),
 			'expiredQualifications' => $club === null ? [] :
 				$this->memberQualificationRepository
 					->findExpired($club, 5),
@@ -329,6 +337,79 @@ class DashboardController extends AbstractDashboardController
 				$canManageQualifications ? (clone $qualificationUrl)->generateUrl() : null,
 		]);
 	}
+
+    #[AdminRoute(path: '/dashboard-preferences', name: 'dashboard_preferences', options: ['methods' => ['POST']])]
+    public function saveDashboardPreferences(Request $request): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User || !$this->isCsrfTokenValid('dashboard_preferences', $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+        $order = static function (array $positions): array {
+            asort($positions, SORT_NUMERIC);
+            return array_map('strval', array_keys($positions));
+        };
+        $existing = $user->getDashboardPreferences();
+        $governance = $request->request->all('governance');
+        $finance = $request->request->all('finance');
+        if ($governance === []) {
+            $governance = $existing['governance'] ?: ['membersTotal', 'membersActive', 'membersPassive', 'memberDepartures', 'openTasks', 'openResolutions', 'pendingDocuments', 'newMemberApplications', 'upcomingMeetingCount'];
+        }
+        if ($finance === []) {
+            $finance = $existing['finance'] ?: ['openCents', 'overdueCents', 'paidCents', 'dunningCount', 'yearIncomeCents', 'yearExpenseCents', 'assetBalanceCents', 'sepaOpenCount'];
+        }
+        try {
+            $user->setDashboardPreferences(
+                array_is_list($governance) ? $governance : $order($governance),
+                array_is_list($finance) ? $finance : $order($finance),
+            );
+            $this->em->flush();
+            $this->addFlash('success', 'Dashboard-Reihenfolge gespeichert.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->addFlash('danger', $exception->getMessage());
+        }
+        return $this->redirect('/admin');
+    }
+
+    /** @return list<array{key:string,label:string,value:int}> */
+    private function governanceMetrics(?array $governance): array
+    {
+        if ($governance === null) { return []; }
+        return [
+            ['key' => 'membersTotal', 'label' => 'Mitglieder gesamt', 'value' => $governance['membersTotal']],
+            ['key' => 'membersActive', 'label' => 'Aktive Mitglieder', 'value' => $governance['membersActive']],
+            ['key' => 'membersPassive', 'label' => 'Passive Mitglieder', 'value' => $governance['membersPassive']],
+            ['key' => 'memberDepartures', 'label' => 'Austritte gesamt', 'value' => $governance['memberDepartures']],
+            ['key' => 'openTasks', 'label' => 'Offene Aufgaben', 'value' => $governance['openTasks']],
+            ['key' => 'openResolutions', 'label' => 'Offene Beschlüsse', 'value' => $governance['openResolutions']],
+            ['key' => 'pendingDocuments', 'label' => 'Dokumentfreigaben', 'value' => $governance['pendingDocuments']],
+            ['key' => 'newMemberApplications', 'label' => 'Aufnahmeverfahren', 'value' => $governance['newMemberApplications']],
+            ['key' => 'upcomingMeetingCount', 'label' => 'Kommende Sitzungen', 'value' => $governance['upcomingMeetingCount']],
+        ];
+    }
+
+    /** @return list<array{key:string,label:string,value:float,int,formatted:bool}> */
+    private function financeMetrics(array $finance): array
+    {
+        return [
+            ['key' => 'openCents', 'label' => 'Offene Forderungen', 'value' => $finance['openCents'] / 100, 'formatted' => true],
+            ['key' => 'overdueCents', 'label' => 'Davon überfällig', 'value' => $finance['overdueCents'] / 100, 'formatted' => true],
+            ['key' => 'paidCents', 'label' => 'Eingegangene Zahlungen', 'value' => $finance['paidCents'] / 100, 'formatted' => true],
+            ['key' => 'dunningCount', 'label' => 'Offene Mahnfälle', 'value' => $finance['dunningCount'], 'formatted' => false],
+            ['key' => 'yearIncomeCents', 'label' => 'Einnahmen '.date('Y'), 'value' => $finance['yearIncomeCents'] / 100, 'formatted' => true],
+            ['key' => 'yearExpenseCents', 'label' => 'Ausgaben '.date('Y'), 'value' => $finance['yearExpenseCents'] / 100, 'formatted' => true],
+            ['key' => 'assetBalanceCents', 'label' => 'Saldo Vermögenskonten', 'value' => $finance['assetBalanceCents'] / 100, 'formatted' => true],
+            ['key' => 'sepaOpenCount', 'label' => 'Lastschriften in Vorbereitung', 'value' => $finance['sepaOpenCount'], 'formatted' => false],
+        ];
+    }
+
+    private function orderedMetrics(array $metrics, array $order): array
+    {
+        if ($order === []) { return $metrics; }
+        $positions = array_flip($order);
+        usort($metrics, static fn (array $left, array $right): int => ($positions[$left['key']] ?? 999) <=> ($positions[$right['key']] ?? 999));
+        return $metrics;
+    }
 
     #[AdminRoute(path: '/settings/tuv-notifications', name: 'settings_tuv_notifications', options: ['methods' => ['GET']])]
     public function tuvNotificationSettings(Request $request, TuvMessageRenderer $renderer): Response

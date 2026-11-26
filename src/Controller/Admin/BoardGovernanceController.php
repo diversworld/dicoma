@@ -19,6 +19,7 @@ use App\Service\BoardDashboard;
 use App\Service\BoardGovernanceService;
 use App\Service\ClubDocumentStorage;
 use App\Service\SimplePdfRenderer;
+use App\Service\ClubAnnualExport;
 use App\Service\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -60,6 +61,25 @@ final class BoardGovernanceController extends AbstractController
                 ->where('m.club = :club')->setParameter('club', $club)->orderBy('u.user', 'ASC')
                 ->getQuery()->getResult(),
         ]);
+    }
+
+    #[Route('/governance/export/{year}.zip', name: 'admin_governance_annual_export', requirements: ['year' => '\d{4}'], methods: ['GET'])]
+    public function exportAnnual(int $year, ClubAnnualExport $export): BinaryFileResponse
+    {
+        $this->assertGovernanceReader();
+        $club = $this->clubs->getClub() ?? throw $this->createAccessDeniedException();
+        try {
+            $package = $export->create($club, $year);
+        } catch (\DomainException $exception) {
+            throw $this->createNotFoundException($exception->getMessage());
+        }
+        $this->audit->record($club, $this->getUser()->getUserIdentifier(), 'governance.annual_export', $club, ['year' => $year]);
+        $this->em->flush();
+        $response = new BinaryFileResponse($package['path']);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $package['filename']);
+        $response->headers->set('Cache-Control', 'private, no-store');
+        $response->deleteFileAfterSend();
+        return $response;
     }
 
     #[Route('/governance/meetings/{id}/resolutions', name: 'admin_governance_resolution_create', methods: ['POST'])]
