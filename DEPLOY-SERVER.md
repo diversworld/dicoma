@@ -9,6 +9,10 @@
 - [ ] `.env.local` und produktive Secrets nicht in den Patch übernommen
 - [ ] `DICOMA_MEMBERSHIP_BANK_KEY`, `MAILER_DSN`, `MEMBERSHIP_MAIL_FROM`,
       Datenbankzugang und Speicherpfade geprüft
+- [ ] `DICOMA_CLAMAV_COMMAND` zeigt auf einen ausführbaren ClamAV-Scanner;
+      Signaturen sind aktuell und EICAR-/Sauberdatei-Prüfung bestanden
+- [ ] `php bin/console app:release-check --fail-on-blocked` ist grün oder alle
+      verbleibenden externen Nachweise wurden dokumentiert
 - [ ] `DICOMA_CLAMAV_COMMAND` zeigt auf einen ausführbaren ClamAV-Client;
       EICAR-Testupload wird vor Freigabe abgewiesen
 - [ ] Bankprofil für pain.008.001.02 einschließlich BIC-/IBAN-Regeln mit einem
@@ -49,6 +53,7 @@ In DDEV entsprechend `ddev exec php ...` verwenden.
 - [ ] Finanzen, Jahreslauf, Mahnung und Zahlungsverbuchung
 - [ ] SEPA-Entwurf, Vier-Augen-Freigabe und pain.008-Export
 - [ ] Datenschutz-Dry-Run ohne gespeicherte oder freigegebene Richtlinie
+- [ ] ZIP-Jahresbericht, Vorstands-Digest und Mitglieder-CSV-Dry-Run geprüft
 - [ ] Private Dokumente bleiben außerhalb des öffentlichen Webroots
 - [ ] Fokussierte Integrationssuite und Mapping-Validierung erfolgreich
 
@@ -60,6 +65,8 @@ Neue Fehler müssen trotzdem vor Produktivsetzung bewertet und behoben werden.
 - Täglich, z. B. 05:30: `php bin/console app:membership:daily --send`
 - Täglich, z. B. 06:00: `php bin/console app:board:task-reminders`
 - Täglich, z. B. 06:15: `php bin/console app:membership:queue-dunning`
+- wöchentlich, z. B. Montag 07:00:
+  `php bin/console app:board:digest --days=14 --confirm`
 - Monatlich nach fachlicher Freigabe:
   `php bin/console app:membership:monthly-billing --period=YYYY-MM --due=YYYY-MM-DD --confirm`
 - Datenschutzbereinigung nur nach Fachfreigabe und zunächst als Dry-Run:

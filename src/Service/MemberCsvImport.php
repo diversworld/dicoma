@@ -69,6 +69,7 @@ final class MemberCsvImport
         }
         $this->em->wrapInTransaction(function () use ($pending): void {
             foreach ($pending as $member) { $this->em->persist($member); }
+            $this->em->flush();
         });
         return $result;
     }

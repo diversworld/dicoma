@@ -127,10 +127,10 @@ Im bestehenden Code sind Mitgliederverwaltung, Mitgliedsanträge, Beiträge, Zah
 
 ### Phase C – Komfort
 
-1. Jahresberichte und Exportpakete.
-2. Kalender-, Protokoll- und Aufgaben-Digest per E-Mail.
-3. Dashboard-Werkzeuge und konfigurierbare KPI-Reihenfolge.
-4. Bulk-Import mit Dry-Run, Dublettenprüfung und Rollback.
+1. Jahresberichte und Exportpakete. **Umgesetzt.**
+2. Kalender-, Protokoll- und Aufgaben-Digest per E-Mail. **Umgesetzt.**
+3. Dashboard-Werkzeuge und konfigurierbare KPI-Reihenfolge. **Umgesetzt.**
+4. Bulk-Import mit Dry-Run, Dublettenprüfung und Rollback. **Umgesetzt.**
 
 ## 7. In dieser Umsetzung gelieferte Erweiterungen
 

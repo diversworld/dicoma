@@ -55,11 +55,18 @@ final class BoardDigest
             ->andWhere('m.membershipStatus != :former')
             ->setParameter('club', $club)->setParameter('former', MembershipStatus::FORMER->value)
             ->getQuery()->getResult();
-        $recipients = array_values(array_filter($members, static fn (Member $member): bool =>
-            $member->getUser() !== null
-            && in_array(User::ROLE_BOARD, $member->getUser()->getStoredRoles(), true)
-            && filter_var($member->getEmail(), FILTER_VALIDATE_EMAIL) !== false
-        ));
+        $recipients = array_values(array_filter($members, static function (Member $member) use ($today): bool {
+            $user = $member->getUser();
+            if ($user === null || !in_array(User::ROLE_BOARD, $user->getStoredRoles(), true)
+                || filter_var($member->getEmail(), FILTER_VALIDATE_EMAIL) === false) {
+                return false;
+            }
+            $window = $user->getRoleValidity()[User::ROLE_BOARD] ?? null;
+            $date = $today->format('Y-m-d');
+            return $window === null
+                || (($window['startsAt'] === null || $window['startsAt'] <= $date)
+                    && ($window['endsAt'] === null || $window['endsAt'] >= $date));
+        }));
         $subject = sprintf('Vorstands-Digest %s bis %s', $today->format('d.m.Y'), $until->format('d.m.Y'));
         $body = $this->body($events, $meetings, $missingMinutes, $tasks, $resolutions, $days);
         $queued = 0;

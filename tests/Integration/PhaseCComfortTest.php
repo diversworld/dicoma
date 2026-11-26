@@ -93,4 +93,15 @@ final class PhaseCComfortTest extends KernelTestCase
         $zip->close();
         @unlink($package['path']);
     }
+
+    public function testDashboardPreferencesMustContainEachKpiExactlyOnce(): void
+    {
+        $user = new User();
+        $governance = ['membersTotal', 'membersActive', 'membersPassive', 'memberDepartures', 'openTasks', 'openResolutions', 'pendingDocuments', 'newMemberApplications', 'upcomingMeetingCount'];
+        $finance = ['openCents', 'overdueCents', 'paidCents', 'dunningCount', 'yearIncomeCents', 'yearExpenseCents', 'assetBalanceCents', 'sepaOpenCount'];
+        $user->setDashboardPreferences(array_reverse($governance), array_reverse($finance));
+        self::assertSame(array_reverse($governance), $user->getDashboardPreferences()['governance']);
+        $this->expectException(\InvalidArgumentException::class);
+        $user->setDashboardPreferences(['membersTotal'], $finance);
+    }
 }

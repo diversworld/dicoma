@@ -25,6 +25,7 @@
     </nav>
 
     {% if dashboardScope %}
+    {% if dashboardGovernanceMetrics or dashboardFinanceMetrics %}
     <details class="mb-4">
         <summary class="btn btn-sm btn-outline-secondary">Dashboard anpassen</summary>
         <form method="post" action="{{ path('admin_dashboard_preferences') }}" class="card card-body mt-2">
@@ -49,6 +50,7 @@
             <button class="btn btn-primary btn-sm mt-3 align-self-start">Reihenfolge speichern</button>
         </form>
     </details>
+    {% endif %}
     {% if canGovernance %}
     <section aria-labelledby="dashboard-governance" class="mb-4">
         <h2 id="dashboard-governance" class="h5">Vorstand & Organisation</h2>
