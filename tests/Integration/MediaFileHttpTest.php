@@ -6,6 +6,7 @@ namespace App\Tests\Integration;
 
 use App\Entity\{BarDutyPolicy, Club, ClubEvent, ClubEventDocument, ClubEventRegistration, ClubFunction, ClubFunctionAssignment, ContributionClass, Courses, FileAction, MediaFile, MediaFolder, MediaFolderPermission, Member, MembershipPolicy, Person, Schedule, User, WebsiteDisplaySettings, WebsitePublication};
 use App\Enum\{CourseStatus, MembershipStatus};
+use App\Security\FolderPermissions;
 use App\Service\MediaFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -232,6 +233,12 @@ final class MediaFileHttpTest extends WebTestCase
         $this->em->flush();
         $childId = $child->getId();
         $foreignId = $foreign->getId();
+        $permissions = static::getContainer()->get(FolderPermissions::class);
+        foreach (FileAction::cases() as $action) {
+            self::assertTrue($permissions->can($super, $this->club, $parent, $action));
+            self::assertTrue($permissions->can($super, $this->club, $child, $action));
+            self::assertFalse($permissions->can($super, $this->club, $foreign, $action));
+        }
         $this->client->loginUser($super);
 
         $this->client->request('GET', '/admin/media?folder='.$childId);
