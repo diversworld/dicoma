@@ -30,7 +30,7 @@ final class CourseTimetableService
                 $s->getEndTimeLabel(),
                 $s->getTrainingUnitLabel(),
                 $s->getLocation() ?? '',
-                $s->getInstructor()?->getFullName() ?? '',
+                $s->getInstructorName(),
             ], ';', '"', '\\');
         }
         rewind($stream);

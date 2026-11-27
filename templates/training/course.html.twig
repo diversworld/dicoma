@@ -32,7 +32,7 @@
 <h2>Termine, Orte und Ausbilder</h2>
 <ul>{% for session in course.schedule %}
     <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen' }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
-        – {{ session.title }} – {{ session.location }} – {{ session.instructor }}
+        – {{ session.title }} – {{ session.location ?: 'wird bekanntgegeben' }} – {{ session.instructorName ?: 'wird bekanntgegeben' }}
         {% if is_granted('TRAINING_ASSESS', session) %}<a href="{{ path('admin_portal_training_assess', {id: session.id}) }}">Anwesenheit und Prüfungsergebnisse erfassen</a>{% endif %}</li>
 {% else %}<li>Noch keine Termine vorhanden.</li>{% endfor %}</ul>
 <h2>Teilnehmer und Warteliste</h2>

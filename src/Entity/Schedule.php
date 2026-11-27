@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Enum\BookingAttendanceStatus;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use Doctrine\ORM\EntityNotFoundException;
 
 #[ORM\Entity(repositoryClass: ScheduleRepository::class)]
 #[ORM\Table(name: 'schedule')]
@@ -73,6 +74,7 @@ class Schedule
 	private ?int $trainingUnitSequence = null;
 	
     #[ORM\ManyToOne(inversedBy: 'schedules')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Member $instructor = null;
 
     public function __construct()
@@ -214,6 +216,15 @@ class Schedule
     public function getInstructor(): ?Member
     {
         return $this->instructor;
+    }
+
+    public function getInstructorName(): string
+    {
+        try {
+            return $this->instructor?->getFullName() ?? '';
+        } catch (EntityNotFoundException) {
+            return '';
+        }
     }
 
     public function setInstructor(?Member $instructor): static

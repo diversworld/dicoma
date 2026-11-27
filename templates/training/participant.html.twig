@@ -36,7 +36,7 @@
 {% if training_route_prefix or participant.course.schedulePublishedAt %}
 <ul>{% for session in participant.course.schedule %}
     <li>{{ session.startDate ? session.startDate|date('d.m.Y') : 'Datum offen'|trans }} {{ session.startTime ? session.startTime|date('H:i') : '' }}
-        – {{ session.title }} – {{ session.location }} – {{ session.instructor }}</li>
+        – {{ session.title }} – {{ session.location ?: 'wird bekanntgegeben' }} – {{ session.instructorName ?: 'wird bekanntgegeben' }}</li>
 {% else %}<li>{{ 'Noch keine Termine geplant.'|trans }}</li>{% endfor %}</ul>
 {% if participant.course.schedulePublishedAt and (not training_route_prefix or manage) %}
 <p><a href="{{ training_route_prefix ? path('admin_training_timetable', {id: participant.course.id}) : path('student_course_timetable', {id: participant.id}) }}">{{ 'Freigegebenen Terminplan anzeigen / herunterladen'|trans }}</a></p>

@@ -94,7 +94,7 @@ final class MemberPortalController extends AbstractController
         $response = new JsonResponse($payload, 200, [
             'Cache-Control' => 'private, no-store',
             'Content-Disposition' => 'attachment; filename="dicoma-datenexport-'.$member->getId().'.json"',
-        ], true);
+        ]);
         $audit->record($member->getClub(), $user->getUserIdentifier(), 'privacy.member_export', $member);
         $em->flush();
         return $response;

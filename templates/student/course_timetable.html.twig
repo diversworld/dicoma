@@ -17,7 +17,7 @@
 <td>{{ appointment.startTime ? appointment.startTime|date('H:i') : 'offen' }}</td>
 <td>{{ appointment.trainingUnitLabel }}</td>
 <td>{{ appointment.location ?: 'wird bekanntgegeben' }}</td>
-<td>{{ appointment.instructor ? appointment.instructor.fullName : 'wird bekanntgegeben' }}</td></tr>
+<td>{{ appointment.instructorName ?: 'wird bekanntgegeben' }}</td></tr>
 {% else %}<tr><td colspan="5">Noch keine Termine festgelegt.</td></tr>{% endfor %}
 </tbody></table></div></main>
 {% endblock %}

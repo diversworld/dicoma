@@ -104,6 +104,22 @@ final class AccountSelfServiceHttpTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testMemberDataExportReturnsValidJsonDownload(): void
+    {
+        $user = $this->user('export', [], true);
+        $user->getMember()->setMemberNumber('EXPORT-1');
+        $this->em->flush();
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/my/data-export');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/json');
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('Cache-Control'));
+        self::assertResponseHeaderSame('Content-Disposition', 'attachment; filename="dicoma-datenexport-'.$user->getMember()->getId().'.json"');
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('EXPORT-1', $data['member']['memberNumber']);
+        self::assertSame([], $data['charges']);
+    }
+
     public function testMemberChangesOnlyOwnContactAndPreservesAccountData(): void
     {
         $user = $this->user('owner', [User::ROLE_ADMIN], true);
