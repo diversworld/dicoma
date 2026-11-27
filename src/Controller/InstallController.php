@@ -8,6 +8,7 @@ use App\Controller\Admin\DashboardController;
 use App\Security\InstallationGuard;
 use App\Service\InstallationBootstrap;
 use App\Service\InstallationCatalog;
+use App\Service\InstallationEnvironmentValue;
 use App\Service\InstallationMigrator;
 use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
@@ -58,7 +59,7 @@ final class InstallController extends AbstractController
             try {
                 $path = $this->getParameter('kernel.project_dir').'/.env.local';
                 $content = is_file($path) ? (string) file_get_contents($path) : '';
-                $line = 'DATABASE_URL="'.$url.'"';
+                $line = 'DATABASE_URL="'.InstallationEnvironmentValue::databaseUrl($url).'"';
                 $content = preg_match('/^DATABASE_URL=.*$/m', $content)
                     ? preg_replace('/^DATABASE_URL=.*$/m', $line, $content)
                     : rtrim($content)."\n".$line."\n";

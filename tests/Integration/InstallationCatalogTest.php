@@ -12,12 +12,14 @@ use App\Security\BootstrapRegistrationLock;
 use App\Security\InstallationGuard;
 use App\Service\InstallationBootstrap;
 use App\Service\InstallationCatalog;
+use App\Service\InstallationEnvironment;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
@@ -73,6 +75,7 @@ final class InstallationCatalogTest extends WebTestCase
             new InstallationGuard($directory),
             new BootstrapRegistrationLock($directory),
             self::getContainer()->get(UserPasswordHasherInterface::class),
+            new InstallationEnvironment($directory, new Filesystem()),
         );
 
         $result = $bootstrap->install([
@@ -92,12 +95,19 @@ final class InstallationCatalogTest extends WebTestCase
         self::assertSame(1, $em->getRepository(User::class)->count([]));
         self::assertSame(1, $em->getRepository(Member::class)->count([]));
         self::assertFileExists($directory.'/var/install-completed.marker');
+        $env = (string) file_get_contents($directory.'/.env.local');
+        self::assertStringContainsString('SITE_THEME=airspace', $env);
+        self::assertStringContainsString('PUBLIC_SITE_CLUB_ID=1', $env);
+        self::assertStringContainsString('DICOMA_INSTALL_ENABLED=1', $env);
+        self::assertStringContainsString('DICOMA_INSTALL_COMPLETED=1', $env);
+        self::assertMatchesRegularExpression('/^DICOMA_MEMBERSHIP_BANK_KEY="[A-Za-z0-9+\/]{43}="$' . '/m', $env);
         self::assertSame([], array_values(array_filter(
             self::getContainer()->get(InstallationCatalog::class)->components($result['club']),
             static fn (array $item): bool => !$item['installed'],
         )));
 
         unlink($directory.'/var/install-completed.marker');
+        unlink($directory.'/.env.local');
         unlink($directory.'/var/lock/dicoma-bootstrap.lock');
         rmdir($directory.'/var/lock');
         rmdir($directory.'/var');

@@ -21,6 +21,7 @@ final class InstallationBootstrap
         private readonly InstallationGuard $guard,
         private readonly BootstrapRegistrationLock $lock,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly InstallationEnvironment $environment,
     ) {}
 
     /** @return array{club:Club,user:User,installed:list<string>} */
@@ -59,6 +60,7 @@ final class InstallationBootstrap
                 $this->em->flush();
                 return ['club' => $club, 'user' => $user, 'installed' => $installed];
             });
+            $this->environment->complete((int) $result['club']->getId(), (string) $result['club']->getEmail());
             $this->guard->markCompleted();
             return $result;
         });

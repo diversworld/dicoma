@@ -20,8 +20,10 @@
    - Mitgliedschafts- und Mahnrichtlinien
    - Datenschutz- und Aufbewahrungsrichtlinien
    - Website-Anzeigeeinstellungen
-7. Melden Sie sich nach erfolgreicher Installation als Superadministrator an.
-8. Entfernen Sie `DICOMA_INSTALL_ENABLED=1` bzw. setzen Sie den Wert auf `0`. Der Marker `var/install-completed.marker` verhindert zusätzlich eine zweite Erstinstallation.
+7. Nach der erfolgreichen Datenanlage werden automatisch `SITE_THEME`, `PUBLIC_SITE_CLUB_ID`, die Absenderadressen, `DICOMA_SINGLE_CLUB_MODE`, `CLUB_FUNCTION_MEMBERSHIP_ENABLED`, der Base64-Schlüssel `DICOMA_MEMBERSHIP_BANK_KEY` sowie die Abschlusswerte `DICOMA_INSTALL_ENABLED=1` und `DICOMA_INSTALL_COMPLETED=1` in `.env.local` geschrieben. Ein bereits vorhandener Bankschlüssel bleibt erhalten.
+8. Melden Sie sich nach erfolgreicher Installation als Superadministrator an.
+
+`DICOMA_INSTALL_ENABLED` bleibt standardmäßig `1`, damit Deployments die Konfiguration nicht versehentlich wieder aktivieren müssen. Die Kombination aus `DICOMA_INSTALL_COMPLETED=1` und `var/install-completed.marker` sperrt die Erstinstallation zuverlässig. Die öffentliche Route darf deshalb nicht ausschließlich anhand von `DICOMA_INSTALL_ENABLED` beurteilt werden.
 
 Bei eingeschränkten Hosting-Rechten können Datenbank und Migrationen nicht durch den Webprozess ausgeführt werden. Führen Sie dann manuell
 `php bin/console doctrine:database:create --if-not-exists` und
