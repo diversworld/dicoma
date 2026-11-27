@@ -58,11 +58,14 @@ final class InternalMessageController extends AbstractController
         foreach ($divisions as $choice) {
             $divisionValues[(string) $choice->getName()] = (string) $choice->getId();
         }
-        $audiences = ['Ein Mitglied' => 'member'];
+        $audiences = [
+            'Ein Mitglied' => 'member',
+            'Vorstand' => 'board',
+        ];
         if ($this->isGranted(User::ROLE_ADMIN) || $this->isGranted(User::ROLE_BOARD)) {
             $audiences += [
                 'Alle aktiven Mitglieder' => 'all',
-                'Vorstand' => 'board',
+                'Spartenleitungen' => 'division_leaders',
                 'Jugendabteilung' => 'youth',
                 'Ehrenmitglieder' => 'honorary',
             ];

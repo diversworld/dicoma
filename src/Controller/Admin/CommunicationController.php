@@ -89,6 +89,7 @@ final class CommunicationController extends AbstractController
             'audiences' => [
                 'Alle aktiven Mitglieder' => 'all',
                 'Vorstand' => 'board',
+                'Spartenleitungen' => 'division_leaders',
                 'Jugendabteilung' => 'youth',
                 'Ehrenmitglieder' => 'honorary',
             ],

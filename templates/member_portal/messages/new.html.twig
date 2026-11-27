@@ -9,7 +9,7 @@
     </div>
     {{ form_start(form, {attr: {class: 'dw-form dw-form-card', novalidate: 'novalidate'}}) }}
         {{ form_errors(form) }}
-        {{ form_row(form.audience) }}
+        {{ form_row(form.audience, {help: 'Normale Mitglieder können einzelne Mitglieder oder den Vorstand anschreiben. Nur Vorstand und Administration dürfen vereinsweite Gruppen adressieren.'}) }}
         {{ form_row(form.recipient) }}
         {{ form_row(form.division) }}
         {{ form_row(form.role) }}

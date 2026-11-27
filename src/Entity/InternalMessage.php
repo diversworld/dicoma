@@ -48,7 +48,7 @@ class InternalMessage
 
     public function __construct(Club $club, User $sender, string $audience, string $subject, string $body)
     {
-        if (!in_array($audience, ['member', 'division', 'role', 'all', 'youth', 'honorary', 'board'], true)) {
+        if (!in_array($audience, ['member', 'division', 'role', 'all', 'youth', 'honorary', 'board', 'division_leaders'], true)) {
             throw new \InvalidArgumentException('Ungültige Empfängergruppe.');
         }
         $subject = trim($subject);

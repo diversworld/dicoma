@@ -121,6 +121,74 @@ final class Phase5CommunicationHttpTest extends WebTestCase
         self::assertNotNull($delivery->getReadAt());
     }
 
+    public function testOrdinaryMemberCanWriteToBoardButCannotForgeDivisionLeaderCampaign(): void
+    {
+        $board = $this->account('board-contact', [User::ROLE_BOARD]);
+        $function = new ClubFunction($this->club, 'Vorstand-Kontakt');
+        $function->setPermissions([User::ROLE_BOARD]);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $board));
+        $this->em->flush();
+        $this->client->loginUser($this->sender);
+        $crawler = $this->client->request('GET', '/my/messages/new');
+        self::assertSelectorExists('option[value="board"]');
+        self::assertSelectorNotExists('option[value="division_leaders"]');
+        $this->client->submit($crawler->selectButton('Nachricht senden')->form(), [
+            'form[audience]' => 'board',
+            'form[subject]' => 'Frage an den Vorstand',
+            'form[body]' => 'Bitte um Rückmeldung.',
+        ]);
+        self::assertResponseRedirects('/my/messages');
+        $message = $this->em->getRepository(InternalMessage::class)->findOneBy(['subject' => 'Frage an den Vorstand']);
+        self::assertSame(1, $this->em->getRepository(InternalMessageRecipient::class)->count(['message' => $message]));
+        self::assertSame($board->getMember()->getId(), $this->em->getRepository(InternalMessageRecipient::class)->findOneBy(['message' => $message])->getMember()->getId());
+
+        $crawler = $this->client->request('GET', '/my/messages/new');
+        $values = $crawler->selectButton('Nachricht senden')->form()->getPhpValues();
+        $values['form']['audience'] = 'division_leaders';
+        $values['form']['subject'] = 'Manipulierter Versand';
+        $values['form']['body'] = 'Nicht erlaubt';
+        $this->client->request('POST', '/my/messages/new', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(InternalMessage::class)->findOneBy(['subject' => 'Manipulierter Versand']));
+    }
+
+    public function testBoardCanMessageAllActiveDivisionLeadersOnce(): void
+    {
+        $firstDivision = $this->division('Erste Sparte');
+        $secondDivision = $this->division('Zweite Sparte');
+        foreach ([$firstDivision, $secondDivision] as $division) {
+            $assignment = new DivisionRoleAssignment($division);
+            $assignment->setMember($this->recipient->getMember());
+            $assignment->setRole(DivisionRole::LEADER);
+            $this->em->persist($assignment);
+        }
+        $expired = new DivisionRoleAssignment($secondDivision);
+        $expired->setMember($this->outsider->getMember());
+        $expired->setRole(DivisionRole::LEADER);
+        $expired->setStartsAt(new \DateTimeImmutable('-2 years'));
+        $expired->setEndsAt(new \DateTimeImmutable('-1 year'));
+        $this->em->persist($expired);
+        $this->em->flush();
+        $boardFunction = new ClubFunction($this->club, 'Vorstand-Absender');
+        $boardFunction->setPermissions([User::ROLE_BOARD]);
+        $this->em->persist($boardFunction);
+        $this->em->persist(new ClubFunctionAssignment($boardFunction, $this->sender));
+        $this->em->flush();
+
+        $this->client->loginUser($this->sender);
+        $crawler = $this->client->request('GET', '/my/messages/new');
+        self::assertSelectorExists('option[value="division_leaders"]');
+        $this->client->submit($crawler->selectButton('Nachricht senden')->form(), [
+            'form[audience]' => 'division_leaders',
+            'form[subject]' => 'Rundmail Spartenleitungen',
+            'form[body]' => 'Bitte Quartalsplanung einreichen.',
+        ]);
+        self::assertResponseRedirects('/my/messages');
+        $message = $this->em->getRepository(InternalMessage::class)->findOneBy(['subject' => 'Rundmail Spartenleitungen']);
+        self::assertSame(1, $this->em->getRepository(InternalMessageRecipient::class)->count(['message' => $message]));
+    }
+
     public function testDivisionLeaderCanMessageOnlyOwnActiveDivisionMembers(): void
     {
         $division = $this->division('Tauchen');

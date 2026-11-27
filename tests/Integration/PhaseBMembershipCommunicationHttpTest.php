@@ -100,6 +100,15 @@ final class PhaseBMembershipCommunicationHttpTest extends WebTestCase
         self::assertSame(1, $this->em->getRepository(\App\Entity\AuditEvent::class)->count(['action' => 'communication.sent']));
     }
 
+    public function testCommunicationOffersDivisionLeadersAudience(): void
+    {
+        $admin = $this->member('communication-leaders', [User::ROLE_ADMIN]);
+        $this->client->loginUser($admin->getUser());
+        $crawler = $this->client->request('GET', '/admin/communication');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="audience"] option[value="division_leaders"]');
+    }
+
     public function testStructuredHistoryRecordsOnlyChangedFields(): void
     {
         $member = $this->member('history');

@@ -92,7 +92,8 @@ final class InternalMessaging
             'all' => $this->allRecipients($sender, $club),
             'youth' => $this->categoryRecipients($sender, $club, 'youth'),
             'honorary' => $this->categoryRecipients($sender, $club, 'honorary'),
-            'board' => $this->roleRecipients($sender, $club, User::ROLE_BOARD),
+            'board' => $this->boardRecipients($club),
+            'division_leaders' => $this->divisionLeaderRecipients($sender, $club),
             default => throw new \DomainException('Ungültige Empfängergruppe.'),
         };
         if ($recipients === []) {
@@ -140,7 +141,8 @@ final class InternalMessaging
             'all' => $this->allRecipients($sender, $club),
             'youth' => $this->categoryRecipients($sender, $club, 'youth'),
             'honorary' => $this->categoryRecipients($sender, $club, 'honorary'),
-            'board' => $this->roleRecipients($sender, $club, User::ROLE_BOARD),
+            'board' => $this->boardRecipients($club),
+            'division_leaders' => $this->divisionLeaderRecipients($sender, $club),
             default => throw new \DomainException('Ungültige Empfängergruppe.'),
         };
     }
@@ -193,6 +195,43 @@ final class InternalMessaging
         return array_values(array_filter($this->directChoices($club), static fn (Member $member): bool =>
             $member->getUser() !== null && in_array($role, $member->getUser()->getRoles(), true)
         ));
+    }
+
+    /** @return list<Member> */
+    private function boardRecipients(Club $club): array
+    {
+        return array_values(array_filter($this->directChoices($club), static fn (Member $member): bool =>
+            $member->getUser() !== null && in_array(User::ROLE_BOARD, $member->getUser()->getRoles(), true)
+        ));
+    }
+
+    /** @return list<Member> */
+    private function divisionLeaderRecipients(User $sender, Club $club): array
+    {
+        if (!$this->canSendClubWide($sender)) {
+            throw new \DomainException('Nur Vorstand und Administration dürfen an alle Spartenleitungen schreiben.');
+        }
+        $today = new \DateTimeImmutable('today');
+        $members = [];
+        foreach ($this->em->getRepository(DivisionRoleAssignment::class)->createQueryBuilder('assignment')
+            ->join('assignment.sport', 'sport')->addSelect('sport')
+            ->join('assignment.member', 'leader')->addSelect('leader')
+            ->where('sport.club = :club')
+            ->andWhere('sport.active = true')
+            ->andWhere('assignment.role = :role')
+            ->andWhere('assignment.startsAt <= :today')
+            ->andWhere('assignment.endsAt IS NULL OR assignment.endsAt >= :today')
+            ->andWhere('leader.archivedAt IS NULL')
+            ->setParameter('club', $club)
+            ->setParameter('role', DivisionRole::LEADER)
+            ->setParameter('today', $today)
+            ->getQuery()->getResult() as $assignment) {
+            $member = $assignment->getMember();
+            if ($member !== null && $member->isActiveMember()) {
+                $members[(int) $member->getId()] = $member;
+            }
+        }
+        return array_values($members);
     }
 
     /** @return list<Member> */
