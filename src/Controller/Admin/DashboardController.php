@@ -1047,7 +1047,6 @@ class DashboardController extends AbstractDashboardController
                 ->setSubItems([
                     MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
                     MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
-                    MenuItem::linkToRoute('Rollenvergabe', 'fa fa-users-gear', 'admin_delegated_roles'),
                     MenuItem::linkTo(PersonCrudController::class, 'Nichtmitglieder und Gäste', 'fa fa-address-book')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(MemberQualificationCrudController::class, 'Mitgliedsqualifikationen', 'fa fa-id-card')
@@ -1155,8 +1154,7 @@ class DashboardController extends AbstractDashboardController
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Vereinsfunktionen verwalten', 'fa fa-user-shield', 'admin_club_functions')
                         ->setPermission('ROLE_ADMIN'),
-//                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')
-//                        ->setPermission('ROLE_SUPER_ADMIN'),
+
                     MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership')
@@ -1178,13 +1176,9 @@ class DashboardController extends AbstractDashboardController
                             ->setPermission('ROLE_SUPER_ADMIN')] : []),
                     MenuItem::linkToRoute('TÜV-Rechnungseinstellungen', 'fa fa-file-invoice', 'admin_invoice_settings_overview')
                         ->setPermission('ROLE_SUPER_ADMIN'),
-//                    MenuItem::linkToRoute('Kurs-Spartenzuordnungen prüfen', 'fa fa-list-check', 'admin_course_division_review'),
-//                    MenuItem::linkTo(MemberCrudController::class, 'Mitglieder ohne Vereinszuordnung prüfen', 'fa fa-user-check')
-//                        ->setQueryParameter('unassigned', '1')
-//                        ->setPermission('ROLE_SUPER_ADMIN'),
-//                    MenuItem::linkTo(CoursesCrudController::class, 'Kurse ohne Vereinszuordnung prüfen', 'fa fa-book-open')
-//                        ->setQueryParameter('unassigned', '1')
-//                        ->setPermission('ROLE_SUPER_ADMIN'),
+                    MenuItem::linkToRoute('Installation prüfen', 'fa fa-list-check', 'admin_installation')
+                        ->setQueryParameter('unassigned', '1')
+                        ->setPermission('ROLE_SUPER_ADMIN'),
                 ]),
         ];
     }
