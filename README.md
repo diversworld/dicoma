@@ -222,7 +222,4 @@ longer changes this behaviour.
 #### Author
 - [Diversworld](https://diversworld.eu) - [GitHub](https://github.com/diversworld/dicoma)
 
-#### Version
-- 1.0.0
-
 ```
