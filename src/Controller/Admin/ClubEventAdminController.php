@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\{Club, ClubEvent, ClubEventDocument, ClubEventPayment, ClubEventRegistration, FileAction, MediaFile, User};
+use App\Entity\WebsitePublication;
 use App\Enum\{PermissionAction, PermissionModule};
 use App\Form\ClubEventType;
 use App\Form\MediaImageType;
@@ -36,9 +37,18 @@ final class ClubEventAdminController extends AbstractController
     public function index(EntityManagerInterface $em): Response
     {
         $this->requireWebsite(PermissionAction::READ);
+        $events = array_map(static fn (ClubEvent $event): array => [
+            'source' => 'booking', 'event' => $event, 'legacy' => null, 'startsAt' => $event->getStartsAt(),
+        ], $em->getRepository(ClubEvent::class)->findBy(['club' => $this->club()]));
+        $legacy = array_map(static fn (WebsitePublication $event): array => [
+            'source' => 'legacy', 'event' => null, 'legacy' => $event, 'startsAt' => $event->getStartsAt(),
+        ], $em->getRepository(WebsitePublication::class)->findBy(['club' => $this->club(), 'kind' => 'event']));
+        $rows = [...$events, ...$legacy];
+        usort($rows, static fn (array $left, array $right): int => ($right['startsAt']?->getTimestamp() ?? 0) <=> ($left['startsAt']?->getTimestamp() ?? 0));
         return $this->render('club_event/admin/index.html.twig', [
-            'events' => $em->getRepository(ClubEvent::class)->findBy(['club' => $this->club()], ['startsAt' => 'DESC']),
+            'eventRows' => $rows,
             'canCreate' => $this->canWebsite(PermissionAction::CREATE),
+            'canEditLegacy' => $this->editorial->can(PermissionAction::EDIT),
         ]);
     }
 
@@ -298,7 +308,9 @@ final class ClubEventAdminController extends AbstractController
 
     private function canWebsite(PermissionAction $action): bool
     {
-        return $this->enabled ? $this->editorial->can($action) : $this->isGranted(User::ROLE_ADMIN);
+        return $this->enabled
+            ? $this->editorial->can($action)
+            : ($this->isGranted(User::ROLE_ADMIN) || $this->editorial->can($action));
     }
 
     private function requireWebsite(PermissionAction $action): void

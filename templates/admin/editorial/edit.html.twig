@@ -1,11 +1,11 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 {% form_theme form '@EasyAdmin/crud/form_theme.html.twig' %}
 
-{% block content_title %}{{ publication.id ? 'Beitrag bearbeiten' : 'Seite / Artikel / Veranstaltung erstellen' }}{% endblock %}
+{% block content_title %}{% if publication.kind == 'page' %}{{ publication.id ? 'Website-Seite bearbeiten' : 'Neue Website-Seite' }}{% elseif publication.kind == 'event' %}Legacy-Veranstaltungsankündigung bearbeiten{% else %}{{ publication.id ? 'Artikel bearbeiten' : 'Neuen Artikel erstellen' }}{% endif %}{% endblock %}
 
 {% block main %}
-    {% if canRead %}<p><a href="{{ path('admin_website_editorial', {'_locale': app.request.locale}) }}">Zur Übersicht und Veröffentlichungshilfe</a></p>{% endif %}
-    <p>Seiten bilden die Navigationsstruktur. Artikel werden einer Seite zugeordnet und erben deren Sparte, sofern sie keine eigene Sparte überschreiben. Neue Veranstaltungen, Kurse, Turniere, Tauchgänge und Clubreisen werden zentral unter „Veranstaltungsbuchungen“ angelegt; vorhandene Legacy-Veranstaltungen bleiben bearbeitbar.</p>
+    {% if canRead %}<p><a href="{{ path(publication.kind == 'page' ? 'admin_website_editorial_pages' : 'admin_website_editorial_articles') }}">Zur passenden Redaktion</a></p>{% endif %}
+    <p>{% if publication.kind == 'event' %}Dies ist eine bestehende redaktionelle Altveranstaltung ohne Buchungsfunktion. Neue Veranstaltungen mit Teilnehmern oder Zahlungen werden unter <a href="{{ path('admin_club_events') }}">Veranstaltungen & Buchungen</a> angelegt.{% elseif publication.kind == 'page' %}Website-Seiten bilden die Navigationsstruktur und können Unterseiten enthalten.{% else %}Artikel bilden Beiträge für Neuigkeiten; optional können sie einer Website-Seite zugeordnet werden.{% endif %}</p>
     <p>Bilder zuerst in der <a href="{{ path('admin_media_index') }}">Dateiverwaltung</a> hochladen und anschließend hier auswählen.</p>
     {% if not canReadImage %}<p>Das vorhandene Bild bleibt unverändert, da keine Leseberechtigung für die Datei besteht.</p>{% endif %}
     {% if publication.image and canReadImage %}<img src="{{ path('admin_media_file', {id:publication.image.id}) }}" alt="{{ publication.image.altText }}" width="200">{% endif %}
@@ -13,13 +13,12 @@
         {{ form_errors(form) }}
         <div class="form-fieldset">
             <fieldset>
-                <div class="form-fieldset-header collapsible"><div class="form-fieldset-title"><a href="#cms-base" data-bs-toggle="collapse" class="form-fieldset-title-content form-fieldset-collapse">Grunddaten und Hierarchie</a></div></div>
+                <div class="form-fieldset-header collapsible"><div class="form-fieldset-title"><a href="#cms-base" data-bs-toggle="collapse" class="form-fieldset-title-content form-fieldset-collapse">{{ publication.kind == 'page' ? 'Seite und Hierarchie' : (publication.kind == 'event' ? 'Veranstaltungsankündigung' : 'Artikelinhalt') }}</a></div></div>
                 <div id="cms-base" class="form-fieldset-body collapse show"><div class="row">
-                <div class="col-md-4">{{ form_row(form.kind) }}</div>
-                <div class="col-md-8">{{ form_row(form.title) }}</div>
-                <div class="col-md-8">{{ form_row(form.parent) }}</div>
-                <div class="col-md-2">{{ form_row(form.sortOrder) }}</div>
-                <div class="col-md-2">{{ form_row(form.menuVisible) }}</div>
+                <div class="col-12">{{ form_row(form.title) }}</div>
+                {% if form.parent is defined %}<div class="col-md-8">{{ form_row(form.parent) }}</div>{% endif %}
+                {% if form.sortOrder is defined %}<div class="col-md-2">{{ form_row(form.sortOrder) }}</div>{% endif %}
+                {% if form.menuVisible is defined %}<div class="col-md-2">{{ form_row(form.menuVisible) }}</div>{% endif %}
                 <div class="col-12">{{ form_row(form.summary) }}</div>
                 <div class="col-12">{{ form_row(form.body) }}</div>
                 </div></div>
@@ -36,7 +35,7 @@
                 </div></div>
             </fieldset>
         </div>
-        {% if form.kind.vars.value == 'event' %}
+        {% if publication.kind == 'event' %}
         <div class="form-fieldset">
             <fieldset>
                 <div class="form-fieldset-header collapsible"><div class="form-fieldset-title"><a href="#cms-legacy-event" data-bs-toggle="collapse" class="form-fieldset-title-content form-fieldset-collapse collapsed">Legacy-Veranstaltungsdaten</a></div></div>
@@ -49,13 +48,8 @@
                 </div></div>
             </fieldset>
         </div>
-        {% else %}
-            {% do form.startsAt.setRendered %}
-            {% do form.endsAt.setRendered %}
-            {% do form.location.setRendered %}
-            {% do form.course.setRendered %}
-            {% do form.tournament.setRendered %}
         {% endif %}
+        {{ form_row(form.kind) }}
         {{ form_row(form.version) }}
         {{ form_row(form._token) }}
         <div class="form-actions">

@@ -158,6 +158,53 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertCount(3, $this->em->find(WebsitePublication::class, $publication->getId())->getHistory());
     }
 
+    public function testEditorialSeparatesPagesArticlesAndAllEventSourcesUseBookingOverview(): void
+    {
+        $article = $this->publication('Editorial article', false);
+        $page = $this->publication('Editorial page', false);
+        $page->setKind('page');
+        $legacy = $this->publication('Legacy event announcement', false);
+        $legacy->setKind('event');
+        $legacy->setLocation('Club');
+        $legacy->setStartsAt(new \DateTimeImmutable('+2 days'));
+        $legacy->setEndsAt(new \DateTimeImmutable('+2 days +1 hour'));
+        $booking = new ClubEvent($this->club);
+        $booking->setTitle('Bookable event');
+        $booking->setDescription('Bookable');
+        $booking->setLocation('Hall');
+        $booking->setStartsAt(new \DateTimeImmutable('+3 days'));
+        $booking->setEndsAt(new \DateTimeImmutable('+3 days +2 hours'));
+        $this->em->persist($booking);
+        $this->em->flush();
+        $this->client->loginUser($this->press);
+
+        $this->client->request('GET', '/admin/de/editorial/articles');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Editorial article');
+        self::assertSelectorTextNotContains('body', 'Editorial page');
+        self::assertSelectorTextNotContains('body', 'Legacy event announcement');
+        self::assertSelectorExists('a[href$="/editorial/articles/new"]');
+        $this->client->request('GET', '/admin/de/editorial/articles/new');
+        self::assertSelectorNotExists('input[name="website_publication[sortOrder]"]');
+        self::assertSelectorNotExists('input[name="website_publication[menuVisible]"]');
+        self::assertSelectorNotExists('input[name="website_publication[startsAt]"]');
+
+        $this->client->request('GET', '/admin/de/editorial/pages');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Editorial page');
+        self::assertSelectorTextNotContains('body', 'Editorial article');
+        $this->client->request('GET', '/admin/de/editorial/pages/new');
+        self::assertSelectorExists('input[name="website_publication[sortOrder]"]');
+        self::assertSelectorExists('input[name="website_publication[menuVisible]"]');
+        self::assertSelectorNotExists('input[name="website_publication[startsAt]"]');
+
+        $this->client->request('GET', '/admin/club-events');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Bookable event');
+        self::assertSelectorTextContains('body', 'Legacy event announcement');
+        self::assertSelectorExists('a[href$="/editorial/'.$legacy->getId().'/edit"]');
+    }
+
     public function testDivisionAreasShowOnlyExplicitlyPublishedContentAndHideInactiveDivisions(): void
     {
         $division = (new Sport())->setClub($this->club)->setName('Public division')->setDescription('Internal division secret');

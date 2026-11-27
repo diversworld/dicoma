@@ -1,9 +1,40 @@
 {% extends 'admin/portal_layout.html.twig' %}
-{% block content_title %}Veranstaltungsbuchungen{% endblock %}
+{% block content_title %}Veranstaltungen & Buchungen{% endblock %}
 {% block main %}
-{% if canCreate %}<a href="{{ path('admin_club_event_new') }}" class="btn btn-primary">Veranstaltung anlegen</a>{% endif %}
-<table class="table"><thead><tr><th>Veranstaltung</th><th>Beginn</th><th>Status</th></tr></thead><tbody>
-{% for event in events %}<tr><td><a href="{{ path('admin_club_event', {id: event.id}) }}">{{ event.title }}</a></td><td>{{ event.startsAt|date('d.m.Y H:i') }}</td><td>{{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }}</td></tr>
-{% else %}<tr><td colspan="3">Keine Veranstaltungen.</td></tr>{% endfor %}
-</tbody></table>
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+    <p class="mb-0">Operative Veranstaltungen und frühere redaktionelle Veranstaltungsankündigungen werden gemeinsam angezeigt.</p>
+    {% if canCreate %}<a href="{{ path('admin_club_event_new') }}" class="btn btn-primary">Neue Veranstaltung mit Buchung</a>{% endif %}
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th>Veranstaltung</th><th>Beginn</th><th>Arbeitsbereich</th><th>Status</th><th>Aktion</th></tr></thead>
+            <tbody>
+            {% for row in eventRows %}
+                {% if row.source == 'booking' %}
+                    {% set event = row.event %}
+                    <tr>
+                        <td><a href="{{ path('admin_club_event', {id: event.id}) }}"><strong>{{ event.title }}</strong></a></td>
+                        <td>{{ event.startsAt|date('d.m.Y H:i') }}</td>
+                        <td><span class="badge bg-primary">Veranstaltung & Buchung</span></td>
+                        <td>{{ event.cancelled ? 'Abgesagt' : (event.published ? 'Veröffentlicht' : 'Entwurf') }}</td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_club_event', {id: event.id}) }}">Öffnen</a></td>
+                    </tr>
+                {% else %}
+                    {% set event = row.legacy %}
+                    <tr>
+                        <td><strong>{{ event.title }}</strong><div class="form-text">Bestehende Legacy-Ankündigung ohne Teilnehmerverwaltung</div></td>
+                        <td>{{ event.startsAt ? event.startsAt|date('d.m.Y H:i') : '—' }}</td>
+                        <td><span class="badge bg-secondary">Redaktionelle Altveranstaltung</span></td>
+                        <td>{{ event.published ? 'Veröffentlicht' : 'Entwurf' }}</td>
+                        <td>{% if canEditLegacy %}<a class="btn btn-sm btn-outline-secondary" href="{{ path('admin_website_editorial_edit', {entityId: event.id}) }}">Ankündigung bearbeiten</a>{% else %}<span class="text-muted">Nur Lesen</span>{% endif %}</td>
+                    </tr>
+                {% endif %}
+            {% else %}
+                <tr><td colspan="5">Keine Veranstaltungen vorhanden.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

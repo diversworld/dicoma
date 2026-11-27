@@ -473,13 +473,21 @@ class DashboardController extends AbstractDashboardController
 	}
 
     #[AdminRoute(path: '/editorial', name: 'website_editorial', options: ['methods' => ['GET']])]
-    public function websiteEditorial(PublicWebsite $website): Response
+    #[AdminRoute(path: '/editorial/pages', name: 'website_editorial_pages', options: ['methods' => ['GET']])]
+    #[AdminRoute(path: '/editorial/articles', name: 'website_editorial_articles', options: ['methods' => ['GET']])]
+    public function websiteEditorial(Request $request, PublicWebsite $website): Response
     {
         $club = $this->editorialClub($website, PermissionAction::READ);
+        $kind = match ($request->attributes->get('_route')) {
+            'admin_website_editorial_pages' => 'page',
+            default => $request->query->getString('kind', 'article'),
+        };
+        if (!in_array($kind, ['article', 'page'], true)) { $kind = 'article'; }
 
         return $this->render('admin/editorial/index.html.twig', [
             'publications' => $this->em->getRepository(WebsitePublication::class)
-                ->findBy(['club' => $club], ['id' => 'DESC']),
+                ->findBy(['club' => $club, 'kind' => $kind], ['id' => 'DESC']),
+            'editorialKind' => $kind,
             'canCreate' => $this->editorialAccess->can(PermissionAction::CREATE),
             'canEdit' => $this->editorialAccess->can(PermissionAction::EDIT),
             'canDelete' => $this->functionModelEnabled && $this->editorialAccess->can(PermissionAction::DELETE),
@@ -509,12 +517,12 @@ class DashboardController extends AbstractDashboardController
                 $this->em->lock($publication, LockMode::OPTIMISTIC, (int) $version);
             } catch (OptimisticLockException) {
                 $this->addFlash('danger', 'Der Beitrag wurde zwischenzeitlich geändert. Bitte den aktuellen Stand prüfen und erneut versuchen.');
-                return $this->editorialRedirect($request);
+                return $this->editorialRedirect($request, $publication->getKind());
             }
             $this->em->remove($publication);
             $this->em->flush();
             $clubId = $club->getId();
-            return $this->editorialRedirect($request);
+            return $this->editorialRedirect($request, $publication->getKind());
         });
         if ($clubId !== null) {
             $logger->notice('Website publication deleted.', [
@@ -560,7 +568,7 @@ class DashboardController extends AbstractDashboardController
                     $errors = $validator->validate($candidate);
                     if (count($errors) > 0) {
                         foreach ($errors as $error) { $this->addFlash('danger', (string) $error->getMessage()); }
-                        return $this->editorialRedirect($request);
+                        return $this->editorialRedirect($request, $publication->getKind());
                     }
                 }
                 $publication->setPublished($published);
@@ -574,7 +582,7 @@ class DashboardController extends AbstractDashboardController
         } catch (OptimisticLockException) {
             $this->addFlash('danger', 'Der Beitrag wurde zwischenzeitlich geändert. Bitte den aktuellen Stand prüfen und erneut versuchen.');
         }
-        return $this->editorialRedirect($request);
+        return $this->editorialRedirect($request, $publication->getKind());
     }
 
     #[AdminRoute(path: '/editorial/display-settings', name: 'website_display_settings', options: ['methods' => ['GET']])]
@@ -594,6 +602,8 @@ class DashboardController extends AbstractDashboardController
     }
 
     #[AdminRoute(path: '/editorial/new', name: 'website_editorial_new', options: ['methods' => ['GET', 'POST']])]
+    #[AdminRoute(path: '/editorial/pages/new', name: 'website_editorial_page_new', options: ['methods' => ['GET', 'POST'], 'priority' => 10])]
+    #[AdminRoute(path: '/editorial/articles/new', name: 'website_editorial_article_new', options: ['methods' => ['GET', 'POST'], 'priority' => 10])]
     public function newWebsitePublication(Request $request, PublicWebsite $website): Response
     {
         return $this->withEditorialWriteLock($request, fn (): Response => $this->renderWebsitePublicationForm($request, $website));
@@ -620,11 +630,32 @@ class DashboardController extends AbstractDashboardController
         if ($publication === null) {
             throw $this->createNotFoundException();
         }
+        $legacyPageMenuDefault = false;
+        if ($entityId === null) {
+            $route = $request->attributes->get('_route');
+            $publication->setKind(match ($route) {
+                'admin_website_editorial_page_new' => 'page',
+                'admin_website_editorial_article_new' => 'article',
+                default => $request->request->all('website_publication')['kind'] ?? $request->query->getString('kind', 'article'),
+            });
+            if ($route === 'admin_website_editorial_new' && $publication->getKind() === 'page' && $request->isMethod('POST')) {
+                $values = $request->request->all('website_publication');
+                if (!array_key_exists('menuVisible', $values)) {
+                    $values['menuVisible'] = '1';
+                    $request->request->set('website_publication', $values);
+                    $legacyPageMenuDefault = true;
+                }
+            }
+            if (!in_array($publication->getKind(), ['page', 'article'], true)) {
+                throw $this->createAccessDeniedException('Neue Veranstaltungen werden unter „Veranstaltungen & Buchungen“ verwaltet.');
+            }
+        }
         if ($this->functionModelEnabled && $entityId !== null && $request->isMethod('POST')) {
             $this->continuity->refresh($publication);
         }
 
         $image = $publication->getImage();
+        $publicationKind = $publication->getKind();
         $user = $this->getUser();
         $canReadImage = !$this->functionModelEnabled || $image === null
             || ($user instanceof User && $image->getClub()->getId() === $club->getId()
@@ -632,11 +663,19 @@ class DashboardController extends AbstractDashboardController
         $form = $this->createForm(WebsitePublicationType::class, $publication, [
             'club' => $club,
             'image_locked' => !$canReadImage,
+            'publication_kind' => $publication->getKind(),
         ]);
         $form->handleRequest($request);
         $conflict = false;
+        if ($form->isSubmitted() && $publication->getKind() !== $publicationKind) {
+            $form->addError(new FormError('Der Inhaltstyp eines bestehenden Formulars darf nicht geändert werden.'));
+            $publication->setKind($publicationKind);
+        }
         if ($form->isSubmitted() && $form->isValid()) {
             try {
+                if ($legacyPageMenuDefault) {
+                    $publication->setMenuVisible(true);
+                }
                 if ($publication->getKind() === 'event' && $publication->getId() === null) {
                     throw new \DomainException('Neue Veranstaltungen werden zentral unter „Veranstaltungsbuchungen“ angelegt. Hier bleiben nur bestehende Legacy-Veranstaltungen bearbeitbar.');
                 }
@@ -650,7 +689,7 @@ class DashboardController extends AbstractDashboardController
                     ? 'Beitrag freigegeben. Sichtbar ab dem Veröffentlichungszeitpunkt, sofern die verknüpfte Veranstaltung freigegeben ist.'
                     : 'Entwurf gespeichert; nicht öffentlich sichtbar.');
 
-                return $this->editorialRedirect($request);
+                return $this->editorialRedirect($request, $publication->getKind());
             } catch (OptimisticLockException|\DomainException) {
                 $form->addError(new FormError('Gleichzeitige Änderung: Bitte den Beitrag neu laden. Nicht gespeichert.'));
                 $conflict = true;
@@ -686,10 +725,15 @@ class DashboardController extends AbstractDashboardController
         });
     }
 
-    private function editorialRedirect(Request $request): Response
+    private function editorialRedirect(Request $request, ?string $kind = null): Response
     {
         if ($this->editorialAccess->can(PermissionAction::READ)) {
-            return $this->redirectToRoute('admin_website_editorial', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute(match ($kind) {
+                'page' => 'admin_website_editorial_pages',
+                'article' => 'admin_website_editorial_articles',
+                'event' => 'admin_club_events',
+                default => 'admin_website_editorial',
+            }, ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
         }
         return $this->redirectToRoute('app_portal', ['_locale' => $request->getLocale()], Response::HTTP_SEE_OTHER);
     }
@@ -957,7 +1001,8 @@ class DashboardController extends AbstractDashboardController
                 ] : []),
                 ...($editorialRoute !== null ? [
                     MenuItem::section('Website & Redaktion'),
-                    MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                    MenuItem::linkToRoute('Artikel & Neuigkeiten', 'fa fa-newspaper', 'admin_website_editorial_articles'),
+                    MenuItem::linkToRoute('Website-Seiten', 'fa fa-file-lines', 'admin_website_editorial_pages'),
                     ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
                 ] : []),
                 ...($canSport ? [
@@ -990,7 +1035,9 @@ class DashboardController extends AbstractDashboardController
             ] : []),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),
-                MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                MenuItem::linkToRoute('Artikel & Neuigkeiten', 'fa fa-newspaper', 'admin_website_editorial_articles'),
+                MenuItem::linkToRoute('Website-Seiten', 'fa fa-file-lines', 'admin_website_editorial_pages'),
+                MenuItem::linkToRoute('Veranstaltungen & Buchungen', 'fa fa-calendar-check', 'admin_club_events'),
                 ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),

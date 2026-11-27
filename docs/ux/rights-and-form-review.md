@@ -65,3 +65,22 @@ Automatisierte Prüfung umfasst Rollen-/Routenzugriff, Kassenwart-Menü,
 Loginziel, Formularsyntax, Container und den Accessibility-Smoke-Test.
 Manuelle WCAG-Expertenfreigabe sowie reale Vorstands-/Kassenwart-Abnahme bleiben
 separate produktive Nachweise.
+
+## Redaktion und Veranstaltungen
+
+Seiten, Artikel und operative Veranstaltungen besitzen getrennte Einstiege:
+
+- „Artikel & Neuigkeiten“
+- „Website-Seiten“
+- „Veranstaltungen & Buchungen“
+
+Das Seitenformular enthält Hierarchie, Menüreihenfolge und Sichtbarkeit. Das
+Artikelformular enthält nur Artikelinhalt und optionale Seitenzuordnung.
+Veranstaltungsdaten werden ausschließlich im Veranstaltungsformular gepflegt.
+
+Die Übersicht „Veranstaltungen & Buchungen“ lädt sowohl operative `ClubEvent`-
+Datensätze als auch bestehende redaktionelle Altveranstaltungen. Dadurch fehlt
+keine Veranstaltung mehr je nach verwendeter Einstiegsseite. Altveranstaltungen
+werden klar als solche gekennzeichnet und verlinken auf ihr separates
+Legacy-Formular; neue buchbare Veranstaltungen entstehen nur im operativen
+Veranstaltungsworkflow.
