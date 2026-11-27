@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Verein und Administrator einrichten{% endblock %}
+
+{% block body %}
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h1>DiCoMa installieren</h1>
+                {% if success %}
+                    <div class="alert alert-success">
+                        <h2 class="h4">Installation abgeschlossen</h2>
+                        <p>Verein, Administrator, Vereinsfunktionen, Richtlinien, Website-Einstellungen und Kontenplan wurden eingerichtet.</p>
+                        <a class="btn btn-primary" href="{{ path('app_login') }}">Zur Anmeldung</a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Schritt 2 von 2: Datenbankschema anlegen und Grunddaten einrichten.</p>
+                    {% if error %}
+                        <div class="alert alert-danger" role="alert">{{ error }}</div>
+                    {% endif %}
+                    <div class="alert alert-info">
+                        Die Installation führt alle vorhandenen Datenbankmigrationen aus und legt den ersten Verein sowie einen Superadministrator an.
+                        Passwörter und Datenbankzugang werden nicht protokolliert.
+                    </div>
+                    {{ form_start(form, {attr: {class: 'vstack gap-3'}}) }}
+                        {{ form_widget(form) }}
+                        <button class="btn btn-primary" type="submit">Installation ausführen</button>
+                    {{ form_end(form) }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

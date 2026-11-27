@@ -1,0 +1,40 @@
+{% extends 'admin/portal_layout.html.twig' %}
+
+{% block content_title %}Installation und Funktionsprüfung{% endblock %}
+
+{% block main %}
+<div class="alert alert-info">
+    Installationskatalog Version {{ version }}. Bestehende Datensätze werden nicht überschrieben; es werden ausschließlich fehlende Kernfunktionen ergänzt.
+</div>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="h5 mb-0">Verfügbare Kernfunktionen</h2>
+        <form method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('installation_update') }}">
+            <button class="btn btn-primary">Alle fehlenden Funktionen installieren</button>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th>Komponente</th><th>Status</th><th class="text-end">Aktion</th></tr></thead>
+            <tbody>
+            {% for component in components %}
+                <tr>
+                    <td>{{ component.label }}</td>
+                    <td>{% if component.installed %}<span class="badge text-bg-success">Installiert</span>{% else %}<span class="badge text-bg-warning">Fehlt</span>{% endif %}</td>
+                    <td class="text-end">
+                        {% if not component.installed %}
+                            <form method="post">
+                                <input type="hidden" name="_token" value="{{ csrf_token('installation_update') }}">
+                                <input type="hidden" name="component" value="{{ component.id }}">
+                                <button class="btn btn-sm btn-outline-primary">Installieren</button>
+                            </form>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1014,6 +1014,7 @@ class DashboardController extends AbstractDashboardController
                 ...($canFiles ? [MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')] : []),
                 ...($canAudit ? [MenuItem::linkToRoute('Audit & Datenschutz', 'fa fa-shield-halved', 'admin_privacy')] : []),
                 ...($canSystem ? [MenuItem::linkToRoute('Vereinsfunktionen & Rollen', 'fa fa-user-shield', 'admin_club_functions')] : []),
+                ...($this->isGranted(User::ROLE_SUPER_ADMIN) ? [MenuItem::linkToRoute('Installation & Funktionsprüfung', 'fa fa-screwdriver-wrench', 'admin_installation')] : []),
                 ...($websiteSettings
                     ? [MenuItem::linkToUrl('Website-Anzeige', 'fa fa-globe', $this->generateUrl('admin_settings_website'))] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()

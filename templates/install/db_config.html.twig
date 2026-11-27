@@ -9,22 +9,21 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="block">
-                    <div class="form-group">
-                        <h1>{{ 'Konfigurieren Sie Ihre Datenbank'|trans }}</h1>
-                    </div>
+                    <h1>DiCoMa installieren</h1>
+                    <p class="text-muted mb-0">Schritt 1 von 2: Datenbankverbindung prüfen und speichern.</p>
                 </div>
             </div>
         </div>
-        {% if error is defined %}
+        {% if error %}
             <div class="alert alert-danger" role="alert">{{ error|trans }}</div>
         {% endif %}
         <div class="row">
             <div class="col-md-8">
                 <div class="block">
                     <div class="form-group">
-                        {{ form_start(form) }}
+                        {{ form_start(form, {attr: {class: 'vstack gap-3'}}) }}
                             {{ form_widget(form) }}
-                            <button type="submit">{{ 'Konfigurationsdaten speichern'|trans }}</button>
+                            <button class="btn btn-primary" type="submit">Weiter zur Vereins- und Administratoreinrichtung</button>
                         {{ form_end(form) }}
                     </div>
                 </div>

@@ -29,7 +29,7 @@ security:
             security: false
 
         install:
-            pattern: ^/install(?:/|$)
+            pattern: ^/install(?:/setup)?$
             security: false
 
         main:
