@@ -134,14 +134,29 @@ final class MembershipFinanceService
         $iban = strtoupper(str_replace(' ', '', $iban));
         $bic = strtoupper(str_replace(' ', '', trim($bic)));
         $creditor = $member->getClub() !== null ? $this->memberships->policy($member->getClub())?->getCreditorIdentifier() : null;
-        if (!$creditor || !preg_match('/^[A-Za-z0-9\-]{1,35}$/D', $reference)
-            || trim($holder) === '' || mb_strlen($holder) > 180 || $signed > new \DateTimeImmutable('today')
-            || $proof->getMember()?->getId() !== $member->getId()
-            || !is_file($this->documents->path($proof->getStorageName()))
-            || count($this->validator->validate($iban, new Assert\Iban())) !== 0
-            || ($bic !== '' && !preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/D', $bic))) {
-            throw new \DomainException('Mandatsdaten ungültig: Gläubiger-ID, Referenz, Kontoinhaber, gültige IBAN, Unterschriftsdatum und eigener Nachweis erforderlich.');
+        if (!$creditor) {
+            throw new \DomainException('SEPA-Gläubiger-ID fehlt in den Mitgliedschaftsregeln. Bitte zuerst unter Einstellungen ergänzen.');
         }
+        if (!preg_match('/^[A-Za-z0-9\-]{1,35}$/D', trim($reference))) {
+            throw new \DomainException('Mandatsreferenz ist erforderlich und darf maximal 35 Zeichen sowie Buchstaben, Ziffern und Bindestriche enthalten.');
+        }
+        if (trim($holder) === '' || mb_strlen($holder) > 180) {
+            throw new \DomainException('Kontoinhaber ist erforderlich und darf maximal 180 Zeichen lang sein.');
+        }
+        if ($signed > new \DateTimeImmutable('today')) {
+            throw new \DomainException('Das Unterschriftsdatum darf nicht in der Zukunft liegen.');
+        }
+        if ($proof->getMember()?->getId() !== $member->getId()
+            || !is_file($this->documents->path($proof->getStorageName()))) {
+            throw new \DomainException('Der ausgewählte Nachweis gehört nicht zu diesem Mitglied oder die Datei ist nicht mehr vorhanden.');
+        }
+        if (count($this->validator->validate($iban, new Assert\Iban())) !== 0) {
+            throw new \DomainException('Die IBAN ist ungültig.');
+        }
+        if ($bic !== '' && !preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/D', $bic)) {
+            throw new \DomainException('Die BIC ist ungültig und muss 8 oder 11 Zeichen lang sein.');
+        }
+        $reference = trim($reference);
         if ($this->em->getRepository(SepaMandate::class)->findOneBy(['club' => $member->getClub(), 'reference' => $reference]) !== null) {
             throw new \DomainException('Diese Mandatsreferenz ist im Verein bereits vergeben.');
         }

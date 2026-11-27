@@ -2,12 +2,12 @@
 {% block content_title %}Mitgliedsbeiträge und Forderungen{% endblock %}
 {% block main %}
 <div class="row mb-4">
-    <div class="col-md-4"><div class="card p-3"><strong>{{ (openCents / 100)|number_format(2, ',', '.') }} EUR</strong><span>Offen</span></div></div>
-    <div class="col-md-4"><div class="card p-3"><strong>{{ (overdueCents / 100)|number_format(2, ',', '.') }} EUR</strong><span>Überfällig</span></div></div>
-    <div class="col-md-4"><div class="card p-3"><strong>{{ (paidCents / 100)|number_format(2, ',', '.') }} EUR</strong><span>Eingegangen</span></div></div>
+    <div class="col-sm-6 col-xl-4 mb-3"><div class="card p-3 h-100"><span class="text-muted">Offene Forderungen</span><strong class="fs-3">{{ (openCents / 100)|number_format(2, ',', '.') }} EUR</strong></div></div>
+    <div class="col-sm-6 col-xl-4 mb-3"><div class="card p-3 h-100"><span class="text-muted">Davon überfällig</span><strong class="fs-3 text-danger">{{ (overdueCents / 100)|number_format(2, ',', '.') }} EUR</strong></div></div>
+    <div class="col-sm-6 col-xl-4 mb-3"><div class="card p-3 h-100"><span class="text-muted">Zahlungseingänge</span><strong class="fs-3">{{ (paidCents / 100)|number_format(2, ',', '.') }} EUR</strong></div></div>
 </div>
 <p class="text-muted">Nur finanzielle Forderungs- und Zahlungsdaten. IBAN, Mandatsnachweise, Kontaktdaten und weitere Mitgliedsverwaltung sind nicht Bestandteil dieser Ansicht.</p>
-<div class="table-responsive"><table class="table table-striped">
+<div class="card"><div class="table-responsive"><table class="table table-striped align-middle mb-0">
     <thead><tr><th>Rechnung</th><th>Mitglied</th><th>Forderung</th><th>Fällig</th><th>Betrag</th><th>Bezahlt</th><th>Offen</th><th>Status</th><th>Zahlungen</th></tr></thead>
     <tbody>{% for row in rows %}
         {% set charge = row.charge %}
@@ -23,15 +23,15 @@
             <td>{% for payment in row.payments %}{{ payment.receivedAt|date('d.m.Y') }}: {{ (payment.amountCents / 100)|number_format(2, ',', '.') }} EUR · {{ payment.reference }}<br>{% endfor %}{% for notice in row.notices %}<a href="{{ path('admin_membership_dunning_pdf', {id: notice.id}) }}">Mahnung {{ notice.createdAt|date('d.m.Y') }} als PDF</a><br>{% endfor %}{% if row.payments is empty and row.notices is empty %}—{% endif %}</td>
         </tr>
     {% else %}<tr><td colspan="9">Keine Mitgliedsforderungen vorhanden.</td></tr>{% endfor %}</tbody>
-</table></div>
+</table></div></div>
 {% if rows and canFinanceWrite %}
-<form method="post" action="{{ path('admin_membership_sepa_create') }}" class="card card-body mt-4">
+<form method="post" action="{{ path('admin_membership_sepa_create') }}" class="card card-body mt-4 dicoma-form-card">
     <input type="hidden" name="_token" value="{{ csrf_token('sepa_batch_create') }}">
     <div class="row g-3 align-items-end">
         <div class="col-lg-4"><label class="form-label" for="sepa-key">Laufschlüssel</label><input class="form-control" id="sepa-key" name="batchKey" required value="SEPA-{{ 'now'|date('Ymd-His') }}"></div>
         <div class="col-lg-3"><label class="form-label" for="sepa-date">Einzugsdatum</label><input class="form-control" id="sepa-date" type="date" name="collectionDate" required min="{{ sepaMinimumDate|default('') }}" value="{{ sepaSuggestedDate|default('now'|date_modify('+3 days')|date('Y-m-d')) }}"></div>
         <div class="col-lg-5"><fieldset><legend class="form-label">Forderungen für Lastschriftlauf</legend>{% for row in rows %}{% if row.charge.outstandingCents > 0 %}<div class="form-check"><input class="form-check-input" id="sepa-charge-{{ row.charge.id }}" type="checkbox" name="charges[]" value="{{ row.charge.id }}"><label class="form-check-label" for="sepa-charge-{{ row.charge.id }}">{{ row.charge.invoiceNumber ?? row.charge.description }} – {{ row.charge.member.fullName }}</label></div>{% endif %}{% endfor %}</fieldset></div>
-        <div class="col-12"><button class="btn btn-primary">Lastschriftentwurf anlegen</button></div>
+        <div class="col-12 dicoma-form-actions"><button class="btn btn-primary">Lastschriftentwurf anlegen</button><span class="form-text">Nur ausgewählte offene Forderungen mit aktivem Mandat.</span></div>
     </div>
 </form>
 {% endif %}

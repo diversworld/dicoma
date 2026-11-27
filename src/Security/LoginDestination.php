@@ -30,6 +30,11 @@ final class LoginDestination
             if ($this->security->isGranted(User::ROLE_ADMIN)) {
                 return 'admin';
             }
+            if ($this->security->isGranted(User::ROLE_BOARD)
+                || $this->security->isGranted(User::ROLE_TREASURER)
+                || $this->security->isGranted(User::ROLE_SECRETARY)) {
+                return 'admin';
+            }
             if ($this->security->isGranted(User::ROLE_TRAINING_MANAGER)) {
                 return 'admin_training_overview';
             }

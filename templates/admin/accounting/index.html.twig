@@ -1,7 +1,7 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}Buchhaltung und Jahresabschluss{% endblock %}
 {% block main %}
-<div class="card mt-4">
+<div class="card mt-4 dicoma-form-card">
   <div class="card-header">
     <h2 class="h5 mb-0">Buchung erfassen</h2>
   </div>
@@ -37,7 +37,7 @@
       <div class="col-md-4">
         <label class="form-label">Belegreferenz<input class="form-control" name="reference" maxlength="180"></label>
       </div>
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md-2 d-flex align-items-end dicoma-form-actions">
         <button class="btn btn-primary w-100">Buchen</button>
       </div>
     </form>
@@ -81,12 +81,12 @@
     <div class="card">
       <div class="card-header">Jahresabschluss</div>
       <div class="card-body">
-        <form method="post" class="d-flex gap-2 mb-3">
+        <form method="post" class="d-grid gap-2 mb-3">
         <input type="hidden" name="_token" value="{{ csrf_token('accounting_post') }}">
         <input type="hidden" name="operation" value="close">
         <label class="visually-hidden" for="close-year">Jahr</label>
         <input id="close-year" class="form-control" name="year" type="number" min="2000" value="{{ ('now'|date('Y')) - 1 }}">
-        <button class="btn btn-outline-primary">Abschließen</button>
+        <button class="btn btn-outline-primary">Jahr endgültig abschließen</button>
         </form>
         {% for close in closes %}
           <div class="border-top pt-2 mb-2">
@@ -102,7 +102,7 @@
 
 <div class="row g-4 mt-1">
   <section class="col-xl-4">
-    <div class="card">
+    <div class="card dicoma-form-card">
       <div class="card-header">
         <h2 class="h5 mb-0">Konto anlegen</h2>
       </div>
@@ -121,7 +121,7 @@
               <option value="expense">Ausgaben</option>
             </select>
           </label>
-          <button class="btn btn-primary">Konto anlegen</button>
+          <div class="dicoma-form-actions"><button class="btn btn-primary">Konto anlegen</button></div>
         </form>
       </div>
     </div>

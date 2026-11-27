@@ -21,6 +21,37 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 #[PreserveGlobalState(false)]
 final class Phase10FinanceAccessHttpTest extends WebTestCase
 {
+    public function testDirectTreasurerRoleShowsAllEntitledMenuEntriesWithoutFunctionModel(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
+        foreach ([
+            'DATABASE_URL' => 'sqlite:///:memory:',
+            'MAILER_DSN' => 'null://null',
+            'PUBLIC_SITE_CLUB_ID' => '1',
+            'CLUB_FUNCTION_MEMBERSHIP_ENABLED' => '0',
+        ] as $name => $value) {
+            $_ENV[$name] = $_SERVER[$name] = $value; putenv($name.'='.$value);
+        }
+        $client = static::createClient(['environment' => 'test']);
+        $client->disableReboot();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $club = (new Club())->setName('Direkte Kassenrolle');
+        $treasurer = $this->account($club, 'direct-treasurer');
+        $treasurer->setRoles([User::ROLE_TREASURER]);
+        $em->persist($club);
+        $em->persist($treasurer);
+        $em->flush();
+        $client->loginUser($treasurer);
+        $client->request('GET', '/login');
+        self::assertResponseRedirects('/admin');
+        $client->request('GET', '/admin');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('a[href="/admin/membership-finance"]');
+        self::assertSelectorExists('a[href*="routeName=admin_accounting"]');
+        self::assertSelectorExists('a[href*="routeName=admin_settings_contributions"]');
+    }
+
     public function testFinanceReadIsAvailableToTreasurerButNotOrdinaryMember(): void
     {
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }

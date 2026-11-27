@@ -467,6 +467,7 @@ class DashboardController extends AbstractDashboardController
 		   ->addCssFile('css/admin.css')
 		    ->addCssFile('css/accessibility.css')
            ->addCssFile('css/admin-theme.css')
+           ->addCssFile('css/admin-ux.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
             ->addCssFile('css/utilities.css');
@@ -900,11 +901,9 @@ class DashboardController extends AbstractDashboardController
             $user instanceof User && $club !== null && $this->moduleAccess->can($user, $club, $module, $action);
         $canMembership = $canModule(PermissionModule::MEMBERSHIP);
         $canGovernance = $canModule(PermissionModule::GOVERNANCE);
-        $financeRoute = $this->functionModelEnabled && $this->getUser() instanceof \App\Entity\User
-            && $this->clubContext->getClub() instanceof \App\Entity\Club
-            && $this->moduleAccess->can(
-                $this->getUser(), $this->clubContext->getClub(), \App\Enum\PermissionModule::FINANCE, \App\Enum\PermissionAction::READ
-            );
+        $canFinance = $canModule(PermissionModule::FINANCE);
+        $canFinanceWrite = $canModule(PermissionModule::FINANCE, PermissionAction::EDIT);
+        $canAccounting = $canModule(PermissionModule::ACCOUNTING);
         $editorialRoute = $this->editorialAccess->can(PermissionAction::READ)
             ? 'admin_website_editorial'
             : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_website_editorial_new' : null);
@@ -930,8 +929,9 @@ class DashboardController extends AbstractDashboardController
             return [
                 MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 MenuItem::section('Kassenwart'),
-                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
-                MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting'),
+                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                ...($canAccounting ? [MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting')] : []),
+                ...($canFinanceWrite ? [MenuItem::linkToRoute('Beitragsarten & Regeln', 'fa fa-sliders', 'admin_settings_contributions')] : []),
                 ...($this->isGranted(User::ROLE_EQUIPMENT_CASH) ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
                 ...($this->isGranted(User::ROLE_BAR_MANAGER) ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
                 ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
@@ -943,7 +943,7 @@ class DashboardController extends AbstractDashboardController
                 MenuItem::section('Vorstand'),
                 MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
                 MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
-                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 MenuItem::linkToRoute('Vorstandsarbeit', 'fa fa-people-line', 'admin_governance'),
                 MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
                 MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
@@ -965,7 +965,7 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
                     MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
                 ] : []),
-                ...($financeRoute ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
                 ...($websiteSettings
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
@@ -984,10 +984,11 @@ class DashboardController extends AbstractDashboardController
         return [
             MenuItem::linkToDashboard('Dashboard', 'fa fa-house'),
             MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
-            ...($financeRoute ? [
+            ...($canFinance || $canAccounting ? [
                 MenuItem::section($this->isGranted(User::ROLE_TREASURER) ? 'Kassenwart' : 'Vorstand & Finanzen'),
-                MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance'),
-                MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting'),
+                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                ...($canAccounting ? [MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting')] : []),
+                ...($canFinanceWrite ? [MenuItem::linkToRoute('Beitragsarten & Regeln', 'fa fa-sliders', 'admin_settings_contributions')] : []),
             ] : []),
             ...($editorialRoute !== null ? [
                 MenuItem::section('Website & Redaktion'),

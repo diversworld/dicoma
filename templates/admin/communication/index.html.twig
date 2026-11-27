@@ -2,7 +2,7 @@
 {% block content_title %}Gruppenkommunikation{% endblock %}
 {% block main %}
 <div class="row g-4">
-  <section class="col-xl-5"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Vorlage anlegen</h2></div><div class="card-body">
+  <section class="col-xl-5"><div class="card dicoma-form-card"><div class="card-header"><h2 class="h5 mb-0">Vorlage anlegen</h2></div><div class="card-body">
     <form method="post" class="vstack gap-3">
       <input type="hidden" name="_token" value="{{ csrf_token('communication') }}"><input type="hidden" name="operation" value="template">
       <label class="form-label">Code<input class="form-control" name="code" maxlength="60" required placeholder="membership-confirmation"></label>
@@ -10,7 +10,7 @@
       <label class="form-label">Betreff<input class="form-control" name="subject" maxlength="180" required></label>
       <label class="form-label">Text<textarea class="form-control" name="body" rows="10" required></textarea></label>
       <p class="small text-muted mb-0">Platzhalter in E-Mails: {% verbatim %}{{ firstname }}, {{ lastname }}, {{ memberNumber }}, {{ club }}{% endverbatim %}.</p>
-      <button class="btn btn-primary">Vorlage speichern</button>
+      <div class="dicoma-form-actions"><button class="btn btn-primary">Vorlage speichern</button></div>
     </form>
   </div></div></section>
   <section class="col-xl-7"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Empfängergruppe und Versand</h2></div><div class="card-body">
@@ -22,6 +22,7 @@
         <button class="btn btn-outline-secondary" name="operation" value="preview">Empfängerzahl prüfen</button>
         <button class="btn btn-outline-primary" name="operation" value="test">Test an mich senden</button>
         <button class="btn btn-primary" name="operation" value="send" {% if templates is empty %}disabled{% endif %}>An Gruppe senden</button>
+        <span class="form-text d-block mt-2">Sende immer zuerst einen Test an die eigene Adresse.</span>
       </div>
       {% if preview is not null %}<div class="col-12"><div class="alert alert-info mb-0" role="status">{{ preview }} aktive Mitglieder würden die Nachricht erhalten.</div></div>{% endif %}
     </form>
