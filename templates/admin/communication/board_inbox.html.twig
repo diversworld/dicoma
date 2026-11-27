@@ -1,0 +1,25 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}Vorstands-Posteingang{% endblock %}
+{% block main %}
+<p class="text-muted">Gemeinsame Ansicht aller Nachrichten, die Mitglieder an den Vorstand des ausgewählten Vereins gesendet haben.</p>
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Eingang</th><th>Absender</th><th>Betreff</th><th>Vorgesehen für</th><th></th></tr></thead>
+            <tbody>
+            {% for message in messages %}
+                <tr>
+                    <td class="text-nowrap">{{ message.sentAt|date('d.m.Y H:i') }}</td>
+                    <td>{{ message.sender.member ? message.sender.member.fullName : message.sender.userIdentifier }}</td>
+                    <td><strong>{{ message.subject }}</strong></td>
+                    <td>{{ message.recipients|length }} Vorstandsmitglied(er)</td>
+                    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_board_message_show', {id: message.id}) }}">Öffnen</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-muted">Noch keine Nachrichten an den Vorstand.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

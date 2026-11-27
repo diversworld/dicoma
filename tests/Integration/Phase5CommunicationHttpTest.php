@@ -189,6 +189,40 @@ final class Phase5CommunicationHttpTest extends WebTestCase
         self::assertSame(1, $this->em->getRepository(InternalMessageRecipient::class)->count(['message' => $message]));
     }
 
+    public function testBoardInboxIsSharedForBoardMembersAndHiddenFromOtherMembers(): void
+    {
+        $boardOne = $this->account('board-one');
+        $boardTwo = $this->account('board-two');
+        $function = new ClubFunction($this->club, 'Gemeinsamer Vorstand');
+        $function->setPermissions([User::ROLE_BOARD]);
+        $this->em->persist($function);
+        $this->em->persist(new ClubFunctionAssignment($function, $boardOne));
+        $this->em->persist(new ClubFunctionAssignment($function, $boardTwo));
+        $this->em->flush();
+        $this->client->loginUser($this->sender);
+        $crawler = $this->client->request('GET', '/my/messages/new');
+        $this->client->submit($crawler->selectButton('Nachricht senden')->form(), [
+            'form[audience]' => 'board',
+            'form[subject]' => 'Gemeinsamer Vorstandsvorgang',
+            'form[body]' => 'Für alle Vorstandsmitglieder.',
+        ]);
+        self::assertResponseRedirects('/my/messages');
+
+        foreach ([$boardOne, $boardTwo] as $board) {
+            $this->client->loginUser($board);
+            $this->client->request('GET', '/admin/board-messages');
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', 'Gemeinsamer Vorstandsvorgang');
+            $message = $this->em->getRepository(InternalMessage::class)->findOneBy(['subject' => 'Gemeinsamer Vorstandsvorgang']);
+            $this->client->request('GET', '/admin/board-messages/'.$message->getId());
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('body', 'Für alle Vorstandsmitglieder.');
+        }
+        $this->client->loginUser($this->recipient);
+        $this->client->request('GET', '/admin/board-messages');
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testDivisionLeaderCanMessageOnlyOwnActiveDivisionMembers(): void
     {
         $division = $this->division('Tauchen');

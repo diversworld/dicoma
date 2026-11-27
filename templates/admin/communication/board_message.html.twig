@@ -1,0 +1,25 @@
+{% extends 'admin/portal_layout.html.twig' %}
+{% block content_title %}{{ message.subject }}{% endblock %}
+{% block main %}
+<p><a href="{{ path('admin_board_messages') }}">← Zurück zum Vorstands-Posteingang</a></p>
+<article class="card">
+    <div class="card-header">
+        <strong>{{ message.sender.member ? message.sender.member.fullName : message.sender.userIdentifier }}</strong>
+        <span class="text-muted">· {{ message.sentAt|date('d.m.Y H:i') }}</span>
+    </div>
+    <div class="card-body">{{ message.body|nl2br }}</div>
+</article>
+<section class="card mt-4">
+    <div class="card-header"><h2 class="h5 mb-0">Zustellung an den Vorstand</h2></div>
+    <div class="list-group list-group-flush">
+        {% for delivery in recipients %}
+            <div class="list-group-item d-flex justify-content-between gap-3">
+                <span>{{ delivery.member.fullName }}</span>
+                <span class="badge {{ delivery.readAt ? 'bg-secondary' : 'bg-primary' }}">{{ delivery.readAt ? 'Gelesen' : 'Neu' }}</span>
+            </div>
+        {% else %}
+            <div class="list-group-item text-muted">Keine Empfängerzuordnung vorhanden.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

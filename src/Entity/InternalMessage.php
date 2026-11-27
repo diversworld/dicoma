@@ -76,6 +76,7 @@ class InternalMessage
     public function getSubject(): string { return $this->subject; }
     public function getBody(): string { return $this->body; }
     public function getSentAt(): \DateTimeImmutable { return $this->sentAt; }
+    public function getRecipients(): Collection { return $this->recipients; }
 
     public function addRecipient(InternalMessageRecipient $recipient): void
     {

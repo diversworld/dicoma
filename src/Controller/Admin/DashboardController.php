@@ -987,6 +987,7 @@ class DashboardController extends AbstractDashboardController
                 ] : []),
                 ...($canGovernance ? [
                     MenuItem::section('Vorstand & Organisation'),
+                    MenuItem::linkToRoute('Vorstands-Posteingang', 'fa fa-inbox', 'admin_board_messages'),
                     MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
                     MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
                     MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
@@ -1053,6 +1054,7 @@ class DashboardController extends AbstractDashboardController
             ]),
             MenuItem::subMenu('Vorstand & Organisation', 'fa fa-people-roof')
                 ->setSubItems([
+                    MenuItem::linkToRoute('Vorstands-Posteingang', 'fa fa-inbox', 'admin_board_messages'),
                     MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
                     MenuItem::linkTo(BoardMeetingCrudController::class, 'Sitzungen verwalten', 'fa fa-calendar-days'),
                     MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben verwalten', 'fa fa-list-check'),
