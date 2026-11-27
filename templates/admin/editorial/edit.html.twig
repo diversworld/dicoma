@@ -16,9 +16,11 @@
                 <div class="form-fieldset-header collapsible"><div class="form-fieldset-title"><a href="#cms-base" data-bs-toggle="collapse" class="form-fieldset-title-content form-fieldset-collapse">{{ publication.kind == 'page' ? 'Seite und Hierarchie' : (publication.kind == 'event' ? 'Veranstaltungsankündigung' : 'Artikelinhalt') }}</a></div></div>
                 <div id="cms-base" class="form-fieldset-body collapse show"><div class="row">
                 <div class="col-12">{{ form_row(form.title) }}</div>
-                {% if form.parent is defined %}<div class="col-md-8">{{ form_row(form.parent) }}</div>{% endif %}
-                {% if form.sortOrder is defined %}<div class="col-md-2">{{ form_row(form.sortOrder) }}</div>{% endif %}
-                {% if form.menuVisible is defined %}<div class="col-md-2">{{ form_row(form.menuVisible) }}</div>{% endif %}
+                {% if publication.kind != 'event' %}<div class="col-md-8">{{ form_row(form.parent) }}</div>{% endif %}
+                {% if publication.kind == 'page' %}
+                    <div class="col-md-2">{{ form_row(form.sortOrder) }}</div>
+                    <div class="col-md-2">{{ form_row(form.menuVisible) }}</div>
+                {% endif %}
                 <div class="col-12">{{ form_row(form.summary) }}</div>
                 <div class="col-12">{{ form_row(form.body) }}</div>
                 </div></div>

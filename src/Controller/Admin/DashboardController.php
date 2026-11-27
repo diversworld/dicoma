@@ -1041,8 +1041,6 @@ class DashboardController extends AbstractDashboardController
                 ] : []),
 
             MenuItem::section('Tägliche Verwaltung'),
-            ...(!$this->functionModelEnabled || $eventRoute !== null
-                ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute ?? 'admin_club_events')] : []),
             MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index'),
             MenuItem::linkToRoute('Thekendienste und Thekenkasse', 'fa fa-mug-hot', 'admin_portal_bar_duty')
                 ->setPermission('ROLE_BAR_MANAGER'),

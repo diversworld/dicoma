@@ -203,6 +203,10 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertSelectorTextContains('body', 'Bookable event');
         self::assertSelectorTextContains('body', 'Legacy event announcement');
         self::assertSelectorExists('a[href$="/editorial/'.$legacy->getId().'/edit"]');
+        $this->client->request('GET', '/admin/de/editorial/'.$legacy->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="website_publication[startsAt]"]');
+        self::assertSelectorNotExists('select[name="website_publication[parent]"]');
     }
 
     public function testDivisionAreasShowOnlyExplicitlyPublishedContentAndHideInactiveDivisions(): void
