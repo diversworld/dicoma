@@ -10,6 +10,7 @@ parameters:
     env(CLUB_FUNCTION_MEMBERSHIP_ENABLED): '0'
     env(CONTACT_MAIL_FROM): ''
     env(DICOMA_CLAMAV_COMMAND): ''
+    env(DICOMA_UPDATE_REPOSITORY): 'diversworld/dicoma'
     site.themes:
         airspace:
             layout: 'themes/airspace/layout.html.twig'

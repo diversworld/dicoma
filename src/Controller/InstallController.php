@@ -10,6 +10,7 @@ use App\Service\InstallationBootstrap;
 use App\Service\InstallationCatalog;
 use App\Service\InstallationEnvironmentValue;
 use App\Service\InstallationMigrator;
+use App\Service\GitVersionChecker;
 use App\Service\SingleClubMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,6 +30,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final class InstallController extends AbstractController
 {
+    public function __construct(private readonly GitVersionChecker $versions) {}
+
     #[Route('/install', name: 'app_install', methods: ['GET', 'POST'])]
     public function database(Request $request, Filesystem $filesystem, InstallationGuard $guard): Response
     {
@@ -119,12 +122,23 @@ final class InstallController extends AbstractController
         $club = $clubs->club();
         $components = $catalog->components($club);
         if ($request->isMethod('POST') && $this->isCsrfTokenValid('installation_update', (string) $request->request->get('_token'))) {
+            if ($request->request->getString('operation') === 'check_version') {
+                $status = $this->versions->check(true);
+                $this->addFlash($status['checked'] ? 'success' : 'warning', $status['checked']
+                    ? 'Versionsprüfung aktualisiert. Neuester Tag: '.$status['latest'].'.'
+                    : 'Versionsprüfung nicht möglich: '.$status['error']);
+                return $this->redirectToRoute('admin_installation');
+            }
             $component = (string) $request->request->get('component', '');
             $installed = $catalog->installMissing($club, $component === '' ? null : $component);
             $em->flush();
             $this->addFlash('success', count($installed) > 0 ? sprintf('%d neue Funktion(en) installiert.', count($installed)) : 'Alle Funktionen sind bereits aktuell.');
             return $this->redirectToRoute('admin_installation');
         }
-        return $this->render('install/update.html.twig', ['components' => $components, 'version' => InstallationCatalog::VERSION]);
+        return $this->render('install/update.html.twig', [
+            'components' => $components,
+            'version' => InstallationCatalog::VERSION,
+            'softwareVersion' => $this->versions->check(),
+        ]);
     }
 }

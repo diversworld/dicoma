@@ -120,6 +120,7 @@ final class InstallationCatalogTest extends WebTestCase
             'DATABASE_URL' => 'sqlite:///:memory:',
             'PUBLIC_SITE_CLUB_ID' => '0',
             'DICOMA_INSTALL_ENABLED' => '0',
+            'DICOMA_UPDATE_REPOSITORY' => 'invalid',
         ] as $key => $value) {
             $_ENV[$key] = $_SERVER[$key] = $value;
             putenv($key.'='.$value);

@@ -33,6 +33,8 @@ Die Datenbank muss vorab durch den Hosting-Provider oder in der Hosting-Verwaltu
 
 Im Backend steht Superadministratoren unter **Installation & Funktionsprüfung** eine Übersicht aller fehlenden Kernfunktionen zur Verfügung. Die Installation ist idempotent und überschreibt keine vorhandenen individuellen Datensätze.
 
+Dieselbe Seite prüft über die GitHub-Tags des Repositories `DICOMA_UPDATE_REPOSITORY` (Standard: `diversworld/dicoma`), ob eine neuere stabile Version als die installierte `VERSION` vorhanden ist. Das Ergebnis wird sechs Stunden zwischengespeichert; **Jetzt erneut prüfen** verwirft den Cache und fragt GitHub direkt erneut ab. Prüfen Sie installierte Releases ausschließlich anhand eines fachlich veröffentlichten Git-Tags; Pre-Release-Tags werden nicht als stabile Version akzeptiert.
+
 CLI-Alternative:
 
 ```bash
