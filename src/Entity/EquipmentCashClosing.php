@@ -31,6 +31,7 @@ class EquipmentCashClosing
         $this->note=$note ?: null; $this->handoverTo=$handover ?: null;
     }
     public function getId(): ?int {return $this->id;}
+    public function getClub(): Club { return $this->club; }
     public function getClosingDate(): \DateTimeImmutable {return $this->closingDate;}
     public function getOpeningCents(): int {return $this->openingCents;}
     public function getCashInCents(): int {return $this->cashInCents;}

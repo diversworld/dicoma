@@ -1,6 +1,64 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}Buchhaltung und Jahresabschluss{% endblock %}
 {% block main %}
+<div class="card mb-4">
+  <div class="card-header"><h2 class="h5 mb-0">Kassenabschlüsse übernehmen</h2></div>
+  <div class="card-body">
+    <p class="text-muted">Pro Abschluss werden Bareinnahmen gegen ein Erlöskonto und Barausgaben gegen ein Aufwandskonto gebucht. Die Neben- oder Kompressorkasse bleibt anschließend mit ihrem gezählten Restbestand bestehen.</p>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead><tr><th>Kasse / Abschluss</th><th>Einnahmen</th><th>Ausgaben</th><th>Kontierung</th></tr></thead>
+      <tbody>
+      {% for closing in cashClosings %}
+        <tr>
+          <td><strong>{{ closing.label }}</strong><div class="small text-muted">{{ closing.type == 'bar' ? 'Thekenkasse 19120' : 'Kompressorkasse 19110' }}</div></td>
+          <td>{{ (closing.incomeCents / 100)|number_format(2, ',', '.') }} EUR</td>
+          <td>{{ (closing.expenseCents / 100)|number_format(2, ',', '.') }} EUR</td>
+          <td>
+            {% if closing.posted %}
+              <span class="badge bg-success">Übernommen</span>
+            {% else %}
+              <form method="post" class="row g-2">
+                <input type="hidden" name="_token" value="{{ csrf_token('accounting_post') }}">
+                <input type="hidden" name="operation" value="cash-close-booking">
+                <input type="hidden" name="cashType" value="{{ closing.type }}">
+                <input type="hidden" name="sourceId" value="{{ closing.id }}">
+                <div class="col-xl-4"><label class="form-label">Kassenkonto<select class="form-select form-select-sm" name="cashAccount" required>
+                  {% for account in accounts %}{% if account.type == 'asset' %}<option value="{{ account.id }}" {{ account.code == (closing.type == 'bar' ? '19120' : '19110') ? 'selected' : '' }}>{{ account.code }} – {{ account.name }}</option>{% endif %}{% endfor %}
+                </select></label></div>
+                <div class="col-xl-4"><label class="form-label">Erlöskonto<select class="form-select form-select-sm" name="incomeAccount" required>
+                  {% for account in accounts %}{% if account.type == 'income' %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endif %}{% endfor %}
+                </select></label></div>
+                <div class="col-xl-4"><label class="form-label">Aufwandskonto<select class="form-select form-select-sm" name="expenseAccount" required>
+                  {% for account in accounts %}{% if account.type == 'expense' %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endif %}{% endfor %}
+                </select></label></div>
+                <div class="col-12"><button class="btn btn-sm btn-primary">In Buchhaltung übernehmen</button></div>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-muted">Keine abgeschlossenen Kassen vorhanden.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+<div class="card mb-4">
+  <div class="card-header"><h2 class="h5 mb-0">Bargeld zwischen Kassen übernehmen</h2></div>
+  <div class="card-body">
+    <p class="text-muted">Eine Übergabe aus Kompressor- oder Thekenkasse in die Hauptkasse bzw. ein Girokonto ist eine reine Umbuchung und verändert Einnahmen/Ausgaben nicht.</p>
+    <form method="post" class="row g-3">
+      <input type="hidden" name="_token" value="{{ csrf_token('accounting_post') }}">
+      <input type="hidden" name="operation" value="cash-transfer">
+      <div class="col-lg-3"><label class="form-label">Von Kasse<select class="form-select" name="fromCashAccount" required>{% for account in accounts %}{% if account.type == 'asset' %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endif %}{% endfor %}</select></label></div>
+      <div class="col-lg-3"><label class="form-label">Nach Kasse / Bank<select class="form-select" name="toCashAccount" required>{% for account in accounts %}{% if account.type == 'asset' %}<option value="{{ account.id }}">{{ account.code }} – {{ account.name }}</option>{% endif %}{% endfor %}</select></label></div>
+      <div class="col-lg-2"><label class="form-label">Betrag EUR<input class="form-control" name="transferAmount" inputmode="decimal" required></label></div>
+      <div class="col-lg-2"><label class="form-label">Datum<input class="form-control" type="date" name="transferDate" value="{{ 'now'|date('Y-m-d') }}" required></label></div>
+      <div class="col-lg-4"><label class="form-label">Übergabebeleg<input class="form-control" name="transferReference" maxlength="180" required placeholder="Kassenübergabe 27.11.2026"></label></div>
+      <div class="col-12"><button class="btn btn-primary">Geldübergabe buchen</button></div>
+    </form>
+  </div>
+</div>
 <div class="card mt-4">
   <div class="card-header">
     <h2 class="h5 mb-0">Buchung erfassen</h2>

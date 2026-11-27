@@ -32,6 +32,23 @@ Der Export:
 
 BIC wird wie IBAN verschlüsselt gespeichert. Das gemeinsame Bankmodell besitzt weiterhin keinen automatischen Zahlungsabgleich; bestätigte Rückgaben werden über den vorhandenen Zahlungsworkflow separat gebucht.
 
+## Neben- und Kompressorkassen
+
+Abgeschlossene Geräte-/Kompressor- und Thekenkassen erscheinen unter
+**Buchhaltung & Abschluss → Kassenabschlüsse übernehmen**. Der Kassenwart wählt
+für jede Kasse:
+
+- das zutreffende Nebenkassenkonto,
+- ein Erlöskonto für Bareinnahmen,
+- ein Aufwandskonto für Barausgaben.
+
+Die Übernahme ist idempotent und speichert Einnahmen und Ausgaben als getrennte
+Buchungen. Kompressor-/Gerätekasse verwendet `19110`, Thekenkasse `19120`.
+
+Eine physische Übergabe an Hauptkasse (`19100`) oder Girokonto ist keine neue
+Einnahme. Sie wird separat als Umbuchung unter **Bargeld zwischen Kassen
+übernehmen** erfasst und benötigt Betrag, Datum und Übergabebeleg.
+
 Die Oberfläche verarbeitet fachliche SEPA-Fehler als Flash-Meldung und verhindert,
 dass dieselbe Forderung gleichzeitig in mehreren Entwurfs-, Freigabe- oder
 Exportläufen reserviert wird. Das früheste Einzugsdatum wird anhand von zwei

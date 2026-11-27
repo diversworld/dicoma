@@ -14,6 +14,7 @@ use App\Security\ModuleAccess;
 use App\Service\AdminClubContext;
 use App\Service\FinanceLedgerService;
 use App\Service\FinanceChartService;
+use App\Service\CashAccountingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,7 @@ final class FinanceLedgerController extends AbstractController
         private readonly ModuleAccess $access,
         private readonly FinanceLedgerService $ledger,
         private readonly FinanceChartService $chart,
+        private readonly CashAccountingService $cash,
     ) {}
 
     #[Route('', name: 'admin_accounting', methods: ['GET', 'POST'])]
@@ -67,6 +69,27 @@ final class FinanceLedgerController extends AbstractController
                 $this->ledger->closeYear($club, $request->request->getInt('year'), $user);
                 $this->em->flush();
                 $this->addFlash('success', 'Jahresabschluss fixiert.');
+            } elseif ($operation === 'cash-close-booking') {
+                $cashAccount = $this->account($request->request->getInt('cashAccount'));
+                $incomeAccount = $this->account($request->request->getInt('incomeAccount'));
+                $expenseAccount = $this->account($request->request->getInt('expenseAccount'));
+                $this->cash->book($club, $request->request->getString('cashType'), $request->request->getInt('sourceId'), $cashAccount, $incomeAccount, $expenseAccount, $user);
+                $this->em->flush();
+                $this->addFlash('success', 'Kassenabschluss unveränderlich in die Buchhaltung übernommen.');
+            } elseif ($operation === 'cash-transfer') {
+                $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $request->request->getString('transferDate'));
+                if ($date === false) { throw $this->createNotFoundException('Ungültiges Übergabedatum.'); }
+                $this->cash->transfer(
+                    $club,
+                    $this->account($request->request->getInt('fromCashAccount')),
+                    $this->account($request->request->getInt('toCashAccount')),
+                    $this->amountCents($request->request->getString('transferAmount')),
+                    $date,
+                    $user,
+                    $request->request->getString('transferReference'),
+                );
+                $this->em->flush();
+                $this->addFlash('success', 'Bargeldübergabe zwischen Kassen gebucht.');
             }
             return $this->redirectToRoute('admin_accounting');
         }
@@ -79,6 +102,7 @@ final class FinanceLedgerController extends AbstractController
             'transactions' => $this->em->getRepository(FinanceTransaction::class)->findBy(['club' => $club], ['effectiveAt' => 'DESC', 'id' => 'DESC'], 100),
             'closes' => $this->em->getRepository(FinanceAnnualClose::class)->findBy(['club' => $club], ['year' => 'DESC']),
             'skr42Installed' => (bool) $this->em->getRepository(FinanceAccount::class)->count(['club' => $club, 'chart' => 'SKR42 2026 EÜR']),
+            'cashClosings' => $this->cash->pending($club),
         ]);
     }
 
@@ -95,5 +119,14 @@ final class FinanceLedgerController extends AbstractController
         $cents = ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
         if ($cents <= 0) { throw $this->createNotFoundException('Betrag muss positiv sein.'); }
         return $cents;
+    }
+
+    private function account(int $id): FinanceAccount
+    {
+        $account = $this->em->find(FinanceAccount::class, $id);
+        if (!$account instanceof FinanceAccount) {
+            throw $this->createNotFoundException('Buchungskonto nicht gefunden.');
+        }
+        return $account;
     }
 }

@@ -23,6 +23,7 @@ use App\Security\ModuleAccess;
 use App\Service\AuditLogger;
 use App\Service\FinanceLedgerService;
 use App\Service\FinanceChartService;
+use App\Service\CashAccountingService;
 use App\Finance\Skr42Chart;
 use App\Service\SepaDirectDebitService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -168,8 +169,8 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         $chart = static::getContainer()->get(FinanceChartService::class);
         $first = $chart->installSkr42($this->club, 'tester');
         $this->em->flush();
-        self::assertSame(96, $first['total']);
-        self::assertSame(96, $first['created']);
+        self::assertSame(98, $first['total']);
+        self::assertSame(98, $first['created']);
         $memberIncome = $this->em->getRepository(FinanceAccount::class)->findOneBy(['club' => $this->club, 'code' => '40000']);
         self::assertSame(FinanceAccount::TYPE_INCOME, $memberIncome->getType());
         self::assertSame('1', $memberIncome->getSphere());
@@ -184,8 +185,51 @@ final class PhaseARbacFinanceComplianceTest extends KernelTestCase
         self::assertSame('Mitgliedsbeiträge Jugend', $youthFees->getName());
         $second = $chart->installSkr42($this->club, 'tester');
         self::assertSame(0, $second['created']);
-        self::assertSame(96, $second['total']);
+        self::assertSame(98, $second['total']);
         self::assertSame(0, $second['updated']);
+    }
+
+    public function testCashCloseImportsIncomeAndExpenseIdempotentlyAndTransfersBalances(): void
+    {
+        $this->em->getRepository(\App\Entity\Club::class);
+        $cash = new FinanceAccount($this->club, CashAccountingService::COMPRESSOR_ACCOUNT, 'Kompressorkasse', FinanceAccount::TYPE_ASSET);
+        $main = new FinanceAccount($this->club, '19100', 'Hauptkasse', FinanceAccount::TYPE_ASSET);
+        $income = new FinanceAccount($this->club, '42040', 'Füllgebühren', FinanceAccount::TYPE_INCOME);
+        $expense = new FinanceAccount($this->club, '63040', 'Kompressoraufwand', FinanceAccount::TYPE_EXPENSE);
+        $closing = new \App\Entity\EquipmentCashClosing($this->club, new \DateTimeImmutable('today'), 0, 5000, 700, 4300, str_repeat('0', 64), 'operator', null, null);
+        foreach ([$cash, $main, $income, $expense, $closing] as $entity) { $this->em->persist($entity); }
+        $this->em->flush();
+        $service = static::getContainer()->get(\App\Service\CashAccountingService::class);
+        $transactions = $service->book($this->club, 'equipment', $closing->getId(), $cash, $income, $expense, $this->treasurer);
+        $this->em->flush();
+        self::assertCount(2, $transactions);
+        self::assertSame(5000, $transactions[0]->getAmountCents());
+        self::assertSame(700, $transactions[1]->getAmountCents());
+        $this->expectException(\DomainException::class);
+        $service->book($this->club, 'equipment', $closing->getId(), $cash, $income, $expense, $this->treasurer);
+    }
+
+    public function testCashHandoverIsAnAssetTransferWithoutIncomeOrExpense(): void
+    {
+        $compressor = new FinanceAccount($this->club, CashAccountingService::COMPRESSOR_ACCOUNT, 'Kompressorkasse', FinanceAccount::TYPE_ASSET);
+        $main = new FinanceAccount($this->club, '19100', 'Hauptkasse', FinanceAccount::TYPE_ASSET);
+        $this->em->persist($compressor);
+        $this->em->persist($main);
+        $this->em->flush();
+        static::getContainer()->get(CashAccountingService::class)->transfer(
+            $this->club,
+            $compressor,
+            $main,
+            2500,
+            new \DateTimeImmutable('today'),
+            $this->treasurer,
+            'Übergabe 2026-11-27',
+        );
+        $this->em->flush();
+        $transaction = $this->em->getRepository(FinanceTransaction::class)->findOneBy(['reference' => 'Übergabe 2026-11-27']);
+        self::assertNotNull($transaction);
+        self::assertSame($main->getId(), $transaction->getDebitAccount()->getId());
+        self::assertSame($compressor->getId(), $transaction->getCreditAccount()->getId());
     }
 
     public function testRetentionCommandDryRunDoesNotDeleteExpiredAudit(): void

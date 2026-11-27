@@ -76,6 +76,8 @@ final class Skr42Chart
         foreach ([
             ['19000', 'Girokonto', 'asset', '—', 'Liquidität'],
             ['19100', 'Barkasse', 'asset', '—', 'Liquidität'],
+            ['19110', 'Kompressorkasse', 'asset', '—', 'Liquidität'],
+            ['19120', 'Thekenkasse', 'asset', '—', 'Liquidität'],
             ['19200', 'Tagesgeld', 'asset', '2', 'Liquidität'],
             ['09500', 'Vereinsvermögen und Rücklagen', 'equity', '—', 'Vermögen'],
             ['16000', 'Verbindlichkeiten Lieferanten', 'liability', '—', 'Verbindlichkeiten'],
