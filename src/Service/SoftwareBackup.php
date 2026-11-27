@@ -11,7 +11,7 @@ use Symfony\Component\Process\Process;
 
 final class SoftwareBackup
 {
-    private const EXCLUDED_PATHS = ['.git', 'vendor', 'var/backups', 'var/cache', 'var/log'];
+    private const EXCLUDED_PATHS = ['.git', 'vendor', 'public/bundles', 'var/backups', 'var/cache', 'var/log'];
 
     public function __construct(
         #[Autowire('%kernel.project_dir%')] private readonly string $projectDir,
@@ -27,8 +27,13 @@ final class SoftwareBackup
 
         $filesystem = new Filesystem();
         $backupDir = $this->projectDir.'/var/backups';
+        if (is_link($backupDir)) {
+            throw new \RuntimeException('Das Backup-Verzeichnis darf kein symbolischer Link sein.');
+        }
         $filesystem->mkdir($backupDir, 0700);
-        chmod($backupDir, 0700);
+        if (!chmod($backupDir, 0700)) {
+            throw new \RuntimeException('Das Backup-Verzeichnis konnte nicht geschützt werden.');
+        }
         $timestamp = (new \DateTimeImmutable())->format('Ymd-His');
         $temporaryDir = $backupDir.'/.update-'.$timestamp.'-'.bin2hex(random_bytes(4));
         $archivePath = $backupDir.'/dicoma-'.$timestamp.'-'.bin2hex(random_bytes(4)).'.zip';
@@ -54,9 +59,18 @@ final class SoftwareBackup
                     throw new \RuntimeException('Die Backup-Metadaten konnten nicht gespeichert werden.');
                 }
 
-                $iterator = new \RecursiveIteratorIterator(
-                    new \RecursiveDirectoryIterator($this->projectDir, \FilesystemIterator::SKIP_DOTS),
-                );
+                $entries = new \RecursiveDirectoryIterator($this->projectDir, \FilesystemIterator::SKIP_DOTS);
+                $filtered = new \RecursiveCallbackFilterIterator($entries, function (\SplFileInfo $file): bool {
+                    $relative = substr($file->getPathname(), strlen(rtrim($this->projectDir, '/')) + 1);
+                    if (self::isExcluded($relative)) {
+                        return false;
+                    }
+                    if ($file->isLink()) {
+                        throw new \RuntimeException('Symbolischer Link kann nicht automatisch gesichert werden: '.$relative);
+                    }
+                    return true;
+                });
+                $iterator = new \RecursiveIteratorIterator($filtered);
                 foreach ($iterator as $file) {
                     if (!$file instanceof \SplFileInfo || !$file->isFile() || $file->isLink()) {
                         continue;

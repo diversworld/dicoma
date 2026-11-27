@@ -56,4 +56,20 @@ final class SoftwareBackupTest extends TestCase
         self::assertSame('42', (string) $restored->fetchOne('SELECT id FROM sample'));
         $zip->close();
     }
+
+    public function testMysqlDumpWhenExplicitlyEnabled(): void
+    {
+        $url = getenv('DICOMA_TEST_BACKUP_DATABASE_URL');
+        if (!is_string($url) || $url === '') {
+            self::markTestSkipped('DICOMA_TEST_BACKUP_DATABASE_URL is not set.');
+        }
+        $connection = DriverManager::getConnection(['url' => $url]);
+        $result = (new SoftwareBackup($this->projectDir, $connection))->create();
+        $zip = new \ZipArchive();
+        self::assertTrue($zip->open($result['path']));
+        $dump = $zip->getFromName('_database/database.dump');
+        self::assertIsString($dump);
+        self::assertNotSame('', $dump);
+        $zip->close();
+    }
 }

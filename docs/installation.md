@@ -41,21 +41,42 @@ Anwendungscode erzeugt DiCoMa ein nur für den Systembenutzer zugängliches Verz
 `var/backups` und ein
 Archiv mit Projektdateien, `.env.local`, privaten Dateien und einem Datenbank-Dump.
 Das Archiv ist nur für den Systembenutzer lesbar. Git-Metadaten, Vendor-Dateien,
-Caches und vorhandene Backup-Archive sind ausgeschlossen.
+`public/bundles`, Caches und vorhandene Backup-Archive sind ausgeschlossen.
+Bei symbolischen Links außerhalb dieser Bereiche wird das Update abgebrochen;
+deren Ziele müssen separat gesichert werden.
 
-Der Webprozess benötigt dafür ein sauberes Git-Arbeitsverzeichnis, Git, Composer sowie
-`mysqldump` für MySQL/MariaDB oder `pg_dump` für PostgreSQL. Fehlt eine dieser
-Voraussetzungen, wird das Update vor dem Wechsel des Git-Tags abgebrochen. SQLite
-wird konsistent per `VACUUM INTO` gesichert. Bei parallelen Update-Anfragen gewinnt
-nur der erste Vorgang; weitere Anfragen werden abgewiesen.
+Der Webprozess benötigt Schreibrechte für das Projekt, PHP-CLI, Composer, die
+PHP-Erweiterungen cURL und ZIP sowie `mysqldump` für MySQL/MariaDB oder `pg_dump`
+für PostgreSQL. Ein Git-Repository ist nicht erforderlich. Das Archiv wird über
+HTTPS für den bei der Versionsprüfung ermittelten GitHub-Commit heruntergeladen und
+vor dem Backup geprüft. SQLite wird konsistent per `VACUUM INTO` gesichert.
+Bei parallelen Update-Anfragen gewinnt nur der erste Vorgang.
+Das Zielrelease muss den archivbasierten Updater enthalten, damit dieser beim
+Update nicht durch einen älteren Git-basierten Updater ersetzt wird.
 
-Nach dem Backup wechselt der Prozess auf den stabilen Versions-Tag, installiert die
-Produktionsabhängigkeiten, führt Doctrine-Migrationen sowie den Installationskatalog
-aus und baut den Produktionscache neu. Ein automatischer Rollback wird absichtlich
+Das Update läuft während der Webanfrage. PHP-, PHP-FPM-, Proxy- und Webserver-
+Timeouts müssen für Download, Backup, Composer und Migrationen ausreichend hoch
+eingestellt sein. Währenddessen sollten keine anderen Nutzer Änderungen vornehmen:
+Die Installation ist weder eine atomare Bereitstellung noch ein Wartungsmodus.
+Bei einem Abbruch nach Beginn der Installation ist das Backup vor einem erneuten
+Versuch wiederherzustellen.
+
+Nach dem Backup werden Release-Dateien bereitgestellt, Produktionsabhängigkeiten
+installiert, Doctrine-Migrationen sowie der Installationskatalog ausgeführt und der
+Produktionscache neu gebaut. Bereits vorhandene `.env`-Dateien, lokale Konfiguration,
+`files/`, `var/`, `vendor/` und hochgeladene Dateien unter `public/images/kurse`
+und `public/uploads` werden nicht durch Archivdateien ersetzt. Andere individuell
+geänderte Programmdateien werden überschrieben; im Release fehlende Dateien werden
+nicht automatisch gelöscht. Die Datei `VERSION` wird erst nach Abschluss aktualisiert.
+Ein älterer Inhalt der `VERSION` im Release wird durch den geprüften Tag ersetzt.
+
+Ein automatischer Rollback wird absichtlich
 nicht durchgeführt, weil eine Datenbankmigration unter Umständen fachliche oder
 irreversible Änderungen enthält. Bei einem Folgefehler enthält die Meldung den Namen
 des erstellten Backups; die Wiederherstellung erfolgt gemäß
-[`DEPLOY-SERVER.md`](../DEPLOY-SERVER.md).
+[`DEPLOY-SERVER.md`](../DEPLOY-SERVER.md). Anschließend muss die Sperrdatei
+`var/.dicoma-update-failed` manuell entfernt werden, bevor ein erneutes Update
+gestartet werden kann.
 
 CLI-Alternative:
 

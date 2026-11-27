@@ -29,7 +29,7 @@
                 <button class="btn btn-primary btn-sm">Jetzt erneut prüfen</button>
             </form>
             {% if softwareVersion.checked and softwareVersion.available %}
-                <form method="post" class="d-flex align-items-center gap-2" onsubmit="return confirm('Backup erstellen und Version {{ softwareVersion.latest }} jetzt installieren?');">
+                <form method="post" class="d-flex align-items-center gap-2" onsubmit="return confirm('Backup erstellen und Version {{ softwareVersion.latest }} installieren? Individuell geänderte Programmdateien werden überschrieben.');">
                     <input type="hidden" name="_token" value="{{ csrf_token('installation_update') }}">
                     <input type="hidden" name="operation" value="install_version">
                     <input type="hidden" name="backup_confirmed" value="1">
@@ -39,9 +39,13 @@
         </div>
         {% if softwareVersion.checked and softwareVersion.available %}
             <p class="text-muted small mt-3 mb-0">
-                Das Update benötigt ein sauberes Git-Arbeitsverzeichnis sowie Composer, Git und
+                Das Update benötigt PHP-CLI, Composer, PHP-cURL, PHP-Zip und
                 das zum Datenbanksystem passende Backup-Programm (mysqldump beziehungsweise pg_dump).
+                Ein Git-Arbeitsverzeichnis ist nicht erforderlich. Individuell geänderte Programmdateien
+                werden nach dem Backup überschrieben; Konfiguration und hochgeladene Dateien bleiben erhalten.
                 Die Backups werden im nicht öffentlich erreichbaren Verzeichnis <code>var/backups</code> gespeichert.
+                Für die Dauer des Updates müssen die Server-Timeouts ausreichend hoch eingestellt sein;
+                währenddessen sollten keine anderen Nutzer Änderungen vornehmen.
             </p>
         {% endif %}
     </div>

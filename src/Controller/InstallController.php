@@ -148,10 +148,13 @@ final class InstallController extends AbstractController
                         $this->addFlash('info', 'Die installierte Software ist bereits aktuell.');
                         return $this->redirectToRoute('admin_installation');
                     }
+                    if ($status['tag'] === null || $status['commit'] === null) {
+                        throw new \RuntimeException('Der Release-Commit konnte nicht geprüft werden.');
+                    }
                     if ($request->request->getString('backup_confirmed') !== '1') {
                         throw new \DomainException('Der automatische Backup-Schritt muss bestätigt werden.');
                     }
-                    $result = $updater->install($status['latest']);
+                    $result = $updater->install($status['latest'], $status['tag'], $status['commit']);
                     $this->addFlash('success', sprintf(
                         'DiCoMa wurde auf Version %s aktualisiert. Sicherheits-Backup: %s (%.1f MB).',
                         $result['version'],

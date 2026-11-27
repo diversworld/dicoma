@@ -16,12 +16,12 @@ final class GitVersionChecker
         #[Autowire(env: 'DICOMA_UPDATE_REPOSITORY')] private readonly string $repository,
     ) {}
 
-    /** @return array{installed:string,latest:?string,available:bool,checked:bool,url:string,error:?string} */
+    /** @return array{installed:string,latest:?string,tag:?string,commit:?string,available:bool,checked:bool,url:string,error:?string} */
     public function check(bool $refresh = false): array
     {
         $installed = $this->installedVersion();
         $url = 'https://github.com/'.$this->repository.'/tags';
-        $cacheKey = 'dicoma_git_version_'.hash('sha256', $this->repository);
+        $cacheKey = 'dicoma_git_version_v2_'.hash('sha256', $this->repository);
         if ($refresh) {
             $this->cache->delete($cacheKey);
         }
@@ -34,6 +34,8 @@ final class GitVersionChecker
             return [
                 'installed' => $installed,
                 'latest' => null,
+                'tag' => null,
+                'commit' => null,
                 'available' => false,
                 'checked' => false,
                 'url' => $url,
@@ -45,6 +47,8 @@ final class GitVersionChecker
         return [
             'installed' => $installed,
             'latest' => $latest,
+            'tag' => $result['tag'],
+            'commit' => $result['commit'],
             'available' => version_compare($latest, $installed, '>'),
             'checked' => true,
             'url' => $url,
@@ -60,7 +64,7 @@ final class GitVersionChecker
         return sprintf('%s.%s.%s', $matches[1], $matches[2], $matches[3] ?? '0');
     }
 
-    /** @return array{version:string}|array{error:string} */
+    /** @return array{version:string,tag:string,commit:string}|array{error:string} */
     private function fetchLatestTag(): array
     {
         if (!extension_loaded('curl')) {
@@ -105,13 +109,15 @@ final class GitVersionChecker
         $latest = null;
         foreach ($tags as $tag) {
             $normalized = is_array($tag) && is_string($tag['name'] ?? null) ? self::normalize($tag['name']) : null;
-            if ($normalized !== null && ($latest === null || version_compare($normalized, $latest, '>'))) {
-                $latest = $normalized;
+            $commit = is_array($tag) && is_array($tag['commit'] ?? null) ? ($tag['commit']['sha'] ?? null) : null;
+            if ($normalized !== null && is_string($commit) && preg_match('/^[a-f0-9]{40}$/D', $commit)
+                && ($latest === null || version_compare($normalized, $latest['version'], '>'))) {
+                $latest = ['version' => $normalized, 'tag' => $tag['name'], 'commit' => $commit];
             }
         }
         return $latest === null
             ? ['error' => 'Im Repository wurde kein stabiler Versions-Tag wie 1.2.3 gefunden.']
-            : ['version' => $latest];
+            : $latest;
     }
 
     private function installedVersion(): string
