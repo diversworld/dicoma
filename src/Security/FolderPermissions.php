@@ -43,8 +43,8 @@ final class FolderPermissions
         if (!$this->moduleAccess->can($user, $club, PermissionModule::FILES, $moduleAction, $date)) {
             return false;
         }
+        $roles = $this->hierarchy->getReachableRoleNames($user->getRoles());
         if ($folder === null) {
-            $roles = $this->hierarchy->getReachableRoleNames($user->getRoles());
             if (!in_array(User::ROLE_ADMIN, $roles, true)) {
                 return false;
             }
@@ -63,6 +63,9 @@ final class FolderPermissions
             }
             $seen[$id] = true;
             $firstLevel = $current;
+        }
+        if (in_array(User::ROLE_SUPER_ADMIN, $roles, true)) {
+            return true;
         }
         $date ??= new \DateTimeImmutable('today');
         $assignments = $this->em->getRepository(ClubFunctionAssignment::class)->findBy(['user' => $user]);

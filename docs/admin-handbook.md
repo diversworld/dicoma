@@ -8,6 +8,11 @@
   Module.
 - Ein Superadministrator ist die technische Notfallrolle; operative Funktionen
   sollen trotzdem fachlich zugeordnet bleiben.
+- In der Dateiverwaltung benötigt jede Vereinsfunktion die passende
+  Modulberechtigung und eine Ordnerfreigabe für den Ordner direkt unter dem
+  Hauptordner. Die Freigabe gilt auch für dessen Unterordner.
+  Superadministratoren können unabhängig von diesen Freigaben alle Ordner
+  des aktuellen Vereins verwalten.
 
 ## Arbeitsübersicht
 

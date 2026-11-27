@@ -99,6 +99,11 @@ final class FunctionFolderPermissionsTest extends KernelTestCase
         self::assertFalse($access->can($user, $foreign->getClub(), null, FileAction::READ, $firstDay));
         $user->setRoles([User::ROLE_SUPER_ADMIN]);
         self::assertTrue($access->can($user, $foreign->getClub(), null, FileAction::READ, $firstDay));
+        foreach (FileAction::cases() as $action) {
+            self::assertTrue($access->can($user, $club, $parent, $action, $firstDay));
+            self::assertTrue($access->can($user, $club, $child, $action, $firstDay));
+            self::assertFalse($access->can($user, $club, $foreign, $action, $firstDay));
+        }
         $this->expectException(\InvalidArgumentException::class);
         new MediaFolderPermission($first, $child);
     }

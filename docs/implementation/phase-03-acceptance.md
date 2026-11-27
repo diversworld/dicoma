@@ -139,6 +139,8 @@ Testkonten und synthetischen Daten durchzuführen und zu protokollieren:
   wirksam sind Funktionszuordnungen, Modul- und Ordnerrechte.
 - Die Mediathek verlangt bei aktiviertem Funktionsmodell sowohl die jeweilige
   Modulaktion der Dateiverwaltung als auch das entsprechende Ordnerrecht.
+  Superadministratoren sind von den Ordnerfreigaben ausgenommen; der
+  Vereinskontext bleibt bestehen.
   Nur Erstellen ermöglicht das Anlegen untergeordneter Ordner und Hochladen,
   aber kein Lesen oder Bearbeiten vorhandener Dateien. Die Kursbildverwaltung
   ist in Mediathek, EasyAdmin-Auswahl und geschützte Bildendpunkte integriert.

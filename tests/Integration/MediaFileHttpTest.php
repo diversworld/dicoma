@@ -219,6 +219,46 @@ final class MediaFileHttpTest extends WebTestCase
         self::assertNull($this->em->find(MediaFile::class, $id));
     }
 
+    public function testFunctionFolderSuperAdminCanUploadAndMoveWithoutFolderRules(): void
+    {
+        $super = $this->account('folder-super-upload', [User::ROLE_SUPER_ADMIN]);
+        $parent = new MediaFolder($this->club, 'Bilder');
+        $child = new MediaFolder($this->club, 'Ausflüge', $parent);
+        $other = (new Club())->setName('Fremder Verein');
+        $foreign = new MediaFolder($other, 'Fremder Ordner');
+        foreach ([$parent, $child, $other, $foreign] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $childId = $child->getId();
+        $foreignId = $foreign->getId();
+        $this->client->loginUser($super);
+
+        $this->client->request('GET', '/admin/media?folder='.$childId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('form[action="/admin/media/upload"] input[name="folder"][value="'.$childId.'"]');
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l7sAAAAASUVORK5CYII=', true);
+        $uploaded = $this->upload('ausflug.png', $png, '', $child);
+        $uploadedId = $uploaded->getId();
+        self::assertSame($childId, $uploaded->getFolder()->getId());
+        $this->client->request('GET', '/admin/media/'.$uploadedId);
+        self::assertResponseIsSuccessful();
+
+        $rootFile = $this->upload('hauptordner.png', $png);
+        $rootId = $rootFile->getId();
+        $this->client->request('GET', '/admin/media');
+        self::assertSelectorExists('select[name="folder"] option[value="'.$childId.'"]');
+        $this->client->request('POST', '/admin/media/'.$rootId.'/move', [
+            '_token' => $this->token('media_move_'.$rootId), 'folder' => (string) $childId,
+        ]);
+        self::assertResponseRedirects('/admin/media', 303);
+        self::assertSame($childId, $this->em->find(MediaFile::class, $rootId)->getFolder()->getId());
+        $this->client->request('POST', '/admin/media/'.$rootId.'/move', [
+            '_token' => $this->token('media_move_'.$rootId), 'folder' => (string) $foreignId,
+        ]);
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testFunctionFolderModuleActionsAndFolderRulesAreBothRequired(): void
     {
         $function = new ClubFunction($this->club, 'Nur lesen');
