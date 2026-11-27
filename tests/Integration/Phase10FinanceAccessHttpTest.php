@@ -36,6 +36,7 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         $client->disableReboot();
         $em = static::getContainer()->get(EntityManagerInterface::class);
         (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $em->getConnection()->executeStatement('CREATE TABLE equipment_cash_correction (id INTEGER PRIMARY KEY AUTOINCREMENT, club_id INT NOT NULL, source_type VARCHAR(20), source_id INT, direction VARCHAR(10), amount_cents INT, reason VARCHAR(500), created_by VARCHAR(180), created_at DATETIME)');
         $club = (new Club())->setName('Direkte Kassenrolle');
         $treasurer = $this->account($club, 'direct-treasurer');
         $treasurer->setRoles([User::ROLE_TREASURER]);
@@ -67,18 +68,19 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         $client->disableReboot();
         $em = static::getContainer()->get(EntityManagerInterface::class);
         (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $em->getConnection()->executeStatement('CREATE TABLE equipment_cash_correction (id INTEGER PRIMARY KEY AUTOINCREMENT, club_id INT NOT NULL, source_type VARCHAR(20), source_id INT, direction VARCHAR(10), amount_cents INT, reason VARCHAR(500), created_by VARCHAR(180), created_at DATETIME)');
         $club = (new Club())->setName('Funktionsrechte');
         $em->persist($club);
         $cases = [
             'treasurer' => [
                 User::ROLE_TREASURER,
-                ['finance:read', 'accounting:read', 'membership:read', 'governance:read', 'audit:read', 'files:read', 'website:read'],
-                ['membership-finance', 'accounting', 'governance', 'privacy', 'media', 'editorial'],
+                ['finance:read', 'accounting:read', 'membership:read', 'governance:read', 'audit:read', 'files:read', 'website:read', 'training:read', 'equipment:read', 'equipment_cash:read', 'bar_cash:read', 'system:read'],
+                ['membership-finance', 'accounting', 'governance', 'privacy', 'media', 'editorial', 'admin_portal_training_portal', 'equipment_manager_dashboard', 'equipment_manager_cashbook', 'bar_duty_cash', 'admin_club_functions'],
             ],
             'board' => [
                 User::ROLE_BOARD,
-                ['membership:read', 'governance:read', 'finance:read', 'website:read', 'files:read', 'audit:read'],
-                ['membership-finance', 'governance', 'privacy', 'media', 'editorial'],
+                ['membership:read', 'governance:read', 'finance:read', 'website:read', 'files:read', 'audit:read', 'training:read', 'equipment:read', 'equipment_cash:read', 'bar_cash:read', 'system:read'],
+                ['membership-finance', 'governance', 'privacy', 'media', 'editorial', 'admin_portal_training_portal', 'equipment_manager_dashboard', 'equipment_manager_cashbook', 'bar_duty_cash', 'admin_club_functions'],
             ],
             'secretary' => [
                 User::ROLE_SECRETARY,
@@ -128,6 +130,14 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
             self::assertResponseIsSuccessful();
             foreach ($routes as $hrefPart) {
                 self::assertSelectorExists('a[href*="'.$hrefPart.'"]', $user->getUserIdentifier().' must see '.$hrefPart);
+            }
+            $links = $client->getCrawler()->filter('aside.sidebar a[href]')->each(static fn ($node): ?string => $node->attr('href'));
+            foreach (array_unique(array_filter($links)) as $url) {
+                if (!str_starts_with($url, 'http') && !str_starts_with($url, '/')) {
+                    continue;
+                }
+                $client->request('GET', $url);
+                self::assertLessThan(400, $client->getResponse()->getStatusCode(), $user->getUserIdentifier().' cannot open visible menu '.$url);
             }
         }
     }

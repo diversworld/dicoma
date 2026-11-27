@@ -951,16 +951,11 @@ class DashboardController extends AbstractDashboardController
         $canFiles = $canModule(PermissionModule::FILES);
         $canSport = $canModule(PermissionModule::SPORT);
         $canBarDuty = $canModule(PermissionModule::BAR_DUTY);
-        $canTrainingMenu = $canModule(PermissionModule::TRAINING)
-            && ($this->isGranted(User::ROLE_INSTRUCTOR)
-                || $this->isGranted(User::ROLE_TRAINING_MANAGER)
-                || $this->isGranted(User::ROLE_COURSE_ADMIN));
-        $canEquipmentMenu = $canModule(PermissionModule::EQUIPMENT)
-            && $this->isGranted(User::ROLE_EQUIPMENT_MANAGER);
-        $canEquipmentCash = $canModule(PermissionModule::EQUIPMENT_CASH)
-            && $this->isGranted(User::ROLE_EQUIPMENT_CASH);
-        $canBarCash = $canModule(PermissionModule::BAR_CASH)
-            && $this->isGranted(User::ROLE_BAR_MANAGER);
+        $canTrainingMenu = $canModule(PermissionModule::TRAINING);
+        $canEquipmentMenu = $canModule(PermissionModule::EQUIPMENT);
+        $canEquipmentCash = $canModule(PermissionModule::EQUIPMENT_CASH);
+        $canBarCash = $canModule(PermissionModule::BAR_CASH);
+        $canSystem = $canModule(PermissionModule::SYSTEM);
         $canWebsite = $this->functionModelEnabled
             ? $canModule(PermissionModule::WEBSITE)
             : $this->editorialAccess->can(PermissionAction::READ);
@@ -1003,7 +998,7 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::section('Website & Redaktion'),
                     MenuItem::linkToRoute('Artikel & Neuigkeiten', 'fa fa-newspaper', 'admin_website_editorial_articles'),
                     MenuItem::linkToRoute('Website-Seiten', 'fa fa-file-lines', 'admin_website_editorial_pages'),
-                    ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
+                    ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungen & Buchungen', 'fa fa-calendar-check', $eventRoute)] : []),
                 ] : []),
                 ...($canSport ? [
                     MenuItem::section('Sport & Wettkampf'),
@@ -1017,10 +1012,11 @@ class DashboardController extends AbstractDashboardController
                 ...($canBarCash ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
                 ...($canFiles ? [MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')] : []),
                 ...($canAudit ? [MenuItem::linkToRoute('Audit & Datenschutz', 'fa fa-shield-halved', 'admin_privacy')] : []),
+                ...($canSystem ? [MenuItem::linkToRoute('Vereinsfunktionen & Rollen', 'fa fa-user-shield', 'admin_club_functions')] : []),
                 ...($websiteSettings
-                    ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
+                    ? [MenuItem::linkToUrl('Website-Anzeige', 'fa fa-globe', $this->generateUrl('admin_settings_website'))] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
-                    ? [MenuItem::linkToRoute('Thekendienst-Jahresregel', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
+                    ? [MenuItem::linkToUrl('Thekendienst-Jahresregel', 'fa fa-mug-hot', $this->generateUrl('admin_settings_bar_services'))] : []),
             ];
         }
 
@@ -1155,19 +1151,19 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(ClubCrudController::class, 'Vereinsdaten', 'fa fa-building')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Vereinsfunktionen verwalten', 'fa fa-user-shield', 'admin_club_functions')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
 //                    MenuItem::linkTo(MemberSportCrudController::class, 'Sportzuordnungen', 'fa fa-link')
 //                        ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkTo(UserCrudController::class, 'Benutzerverwaltung', 'fa fa-users-gear')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     MenuItem::linkToRoute('Mitgliedschaftsregeln', 'fa fa-address-card', 'admin_settings_membership')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
                     MenuItem::linkToRoute('Beitragsarten', 'fa fa-coins', 'admin_settings_contributions')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
                     MenuItem::linkTo(DivisionContributionCrudController::class, 'Spartenzuschläge', 'fa fa-plus')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
                     MenuItem::linkToRoute('Sportkonfiguration', 'fa fa-futbol', 'admin_settings_sports_configuration')
-                        ->setPermission('ROLE_SUPER_ADMIN'),
+                        ->setPermission('ROLE_ADMIN'),
                     MenuItem::linkToRoute('TÜV-Benachrichtigungen', 'fa fa-bell', 'admin_settings_tuv_notifications')
                         ->setPermission('ROLE_SUPER_ADMIN'),
                     ...($this->clubContext->getClub() !== null

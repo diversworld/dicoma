@@ -6,6 +6,10 @@ namespace App\Controller\Admin;
 
 use App\Entity\ClubFunction;
 use App\Security\ModulePermission;
+use App\Security\ModuleAccess;
+use App\Entity\User;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Service\AdminClubContext;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -21,11 +25,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 final class ClubFunctionCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly AdminClubContext $clubContext,
+        private readonly ModuleAccess $modules,
     ) {}
 
     public static function getEntityFqcn(): string { return ClubFunction::class; }
@@ -43,12 +48,19 @@ final class ClubFunctionCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
+        $user = $this->getUser();
+        $club = $this->clubContext->getClub();
+        $canCreate = $user instanceof User && $club !== null
+            && $this->modules->can($user, $club, PermissionModule::SYSTEM, PermissionAction::CREATE);
+        $canEdit = $user instanceof User && $club !== null
+            && $this->modules->can($user, $club, PermissionModule::SYSTEM, PermissionAction::EDIT);
         return $actions
             ->disable(Action::NEW, Action::EDIT, Action::DELETE, Action::BATCH_DELETE, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, Action::new('functionCreate', 'Funktion anlegen')
-                ->linkToRoute('admin_function_definition_new')->createAsGlobalAction())
+                ->linkToRoute('admin_function_definition_new')->createAsGlobalAction()->displayIf(fn (): bool => $canCreate))
             ->add(Crud::PAGE_INDEX, Action::new('functionEdit', 'Bearbeiten')
-                ->linkToRoute('admin_function_definition_edit', static fn (ClubFunction $function): array => ['id' => $function->getId()]));
+                ->linkToRoute('admin_function_definition_edit', static fn (ClubFunction $function): array => ['id' => $function->getId()])
+                ->displayIf(fn (): bool => $canEdit));
     }
 
     public function configureFields(string $pageName): iterable
@@ -71,6 +83,10 @@ final class ClubFunctionCrudController extends AbstractCrudController
     public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
         $club = $this->clubContext->getClub() ?? throw $this->createAccessDeniedException('Keine Vereinszuordnung vorhanden.');
+        $user = $this->getUser();
+        if (!$user instanceof User || !$this->modules->can($user, $club, PermissionModule::SYSTEM, PermissionAction::READ)) {
+            throw $this->createAccessDeniedException();
+        }
         return parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters)
             ->andWhere('entity.club = :functionClub')->setParameter('functionClub', $club);
     }

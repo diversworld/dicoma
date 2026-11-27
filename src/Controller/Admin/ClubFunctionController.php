@@ -13,6 +13,9 @@ use App\Entity\MediaFolderPermission;
 use App\Entity\User;
 use App\Security\DelegatedRoles;
 use App\Security\ModulePermission;
+use App\Security\ModuleAccess;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use App\Service\AdminClubContext;
 use App\Service\MembershipRoleContinuity;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,7 +37,7 @@ use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
 
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 #[Route('/admin/club-functions', defaults: DashboardController::ROUTE_DEFAULTS)]
 final class ClubFunctionController extends AbstractController
 {
@@ -43,6 +46,7 @@ final class ClubFunctionController extends AbstractController
         private readonly AdminClubContext $context,
         private readonly MembershipRoleContinuity $continuity,
         private readonly RoleHierarchyInterface $hierarchy,
+        private readonly ModuleAccess $modules,
         private readonly LoggerInterface $logger,
         #[Autowire('%env(bool:CLUB_FUNCTION_MEMBERSHIP_ENABLED)%')] private readonly bool $enabled,
     ) {}
@@ -302,7 +306,13 @@ final class ClubFunctionController extends AbstractController
             $actor = $this->em->find(User::class, $actorId) ?? throw $this->createAccessDeniedException();
             $roles = $this->hierarchy->getReachableRoleNames($actor->getRoles());
             $super = in_array(User::ROLE_SUPER_ADMIN, $roles, true);
-            if (!in_array(User::ROLE_ADMIN, $roles, true) || (!$super && (!$actor->getMember()?->isActiveMember()
+            $action = match ($request->attributes->get('_route')) {
+                'admin_function_definition_new' => $request->isMethod('POST') ? PermissionAction::CREATE : PermissionAction::READ,
+                'admin_function_definition_delete' => PermissionAction::DELETE,
+                default => $request->isMethod('POST') ? PermissionAction::EDIT : PermissionAction::READ,
+            };
+            if (!$this->modules->can($actor, $club, PermissionModule::SYSTEM, $action)
+                || (!$super && (!$actor->getMember()?->isActiveMember()
                 || $actor->getMember()?->getArchivedAt() !== null || $actor->getMember()?->getClub()?->getId() !== $clubId))) {
                 throw $this->createAccessDeniedException();
             }

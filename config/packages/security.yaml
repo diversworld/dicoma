@@ -102,7 +102,7 @@ security:
         # ---------------------------------------------------------
 
         - { path: ^/admin/(?:account|teams|tournaments|calendar)(?:/|$), roles: ROLE_USER }
-        - { path: ^/admin/training(?:/|$), roles: [ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_COURSE_ADMIN] }
+        - { path: ^/admin/training(?:/|$), roles: ROLE_USER }
         - { path: ^/admin/training-overview(?:/|$), roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/(?:de|en|fr|es)/training-overview$, roles: [ROLE_ADMIN, ROLE_TRAINING_MANAGER] }
         - { path: ^/admin/bar-duty(?:/|$), roles: ROLE_BAR_MANAGER }
@@ -138,7 +138,10 @@ security:
         - { path: ^/instructor-portal(?:/|$), roles: ROLE_INSTRUCTOR }
         - { path: ^/instructor, roles: ROLE_ADMIN }
         - { path: ^/equipment-manager/compressor-(?:evenings|log)(?:/export\.csv)?$, roles: [ROLE_EQUIPMENT_MANAGER, ROLE_COMPRESSOR_OPERATOR] }
-        - { path: ^/equipment-manager(?:/|$), roles: ROLE_EQUIPMENT_MANAGER }
+        # Die Fachberechtigung wird in EquipmentManagerClubTrait anhand des
+        # effektiven Moduls geprüft; Rollen allein wären bei Funktionsrechten
+        # nicht vollständig.
+        - { path: ^/equipment-manager(?:/|$), roles: ROLE_USER }
 
         # ---------------------------------------------------------
         # Ausbildungsverwaltung

@@ -25,6 +25,9 @@ use App\Service\FrontendCourseRegistrationService;
 use App\Service\ScheduleParticipantSyncService;
 use App\Service\TrainingProgressService;
 use App\Service\AdminClubContext;
+use App\Security\ModuleAccess;
+use App\Enum\PermissionAction;
+use App\Enum\PermissionModule;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -50,12 +53,19 @@ final class TrainingPortalController extends AbstractController
         private readonly TrainingProgressService $progress,
         private readonly AdminClubContext $clubContext,
         private readonly RequestStack $requests,
+        private readonly ModuleAccess $moduleAccess,
     ) {}
 
     #[Route('/training', name: 'training_portal', methods: ['GET'])]
     public function index(Request $request): Response
     {
         $user = $this->account();
+        if (EasyAdminRequest::matches($request)) {
+            $club = $this->clubContext->getClub();
+            if ($club === null || !$this->moduleAccess->can($user, $club, PermissionModule::TRAINING, PermissionAction::READ)) {
+                throw $this->createAccessDeniedException();
+            }
+        }
         $mine = $user->getPerson() === null ? [] : $this->em->getRepository(CourseParticipant::class)->findBy(['person' => $user->getPerson()], ['id' => 'DESC']);
         $staffCourses = [];
         $club = $this->clubContext->getClub();
@@ -367,6 +377,10 @@ final class TrainingPortalController extends AbstractController
     private function canViewCourse(?Courses $course): bool
     {
         if ($course === null) { return false; }
+        $club = $course->getClub();
+        if ($club !== null && $this->moduleAccess->can($this->account(), $club, PermissionModule::TRAINING, PermissionAction::READ)) {
+            return true;
+        }
         if ($this->isGranted(CourseManagementVoter::MANAGE, $course)) { return true; }
         $member = $this->account()->getMember();
         if (!$this->isGranted('ROLE_INSTRUCTOR') || $member === null || $course->getClub() !== $member->getClub()) { return false; }

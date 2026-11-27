@@ -52,6 +52,33 @@ final class ModuleAccess
         if (in_array(User::ROLE_ADMIN, $roles, true)) {
             return true;
         }
+        if (in_array(User::ROLE_INSTRUCTOR, $roles, true)
+            || in_array(User::ROLE_TRAINING_MANAGER, $roles, true)
+            || in_array(User::ROLE_COURSE_ADMIN, $roles, true)) {
+            if ($module === PermissionModule::TRAINING) { return true; }
+        }
+        if (in_array(User::ROLE_EQUIPMENT_MANAGER, $roles, true)
+            && $module === PermissionModule::EQUIPMENT) {
+            return true;
+        }
+        if (in_array(User::ROLE_EQUIPMENT_CASH, $roles, true)
+            && in_array(User::ROLE_EQUIPMENT_MANAGER, $roles, true)
+            && $module === PermissionModule::EQUIPMENT_CASH) {
+            return true;
+        }
+        if (in_array(User::ROLE_COMPRESSOR_OPERATOR, $roles, true)
+            && $module === PermissionModule::EQUIPMENT
+            && $action === PermissionAction::READ) {
+            return true;
+        }
+        if (in_array(User::ROLE_BAR_MANAGER, $roles, true)
+            && in_array($module, [PermissionModule::BAR_DUTY, PermissionModule::BAR_CASH], true)) {
+            return true;
+        }
+        if (in_array(User::ROLE_PRESS_OFFICER, $roles, true)
+            && in_array($module, [PermissionModule::WEBSITE, PermissionModule::FILES], true)) {
+            return true;
+        }
         if (in_array(User::ROLE_BOARD, $roles, true)) {
             return in_array($module, [PermissionModule::MEMBERSHIP, PermissionModule::GOVERNANCE, PermissionModule::FILES, PermissionModule::WEBSITE], true)
                 || ($module === PermissionModule::FINANCE && $action === PermissionAction::READ);
