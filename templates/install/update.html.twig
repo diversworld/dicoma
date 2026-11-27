@@ -13,7 +13,8 @@
         {% elseif softwareVersion.available %}
             <div class="alert alert-warning mb-3">
                 <strong>Neue Version verfügbar:</strong> {{ softwareVersion.latest }}<br>
-                Installiert ist {{ softwareVersion.installed }}.
+                Installiert ist {{ softwareVersion.installed }}.<br>
+                Vor der Installation werden die Datenbank, Konfiguration und Projektdateien automatisch gesichert.
             </div>
         {% else %}
             <div class="alert alert-success mb-3">
@@ -27,7 +28,22 @@
                 <input type="hidden" name="operation" value="check_version">
                 <button class="btn btn-primary btn-sm">Jetzt erneut prüfen</button>
             </form>
+            {% if softwareVersion.checked and softwareVersion.available %}
+                <form method="post" class="d-flex align-items-center gap-2" onsubmit="return confirm('Backup erstellen und Version {{ softwareVersion.latest }} jetzt installieren?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('installation_update') }}">
+                    <input type="hidden" name="operation" value="install_version">
+                    <input type="hidden" name="backup_confirmed" value="1">
+                    <button class="btn btn-warning btn-sm">Version {{ softwareVersion.latest }} mit Backup installieren</button>
+                </form>
+            {% endif %}
         </div>
+        {% if softwareVersion.checked and softwareVersion.available %}
+            <p class="text-muted small mt-3 mb-0">
+                Das Update benötigt ein sauberes Git-Arbeitsverzeichnis sowie Composer, Git und
+                das zum Datenbanksystem passende Backup-Programm (mysqldump beziehungsweise pg_dump).
+                Die Backups werden im nicht öffentlich erreichbaren Verzeichnis <code>var/backups</code> gespeichert.
+            </p>
+        {% endif %}
     </div>
 </div>
 <div class="alert alert-info">

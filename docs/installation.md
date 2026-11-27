@@ -35,6 +35,28 @@ Im Backend steht Superadministratoren unter **Installation & Funktionsprüfung**
 
 Dieselbe Seite prüft über die GitHub-Tags des Repositories `DICOMA_UPDATE_REPOSITORY` (Standard: `diversworld/dicoma`), ob eine neuere stabile Version als die installierte `VERSION` vorhanden ist. Das Ergebnis wird sechs Stunden zwischengespeichert; **Jetzt erneut prüfen** verwirft den Cache und fragt GitHub direkt erneut ab. Prüfen Sie installierte Releases ausschließlich anhand eines fachlich veröffentlichten Git-Tags; Pre-Release-Tags werden nicht als stabile Version akzeptiert.
 
+Wenn eine stabile neuere Version verfügbar ist, kann sie ein Superadministrator mit
+**Version mit Backup installieren** einspielen. Vor dem ersten Schreibzugriff auf den
+Anwendungscode erzeugt DiCoMa ein nur für den Systembenutzer zugängliches Verzeichnis
+`var/backups` und ein
+Archiv mit Projektdateien, `.env.local`, privaten Dateien und einem Datenbank-Dump.
+Das Archiv ist nur für den Systembenutzer lesbar. Git-Metadaten, Vendor-Dateien,
+Caches und vorhandene Backup-Archive sind ausgeschlossen.
+
+Der Webprozess benötigt dafür ein sauberes Git-Arbeitsverzeichnis, Git, Composer sowie
+`mysqldump` für MySQL/MariaDB oder `pg_dump` für PostgreSQL. Fehlt eine dieser
+Voraussetzungen, wird das Update vor dem Wechsel des Git-Tags abgebrochen. SQLite
+wird konsistent per `VACUUM INTO` gesichert. Bei parallelen Update-Anfragen gewinnt
+nur der erste Vorgang; weitere Anfragen werden abgewiesen.
+
+Nach dem Backup wechselt der Prozess auf den stabilen Versions-Tag, installiert die
+Produktionsabhängigkeiten, führt Doctrine-Migrationen sowie den Installationskatalog
+aus und baut den Produktionscache neu. Ein automatischer Rollback wird absichtlich
+nicht durchgeführt, weil eine Datenbankmigration unter Umständen fachliche oder
+irreversible Änderungen enthält. Bei einem Folgefehler enthält die Meldung den Namen
+des erstellten Backups; die Wiederherstellung erfolgt gemäß
+[`DEPLOY-SERVER.md`](../DEPLOY-SERVER.md).
+
 CLI-Alternative:
 
 ```bash

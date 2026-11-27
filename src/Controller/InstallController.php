@@ -12,7 +12,9 @@ use App\Service\InstallationEnvironmentValue;
 use App\Service\InstallationMigrator;
 use App\Service\GitVersionChecker;
 use App\Service\SingleClubMode;
+use App\Service\SoftwareUpdater;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -117,7 +119,14 @@ final class InstallController extends AbstractController
 
     #[Route('/admin/installation', name: 'admin_installation', methods: ['GET', 'POST'], defaults: DashboardController::ROUTE_DEFAULTS)]
     #[IsGranted('ROLE_SUPER_ADMIN')]
-    public function update(Request $request, SingleClubMode $clubs, InstallationCatalog $catalog, EntityManagerInterface $em): Response
+    public function update(
+        Request $request,
+        SingleClubMode $clubs,
+        InstallationCatalog $catalog,
+        EntityManagerInterface $em,
+        SoftwareUpdater $updater,
+        LoggerInterface $logger,
+    ): Response
     {
         $club = $clubs->club();
         $components = $catalog->components($club);
@@ -127,6 +136,32 @@ final class InstallController extends AbstractController
                 $this->addFlash($status['checked'] ? 'success' : 'warning', $status['checked']
                     ? 'Versionsprüfung aktualisiert. Neuester Tag: '.$status['latest'].'.'
                     : 'Versionsprüfung nicht möglich: '.$status['error']);
+                return $this->redirectToRoute('admin_installation');
+            }
+            if ($request->request->getString('operation') === 'install_version') {
+                try {
+                    $status = $this->versions->check(true);
+                    if (!$status['checked']) {
+                        throw new \RuntimeException('Versionsprüfung nicht möglich: '.$status['error']);
+                    }
+                    if (!$status['available'] || $status['latest'] === null) {
+                        $this->addFlash('info', 'Die installierte Software ist bereits aktuell.');
+                        return $this->redirectToRoute('admin_installation');
+                    }
+                    if ($request->request->getString('backup_confirmed') !== '1') {
+                        throw new \DomainException('Der automatische Backup-Schritt muss bestätigt werden.');
+                    }
+                    $result = $updater->install($status['latest']);
+                    $this->addFlash('success', sprintf(
+                        'DiCoMa wurde auf Version %s aktualisiert. Sicherheits-Backup: %s (%.1f MB).',
+                        $result['version'],
+                        basename($result['backup']),
+                        $result['backupSize'] / 1024 / 1024,
+                    ));
+                } catch (\Throwable $exception) {
+                    $logger->error('Software update failed.', ['exception' => $exception]);
+                    $this->addFlash('danger', $exception->getMessage());
+                }
                 return $this->redirectToRoute('admin_installation');
             }
             $component = (string) $request->request->get('component', '');
