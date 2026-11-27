@@ -39,6 +39,10 @@ class WebsitePublication
     #[ORM\Column(options: ['default' => true])]
     private bool $menuVisible = true;
     #[ORM\Column(type: 'json')] private array $history = [];
+    #[ORM\Column(length: 10, options: ['default' => 'large'])]
+    private string $imageWidth = 'large';
+    #[ORM\Column(length: 10, options: ['default' => 'top'])]
+    private string $imagePosition = 'top';
 
     public function __construct(Club $club) { $this->club = $club; $this->publishAt = new \DateTimeImmutable(); }
     public function getId(): ?int { return $this->id; }
@@ -68,6 +72,22 @@ class WebsitePublication
     public function setTournament(?Tournament $value): void { $this->tournament = $value; }
     public function getImage(): ?MediaFile { return $this->image; }
     public function setImage(?MediaFile $value): void { $this->image = $value; }
+    public function getImageWidth(): string { return $this->imageWidth; }
+    public function setImageWidth(string $value): void
+    {
+        if (!in_array($value, ['small', 'medium', 'large', 'full'], true)) {
+            throw new \InvalidArgumentException('Unbekannte Bildbreite.');
+        }
+        $this->imageWidth = $value;
+    }
+    public function getImagePosition(): string { return $this->imagePosition; }
+    public function setImagePosition(string $value): void
+    {
+        if (!in_array($value, ['top', 'left', 'right', 'bottom'], true)) {
+            throw new \InvalidArgumentException('Unbekannte Bildposition.');
+        }
+        $this->imagePosition = $value;
+    }
     public function getDivision(): ?Sport { return $this->division; }
     public function setDivision(?Sport $value): void { $this->division = $value; }
     public function getParent(): ?self { return $this->parent; }

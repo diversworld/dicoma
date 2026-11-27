@@ -1,3 +1,5 @@
 {% if image %}
-    <img class="website-content-image" src="{{ url }}" alt="{{ image.altText }}" loading="lazy">
+    {% set width = imageWidth|default('large') %}
+    {% set position = imagePosition|default('top') %}
+    <img class="website-content-image website-content-image--{{ width }} website-content-image--{{ position }}" src="{{ url }}" alt="{{ image.altText }}" loading="lazy">
 {% endif %}

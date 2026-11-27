@@ -77,6 +77,36 @@ final class ClubEventBookingHttpTest extends WebTestCase
         self::assertSame(1, $this->em->getRepository(ClubEventPayment::class)->count([]));
     }
 
+    public function testEventImageSizeAndPositionCanBeConfiguredAndRendered(): void
+    {
+        $image = new MediaFile($this->club, str_repeat('b', 40).'.jpg', 'event.jpg', 'image/jpeg', 10, '');
+        $event = $this->event('members_free');
+        $event->setImage($image);
+        $event->setImageWidth('medium');
+        $event->setImagePosition('left');
+        $event->setPublished(true);
+        $this->em->persist($image);
+        $this->em->flush();
+        $this->client->loginUser($this->member);
+        $this->client->request('GET', '/events/'.$event->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.website-content-image--medium.website-content-image--left');
+        $this->client->loginUser($this->admin);
+        $this->client->request('GET', '/admin/club-events/'.$event->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="club_event[imageWidth]"]');
+        self::assertSelectorExists('select[name="club_event[imagePosition]"] option[value="bottom"]');
+        $this->client->submitForm('Veranstaltung speichern', [
+            'club_event[imageWidth]' => 'full',
+            'club_event[imagePosition]' => 'bottom',
+        ]);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $saved = $this->em->find(ClubEvent::class, $event->getId());
+        self::assertSame('full', $saved->getImageWidth());
+        self::assertSame('bottom', $saved->getImagePosition());
+    }
+
     public function testSuperAdminEventManagementUsesConfiguredClub(): void
     {
         $own = $this->event('paid');

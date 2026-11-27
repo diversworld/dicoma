@@ -138,6 +138,16 @@ final class ClubEventType extends AbstractType
         if (!$options['image_locked']) {
             $builder->add('image', MediaImageType::class, ['club' => $builder->getData()->getClub()]);
         }
+        $builder
+            ->add('imageWidth', ChoiceType::class, [
+                'label' => 'Bildbreite',
+                'choices' => ['Klein – 25 %' => 'small', 'Mittel – 40 %' => 'medium', 'Groß – 65 %' => 'large', 'Volle Breite' => 'full'],
+                'help' => 'Auf kleinen Bildschirmen wird das Bild automatisch auf volle Breite angepasst.',
+            ])
+            ->add('imagePosition', ChoiceType::class, [
+                'label' => 'Bildposition in der Detailansicht',
+                'choices' => ['Über dem Text' => 'top', 'Links neben dem Text' => 'left', 'Rechts neben dem Text' => 'right', 'Unter dem Text' => 'bottom'],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void { 

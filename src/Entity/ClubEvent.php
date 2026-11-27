@@ -31,6 +31,10 @@ class ClubEvent
     #[ORM\Column] private bool $published = false;
     #[ORM\Column] private bool $cancelled = false;
     #[ORM\ManyToOne, ORM\JoinColumn(onDelete: 'RESTRICT')] private ?MediaFile $image = null;
+    #[ORM\Column(length: 10, options: ['default' => 'large'])]
+    private string $imageWidth = 'large';
+    #[ORM\Column(length: 10, options: ['default' => 'top'])]
+    private string $imagePosition = 'top';
     #[ORM\Column(length: 20, options: ['default' => 'event'])] private string $eventType = 'event';
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')] private ?Sport $division = null;
     #[ORM\ManyToOne, ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')] private ?Member $responsible = null;
@@ -69,6 +73,22 @@ class ClubEvent
     public function isCancelled(): bool { return $this->cancelled; }
     public function getImage(): ?MediaFile { return $this->image; }
     public function setImage(?MediaFile $value): void { $this->image = $value; }
+    public function getImageWidth(): string { return $this->imageWidth; }
+    public function setImageWidth(string $value): void
+    {
+        if (!in_array($value, ['small', 'medium', 'large', 'full'], true)) {
+            throw new \InvalidArgumentException('Unbekannte Bildbreite.');
+        }
+        $this->imageWidth = $value;
+    }
+    public function getImagePosition(): string { return $this->imagePosition; }
+    public function setImagePosition(string $value): void
+    {
+        if (!in_array($value, ['top', 'left', 'right', 'bottom'], true)) {
+            throw new \InvalidArgumentException('Unbekannte Bildposition.');
+        }
+        $this->imagePosition = $value;
+    }
     public function getEventType(): string { return $this->eventType; }
     public function setEventType(string $value): void { $this->eventType = $value; }
     public function getDivision(): ?Sport { return $this->division; }
@@ -95,6 +115,8 @@ class ClubEvent
         $this->startsAt = $other->startsAt; $this->endsAt = $other->endsAt; $this->deadline = $other->deadline;
         $this->location = $other->location; $this->capacity = $other->capacity; $this->published = $other->published;
         $this->image = $other->image;
+        $this->imageWidth = $other->imageWidth;
+        $this->imagePosition = $other->imagePosition;
         $this->eventType = $other->eventType;
         $this->division = $other->division;
         $this->responsible = $other->responsible;

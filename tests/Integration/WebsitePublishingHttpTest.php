@@ -209,6 +209,33 @@ final class WebsitePublishingHttpTest extends WebTestCase
         self::assertSelectorNotExists('select[name="website_publication[parent]"]');
     }
 
+    public function testArticleImageSizeAndTextPositionAreEditableAndRendered(): void
+    {
+        $image = new MediaFile($this->club, str_repeat('a', 40).'.jpg', 'article.jpg', 'image/jpeg', 10, '');
+        $article = $this->publication('Image layout', true);
+        $article->setImage($image);
+        $article->setImageWidth('small');
+        $article->setImagePosition('right');
+        $this->em->persist($image);
+        $this->em->flush();
+        $this->client->request('GET', '/news/'.$article->getId());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.website-content-image--small.website-content-image--right');
+        $this->client->loginUser($this->press);
+        $this->client->request('GET', '/admin/de/editorial/'.$article->getId().'/edit');
+        self::assertSelectorExists('select[name="website_publication[imageWidth]"]');
+        self::assertSelectorExists('select[name="website_publication[imagePosition]"] option[value="left"]');
+        $this->client->submitForm('Beitrag speichern', [
+            'website_publication[imageWidth]' => 'full',
+            'website_publication[imagePosition]' => 'bottom',
+        ]);
+        self::assertResponseRedirects();
+        $this->em->clear();
+        $saved = $this->em->find(WebsitePublication::class, $article->getId());
+        self::assertSame('full', $saved->getImageWidth());
+        self::assertSame('bottom', $saved->getImagePosition());
+    }
+
     public function testDivisionAreasShowOnlyExplicitlyPublishedContentAndHideInactiveDivisions(): void
     {
         $division = (new Sport())->setClub($this->club)->setName('Public division')->setDescription('Internal division secret');

@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\{CheckboxType, DateTimeType, HiddenType, IntegerType, TextareaType, TextType};
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -70,6 +71,15 @@ final class WebsitePublicationType extends AbstractType
             ->add('image', MediaImageType::class, [
                 'club' => $options['club'],
                 'disabled' => $options['image_locked'],
+            ])
+            ->add('imageWidth', ChoiceType::class, [
+                'label' => 'Bildbreite',
+                'choices' => ['Klein – 25 %' => 'small', 'Mittel – 40 %' => 'medium', 'Groß – 65 %' => 'large', 'Volle Breite' => 'full'],
+                'help' => 'Auf kleinen Bildschirmen wird das Bild automatisch auf volle Breite angepasst.',
+            ])
+            ->add('imagePosition', ChoiceType::class, [
+                'label' => 'Bildposition in der Detailansicht',
+                'choices' => ['Über dem Text' => 'top', 'Links neben dem Text' => 'left', 'Rechts neben dem Text' => 'right', 'Unter dem Text' => 'bottom'],
             ])
             ->add('published', CheckboxType::class, [
                 'label' => 'Zur Veröffentlichung freigeben',

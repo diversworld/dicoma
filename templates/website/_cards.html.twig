@@ -2,7 +2,7 @@
 {% for publication in publications %}
     {% set detailRoute = publication.kind == 'page' ? 'website_page' : 'website_publication' %}
     <article class="col-md-6 mb-4"><div class="block">
-        {% if publication.image %}{% include 'website/_image.html.twig' with {image: publication.image, url: path('website_publication_image', {id: publication.id})} %}{% endif %}
+        {% if publication.image %}{% include 'website/_image.html.twig' with {image: publication.image, url: path('website_publication_image', {id: publication.id}), imageWidth: publication.imageWidth, imagePosition: 'top'} %}{% endif %}
         <h3><a href="{{ path(detailRoute, {id:publication.id}) }}">{{ publication.title }}</a></h3>
         {% if publication.kind == 'event' %}<p><time datetime="{{ publication.startsAt|date('c') }}">{{ publication.startsAt|date('d.m.Y H:i') }}</time> – {{ publication.endsAt|date('d.m.Y H:i') }} · {{ publication.location }}</p>{% elseif publication.kind != 'page' %}<p>{{ publication.publishAt|date('d.m.Y') }}</p>{% endif %}
         <p>{{ publication.summary }}</p>

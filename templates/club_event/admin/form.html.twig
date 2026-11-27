@@ -51,7 +51,11 @@
     <div class="form-fieldset">
         <fieldset>
             <div class="form-fieldset-header collapsible"><div class="form-fieldset-title"><a href="#event-image" data-bs-toggle="collapse" class="form-fieldset-title-content form-fieldset-collapse collapsed">Bild</a></div></div>
-            <div id="event-image" class="form-fieldset-body collapse"><div class="row">{{ form_row(form.image) }}</div></div>
+            <div id="event-image" class="form-fieldset-body collapse show"><div class="row">
+                <div class="col-md-6">{{ form_row(form.image) }}</div>
+                <div class="col-md-3">{{ form_row(form.imageWidth) }}</div>
+                <div class="col-md-3">{{ form_row(form.imagePosition) }}</div>
+            </div></div>
         </fieldset>
     </div>
     {% endif %}

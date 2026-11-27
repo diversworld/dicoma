@@ -5,10 +5,14 @@
 <main class="container py-4">
     {% for type, messages in app.flashes %}{% for message in messages %}<div class="alert alert-{{ type }}" role="status">{{ message }}</div>{% endfor %}{% endfor %}
     <h1>{{ event.title }}</h1>
-    {% if event.image %}{% include 'website/_image.html.twig' with {image: event.image, url: path('club_event_image', {id: event.id})} %}{% endif %}
+    {% if event.image and event.imagePosition == 'top' %}{% include 'website/_image.html.twig' with {image: event.image, url: path('club_event_image', {id: event.id}), imageWidth: event.imageWidth, imagePosition: event.imagePosition} %}{% endif %}
     <p>{{ event.startsAt|date('d.m.Y H:i') }} – {{ event.endsAt|date('d.m.Y H:i') }} · {{ event.location }}</p>
     <p class="text-muted">{{ event.eventType == 'dive' ? 'Tauchgang' : (event.eventType == 'trip' ? 'Ausfahrt' : 'Veranstaltung') }}{% if event.division %} · {{ event.division.name }}{% endif %}{% if event.responsible %} · Verantwortlich: {{ event.responsible.fullName }}{% endif %}</p>
-    <p>{{ event.description|nl2br }}</p>
+    <div class="website-content-body">
+        {% if event.image and event.imagePosition in ['left', 'right'] %}{% include 'website/_image.html.twig' with {image: event.image, url: path('club_event_image', {id: event.id}), imageWidth: event.imageWidth, imagePosition: event.imagePosition} %}{% endif %}
+        {{ event.description|nl2br }}
+    </div>
+    {% if event.image and event.imagePosition == 'bottom' %}{% include 'website/_image.html.twig' with {image: event.image, url: path('club_event_image', {id: event.id}), imageWidth: event.imageWidth, imagePosition: event.imagePosition} %}{% endif %}
     {% if event.pricing == 'members_free' %}
         <p>Kostenfrei für aktive Mitglieder dieses Vereins.</p>
     {% else %}
