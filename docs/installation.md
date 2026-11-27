@@ -27,7 +27,7 @@
 `DICOMA_INSTALL_ENABLED` bleibt standardmäßig `1`, damit Deployments die Konfiguration nicht versehentlich wieder aktivieren müssen. Die Kombination aus `DICOMA_INSTALL_COMPLETED=1` und `var/install-completed.marker` sperrt die Erstinstallation zuverlässig. Die öffentliche Route darf deshalb nicht ausschließlich anhand von `DICOMA_INSTALL_ENABLED` beurteilt werden.
 
 Die Datenbank muss vorab durch den Hosting-Provider oder in der Hosting-Verwaltung angelegt sein. DiCoMa führt absichtlich kein `doctrine:database:create` aus, da verwaltete Hosting-Zugänge meist keine Berechtigung zum globalen Anlegen von Datenbanken besitzen. Bei eingeschränkten Rechten führen Sie
-`php bin/console doctrine:migrations:migrate` manuell aus, bevor Schritt 5 wiederholt wird.
+`php bin/console doctrine:migrations:migrate` manuell aus, bevor Schritt 5 wiederholt wird. Der Web-Installer selbst führt Migrationen direkt über die Doctrine-Migrations-API aus und startet dafür keinen zusätzlichen PHP- oder PHP-FPM-Prozess.
 
 ## Neue Kernfunktionen prüfen
 
