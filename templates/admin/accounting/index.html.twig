@@ -1,7 +1,7 @@
 {% extends 'admin/portal_layout.html.twig' %}
 {% block content_title %}Buchhaltung und Jahresabschluss{% endblock %}
 {% block main %}
-<div class="card mt-4 dicoma-form-card">
+<div class="card mt-4">
   <div class="card-header">
     <h2 class="h5 mb-0">Buchung erfassen</h2>
   </div>
@@ -37,7 +37,7 @@
       <div class="col-md-4">
         <label class="form-label">Belegreferenz<input class="form-control" name="reference" maxlength="180"></label>
       </div>
-      <div class="col-md-2 d-flex align-items-end dicoma-form-actions">
+      <div class="col-md-2 d-flex align-items-end">
         <button class="btn btn-primary w-100">Buchen</button>
       </div>
     </form>
@@ -102,7 +102,7 @@
 
 <div class="row g-4 mt-1">
   <section class="col-xl-4">
-    <div class="card dicoma-form-card">
+    <div class="card">
       <div class="card-header">
         <h2 class="h5 mb-0">Konto anlegen</h2>
       </div>
@@ -121,7 +121,7 @@
               <option value="expense">Ausgaben</option>
             </select>
           </label>
-          <div class="dicoma-form-actions"><button class="btn btn-primary">Konto anlegen</button></div>
+          <button class="btn btn-primary">Konto anlegen</button>
         </form>
       </div>
     </div>

@@ -52,6 +52,86 @@ final class Phase10FinanceAccessHttpTest extends WebTestCase
         self::assertSelectorExists('a[href*="routeName=admin_settings_contributions"]');
     }
 
+    public function testFunctionMenusFollowEveryEffectiveModulePermissionForTreasurerBoardSecretaryAndPress(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }
+        foreach ([
+            'DATABASE_URL' => 'sqlite:///:memory:',
+            'MAILER_DSN' => 'null://null',
+            'PUBLIC_SITE_CLUB_ID' => '1',
+            'CLUB_FUNCTION_MEMBERSHIP_ENABLED' => '1',
+        ] as $name => $value) {
+            $_ENV[$name] = $_SERVER[$name] = $value; putenv($name.'='.$value);
+        }
+        $client = static::createClient(['environment' => 'test']);
+        $client->disableReboot();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        (new SchemaTool($em))->createSchema($em->getMetadataFactory()->getAllMetadata());
+        $club = (new Club())->setName('Funktionsrechte');
+        $em->persist($club);
+        $cases = [
+            'treasurer' => [
+                User::ROLE_TREASURER,
+                ['finance:read', 'accounting:read', 'membership:read', 'governance:read', 'audit:read', 'files:read', 'website:read'],
+                ['membership-finance', 'accounting', 'governance', 'privacy', 'media', 'editorial'],
+            ],
+            'board' => [
+                User::ROLE_BOARD,
+                ['membership:read', 'governance:read', 'finance:read', 'website:read', 'files:read', 'audit:read'],
+                ['membership-finance', 'governance', 'privacy', 'media', 'editorial'],
+            ],
+            'secretary' => [
+                User::ROLE_SECRETARY,
+                ['governance:read', 'files:read'],
+                ['governance', 'media'],
+            ],
+            'press' => [
+                User::ROLE_PRESS_OFFICER,
+                ['website:read', 'files:read'],
+                ['editorial', 'media'],
+            ],
+            'trainer' => [
+                User::ROLE_INSTRUCTOR,
+                ['training:read'],
+                ['admin_portal_training_portal'],
+            ],
+            'equipment' => [
+                User::ROLE_EQUIPMENT_MANAGER,
+                ['equipment:read'],
+                ['equipment_manager_dashboard'],
+            ],
+            'bar' => [
+                User::ROLE_BAR_MANAGER,
+                ['bar_duty:read', 'bar_cash:read'],
+                ['bar_duty', 'bar_duty_cash'],
+            ],
+        ];
+        $users = [];
+        foreach ($cases as $name => [$role, $permissions, $routes]) {
+            $user = $this->account($club, $name);
+            $function = new ClubFunction($club, $name);
+            $function->setPermissions([$role]);
+            $function->setModulePermissions($permissions);
+            $em->persist($user);
+            $em->persist($function);
+            $em->persist(new ClubFunctionAssignment($function, $user));
+            $users[$name] = [$user, $routes];
+        }
+        $em->flush();
+        foreach ($users as [$user, $routes]) {
+            $client->loginUser($user);
+            if (in_array($user->getUserIdentifier(), ['treasurer', 'board', 'secretary'], true)) {
+                $client->request('GET', '/login');
+                self::assertResponseRedirects('/admin');
+            }
+            $client->request('GET', '/admin');
+            self::assertResponseIsSuccessful();
+            foreach ($routes as $hrefPart) {
+                self::assertSelectorExists('a[href*="'.$hrefPart.'"]', $user->getUserIdentifier().' must see '.$hrefPart);
+            }
+        }
+    }
+
     public function testFinanceReadIsAvailableToTreasurerButNotOrdinaryMember(): void
     {
         if (!extension_loaded('pdo_sqlite')) { self::markTestSkipped('pdo_sqlite required.'); }

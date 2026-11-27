@@ -17,7 +17,7 @@
         {{ form_start(policyForm) }}
         {{ form_errors(policyForm) }}
         {{ form_widget(policyForm) }}
-        <div class="dicoma-form-actions"><button class="btn btn-primary">{{ 'Vereinsregeln speichern'|trans }}</button></div>
+        <button class="btn btn-primary">{{ 'Vereinsregeln speichern'|trans }}</button>
         {{ form_end(policyForm) }}
     {% endif %}
     {% if classForm %}
@@ -26,11 +26,11 @@
         <p>{{ 'Änderungen gelten nur für zukünftige Forderungen; bestehende Forderungen bleiben unverändert.'|trans }}</p>
         {% for item in classForms %}
             {% form_theme item.form 'bootstrap_5_layout.html.twig' %}
-            <details class="my-3 dicoma-disclosure" {% if item.form.vars.submitted %}open{% endif %}><summary>{{ item.class.name }}</summary>
+            <details class="my-3" {% if item.form.vars.submitted %}open{% endif %}><summary>{{ item.class.name }}</summary>
                 {{ form_start(item.form) }}
                 {{ form_errors(item.form) }}
                 {{ form_widget(item.form) }}
-                <div class="dicoma-form-actions"><button class="btn btn-primary">{{ 'Beitragsklasse speichern'|trans }}</button></div>
+                <button class="btn btn-primary">{{ 'Beitragsklasse speichern'|trans }}</button>
                 {{ form_end(item.form) }}
             </details>
         {% endfor %}
@@ -38,7 +38,7 @@
         {{ form_start(classForm) }}
             {{ form_errors(classForm) }}
             {{ form_widget(classForm) }}
-            <div class="dicoma-form-actions"><button class="btn btn-primary">{{ 'Beitragsklasse anlegen'|trans }}</button></div>
+            <button class="btn btn-primary">{{ 'Beitragsklasse anlegen'|trans }}</button>
         {{ form_end(classForm) }}
     {% endif %}
     {% if canBar %}

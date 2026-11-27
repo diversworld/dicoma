@@ -6,14 +6,14 @@
 {% else %}
 <div class="alert alert-warning"><strong>Produktivabnahme offen</strong><ul class="mb-0 mt-2">{% for blocker in readinessBlockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>
 {% endif %}
-<div class="row g-4"><section class="col-lg-4"><div class="card dicoma-form-card"><div class="card-header"><h2 class="h5 mb-0">Aufbewahrungsrichtlinie</h2></div><div class="card-body"><form method="post" class="vstack gap-3">
+<div class="row g-4"><section class="col-lg-4"><div class="card"><div class="card-header"><h2 class="h5 mb-0">Aufbewahrungsrichtlinie</h2></div><div class="card-body"><form method="post" class="vstack gap-3">
 <input type="hidden" name="_token" value="{{ csrf_token('privacy_policy') }}">
 <label class="form-label">Mitgliedsdaten nach Austritt in Jahren<input class="form-control" type="number" min="1" max="10" name="memberRetentionYears" value="{{ policy.memberRetentionYears }}"></label>
 <label class="form-label">Nachrichten in Tagen<input class="form-control" type="number" min="30" max="3650" name="messageRetentionDays" value="{{ policy.messageRetentionDays }}"></label>
 <label class="form-label">Finanzdaten in Jahren<input class="form-control" type="number" min="10" max="30" name="financialRetentionYears" value="{{ policy.financialRetentionYears }}"></label>
 <label class="form-label">Auditdaten in Jahren<input class="form-control" type="number" min="1" max="10" name="auditRetentionYears" value="{{ policy.auditRetentionYears }}"></label>
 <div class="form-check"><input class="form-check-input" type="checkbox" id="purge-enabled" name="purgeEnabled" value="1" {{ policy.purgeEnabled ? 'checked' : '' }}><label class="form-check-label" for="purge-enabled">Automatische Bereinigung zulassen</label></div>
-<div class="dicoma-form-actions"><button class="btn btn-primary">Aufbewahrung speichern</button></div></form></div></div>
+<button class="btn btn-primary">Aufbewahrung speichern</button></form></div></div>
 <div class="card mt-4"><div class="card-header"><h2 class="h5 mb-0">Produktivfreigaben dokumentieren</h2></div><div class="card-body">
 <p class="small text-muted">Nur nach extern bestätigter Bank-, Steuer-, Datenschutz- oder WCAG-Prüfung verwenden. Der Nachweis muss Ticket, Schreiben, Bericht oder Protokoll eindeutig bezeichnen.</p>
 {% set approvals = {

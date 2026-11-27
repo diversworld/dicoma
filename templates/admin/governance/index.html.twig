@@ -59,7 +59,7 @@
                                     {% endfor %}
                                 </ul>
                             {% endif %}
-                            <details class="mt-3 dicoma-disclosure">
+                            <details class="mt-3">
                                 <summary>Beschluss erfassen</summary>
                                 <form method="post" action="{{ path('admin_governance_resolution_create', {id: meeting.id}) }}" class="row g-2 mt-1">
                                     <input type="hidden" name="_token" value="{{ csrf_token('resolution_' ~ meeting.id) }}">
@@ -68,7 +68,7 @@
                                     <div class="col-12"><label class="form-label">Beschluss<input class="form-control" name="decision" required></label></div>
                                     <div class="col-md-8"><label class="form-label">Verantwortlich<select class="form-select" name="responsible"><option value="">Offen</option>{% for user in users %}<option value="{{ user.id }}">{{ user.user }}</option>{% endfor %}</select></label></div>
                                     <div class="col-md-4 d-flex align-items-end"><div class="form-check"><input class="form-check-input" id="task-{{ meeting.id }}" type="checkbox" name="createTask" value="1" checked><label class="form-check-label" for="task-{{ meeting.id }}">Aufgabe erzeugen</label></div></div>
-                                    <div class="col-12 dicoma-form-actions"><button class="btn btn-primary btn-sm">Beschluss speichern</button></div>
+                                    <div class="col-12"><button class="btn btn-primary btn-sm">Beschluss speichern</button></div>
                                 </form>
                             </details>
                         </article>

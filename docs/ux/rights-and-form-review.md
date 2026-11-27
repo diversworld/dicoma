@@ -22,22 +22,25 @@ getrennt. Zusätzliche Berechtigungen werden nicht durch die Menüänderung
 gewährt. Kassenwart, Schriftführung und Vorstand werden nach direkter
 Authentifizierung ins administrative Dashboard geleitet.
 
-Regressionstest:
-`Phase10FinanceAccessHttpTest::testDirectTreasurerRoleShowsAllEntitledMenuEntriesWithoutFunctionModel`
+Die früheren Kassenwart-, Schriftführer- und Vorstand-Sonderzweige wurden
+entfernt. Dadurch werden zusätzliche Modulrechte einer Vereinsfunktion nicht mehr
+nach dem ersten passenden Rollenlabel abgeschnitten.
+
+Regressionstests:
+- `Phase10FinanceAccessHttpTest::testDirectTreasurerRoleShowsAllEntitledMenuEntriesWithoutFunctionModel`
+- `Phase10FinanceAccessHttpTest::testFunctionMenusFollowEveryEffectiveModulePermissionForTreasurerBoardSecretaryAndPress`
 
 ## UX-Maßnahmen
 
-Gemeinsame Admin-UX-Stile liegen in `public/css/admin-ux.css`:
+Das Standard-EasyAdmin-Design bleibt unverändert. Änderungen erfolgen nur lokal
+über vorhandene EasyAdmin-/Bootstrap-Klassen in Nicht-CRUD-Seiten:
 
-- größere und konsistent ausgerichtete Eingabefelder
-- sichtbare Fokusrahmen
-- Karten mit klarer Gruppierung
-- Aktionsbereiche unter Formularen
-- responsive Tabellen
-- mobile Seitenaktionen in voller Breite
-- kompakte Details nur für selten verwendete Vorgänge
+- semantische Karten und bestehende Card-Header
+- responsive Zeilen/Spalten und Tabellencontainer
+- bestehende `form-control`, `form-select`, `form-label` und `form-text`
+- Standard-Buttonvarianten und EasyAdmin-Farben
 
-Angepasste Nicht-EasyAdmin-Formulare:
+Geprüfte Nicht-EasyAdmin-Formulare:
 
 - Mitgliedsfinanzen und SEPA
 - Buchhaltung und Jahresabschluss
@@ -54,7 +57,7 @@ Angepasste Nicht-EasyAdmin-Formulare:
 - Finanzbeträge, Status und Warnungen sind nicht ausschließlich farbcodiert.
 - Formulardaten bleiben nach Validierungsfehlern erhalten.
 - Dateien, Freigaben und irreversible Finanzaktionen besitzen erläuternden Hilfetext.
-- Mobile Tabellen bleiben horizontal scrollbar statt Inhalte zu beschneiden.
+- mobile Tabellen bleiben horizontal scrollbar statt Inhalte zu beschneiden.
 
 ## Verifikation
 

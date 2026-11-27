@@ -467,7 +467,6 @@ class DashboardController extends AbstractDashboardController
 		   ->addCssFile('css/admin.css')
 		    ->addCssFile('css/accessibility.css')
            ->addCssFile('css/admin-theme.css')
-           ->addCssFile('css/admin-ux.css')
 			->addCssFile('css/admin-logout.css')
 			->addCssFile('css/member-center.css?v=3')
             ->addCssFile('css/utilities.css');
@@ -904,59 +903,48 @@ class DashboardController extends AbstractDashboardController
         $canFinance = $canModule(PermissionModule::FINANCE);
         $canFinanceWrite = $canModule(PermissionModule::FINANCE, PermissionAction::EDIT);
         $canAccounting = $canModule(PermissionModule::ACCOUNTING);
-        $editorialRoute = $this->editorialAccess->can(PermissionAction::READ)
+        $canAudit = $canModule(PermissionModule::AUDIT);
+        $canFiles = $canModule(PermissionModule::FILES);
+        $canSport = $canModule(PermissionModule::SPORT);
+        $canBarDuty = $canModule(PermissionModule::BAR_DUTY);
+        $canTrainingMenu = $canModule(PermissionModule::TRAINING)
+            && ($this->isGranted(User::ROLE_INSTRUCTOR)
+                || $this->isGranted(User::ROLE_TRAINING_MANAGER)
+                || $this->isGranted(User::ROLE_COURSE_ADMIN));
+        $canEquipmentMenu = $canModule(PermissionModule::EQUIPMENT)
+            && $this->isGranted(User::ROLE_EQUIPMENT_MANAGER);
+        $canEquipmentCash = $canModule(PermissionModule::EQUIPMENT_CASH)
+            && $this->isGranted(User::ROLE_EQUIPMENT_CASH);
+        $canBarCash = $canModule(PermissionModule::BAR_CASH)
+            && $this->isGranted(User::ROLE_BAR_MANAGER);
+        $canWebsite = $this->functionModelEnabled
+            ? $canModule(PermissionModule::WEBSITE)
+            : $this->editorialAccess->can(PermissionAction::READ);
+        $canWebsiteCreate = $this->functionModelEnabled
+            ? $canModule(PermissionModule::WEBSITE, PermissionAction::CREATE)
+            : $this->editorialAccess->can(PermissionAction::CREATE);
+        $editorialRoute = $canWebsite
             ? 'admin_website_editorial'
-            : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_website_editorial_new' : null);
+            : ($canWebsiteCreate ? 'admin_website_editorial_new' : null);
         $websiteSettings = $this->functionModelEnabled
             ? $this->editorialAccess->canViewSettings()
             : $this->publicWebsite->canManageEditorial();
-        $eventRoute = $this->editorialAccess->can(PermissionAction::READ)
+        $eventRoute = $canWebsite
             ? 'admin_club_events'
-            : ($this->editorialAccess->can(PermissionAction::CREATE) ? 'admin_club_event_new' : null);
-        if ($this->isGranted(User::ROLE_SECRETARY)
-            && !$this->isGranted(User::ROLE_BOARD)
-            && !$this->isGranted(User::ROLE_ADMIN)) {
-            return [
-                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
-                MenuItem::section('Schriftführung'),
-                MenuItem::linkToRoute('Sitzungen & Beschlüsse', 'fa fa-people-line', 'admin_governance'),
-                MenuItem::linkTo(BoardMeetingCrudController::class, 'Sitzungen', 'fa fa-calendar-days'),
-                MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
-                MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
-            ];
-        }
-        if ($this->isGranted(User::ROLE_TREASURER) && !$this->isGranted(User::ROLE_SUPER_ADMIN)) {
-            return [
-                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
-                MenuItem::section('Kassenwart'),
-                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
-                ...($canAccounting ? [MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting')] : []),
-                ...($canFinanceWrite ? [MenuItem::linkToRoute('Beitragsarten & Regeln', 'fa fa-sliders', 'admin_settings_contributions')] : []),
-                ...($this->isGranted(User::ROLE_EQUIPMENT_CASH) ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
-                ...($this->isGranted(User::ROLE_BAR_MANAGER) ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
-                ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
-            ];
-        }
-        if ($this->isGranted(User::ROLE_BOARD) && !$this->isGranted(User::ROLE_SUPER_ADMIN)) {
-            return [
-                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
-                MenuItem::section('Vorstand'),
-                MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
-                MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
-                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
-                MenuItem::linkToRoute('Vorstandsarbeit', 'fa fa-people-line', 'admin_governance'),
-                MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
-                MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
-                MenuItem::linkToRoute('Veranstaltungen', 'fa fa-calendar-days', 'club_calendar'),
-                MenuItem::linkToRoute('Gruppenkommunikation', 'fa fa-envelope', 'admin_communication'),
-                ...($editorialRoute !== null ? [MenuItem::linkToRoute('Website & Redaktion', 'fa fa-newspaper', $editorialRoute)] : []),
-            ];
-        }
+            : ($canWebsiteCreate ? 'admin_club_event_new' : null);
         if (!$this->isGranted('ROLE_ADMIN')) {
             return [
+                MenuItem::linkToDashboard('Arbeitsübersicht', 'fa fa-table-columns'),
                 ...($canMembership ? [
+                    MenuItem::section('Mitglieder'),
                     MenuItem::linkTo(MemberCrudController::class, 'Mitgliederzentrale', 'fa fa-users'),
                     MenuItem::linkToRoute('Aufnahmeverfahren', 'fa fa-user-plus', 'membership_admin'),
+                ] : []),
+                ...($canFinance || $canAccounting ? [
+                    MenuItem::section('Finanzen'),
+                    ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                    ...($canAccounting ? [MenuItem::linkToRoute('Buchhaltung & Abschluss', 'fa fa-book', 'admin_accounting')] : []),
+                    ...($canFinanceWrite ? [MenuItem::linkToRoute('Beitragsarten & Regeln', 'fa fa-sliders', 'admin_settings_contributions')] : []),
                 ] : []),
                 ...($canGovernance ? [
                     MenuItem::section('Vorstand & Organisation'),
@@ -964,20 +952,30 @@ class DashboardController extends AbstractDashboardController
                     MenuItem::linkTo(BoardTaskCrudController::class, 'Aufgaben', 'fa fa-list-check'),
                     MenuItem::linkToRoute('Dokumente', 'fa fa-folder-open', 'admin_club_documents'),
                     MenuItem::linkToRoute('Veranstaltungskalender', 'fa fa-calendar-days', 'club_calendar'),
+                    ...($this->isGranted(User::ROLE_BOARD) || $this->isGranted(User::ROLE_ADMIN)
+                        ? [MenuItem::linkToRoute('Gruppenkommunikation', 'fa fa-envelope', 'admin_communication')] : []),
                 ] : []),
-                ...($canFinance ? [MenuItem::linkToRoute('Mitgliedsfinanzen', 'fa fa-coins', 'admin_membership_finance')] : []),
+                ...($editorialRoute !== null ? [
+                    MenuItem::section('Website & Redaktion'),
+                    MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
+                    ...($eventRoute !== null ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
+                ] : []),
+                ...($canSport ? [
+                    MenuItem::section('Sport & Wettkampf'),
+                    MenuItem::linkToRoute('Mannschaften und Kader', 'fa fa-people-group', 'competition_teams'),
+                    MenuItem::linkToRoute('Turniere und Historie', 'fa fa-trophy', 'competition_tournaments'),
+                ] : []),
+                ...($canBarDuty ? [MenuItem::linkToRoute('Vereins- und Thekendienstkalender', 'fa fa-calendar-days', 'bar_duty')] : []),
+                ...($canTrainingMenu ? [MenuItem::linkToRoute('Ausbildungsportal', 'fa fa-graduation-cap', 'admin_portal_training_portal')] : []),
+                ...($canEquipmentMenu ? [MenuItem::linkToRoute('Ausrüstung & Verleih', 'fa fa-toolbox', 'equipment_manager_dashboard')] : []),
+                ...($canEquipmentCash ? [MenuItem::linkToRoute('Gerätekasse', 'fa fa-cash-register', 'equipment_manager_cashbook')] : []),
+                ...($canBarCash ? [MenuItem::linkToRoute('Thekenkasse', 'fa fa-mug-hot', 'bar_duty_cash')] : []),
+                ...($canFiles ? [MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')] : []),
+                ...($canAudit ? [MenuItem::linkToRoute('Audit & Datenschutz', 'fa fa-shield-halved', 'admin_privacy')] : []),
                 ...($websiteSettings
                     ? [MenuItem::linkToRoute('Website-Anzeige', 'fa fa-globe', 'admin_settings_website')] : []),
                 ...($this->barAccess->isManager() && $this->barAccess->selectedClubIsMembershipClub()
                     ? [MenuItem::linkToRoute('Thekendienst-Jahresregel', 'fa fa-mug-hot', 'admin_settings_bar_services')] : []),
-                ...($editorialRoute !== null ? [
-                    MenuItem::section('Website & Redaktion'),
-                    MenuItem::linkToRoute('Seiten, Artikel und Veranstaltungen', 'fa fa-newspaper', $editorialRoute),
-                ] : []),
-                ...($this->functionModelEnabled && $eventRoute !== null
-                    ? [MenuItem::linkToRoute('Veranstaltungsbuchungen', 'fa fa-calendar-check', $eventRoute)] : []),
-                MenuItem::linkToRoute('Dateiverwaltung', 'fa fa-folder-open', 'admin_media_index')
-                    ->setPermission('ROLE_PRESS_OFFICER'),
             ];
         }
 
